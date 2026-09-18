@@ -10,8 +10,8 @@
     "astro": "astro"
   },
   "dependencies": {
-    "@astrojs/node": "^11.1.4",
     "@astrojs/react": "^6.0.5",
+    "@astrojs/vercel": "^11.0.10",
     "astro": "^7.2.4",
     "framer-motion": "^13.3.0",
     "react": "^19.3.0",

@@ -1,6 +1,7 @@
 node_modules/
 dist/
 .astro/
+.vercel/
 .DS_Store
 
 # Local secrets. Keep only the documented template in version control.
