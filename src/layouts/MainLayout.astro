@@ -17,7 +17,7 @@ const {
   description = 'Psychologisch inzicht en online begeleiding bij stress en emotionele belasting. Zelfstandig of samen met een professional.',
   activeNav = '',
   noindex = false,
-  ogImage = '/images/social/mygrowise-social-share.png',
+  ogImage = '/images/social/mygrowise-social-share.jpg',
   ogImageAlt = 'Virginie van MyGrowise met de boodschap: Begrijp wat er speelt. Kies wat nu past.',
 } = Astro.props;
 
@@ -45,10 +45,11 @@ const socialImage = new URL(ogImage, siteOrigin);
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
     <meta property="og:image" content={socialImage} />
+    <meta property="og:image:url" content={socialImage} />
     <meta property="og:image:secure_url" content={socialImage} />
-    <meta property="og:image:type" content="image/png" />
-    <meta property="og:image:width" content="1734" />
-    <meta property="og:image:height" content="907" />
+    <meta property="og:image:type" content="image/jpeg" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
     <meta property="og:image:alt" content={ogImageAlt} />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content={title} />
