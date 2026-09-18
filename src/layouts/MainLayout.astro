@@ -8,6 +8,8 @@ interface Props {
   description?: string;
   activeNav?: string;
   noindex?: boolean;
+  ogImage?: string;
+  ogImageAlt?: string;
 }
 
 const {
@@ -15,9 +17,13 @@ const {
   description = 'Psychologisch inzicht en online begeleiding bij stress en emotionele belasting. Zelfstandig of samen met een professional.',
   activeNav = '',
   noindex = false,
+  ogImage = '/images/social/mygrowise-social-share.png',
+  ogImageAlt = 'Virginie van MyGrowise met de boodschap: Begrijp wat er speelt. Kies wat nu past.',
 } = Astro.props;
 
-const canonical = new URL(Astro.url.pathname, Astro.site ?? 'https://www.mygrowise.be');
+const siteOrigin = Astro.site ?? Astro.url.origin;
+const canonical = new URL(Astro.url.pathname, siteOrigin);
+const socialImage = new URL(ogImage, siteOrigin);
 ---
 
 <!doctype html>
@@ -35,9 +41,20 @@ const canonical = new URL(Astro.url.pathname, Astro.site ?? 'https://www.mygrowi
     <meta property="og:type" content="website" />
     <meta property="og:locale" content="nl_BE" />
     <meta property="og:site_name" content="MyGrowise" />
+    <meta property="og:url" content={canonical} />
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
-    <meta property="og:image" content="/images/editorial/mygrowise-74.jpg" />
+    <meta property="og:image" content={socialImage} />
+    <meta property="og:image:secure_url" content={socialImage} />
+    <meta property="og:image:type" content="image/png" />
+    <meta property="og:image:width" content="1734" />
+    <meta property="og:image:height" content="907" />
+    <meta property="og:image:alt" content={ogImageAlt} />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={socialImage} />
+    <meta name="twitter:image:alt" content={ogImageAlt} />
   </head>
   <body>
     <a class="skip-link" href="#inhoud">Ga naar de inhoud</a>
