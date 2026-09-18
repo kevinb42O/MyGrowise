@@ -1,0 +1,70 @@
+---
+import type { AdminProduct } from '../../lib/adminProducts';
+import { PRODUCT_STATUSES, PRODUCT_TYPES, productStatusLabel, productTypeLabel } from '../../lib/adminProducts';
+import AdminIcon from './AdminIcon.astro';
+
+interface Props {
+  product?: Partial<AdminProduct>;
+  action: string;
+  submitLabel: string;
+  error?: string;
+  priceValue?: string;
+}
+
+const { product, action, submitLabel, error = '', priceValue } = Astro.props;
+const price = priceValue ?? (product?.priceCents === null || product?.priceCents === undefined ? '' : (product.priceCents / 100).toFixed(2).replace('.', ','));
+---
+
+{error && <div class="admin-form-alert" role="alert"><AdminIcon name="warning" size={17} />{error}</div>}
+<form class="admin-product-form" action={action} method="post">
+  <div class="admin-form-grid">
+    <label class="admin-field admin-field--wide">
+      <span>Productnaam <i>*</i></span>
+      <input name="title" value={product?.title || ''} required minlength="3" maxlength="120" autocomplete="off" data-title />
+      <small>De publieke naam zoals bezoekers die zien.</small>
+    </label>
+    <label class="admin-field admin-field--wide">
+      <span>URL-slug <i>*</i></span>
+      <div class="admin-slug-field"><em>mygrowise.be/aanbod/</em><input name="slug" value={product?.slug || ''} required maxlength="80" pattern="[a-z0-9]+(?:-[a-z0-9]+)*" data-slug /></div>
+      <small>Kleine letters, cijfers en koppeltekens. Wijzigen na publicatie vereist later een redirect.</small>
+    </label>
+    <label class="admin-field">
+      <span>Type <i>*</i></span>
+      <select name="type" required>
+        {PRODUCT_TYPES.map((type) => <option value={type} selected={(product?.type || 'profile') === type}>{productTypeLabel[type]}</option>)}
+      </select>
+    </label>
+    <label class="admin-field">
+      <span>Status <i>*</i></span>
+      <select name="status" required>
+        {PRODUCT_STATUSES.map((status) => <option value={status} selected={(product?.status || 'draft') === status}>{productStatusLabel[status]}</option>)}
+      </select>
+    </label>
+    <label class="admin-field">
+      <span>Prijs inclusief btw</span>
+      <div class="admin-price-field"><em>€</em><input name="price" value={price} inputmode="decimal" placeholder="0,00" maxlength="10" /></div>
+      <small>Verplicht wanneer de status “Gepubliceerd” is.</small>
+    </label>
+    <label class="admin-field admin-field--wide">
+      <span>Korte omschrijving <i>*</i></span>
+      <textarea name="summary" required minlength="20" maxlength="320" rows="5" data-summary>{product?.summary || ''}</textarea>
+      <small><span data-count>{product?.summary?.length || 0}</span>/320 tekens</small>
+    </label>
+  </div>
+  <footer class="admin-form-actions">
+    <a class="admin-button" href="/admin/producten">Annuleren</a>
+    <button class="admin-button admin-button--primary" type="submit"><AdminIcon name="check" size={16} />{submitLabel}</button>
+  </footer>
+</form>
+
+<script is:inline>
+  const title = document.querySelector('[data-title]');
+  const slug = document.querySelector('[data-slug]');
+  const summary = document.querySelector('[data-summary]');
+  const count = document.querySelector('[data-count]');
+  let slugTouched = Boolean(slug?.value);
+  const slugify = (value) => value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 80);
+  slug?.addEventListener('input', () => { slugTouched = Boolean(slug.value); });
+  title?.addEventListener('input', () => { if (!slugTouched && slug) slug.value = slugify(title.value); });
+  summary?.addEventListener('input', () => { if (count) count.textContent = String(summary.value.length); });
+</script>

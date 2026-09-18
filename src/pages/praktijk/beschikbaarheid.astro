@@ -1,0 +1,60 @@
+---
+import PracticeLayout from '../../layouts/PracticeLayout.astro';
+import AdminIcon from '../../components/admin/AdminIcon.astro';
+import { getAvailabilityRules, listAvailabilityExceptions } from '../../lib/practiceStore';
+import { getPractitionerProfile } from '../../lib/practiceDb';
+const user = Astro.locals.currentUser!;
+const rules = Map.groupBy(getAvailabilityRules(user.practitionerId!), (rule) => rule.weekday);
+const profile = getPractitionerProfile(user.practitionerId!);
+const exceptions = listAvailabilityExceptions(user.practitionerId!);
+const days = [[1,'Maandag'],[2,'Dinsdag'],[3,'Woensdag'],[4,'Donderdag'],[5,'Vrijdag'],[6,'Zaterdag'],[7,'Zondag']] as const;
+const saved = Astro.url.searchParams.get('saved') === '1';
+const error = Astro.url.searchParams.get('error') || '';
+const exceptionSaved = Astro.url.searchParams.get('exception_saved') === '1';
+const exceptionDeleted = Astro.url.searchParams.get('exception_deleted') === '1';
+const exceptionError = Astro.url.searchParams.get('exception_error') === '1';
+const displayDate = (value: string) => new Intl.DateTimeFormat('nl-BE', { timeZone: 'Europe/Brussels', weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }).format(new Date(value));
+---
+<PracticeLayout title="Beschikbaarheid">
+  <div class="admin-page admin-page--form"><section class="admin-page-heading"><div><p class="admin-eyebrow">Mijn agenda</p><h1>Beschikbaarheid</h1><p>Stel je gewone werkweek in. Alleen concrete boekbare tijdsloten worden publiek getoond.</p></div></section>
+    {saved && <div class="admin-login__alert admin-login__alert--success" role="status"><AdminIcon name="check" size={17} />Je weekschema is opgeslagen.</div>}
+    {error && <div class="admin-login__alert admin-login__alert--error" role="alert"><AdminIcon name="warning" size={17} />{error}</div>}
+    {(exceptionSaved || exceptionDeleted) && <div class="admin-login__alert admin-login__alert--success" role="status"><AdminIcon name="check" size={17} />{exceptionSaved ? 'Blokkade toegevoegd. De betrokken momenten zijn niet meer publiek boekbaar.' : 'Blokkade verwijderd.'}</div>}
+    {exceptionError && <div class="admin-login__alert admin-login__alert--error" role="alert"><AdminIcon name="warning" size={17} />Controleer de begin- en einddatum van de blokkade.</div>}
+    <section class="admin-panel"><header class="admin-panel__header"><div><h2>Gewone werkweek</h2><p>Tijdzone Europe/Brussels · sessies van {profile?.appointmentDurationMinutes || 60} minuten · meerdere blokken per dag mogelijk</p></div><span class="admin-state admin-state--ready">Publieke bron</span></header>
+      <form class="practice-availability-form" action="/api/praktijk/beschikbaarheid" method="post">
+        <div class="practice-week">{days.map(([number,label]) => { const dayRules=rules.get(number) || []; const periods=dayRules.length ? dayRules : [{weekday:number,startTime:'09:00',endTime:'17:00'}]; return <div class:list={['practice-day',{'is-enabled':dayRules.length>0}]} data-weekday={number}>
+          <label class="practice-day__toggle"><input type="checkbox" name={`enabled_${number}`} checked={dayRules.length>0} /><span></span><strong>{label}</strong></label>
+          <div class="practice-day__schedule"><div class="practice-day__periods">{periods.map((rule)=><div class="practice-day__times"><label><span>Van</span><input type="time" step="900" name={`start_${number}`} value={rule.startTime} /></label><span>tot</span><label><span class="sr-only">Tot</span><input type="time" step="900" name={`end_${number}`} value={rule.endTime} /></label><button class="practice-period-remove" type="button" aria-label="Tijdsblok verwijderen">×</button></div>)}</div><button class="practice-period-add" type="button">+ Tijdsblok</button></div>
+          <template><div class="practice-day__times"><label><span>Van</span><input type="time" step="900" name={`start_${number}`} value="09:00" /></label><span>tot</span><label><span class="sr-only">Tot</span><input type="time" step="900" name={`end_${number}`} value="17:00" /></label><button class="practice-period-remove" type="button" aria-label="Tijdsblok verwijderen">×</button></div></template>
+        </div>})}</div>
+        <footer class="admin-form-actions"><p class="practice-form-note"><AdminIcon name="lock" size={14} /> Bezoekers zien nooit waarom een moment niet beschikbaar is.</p><button class="admin-button admin-button--primary" type="submit"><AdminIcon name="check" size={16} /> Schema opslaan</button></footer>
+      </form>
+    </section>
+    <section class="admin-panel practice-exception-panel"><header class="admin-panel__header"><div><h2>Afwijkingen & blokkades</h2><p>Vakantie, opleiding of een losse onbeschikbare periode</p></div></header>
+      <div class="practice-exception-grid"><form class="practice-exception-form" action="/api/praktijk/beschikbaarheid/uitzonderingen" method="post"><label><span>Van</span><input type="datetime-local" name="starts_at" required /></label><label><span>Tot</span><input type="datetime-local" name="ends_at" required /></label><label class="practice-exception-form__wide"><span>Privénotitie <small>optioneel · nooit publiek</small></span><input name="reason" maxlength="80" placeholder="Bijv. vakantie of opleiding" /></label><button class="admin-button admin-button--primary" type="submit"><AdminIcon name="plus" size={15}/> Blokkade toevoegen</button></form>
+        <div class="practice-exception-list">{exceptions.length ? exceptions.map((exception) => <article><span><AdminIcon name="clock" size={15}/></span><div><strong>{displayDate(exception.startsAt)} — {displayDate(exception.endsAt)}</strong><small>{exception.privateReason || 'Geen interne notitie'}</small></div><form action={`/api/praktijk/beschikbaarheid/uitzonderingen/${exception.id}`} method="post"><button type="submit" aria-label="Blokkade verwijderen" title="Blokkade verwijderen"><AdminIcon name="close" size={15}/></button></form></article>) : <div class="admin-empty-row"><div><span><AdminIcon name="check" size={17}/></span><strong>Geen geplande blokkades</strong><p>Je gewone weekschema is de enige bron van beschikbaarheid.</p></div></div>}</div>
+      </div>
+    </section>
+  </div>
+</PracticeLayout>
+<script is:inline>
+  const updateRemoveButtons = (day) => day.querySelectorAll('.practice-period-remove').forEach((button) => { button.disabled = day.querySelectorAll('.practice-day__times').length === 1; });
+  document.querySelectorAll('.practice-day').forEach((day) => {
+    const toggle = day.querySelector('.practice-day__toggle input');
+    toggle?.addEventListener('change', () => day.classList.toggle('is-enabled', toggle.checked));
+    day.querySelector('.practice-period-add')?.addEventListener('click', () => {
+      if (day.querySelectorAll('.practice-day__times').length >= 4) return;
+      const period = day.querySelector('template').content.firstElementChild.cloneNode(true);
+      day.querySelector('.practice-day__periods').append(period);
+      updateRemoveButtons(day);
+    });
+    day.addEventListener('click', (event) => {
+      const button = event.target.closest('.practice-period-remove');
+      if (!button || button.disabled) return;
+      button.closest('.practice-day__times').remove();
+      updateRemoveButtons(day);
+    });
+    updateRemoveButtons(day);
+  });
+</script>

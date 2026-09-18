@@ -1,0 +1,82 @@
+---
+import AdminIcon from '../../components/admin/AdminIcon.astro';
+import '../../styles/admin.css';
+
+const errorMessages: Record<string, string> = {
+  invalid: 'Het e-mailadres of wachtwoord is niet correct.',
+  rate_limited: 'Te veel mislukte pogingen. Probeer het over vijftien minuten opnieuw.',
+  configuration: 'De beheerlogin is nog niet correct geconfigureerd.',
+  forbidden: 'Dit account heeft geen toegang tot de beheeromgeving.',
+};
+const error = Astro.url.searchParams.get('error') || '';
+const signedOut = Astro.url.searchParams.get('signed_out') === '1';
+const requestedNext = Astro.url.searchParams.get('next') || '/admin';
+const next = requestedNext.startsWith('/admin') && !requestedNext.startsWith('//') && !requestedNext.startsWith('/admin/login') ? requestedNext : '/admin';
+---
+
+<!doctype html>
+<html lang="nl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex, nofollow, noarchive" />
+    <meta name="theme-color" content="#f7f7f5" />
+    <link rel="icon" type="image/png" href="/images/logo-lelie.png" />
+    <link rel="alternate icon" href="/favicon.ico" />
+    <title>Aanmelden · MyGrowise Admin</title>
+  </head>
+  <body class="admin-body admin-login-body">
+    <main class="admin-login">
+      <section class="admin-login__brand" aria-label="MyGrowise">
+        <a href="/" class="admin-login__wordmark"><img src="/images/logo-lelie.webp" alt="" width="382" height="289" /><strong>MyGrowise</strong></a>
+        <div class="admin-login__brand-copy">
+          <p class="admin-eyebrow">Beheeromgeving</p>
+          <h1>Alles wat MyGrowise doet, rustig op één plek.</h1>
+          <p>Beheer aanbod, volg verkoop en behoud het overzicht over begeleiding—zonder gezondheidsinformatie in het commerciële dashboard te mengen.</p>
+        </div>
+        <div class="admin-login__trust"><AdminIcon name="lock" size={15} /><span>Server-side beveiligd<br/><small>Sessie verloopt automatisch na 8 uur</small></span></div>
+      </section>
+
+      <section class="admin-login__panel" aria-labelledby="login-title">
+        <div class="admin-login__form-wrap">
+          <div class="admin-login__mobile-mark"><img src="/images/logo-lelie.webp" alt="" width="382" height="289" /><strong>MyGrowise</strong></div>
+          <p class="admin-eyebrow">Welkom terug</p>
+          <h2 id="login-title">Aanmelden</h2>
+          <p class="admin-login__intro">Meld je aan voor het organisatiebeheer van MyGrowise.</p>
+
+          {errorMessages[error] && <div class="admin-login__alert admin-login__alert--error" role="alert"><AdminIcon name="warning" size={17} /><span>{errorMessages[error]}</span></div>}
+          {signedOut && <div class="admin-login__alert admin-login__alert--success" role="status"><AdminIcon name="check" size={17} /><span>Je bent veilig afgemeld.</span></div>}
+
+          <form class="admin-login__form" action="/api/admin/login" method="post">
+            <input type="hidden" name="next" value={next} />
+            <label>
+              <span>E-mailadres</span>
+              <input type="email" name="email" placeholder="naam@mygrowise.com" autocomplete="username" inputmode="email" required maxlength="254" autofocus />
+            </label>
+            <label>
+              <span>Wachtwoord</span>
+              <span class="admin-password-field">
+                <input id="admin-password" type="password" name="password" autocomplete="current-password" required maxlength="256" />
+                <button type="button" aria-label="Wachtwoord tonen" aria-pressed="false" data-password-toggle><AdminIcon name="eye" size={17} /></button>
+              </span>
+            </label>
+            <button class="admin-login__submit" type="submit">Aanmelden <AdminIcon name="arrow" size={16} /></button>
+          </form>
+
+          <p class="admin-login__help">Problemen met aanmelden? Neem contact op met de technische beheerder.</p>
+        </div>
+      </section>
+    </main>
+
+    <script is:inline>
+      const toggle = document.querySelector('[data-password-toggle]');
+      const password = document.querySelector('#admin-password');
+      toggle?.addEventListener('click', () => {
+        const isVisible = password?.getAttribute('type') === 'text';
+        password?.setAttribute('type', isVisible ? 'password' : 'text');
+        toggle.setAttribute('aria-pressed', String(!isVisible));
+        toggle.setAttribute('aria-label', isVisible ? 'Wachtwoord tonen' : 'Wachtwoord verbergen');
+      });
+    </script>
+  </body>
+</html>

@@ -1,0 +1,39 @@
+---
+import AdminLayout from '../../layouts/AdminLayout.astro';
+import AdminIcon from '../../components/admin/AdminIcon.astro';
+
+const sections: Record<string, { title: string; eyebrow: string; description: string; items: string[]; action?: string }> = {
+  bestellingen: { title: 'Bestellingen', eyebrow: 'Verkoop', description: 'Beheer betalingen, statussen, terugbetalingen en digitale levering vanuit één controleerbare tijdlijn.', items: ['Zoeken en filteren op status, product en periode', 'Betalings- en leveringsstatus naast elkaar', 'Terugbetaling met reden en auditlog', 'Veilige herverzending van toegang'], action: 'Bestelling exporteren' },
+  klanten: { title: 'Klanten', eyebrow: 'Relaties', description: 'Een minimaal klantbeeld voor support en verkoop, strikt gescheiden van antwoorden en gezondheidsinformatie.', items: ['Contact- en facturatiegegevens', 'Aankopen en actieve toegangsrechten', 'Toestemmingen en communicatievoorkeuren', 'AVG-verzoeken en bewaartermijnen'], action: 'Klant toevoegen' },
+  producten: { title: 'Producten', eyebrow: 'Catalogus', description: 'Publiceer profielen, modules en e-books met eigen prijs, versie, verkoopstatus en leveringsmethode.', items: ['Concept, review, gepland en gepubliceerd', 'Prijzen en btw-configuratie', 'Versies en klinische reviewstatus', 'Preview vóór publicatie'], action: 'Nieuw product' },
+  boekingen: { title: 'Boekingen', eyebrow: 'Begeleiding', description: 'Volg doorverwijzingen en bevestigde afspraken zonder therapeutische inhoud in het commerciële dashboard op te slaan.', items: ['Uitgaande boekingsklikken per professional', 'Bevestiging uitsluitend via provider-webhook', 'Annulering en no-show wanneer beschikbaar', 'Geen sessienotities of hulpvraag in analytics'], action: 'Beschikbaarheid bekijken' },
+  professionals: { title: 'Professionals', eyebrow: 'Netwerk', description: 'Beheer profielen, expertise, beschikbaarheid, boekingslinks en toekomstige fee-afspraken.', items: ['Profiel en erkenningsinformatie', 'Publicatiestatus en kwaliteitscontrole', 'Boekingsprovider en beschikbaarheid', 'Leadrapportage en fee-configuratie'], action: 'Professional toevoegen' },
+  profielen: { title: 'Profielen', eyebrow: 'Digitaal aanbod', description: 'Beheer vragenlijsten en persoonlijke rapporten als versieerbare producten met een veilige leveringsflow.', items: ['Vragenlijstversies en review', 'Rapportsjabloon en resultaatlogica', 'Prijs, landingspagina en SEO', 'Testaankoop en leveringscontrole'], action: 'Nieuw profiel' },
+  modules: { title: 'Modules', eyebrow: 'Digitaal aanbod', description: 'Bouw leertrajecten op uit hoofdstukken, lessen, downloads en voortgangsmomenten.', items: ['Module- en lesstructuur', 'Video, tekst en downloads', 'Toegang en publicatieplanning', 'Voortgang op geaggregeerd niveau'], action: 'Nieuwe module' },
+  content: { title: 'Website & blogs', eyebrow: 'Content', description: 'Pas pagina’s, blogs, veelgestelde vragen, navigatie en SEO aan zonder tussenkomst van een ontwikkelaar.', items: ['Pagina’s en herbruikbare secties', 'Blogredactie en publicatieplanning', 'Media met alt-tekst en rechtenbron', 'SEO-preview en redirects'], action: 'Nieuwe blog' },
+  berichten: { title: 'Berichten', eyebrow: 'Opvolging', description: 'Bundel contactvragen en productondersteuning, met duidelijke eigenaar en opvolgstatus.', items: ['Inbox met verantwoordelijke', 'Status, prioriteit en interne notitie', 'Antwoordsjablonen', 'Escalatie zonder medische dossiers'], action: 'Nieuw bericht' },
+  instellingen: { title: 'Instellingen', eyebrow: 'Organisatie', description: 'Beheer gebruikers, rollen, integraties, auditlogs, analyticsregels en bedrijfsgegevens.', items: ['Gebruikers, rollen en tweefactorauthenticatie', 'Betaal-, mail- en boekingsintegraties', 'Analytics-events en datakwaliteit', 'Auditlog, export en bewaartermijnen'], action: 'Integratie koppelen' },
+};
+
+const { section = '' } = Astro.params;
+const content = sections[section];
+if (!content) return Astro.redirect('/admin');
+---
+
+<AdminLayout title={content.title} description={content.description}>
+  <div class="admin-page">
+    <section class="admin-page-heading" aria-labelledby="section-title">
+      <div><p class="admin-eyebrow">{content.eyebrow}</p><h1 id="section-title">{content.title}</h1><p>{content.description}</p></div>
+      <div class="admin-page-actions"><button class="admin-button admin-button--primary" type="button"><AdminIcon name="plus" size={16} /> {content.action}</button></div>
+    </section>
+
+    <div class="admin-preview-notice" role="status"><AdminIcon name="warning" size={18} /><div><strong>Functionele blauwdruk</strong>Deze module is inhoudelijk afgebakend en volgt na authenticatie en het centrale datamodel. Er wordt nog niets opgeslagen.</div></div>
+
+    <section class="admin-panel" aria-labelledby="scope-title">
+      <header class="admin-panel__header"><div><h2 id="scope-title">Wat deze module moet kunnen</h2><p>Vastgelegd voor de implementatiefase</p></div><span class="admin-state">Gepland</span></header>
+      <ol class="admin-setup-list">
+        {content.items.map((item, index) => <li><span class="admin-setup-list__number">{index + 1}</span><span><strong>{item}</strong><small>Met rechtencontrole, validatie en audittrail</small></span><span class="admin-state">MVP</span></li>)}
+      </ol>
+    </section>
+  </div>
+</AdminLayout>

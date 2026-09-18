@@ -1,0 +1,26 @@
+---
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+import ProductForm from '../../../components/admin/ProductForm.astro';
+import { decodeProductFormFlash, PRODUCT_FLASH_COOKIE } from '../../../lib/adminProducts';
+
+const flash = decodeProductFormFlash(Astro.cookies.get(PRODUCT_FLASH_COOKIE)?.value);
+Astro.cookies.delete(PRODUCT_FLASH_COOKIE, { path: '/admin/producten' });
+const draft = flash ? {
+  title: flash.fields.title,
+  slug: flash.fields.slug,
+  type: flash.fields.type as any,
+  status: flash.fields.status as any,
+  summary: flash.fields.summary,
+} : undefined;
+---
+
+<AdminLayout title="Nieuw product" description="Voeg een product toe aan MyGrowise">
+  <div class="admin-page admin-page--form">
+    <a class="admin-back-link" href="/admin/producten">← Terug naar producten</a>
+    <section class="admin-page-heading" aria-labelledby="new-product-title"><div><p class="admin-eyebrow">Catalogus</p><h1 id="new-product-title">Nieuw product</h1><p>Maak eerst de commerciële basis aan. Inhoud, levering en checkout worden als aparte gecontroleerde stappen gekoppeld.</p></div></section>
+    <section class="admin-panel admin-form-panel">
+      <header class="admin-panel__header"><div><h2>Productgegevens</h2><p>Velden met een * zijn verplicht</p></div><span class="admin-state">Nieuw concept</span></header>
+      <ProductForm product={draft} priceValue={flash?.fields.price} action="/api/admin/products" submitLabel="Product aanmaken" error={flash?.error || ''} />
+    </section>
+  </div>
+</AdminLayout>

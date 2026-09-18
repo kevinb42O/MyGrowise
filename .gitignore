@@ -1,0 +1,15 @@
+node_modules/
+dist/
+.astro/
+.DS_Store
+
+# Local secrets. Keep only the documented template in version control.
+.env
+.env.*
+!.env.example
+
+# Runtime audit events are environment-specific.
+data/admin/audit-log.jsonl
+data/admin/*.sqlite
+data/admin/*.sqlite-shm
+data/admin/*.sqlite-wal

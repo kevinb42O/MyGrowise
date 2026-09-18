@@ -1,0 +1,45 @@
+---
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+import ProductForm from '../../../components/admin/ProductForm.astro';
+import AdminIcon from '../../../components/admin/AdminIcon.astro';
+import { decodeProductFormFlash, formatProductPrice, getProduct, PRODUCT_FLASH_COOKIE, productStatusLabel, productTypeLabel } from '../../../lib/adminProducts';
+
+const product = await getProduct(Astro.params.id || '');
+if (!product) return Astro.redirect('/admin/producten?message=Product+niet+gevonden.');
+const flash = decodeProductFormFlash(Astro.cookies.get(PRODUCT_FLASH_COOKIE)?.value);
+Astro.cookies.delete(PRODUCT_FLASH_COOKIE, { path: '/admin/producten' });
+const formProduct = flash?.id === product.id ? {
+  ...product,
+  title: flash.fields.title,
+  slug: flash.fields.slug,
+  type: flash.fields.type as any,
+  status: flash.fields.status as any,
+  summary: flash.fields.summary,
+} : product;
+const saved = Astro.url.searchParams.get('saved') === '1';
+const created = Astro.url.searchParams.get('created') === '1';
+---
+
+<AdminLayout title={product.title} description={`Bewerk ${product.title}`}>
+  <div class="admin-page admin-page--form">
+    <a class="admin-back-link" href="/admin/producten">← Terug naar producten</a>
+    <section class="admin-page-heading" aria-labelledby="edit-product-title">
+      <div><p class="admin-eyebrow">{productTypeLabel[product.type]}</p><h1 id="edit-product-title">{product.title}</h1><p>Beheer de commerciële basis en publicatiestatus van dit product.</p></div>
+      <div class="admin-page-actions"><span class={`admin-product-status admin-product-status--${product.status}`}><i></i>{productStatusLabel[product.status]}</span></div>
+    </section>
+
+    {(saved || created) && <div class="admin-login__alert admin-login__alert--success" role="status"><AdminIcon name="check" size={17} />{created ? 'Product aangemaakt.' : 'Wijzigingen opgeslagen.'}</div>}
+
+    <div class="admin-edit-grid">
+      <section class="admin-panel admin-form-panel">
+        <header class="admin-panel__header"><div><h2>Productgegevens</h2><p>Laatst gewijzigd door {product.updatedBy}</p></div></header>
+        <ProductForm product={formProduct} priceValue={flash?.id === product.id ? flash.fields.price : undefined} action={`/api/admin/products/${product.id}`} submitLabel="Wijzigingen opslaan" error={flash?.id === product.id ? flash.error : ''} />
+      </section>
+      <aside class="admin-panel admin-product-aside" aria-labelledby="product-summary-title">
+        <header class="admin-panel__header"><div><h2 id="product-summary-title">Samenvatting</h2><p>Technische productstatus</p></div></header>
+        <dl><div><dt>Interne ID</dt><dd>{product.id}</dd></div><div><dt>Prijs</dt><dd>{formatProductPrice(product.priceCents)}</dd></div><div><dt>Aangemaakt</dt><dd>{new Intl.DateTimeFormat('nl-BE', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(product.createdAt))}</dd></div><div><dt>Gewijzigd</dt><dd>{new Intl.DateTimeFormat('nl-BE', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(product.updatedAt))}</dd></div></dl>
+        <div class="admin-product-aside__note"><AdminIcon name="warning" size={16} /><p><strong>Nog niet gekoppeld aan de publieke website.</strong>Publicatie verandert voorlopig alleen de adminstatus. De gecontroleerde CMS-koppeling volgt afzonderlijk.</p></div>
+      </aside>
+    </div>
+  </div>
+</AdminLayout>

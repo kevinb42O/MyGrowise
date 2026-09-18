@@ -1,0 +1,29 @@
+---
+import PracticeLayout from '../../layouts/PracticeLayout.astro';
+import AdminIcon from '../../components/admin/AdminIcon.astro';
+import { getPracticeSummary, listBookings } from '../../lib/practiceStore';
+
+const user = Astro.locals.currentUser!;
+const practitionerId = user.practitionerId!;
+const summary = getPracticeSummary(practitionerId);
+const upcoming = listBookings(practitionerId).filter((booking) => booking.status === 'confirmed' && booking.startsAt >= new Date().toISOString()).slice(0, 5);
+const forbidden = Astro.url.searchParams.get('forbidden') === 'admin';
+const formatDate = (value: string) => new Intl.DateTimeFormat('nl-BE', { timeZone: 'Europe/Brussels', weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }).format(new Date(value));
+---
+
+<PracticeLayout title="Vandaag">
+  <div class="admin-page">
+    <section class="admin-page-heading"><div><p class="admin-eyebrow">Mijn praktijk</p><h1>Goedemiddag, {user.name}.</h1><p>Je persoonlijke overzicht van afspraken, aanvragen en beschikbare momenten.</p></div><div class="admin-page-actions"><a class="admin-button" href="/praktijk/agenda"><AdminIcon name="calendar" size={16} /> Agenda</a><a class="admin-button admin-button--primary" href="/praktijk/beschikbaarheid"><AdminIcon name="plus" size={16} /> Beschikbaarheid</a></div></section>
+    {forbidden && <div class="admin-preview-notice" role="alert"><AdminIcon name="warning" size={18} /><div><strong>Geen toegang tot organisatiebeheer</strong>Je account heeft alleen toegang tot je eigen praktijkomgeving.</div></div>}
+    <section class="admin-metrics" aria-label="Praktijkcijfers">
+      <article class="admin-metric"><div class="admin-metric__head"><span class="admin-metric__label">Nieuwe aanvragen</span><span class="admin-metric__icon"><AdminIcon name="messages" size={15} /></span></div><strong>{summary.pending}</strong><small>{summary.pending ? 'Wachten op jouw antwoord' : 'Alles opgevolgd'}</small></article>
+      <article class="admin-metric"><div class="admin-metric__head"><span class="admin-metric__label">Komende afspraken</span><span class="admin-metric__icon"><AdminIcon name="calendar" size={15} /></span></div><strong>{summary.upcoming}</strong><small>Bevestigd en toekomstig</small></article>
+      <article class="admin-metric"><div class="admin-metric__head"><span class="admin-metric__label">Werkdagen</span><span class="admin-metric__icon"><AdminIcon name="clock" size={15} /></span></div><strong>{summary.availabilityDays}</strong><small>In je weekschema</small></article>
+      <article class="admin-metric"><div class="admin-metric__head"><span class="admin-metric__label">Vrije momenten</span><span class="admin-metric__icon"><AdminIcon name="check" size={15} /></span></div><strong>{summary.nextSlots.length}</strong><small>Komende 14 dagen</small></article>
+    </section>
+    <div class="admin-dashboard-grid">
+      <section class="admin-panel"><header class="admin-panel__header"><div><h2>Komende afspraken</h2><p>Alleen jouw bevestigde afspraken</p></div><a class="admin-text-link" href="/praktijk/agenda">Volledige agenda <AdminIcon name="arrow" size={13} /></a></header>{upcoming.length ? <div class="practice-list">{upcoming.map((booking) => <div class="practice-list-row"><span class="admin-avatar">{booking.clientName.charAt(0).toUpperCase()}</span><span><strong>{booking.clientName}</strong><small>{formatDate(booking.startsAt)}</small></span><span class="admin-product-status admin-product-status--published"><i></i>Bevestigd</span></div>)}</div> : <div class="admin-empty-row"><div><span><AdminIcon name="calendar" size={17} /></span><strong>Geen komende afspraken</strong><p>Bevestigde aanvragen verschijnen hier.</p></div></div>}</section>
+      <section class="admin-panel"><header class="admin-panel__header"><div><h2>Volgende vrije momenten</h2><p>Wat bezoekers momenteel kunnen boeken</p></div></header>{summary.nextSlots.length ? <div class="practice-slots">{summary.nextSlots.map((slot) => <div><span>{slot.dateLabel}</span><strong>{slot.timeLabel}</strong></div>)}</div> : <div class="admin-empty-row"><div><span><AdminIcon name="clock" size={17} /></span><strong>Nog geen vrije momenten</strong><p>Stel eerst je wekelijkse beschikbaarheid in.</p><a class="admin-text-link" href="/praktijk/beschikbaarheid">Schema instellen →</a></div></div>}</section>
+    </div>
+  </div>
+</PracticeLayout>

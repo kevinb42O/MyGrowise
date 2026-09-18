@@ -1,0 +1,160 @@
+---
+import AdminIcon from '../components/admin/AdminIcon.astro';
+import '../styles/admin.css';
+
+interface Props {
+  title: string;
+  description?: string;
+}
+
+const { title, description = 'Beheer MyGrowise' } = Astro.props;
+const currentPath = Astro.url.pathname.replace(/\/$/, '') || '/';
+const adminUser = Astro.locals.adminUser;
+
+const navGroups = [
+  {
+    label: 'Overzicht',
+    items: [
+      { label: 'Dashboard', href: '/admin', icon: 'overview', exact: true },
+      { label: 'Analytics', href: '/admin/analytics', icon: 'analytics' },
+    ],
+  },
+  {
+    label: 'Verkoop',
+    items: [
+      { label: 'Bestellingen', href: '/admin/bestellingen', icon: 'orders', badge: '0' },
+      { label: 'Klanten', href: '/admin/klanten', icon: 'customers' },
+      { label: 'Producten', href: '/admin/producten', icon: 'products' },
+    ],
+  },
+  {
+    label: 'Begeleiding',
+    items: [
+      { label: 'Boekingen', href: '/admin/boekingen', icon: 'calendar' },
+      { label: 'Professionals', href: '/admin/professionals', icon: 'professionals' },
+    ],
+  },
+  {
+    label: 'Aanbod & content',
+    items: [
+      { label: 'Profielen', href: '/admin/profielen', icon: 'profiles' },
+      { label: 'Modules', href: '/admin/modules', icon: 'modules' },
+      { label: 'Website & blogs', href: '/admin/content', icon: 'content' },
+    ],
+  },
+  {
+    label: 'Organisatie',
+    items: [
+      { label: 'Berichten', href: '/admin/berichten', icon: 'messages', badge: '0' },
+      { label: 'Instellingen', href: '/admin/instellingen', icon: 'settings' },
+    ],
+  },
+];
+
+const isActive = (item: { href: string; exact?: boolean }) =>
+  item.exact ? currentPath === item.href : currentPath.startsWith(item.href);
+---
+
+<!doctype html>
+<html lang="nl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex, nofollow, noarchive" />
+    <meta name="theme-color" content="#fafafa" />
+    <link rel="icon" type="image/png" href="/images/logo-lelie.png" />
+    <link rel="alternate icon" href="/favicon.ico" />
+    <meta name="description" content={description} />
+    <title>{title} · MyGrowise Admin</title>
+  </head>
+  <body class="admin-body">
+    <a class="admin-skip-link" href="#admin-main">Naar de hoofdinhoud</a>
+    <div class="admin-shell">
+      <div class="admin-sidebar-scrim" data-sidebar-close></div>
+      <aside class="admin-sidebar" id="admin-sidebar" aria-label="Beheernavigatie">
+        <div class="admin-brand">
+          <a href="/admin" aria-label="MyGrowise dashboard">
+            <img class="admin-brand__mark" src="/images/logo-lelie.webp" alt="" width="382" height="289" />
+            <span><strong>MyGrowise</strong><small>Beheeromgeving</small></span>
+          </a>
+          <button class="admin-icon-button admin-sidebar__close" type="button" aria-label="Menu sluiten" data-sidebar-close>
+            <AdminIcon name="close" />
+          </button>
+        </div>
+
+        <nav class="admin-nav">
+          {navGroups.map((group) => (
+            <section class="admin-nav__group" aria-labelledby={`nav-${group.label.toLowerCase().replaceAll(' ', '-')}`}>
+              <h2 id={`nav-${group.label.toLowerCase().replaceAll(' ', '-')}`}>{group.label}</h2>
+              <ul>
+                {group.items.map((item) => (
+                  <li>
+                    <a href={item.href} class:list={{ 'is-active': isActive(item) }} aria-current={isActive(item) ? 'page' : undefined}>
+                      <AdminIcon name={item.icon} />
+                      <span>{item.label}</span>
+                      {item.badge && <small>{item.badge}</small>}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ))}
+        </nav>
+
+        <div class="admin-sidebar__footer">
+          {adminUser?.roles.includes('practitioner') && <a class="practice-switch" href="/praktijk"><AdminIcon name="calendar" /> Naar mijn praktijk</a>}
+          <a href="/" target="_blank" rel="noreferrer">
+            <AdminIcon name="external" />
+            Website bekijken
+          </a>
+          <div class="admin-user">
+            <span>VM</span>
+            <span><strong>{adminUser?.name || 'Virginie'}</strong><small>Eigenaar</small></span>
+            <form action="/api/admin/logout" method="post">
+              <button type="submit" aria-label="Afmelden" title="Afmelden"><AdminIcon name="logout" size={16} /></button>
+            </form>
+          </div>
+        </div>
+      </aside>
+
+      <div class="admin-workspace">
+        <header class="admin-topbar">
+          <div class="admin-topbar__left">
+            <button class="admin-icon-button admin-menu-button" type="button" aria-label="Menu openen" aria-controls="admin-sidebar" aria-expanded="false" data-sidebar-open>
+              <AdminIcon name="menu" />
+            </button>
+            <span class="admin-topbar__crumb">MyGrowise</span>
+            <span aria-hidden="true">/</span>
+            <strong>{title}</strong>
+          </div>
+          <div class="admin-topbar__right">
+            <span class="admin-environment"><i></i> Preview</span>
+            <a class="admin-topbar__site-link" href="/" target="_blank" rel="noreferrer">
+              <AdminIcon name="external" size={16} />
+              <span>Website</span>
+            </a>
+          </div>
+        </header>
+
+        <main id="admin-main" class="admin-main">
+          <slot />
+        </main>
+      </div>
+    </div>
+
+    <script is:inline>
+      const body = document.body;
+      const openButton = document.querySelector('[data-sidebar-open]');
+      const closeButtons = document.querySelectorAll('[data-sidebar-close]');
+      const setSidebar = (open) => {
+        body.classList.toggle('admin-menu-open', open);
+        openButton?.setAttribute('aria-expanded', String(open));
+      };
+      openButton?.addEventListener('click', () => setSidebar(true));
+      closeButtons.forEach((button) => button.addEventListener('click', () => setSidebar(false)));
+      document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape') setSidebar(false);
+      });
+    </script>
+  </body>
+</html>

@@ -1,0 +1,105 @@
+---
+import MainLayout from '../layouts/MainLayout.astro';
+---
+
+<MainLayout title="Vind je startpunt — MyGrowise" description="Verken in drie korte vragen welke volgende stap bij jou kan passen: zelfstandig inzicht of persoonlijke begeleiding.">
+  <section class="start-hero">
+    <div class="container start-hero__grid">
+      <div class="reveal">
+        <a class="back" href="/">← Terug naar MyGrowise</a>
+        <span class="eyebrow">Een rustige keuzehulp</span>
+        <h1>Je hoeft het niet al precies te weten.</h1>
+        <p class="lead">Beantwoord drie korte vragen. We helpen je kiezen tussen zelfstandig inzicht en een gesprek met een professional — zonder label of diagnose.</p>
+        <p class="start-note">Dit is een keuzehulp, geen klinische beoordeling. Bij acute nood bel je 112; bij zelfmoordgedachten kan je in België terecht bij Zelfmoordlijn 1813.</p>
+      </div>
+      <aside class="start-card" aria-label="Wat deze keuzehulp doet">
+        <span>3 vragen</span>
+        <strong>Een helder vertrekpunt</strong>
+        <p>Je antwoord blijft in je browser en wordt nergens verstuurd of bewaard.</p>
+      </aside>
+    </div>
+  </section>
+
+  <section class="section chooser-section">
+    <div class="container chooser-layout">
+      <form class="chooser" data-chooser>
+        <div class="chooser-progress" aria-hidden="true"><i></i></div>
+        <fieldset data-question="0">
+          <legend><span>01</span>Wat heb je vandaag het meest nodig?</legend>
+          <label><input type="radio" name="need" value="insight" required /><span><b>Rustig zelf inzicht krijgen</b><small>Ik wil eerst beter begrijpen wat er gebeurt.</small></span></label>
+          <label><input type="radio" name="need" value="talk" /><span><b>Mijn verhaal met iemand bespreken</b><small>Ik wil graag samen ordenen en afstemmen.</small></span></label>
+        </fieldset>
+        <fieldset data-question="1" hidden>
+          <legend><span>02</span>Wat voelt op dit moment haalbaar?</legend>
+          <label><input type="radio" name="pace" value="own" required /><span><b>Ik wil op mijn eigen tempo starten</b><small>Ik heb vooral nood aan ruimte en een eerste houvast.</small></span></label>
+          <label><input type="radio" name="pace" value="together" /><span><b>Ik wil liever niet alleen zoeken</b><small>Een eerste gesprek zou nu beter passen.</small></span></label>
+        </fieldset>
+        <fieldset data-question="2" hidden>
+          <legend><span>03</span>Waar past je vraag het best bij?</legend>
+          <label><input type="radio" name="focus" value="stress" required /><span><b>Stress, emoties of draagkracht</b><small>Ik wil begrijpen hoe spanning en emoties bij mij doorwerken.</small></span></label>
+          <label><input type="radio" name="focus" value="other" /><span><b>Een andere of bredere hulpvraag</b><small>Ik wil eerst bekijken welke professional of vorm van begeleiding past.</small></span></label>
+        </fieldset>
+        <div class="chooser-actions"><button class="button button-light" type="button" data-back hidden>← Vorige vraag</button><button class="button button-primary" type="button" data-next>Volgende vraag <span aria-hidden="true">→</span></button></div>
+      </form>
+
+      <aside class="result" data-result hidden aria-live="polite" tabindex="-1">
+        <div class="result-topline"><span>Jouw route</span><span data-result-route></span></div>
+        <div class="result-orbit" aria-hidden="true"><i></i><b>→</b></div>
+        <h2 data-result-title></h2>
+        <p class="lead" data-result-copy></p>
+        <div class="result-details"><span>Waarom dit kan passen</span><ul data-result-points></ul></div>
+        <div class="result-actions"><a class="button button-light" data-result-link href="/"></a><button class="restart" type="button" data-restart>Andere antwoorden kiezen</button></div>
+      </aside>
+    </div>
+  </section>
+</MainLayout>
+
+<style>
+  .start-hero{padding-block:clamp(3rem,8vw,7rem);background:var(--cream)}.start-hero__grid{display:grid;gap:2rem;align-items:end}.back{display:inline-block;margin-bottom:2.5rem;color:var(--muted);font-size:.78rem;font-weight:700;text-decoration:none}.start-hero h1{max-width:11ch;margin-bottom:1.3rem;font-size:clamp(3.5rem,8vw,7.2rem);line-height:.9}.start-note{max-width:65ch;margin:1.6rem 0 0;color:var(--muted);font-size:.75rem;line-height:1.65}.start-card{display:grid;gap:.8rem;padding:2rem;border-radius:var(--radius-lg);background:var(--ink);color:white}.start-card>span{color:var(--yellow);font-size:.7rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase}.start-card strong{font-family:'DM Serif Display',Georgia,serif;font-size:2rem;font-weight:400}.start-card p{margin:0;color:rgba(255,255,255,.7);font-size:.85rem;line-height:1.6}.chooser-layout{display:grid;gap:2rem;align-items:start}.chooser{padding:clamp(1.4rem,4vw,3rem);border:1px solid var(--line);border-radius:var(--radius-lg);background:var(--white)}.chooser-progress{height:.3rem;margin-bottom:2.5rem;border-radius:999px;background:var(--cream)}.chooser-progress i{display:block;width:33.333%;height:100%;border-radius:inherit;background:var(--pink);transition:width 220ms ease}.chooser fieldset{margin:0;padding:0;border:0}.chooser legend{max-width:22ch;margin-bottom:1.5rem;color:var(--ink-deep);font-family:'DM Serif Display',Georgia,serif;font-size:clamp(2rem,4vw,3.4rem);line-height:1}.chooser legend span{display:block;margin-bottom:1rem;color:var(--pink);font-family:'DM Sans',sans-serif;font-size:.7rem;font-weight:700;letter-spacing:.12em}.chooser label{display:block;margin-bottom:.8rem;cursor:pointer}.chooser input{position:absolute;opacity:0}.chooser label span{display:block;padding:1.2rem 1.25rem;border:1px solid var(--line);border-radius:var(--radius-sm);transition:border-color 180ms ease,background 180ms ease}.chooser label:hover span{border-color:var(--ink)}.chooser input:checked+span{border-color:var(--ink);background:var(--ink);color:white}.chooser label b,.chooser label small{display:block}.chooser label b{margin-bottom:.35rem;font-size:.95rem}.chooser label small{color:var(--muted);font-size:.8rem;line-height:1.5}.chooser input:checked+span small{color:rgba(255,255,255,.72)}.chooser-actions{display:flex;justify-content:space-between;gap:1rem;margin-top:2rem}.chooser-layout:has(.chooser[hidden]){grid-template-columns:minmax(0,48rem);justify-content:center}.result{position:relative;overflow:hidden;padding:clamp(1.7rem,4vw,3.5rem);border-radius:var(--radius-lg);background:var(--ink);color:white;box-shadow:var(--shadow)}.result-topline{position:relative;z-index:1;display:flex;align-items:center;gap:.7rem;margin-bottom:2.2rem;color:var(--yellow);font-size:.7rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase}.result-topline span+span{display:inline-flex;align-items:center;gap:.45rem;color:rgba(255,255,255,.65);letter-spacing:.08em}.result-topline span+span::before{width:.25rem;height:.25rem;border-radius:50%;background:var(--pink);content:''}.result-orbit{position:absolute;top:-4.2rem;right:-3.4rem;width:13rem;height:13rem;border:1px solid rgba(255,255,255,.2);border-radius:50%}.result-orbit i{position:absolute;inset:1.3rem;border:1px solid rgba(255,255,255,.12);border-radius:inherit}.result-orbit b{position:absolute;bottom:1.9rem;left:1.8rem;display:grid;width:2.9rem;height:2.9rem;place-content:center;border-radius:50%;background:var(--pink);font-size:1.2rem}.result h2{position:relative;z-index:1;max-width:11ch;margin-bottom:1rem;font-size:clamp(2.65rem,5.2vw,4.7rem);line-height:.94}.result .lead{position:relative;z-index:1;max-width:48ch;color:rgba(255,255,255,.74);font-size:clamp(1rem,1.8vw,1.18rem);line-height:1.65}.result-details{position:relative;z-index:1;margin:2.2rem 0 1.8rem;padding:1.2rem 0;border-block:1px solid rgba(255,255,255,.18)}.result-details>span{display:block;margin-bottom:.8rem;color:var(--yellow);font-size:.68rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase}.result ul{display:grid;gap:.55rem;margin:0;padding:0;list-style:none}.result li{color:rgba(255,255,255,.88);font-size:.88rem;line-height:1.5}.result li::before{content:'✓';margin-right:.65rem;color:var(--pink);font-weight:700}.result-actions{position:relative;z-index:1;display:flex;flex-wrap:wrap;align-items:center;gap:1.2rem}.result .button{border-color:white;background:white;color:var(--ink);box-shadow:none}.restart{border:0;background:transparent;color:rgba(255,255,255,.65);font-size:.78rem;font-weight:700;text-decoration:underline;cursor:pointer;text-underline-offset:3px}@media(min-width:900px){.start-hero__grid{grid-template-columns:1.2fr .8fr}.chooser-layout{grid-template-columns:1.1fr .9fr}.result{position:sticky;top:6.5rem}.chooser-layout:has(.chooser[hidden]) .result{position:relative;top:auto}}
+</style>
+
+<script>
+  const chooser = document.querySelector('[data-chooser]');
+  if (chooser instanceof HTMLFormElement) {
+    const questions = [...chooser.querySelectorAll('fieldset')];
+    const progress = chooser.querySelector('.chooser-progress i');
+    const back = chooser.querySelector('[data-back]');
+    const next = chooser.querySelector('[data-next]');
+    const result = document.querySelector('[data-result]');
+    const route = document.querySelector('[data-result-route]');
+    const title = document.querySelector('[data-result-title]');
+    const copy = document.querySelector('[data-result-copy]');
+    const points = document.querySelector('[data-result-points]');
+    const link = document.querySelector('[data-result-link]');
+    let step = 0;
+
+    const showStep = () => {
+      questions.forEach((question, index) => question.hidden = index !== step);
+      if (progress instanceof HTMLElement) progress.style.width = `${((step + 1) / questions.length) * 100}%`;
+      if (back instanceof HTMLButtonElement) back.hidden = step === 0;
+      if (next instanceof HTMLButtonElement) next.textContent = step === questions.length - 1 ? 'Bekijk mijn startpunt' : 'Volgende vraag →';
+    };
+    const selection = (name) => chooser.querySelector(`input[name="${name}"]:checked`)?.value;
+    const renderResult = () => {
+      const need = selection('need'); const pace = selection('pace'); const focus = selection('focus');
+      const guidance = need === 'talk' || pace === 'together' || focus === 'other'
+        ? { route: 'Samen met iemand', title: 'Je hoeft dit niet alleen te ordenen.', copy: 'Een gesprek met een professional lijkt nu een passende eerste stap. Kies rustig wie aansluit bij jouw vraag en tempo.', link: '/begeleiding', label: 'Bekijk begeleiding', points: ['Je kiest zelf welke professional je aanspreekt.', 'Een tijdstip kiezen is eerst een aanvraag.', 'Je hoeft je hulpvraag niet perfect te kunnen uitleggen.'] }
+        : { route: 'Op je eigen tempo', title: 'Eerst ruimte om te begrijpen.', copy: 'Een persoonlijk profiel kan nu een passend vertrekpunt zijn als je zicht wil krijgen op stress, emoties en draagkracht.', link: '/profielen/stress-en-emotieprofiel', label: 'Bekijk het profiel', points: ['Je verkent rustig of dit profiel bij je past.', 'Een profiel is geen diagnose.', 'Je kan later altijd begeleiding toevoegen.'] };
+      if (route) route.textContent = guidance.route;
+      if (title) title.textContent = guidance.title;
+      if (copy) copy.textContent = guidance.copy;
+      if (points) points.replaceChildren(...guidance.points.map((item) => { const node = document.createElement('li'); node.textContent = item; return node; }));
+      if (link instanceof HTMLAnchorElement) { link.href = guidance.link; link.textContent = guidance.label; }
+      chooser.hidden = true;
+      if (result instanceof HTMLElement) { result.hidden = false; result.focus?.(); }
+    };
+    next?.addEventListener('click', () => {
+      const answered = questions[step]?.querySelector('input:checked');
+      if (!answered) { const first = questions[step]?.querySelector('input'); if (first instanceof HTMLInputElement) first.focus(); return; }
+      if (step === questions.length - 1) renderResult(); else { step += 1; showStep(); }
+    });
+    back?.addEventListener('click', () => { if (step > 0) { step -= 1; showStep(); } });
+    document.querySelector('[data-restart]')?.addEventListener('click', () => { chooser.reset(); step = 0; if (result instanceof HTMLElement) result.hidden = true; chooser.hidden = false; showStep(); });
+    showStep();
+  }
+</script>

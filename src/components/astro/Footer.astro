@@ -1,0 +1,63 @@
+---
+const year = new Date().getFullYear();
+---
+
+<footer class="site-footer">
+  <div class="container footer-main">
+    <div class="footer-intro">
+      <span class="footer-kicker">Een volgende stap die bij jou past</span>
+      <h2>Begrijpen mag ook<br /><em>het begin zijn.</em></h2>
+      <div class="footer-actions">
+        <a class="button footer-button" href="/startpunt">Vind je startpunt</a>
+        <a class="button footer-button ghost" href="/begeleiding">Vind begeleiding</a>
+      </div>
+    </div>
+    <div class="footer-nav">
+      <div>
+        <strong>Aanbod</strong>
+        <a href="/profielen">Profielen</a>
+        <a href="/modules">Online modules</a>
+        <a href="/community">Community</a>
+        <a href="/begeleiding">Begeleiding</a>
+      </div>
+      <div>
+        <strong>MyGrowise</strong>
+        <a href="/over-ons">Over ons</a>
+        <a href="/contact">Contact</a>
+        <a href="/prijzen">Prijzen</a>
+      </div>
+      <div>
+        <strong>Praktisch</strong>
+        <a href="mailto:info@mygrowise.be">info@mygrowise.be</a>
+        <a href="/privacy">Privacy</a>
+        <a href="/voorwaarden">Voorwaarden</a>
+      </div>
+    </div>
+  </div>
+  <div class="container footer-bottom">
+    <a class="footer-wordmark" href="/" aria-label="MyGrowise home"><img class="footer-mark" src="/images/logo-lelie.webp" alt="" width="45" height="34" /><span>MyGrowise</span></a>
+    <p>© {year} MyGrowise. Geen crisisdienst — bij acuut gevaar bel 112.</p>
+  </div>
+</footer>
+
+<style>
+  .site-footer { overflow: hidden; background: var(--ink-deep); color: white; }
+  .footer-main { display: grid; gap: 4rem; padding-block: clamp(4rem, 9vw, 8rem); }
+  .footer-kicker { display: block; margin-bottom: 1.2rem; color: var(--yellow); font-size: 0.75rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; }
+  .footer-intro h2 { margin-bottom: 2rem; font-size: clamp(3rem, 7vw, 6.5rem); line-height: 0.92; }
+  .footer-intro h2 em { color: var(--pink); font-weight: 400; }
+  .footer-actions { display: flex; flex-wrap: wrap; gap: 0.8rem; }
+  .footer-button { border-color: white; background: white; color: var(--ink-deep); }
+  .footer-button.ghost { background: transparent; color: white; }
+  .footer-nav { display: grid; grid-template-columns: repeat(2, 1fr); gap: 2.5rem 1rem; }
+  .footer-nav div { display: flex; flex-direction: column; align-items: flex-start; gap: 0.75rem; }
+  .footer-nav strong { margin-bottom: 0.35rem; color: var(--pink); font-size: 0.75rem; letter-spacing: 0.1em; text-transform: uppercase; }
+  .footer-nav a { color: rgba(255,255,255,.72); font-size: 0.9rem; text-decoration: none; }
+  .footer-nav a:hover { color: white; text-decoration: underline; text-underline-offset: 4px; }
+  .footer-bottom { display: flex; flex-direction: column; gap: 1.2rem; justify-content: space-between; padding-block: 1.5rem; border-top: 1px solid rgba(255,255,255,.15); }
+  .footer-wordmark { display: inline-flex; align-items: center; gap: .7rem; font-family: 'DM Serif Display', Georgia, serif; font-size: 1.6rem; text-decoration: none; }
+  .footer-mark { display: block; width: 2.8rem; max-width: 2.8rem; height: auto; flex: 0 0 2.8rem; object-fit: contain; }
+  .footer-bottom p { margin: 0; color: rgba(255,255,255,.55); font-size: 0.72rem; line-height: 1.5; }
+  @media (min-width: 700px) { .footer-nav { grid-template-columns: repeat(3, 1fr); } .footer-bottom { flex-direction: row; align-items: center; } }
+  @media (min-width: 960px) { .footer-main { grid-template-columns: 1.35fr .9fr; align-items: end; } }
+</style>

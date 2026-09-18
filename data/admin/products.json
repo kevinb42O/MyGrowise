@@ -1,0 +1,28 @@
+[
+  {
+    "id": "prod_stress_emotion",
+    "title": "Stress- en emotieprofiel",
+    "slug": "stress-en-emotieprofiel",
+    "type": "profile",
+    "status": "published",
+    "priceCents": 27500,
+    "currency": "EUR",
+    "summary": "Krijg zicht op hoe je reageert onder druk, waar je draagkracht ligt en welke patronen je energie kosten.",
+    "createdAt": "2026-08-24T08:00:00.000Z",
+    "updatedAt": "2026-08-24T08:52:36.543Z",
+    "updatedBy": "virginie@mygrowise.com"
+  },
+  {
+    "id": "prod_attachment_relation",
+    "title": "Hechting- en relatieprofiel",
+    "slug": "hechting-en-relatieprofiel",
+    "type": "profile",
+    "status": "draft",
+    "priceCents": null,
+    "currency": "EUR",
+    "summary": "Verken hoe je verbinding maakt, wat je nodig hebt in relaties en welke automatische patronen terugkomen.",
+    "createdAt": "2026-08-24T08:00:00.000Z",
+    "updatedAt": "2026-08-24T08:00:00.000Z",
+    "updatedBy": "virginie@mygrowise.com"
+  }
+]

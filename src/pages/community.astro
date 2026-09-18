@@ -1,0 +1,28 @@
+---
+import MainLayout from '../layouts/MainLayout.astro';
+
+const qualities = [
+  ['Reflecties & reminders', 'Korte inzichten en vragen die aansluiten bij je profiel, modules of begeleiding. Niet om bij te houden, wel om even bij stil te staan.'],
+  ['Ruimte voor uitwisseling', 'Deel een vraag of ervaring, of lees rustig mee. Actief deelnemen is nooit een verplichting.'],
+  ['Extra materiaal & tips', 'Aanvullende audio’s, tips en korte materialen rond stress, regulatie en zelfinzicht.'],
+];
+---
+
+<MainLayout title="De MyGrowise community — rustige ondersteuning" description="Een besloten online community voor herkenning, ondersteuning en psychologisch inzicht, op jouw tempo.">
+  <section class="community-hero">
+    <div class="container community-hero__grid">
+      <div class="reveal"><span class="eyebrow">De MyGrowise community</span><h1>Verbonden blijven, zonder dat het te veel wordt.</h1><p class="lead">Een besloten online plek voor mensen die met een profiel, modules of begeleiding werken. Je kan vertragen, lezen, herkennen en af en toe delen—helemaal op jouw manier.</p><a class="button button-primary" href="/profielen">Start met een profiel <span aria-hidden="true">→</span></a></div>
+      <aside class="community-card"><span>Een rustige plek</span><strong>Geen sociaal netwerk. Wel nabijheid die past.</strong><p>Je hoeft niets te delen. Aanwezig zijn, meelezen of af en toe reageren is voldoende.</p></aside>
+    </div>
+  </section>
+
+  <section class="section"><div class="container split"><div><span class="eyebrow">Wat je er vindt</span><h2 class="heading-lg">Ondersteuning tussen inzichten, modules en sessies door.</h2></div><div class="qualities">{qualities.map(([title, copy], index) => <article><span>{String(index + 1).padStart(2, '0')}</span><h3>{title}</h3><p>{copy}</p></article>)}</div></div></section>
+
+  <section class="steps section"><div class="container"><div class="steps-intro"><span class="eyebrow">Hoe je deelneemt</span><h2 class="heading-lg">Je hoeft er niets voor te presteren.</h2></div><ol><li><span>01</span><div><h3>Toegang na jouw profiel</h3><p>Na het afnemen van een persoonlijkheidsprofiel ontvang je een login voor de afgeschermde omgeving binnen MyGrowise.</p></div></li><li><span>02</span><div><h3>Neem deel op jouw manier</h3><p>Je kiest zelf hoe en wanneer je aansluit: iets delen, een vraag stellen, reageren of gewoon rustig meelezen.</p></div></li><li><span>03</span><div><h3>Blijf aangesloten zolang het helpt</h3><p>De community is een zachte ondersteuning naast je profiel, modules of begeleiding—zonder vaste verwachtingen.</p></div></li></ol></div></section>
+
+  <section class="section-sm community-cta"><div class="container"><span class="eyebrow">Veilig en mild</span><h2 class="heading-md">Professioneel opgevolgd, zorgvuldig afgestemd.</h2><p>De community is enkel toegankelijk voor mensen binnen MyGrowise. Zo blijft er rust, focus en een gedeeld psychologisch kader.</p></div></section>
+</MainLayout>
+
+<style>
+  .community-hero{padding-block:clamp(4rem,9vw,8rem);background:var(--pink-soft)}.community-hero__grid{display:grid;gap:2rem;align-items:end}.community-hero h1{max-width:10ch;margin-bottom:1.4rem;font-size:clamp(3.4rem,8vw,7.2rem);line-height:.9}.community-card{display:grid;gap:1rem;padding:clamp(1.8rem,4vw,3.2rem);border-radius:var(--radius-lg);background:var(--ink);color:white}.community-card span{color:var(--yellow);font-size:.7rem;font-weight:700;letter-spacing:.13em;text-transform:uppercase}.community-card strong{max-width:14ch;font-family:'DM Serif Display',Georgia,serif;font-size:clamp(2rem,3vw,2.8rem);font-weight:400;line-height:1}.community-card p{max-width:40ch;margin:0;color:rgba(255,255,255,.72);font-size:.88rem;line-height:1.65}.split{display:grid;gap:3rem}.qualities{border-top:1px solid var(--line)}.qualities article{display:grid;grid-template-columns:2.4rem 1fr;gap:.7rem;padding:1.4rem 0;border-bottom:1px solid var(--line)}.qualities span{color:var(--pink);font-size:.72rem;font-weight:700}.qualities h3{margin:0 0 .45rem;font-family:'DM Sans',sans-serif;font-size:1rem;font-weight:700;letter-spacing:0}.qualities p{grid-column:2;margin:0;color:var(--muted);font-size:.9rem;line-height:1.65}.steps{background:var(--cream)}.steps-intro{margin-bottom:3rem}.steps-intro h2{margin:0}.steps ol{margin:0;padding:0;border-top:1px solid var(--line);list-style:none}.steps li{display:grid;grid-template-columns:3rem 1fr;gap:1rem;padding:1.5rem 0;border-bottom:1px solid var(--line)}.steps li>span{color:var(--pink);font-size:.72rem;font-weight:700}.steps h3{margin:0 0 .4rem;font-family:'DM Sans',sans-serif;font-size:1rem;font-weight:700;letter-spacing:0}.steps p{max-width:65ch;margin:0;color:var(--muted);font-size:.9rem;line-height:1.65}.community-cta{background:var(--yellow-soft)}.community-cta h2{margin-bottom:.8rem}.community-cta p{max-width:55ch;margin:0;color:var(--muted);line-height:1.65}@media(min-width:900px){.community-hero__grid{grid-template-columns:1.2fr .8fr}.split{grid-template-columns:.85fr 1.15fr}.steps>div{display:grid;grid-template-columns:.85fr 1.15fr;gap:3rem}.steps-intro{margin:0}.steps ol{margin:0}}
+</style>

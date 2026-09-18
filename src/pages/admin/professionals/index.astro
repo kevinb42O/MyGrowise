@@ -1,0 +1,11 @@
+---
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+import AdminIcon from '../../../components/admin/AdminIcon.astro';
+import { listPractitionerAccounts } from '../../../lib/practiceDb';
+const accounts=listPractitionerAccounts();
+const active=accounts.filter((account)=>account.active).length;
+const schedules=accounts.filter((account)=>account.availability_days>0).length;
+---
+<AdminLayout title="Professionals" description="Beheer praktijktoegang en beschikbaarheid"><div class="admin-page"><section class="admin-page-heading"><div><p class="admin-eyebrow">Team & toegang</p><h1>Professionals</h1><p>Virginie beheert de organisatie; iedere professional werkt uitsluitend binnen het eigen praktijkprofiel.</p></div><div class="admin-page-actions"><button class="admin-button admin-button--primary" type="button" aria-disabled="true" title="Uitnodigingsflow volgt"><AdminIcon name="plus" size={16}/> Professional uitnodigen</button></div></section>
+<section class="admin-catalog-stats"><article><span>Accounts</span><strong>{accounts.length}</strong></article><article><span>Actief</span><strong>{active}</strong></article><article><span>Schema ingesteld</span><strong>{schedules}</strong></article><article><span>Open aanvragen</span><strong>{accounts.reduce((sum,a)=>sum+a.pending_bookings,0)}</strong></article></section>
+<section class="admin-panel"><header class="admin-panel__header"><div><h2>Praktijkaccounts</h2><p>Toegang is server-side begrensd op het eigen professional-ID</p></div><span class="admin-state admin-state--ready">3 beveiligde accounts</span></header><div class="practice-team-list">{accounts.map((account)=><article><span class="practice-team-avatar">{account.name.charAt(0)}</span><div class="practice-team-person"><strong>{account.name}</strong><small>{account.email}</small></div><div><small>Rol</small><strong>{account.slug==='virginie'?'Superadmin + professional':'Professional'}</strong></div><div><small>Werkdagen</small><strong>{account.availability_days}</strong></div><div><small>Laatste login</small><strong>{account.last_login_at?new Intl.DateTimeFormat('nl-BE',{dateStyle:'medium',timeStyle:'short'}).format(new Date(account.last_login_at)):'Nog nooit'}</strong></div><span class="admin-product-status admin-product-status--published"><i></i>Actief</span></article>)}</div></section></div></AdminLayout>

@@ -1,0 +1,73 @@
+---
+import AccountLayout from '../../layouts/AccountLayout.astro';
+import AccountDashboard from '../../components/account/AccountDashboard';
+import { listCustomerBookings, listCustomerEntitlements, listCustomerTransactions } from '../../lib/practiceDb';
+
+const user = Astro.locals.currentUser!;
+const now = Date.now();
+const displayDate = (value: string, withTime = true) => new Intl.DateTimeFormat('nl-BE', {
+  timeZone: 'Europe/Brussels',
+  weekday: withTime ? 'long' : undefined,
+  day: 'numeric',
+  month: 'long',
+  ...(withTime ? { hour: '2-digit', minute: '2-digit' } : {}),
+}).format(new Date(value));
+const shortDate = (value: string) => new Intl.DateTimeFormat('nl-BE', { day: 'numeric', month: 'short', year: 'numeric' }).format(new Date(value));
+const appointments = listCustomerBookings(user.sub);
+const entitlements = listCustomerEntitlements(user.sub);
+const transactions = listCustomerTransactions(user.sub);
+const upcoming = appointments.filter((booking) => ['pending', 'confirmed'].includes(booking.status) && new Date(booking.startsAt).getTime() > now).sort((a, b) => a.startsAt.localeCompare(b.startsAt))[0];
+const demoMode = import.meta.env.DEV && Astro.url.searchParams.get('demo') === '1';
+const demoStartsAt = new Date(now + 1000 * 60 * 60 * 24 * 6).toISOString();
+const displayUpcoming = upcoming || (demoMode ? { id: 'demo-appointment', practitionerName: 'Margot', practitionerSlug: 'margot', startsAt: demoStartsAt, endsAt: demoStartsAt, status: 'confirmed' } : undefined);
+const displayEntitlements = entitlements.length ? entitlements : demoMode ? [{ id: 'demo-library', productTitle: 'Stress- en emotieprofiel', productSlug: 'stress-en-emotieprofiel', productType: 'Profiel', status: 'active', grantedAt: new Date(now - 1000 * 60 * 60 * 24 * 4).toISOString() }] : [];
+const status: Record<string, string> = { pending: 'Aanvraag in behandeling', confirmed: 'Bevestigd' };
+
+const primary = displayUpcoming ? {
+  eyebrow: 'Je volgende afspraak',
+  title: `Je afspraak met ${displayUpcoming.practitionerName} staat klaar.`,
+  description: `${displayDate(displayUpcoming.startsAt)} · online begeleiding. ${displayUpcoming.status === 'pending' ? 'Je aanvraag wacht nog op bevestiging.' : 'Alles wat je praktisch nodig hebt, vind je hier terug.'}`,
+  href: '/account/begeleiding',
+  label: 'Bekijk afspraak',
+  status: status[displayUpcoming.status],
+  meta: 'Online · jouw tempo',
+  kind: 'appointment' as const,
+} : displayEntitlements[0] ? {
+  eyebrow: 'Klaar wanneer jij dat bent',
+  title: `${displayEntitlements[0].productTitle} staat voor je klaar.`,
+  description: 'Je aankoop blijft veilig in je persoonlijke bibliotheek beschikbaar. Ga verder wanneer het goed voelt.',
+  href: '/account/bibliotheek',
+  label: 'Open je bibliotheek',
+  status: 'Altijd beschikbaar',
+  meta: `Sinds ${shortDate(displayEntitlements[0].grantedAt)}`,
+  kind: 'library' as const,
+} : {
+  eyebrow: 'Welkom bij MyGrowise',
+  title: 'Kleine stappen mogen ook een begin zijn.',
+  description: 'Je aankopen en afspraken verschijnen hier vanzelf. Intussen kan je rustig verkennen wat bij je past.',
+  href: '/startpunt',
+  label: 'Vind je startpunt',
+  meta: 'Geen haast, wel helderheid',
+  kind: 'welcome' as const,
+};
+const secondary = displayUpcoming && displayEntitlements[0] ? {
+  label: 'Ook voor jou klaar',
+  title: displayEntitlements[0].productTitle,
+  description: 'Je persoonlijke bibliotheek blijft beschikbaar op jouw tempo.',
+  href: '/account/bibliotheek',
+} : undefined;
+const summaries = [
+  { label: 'Bibliotheek', value: `${displayEntitlements.length} ${displayEntitlements.length === 1 ? 'item' : 'items'}`, detail: displayEntitlements.length ? 'Klaar om verder te gaan.' : 'Alles wat je kiest, vind je hier terug.', href: '/account/bibliotheek', icon: 'library' as const, tone: 'rose' as const },
+  { label: 'Begeleiding', value: displayUpcoming ? 'Staat klaar' : appointments.length ? `${appointments.length} afspraken` : 'Nog open', detail: displayUpcoming ? `${displayUpcoming.practitionerName} · ${shortDate(displayUpcoming.startsAt)}` : 'Plan wanneer dat voor jou past.', href: '/account/begeleiding', icon: 'care' as const, tone: 'sun' as const },
+  { label: 'Transacties', value: `${transactions.length} ${transactions.length === 1 ? 'aankoop' : 'aankopen'}`, detail: transactions.length ? 'Status en overzicht op één plek.' : 'Een helder overzicht, zodra je iets kiest.', href: '/account/transacties', icon: 'receipt' as const, tone: 'mint' as const },
+];
+const activity = [
+  ...appointments.map((booking) => ({ occurredAt: booking.startsAt, label: booking.status === 'confirmed' ? 'Afspraak bevestigd' : booking.status === 'pending' ? 'Afspraak aangevraagd' : 'Afspraak in je overzicht', title: `${booking.practitionerName}`, detail: `${shortDate(booking.startsAt)} · praktische afspraakgegevens`, time: shortDate(booking.startsAt), tone: booking.status === 'confirmed' ? 'mint' as const : 'sun' as const })),
+  ...entitlements.map((item) => ({ occurredAt: item.grantedAt, label: 'Toegevoegd aan je bibliotheek', title: item.productTitle, detail: 'Veilig beschikbaar in jouw persoonlijke bibliotheek.', time: shortDate(item.grantedAt), tone: 'rose' as const })),
+  ...transactions.map((transaction) => ({ occurredAt: transaction.createdAt, label: 'Transactie bijgewerkt', title: 'MyGrowise bestelling', detail: 'Bekijk betaalstatus en bedrag in je transacties.', time: shortDate(transaction.createdAt), tone: 'mint' as const })),
+].sort((a, b) => b.occurredAt.localeCompare(a.occurredAt)).slice(0, 3);
+const dayLabel = new Intl.DateTimeFormat('nl-BE', { weekday: 'long', day: 'numeric', month: 'long' }).format(new Date());
+---
+<AccountLayout title="Vandaag">
+  <AccountDashboard client:load firstName={user.name.split(' ')[0]} dayLabel={dayLabel} primary={primary} secondary={secondary} summaries={summaries} activity={activity} hasActivity={activity.length > 0} />
+</AccountLayout>

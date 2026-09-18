@@ -1,0 +1,109 @@
+---
+import Header from '../components/astro/Header.astro';
+import Footer from '../components/astro/Footer.astro';
+import '../styles/global.css';
+
+interface Props {
+  title?: string;
+  description?: string;
+  activeNav?: string;
+  noindex?: boolean;
+}
+
+const {
+  title = 'MyGrowise — inzicht dat je verder helpt',
+  description = 'Psychologisch inzicht en online begeleiding bij stress en emotionele belasting. Zelfstandig of samen met een professional.',
+  activeNav = '',
+  noindex = false,
+} = Astro.props;
+
+const canonical = new URL(Astro.url.pathname, Astro.site ?? 'https://www.mygrowise.be');
+---
+
+<!doctype html>
+<html lang="nl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#173d35" />
+    <meta name="generator" content={Astro.generator} />
+    <link rel="icon" type="image/png" href="/images/logo-lelie.png" />
+    <link rel="canonical" href={canonical} />
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    <meta name="robots" content={noindex ? 'noindex, nofollow' : 'index, follow'} />
+    <meta property="og:type" content="website" />
+    <meta property="og:locale" content="nl_BE" />
+    <meta property="og:site_name" content="MyGrowise" />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:image" content="/images/editorial/mygrowise-74.jpg" />
+  </head>
+  <body>
+    <a class="skip-link" href="#inhoud">Ga naar de inhoud</a>
+    <Header activeNav={activeNav} />
+    <main id="inhoud"><slot /></main>
+    <Footer />
+    <script is:inline>
+      (() => {
+        const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+        const path = window.location.pathname;
+        if (reduceMotion.matches || path === '/' || path.startsWith('/account')) return;
+
+        document.documentElement.classList.add('site-motion-enabled');
+        const targets = [];
+        const addMotion = (element, index = 0, kind = 'content') => {
+          if (!element || element.classList.contains('reveal') || element.dataset.siteMotion) return;
+          element.dataset.siteMotion = kind;
+          element.style.setProperty('--site-motion-delay', `${Math.min(index * 85, 340)}ms`);
+          targets.push(element);
+        };
+
+        document.querySelectorAll('#inhoud > section').forEach((section) => {
+          const container = section.querySelector(':scope > .container');
+          if (container && !container.querySelector(':scope > .reveal')) addMotion(container, 0, 'section');
+
+          const cards = section.querySelectorAll(':scope .product-grid > *, :scope .pricing > *, :scope .value-grid > *, :scope .theme-grid > *, :scope .professional-list > *, :scope .qualities > *, :scope .steps > *, :scope .module-list > *, :scope .benefits > *, :scope .process li, :scope .principles-grid > *');
+          cards.forEach((card, index) => addMotion(card, index + 1, 'card'));
+
+          const media = section.querySelectorAll(':scope .module-image, :scope .product-image, :scope .guide-image, :scope .portrait, :scope .fit-image, :scope .founder-image, :scope .image, :scope .product-photo, :scope .booking-person > img');
+          media.forEach((item) => item.classList.add('site-motion-media'));
+        });
+
+        // Parallax is reserved for larger editorial photographs, never portraits or functional UI.
+        const parallaxMedia = [...document.querySelectorAll('#inhoud .module-image, #inhoud .product-image, #inhoud .guide-image, #inhoud .fit-image, #inhoud .founder-image')]
+          .filter((element) => element.querySelector('img'));
+        if (window.matchMedia('(hover: hover) and (pointer: fine)').matches && parallaxMedia.length) {
+          let ticking = false;
+          const updateParallax = () => {
+            const viewportCenter = window.innerHeight / 2;
+            parallaxMedia.forEach((element) => {
+              const rect = element.getBoundingClientRect();
+              const distance = Math.max(-1, Math.min(1, (viewportCenter - (rect.top + rect.height / 2)) / window.innerHeight));
+              element.style.setProperty('--photo-parallax-y', `${(distance * 10).toFixed(2)}px`);
+            });
+            ticking = false;
+          };
+          const requestParallax = () => {
+            if (ticking) return;
+            ticking = true;
+            requestAnimationFrame(updateParallax);
+          };
+          parallaxMedia.forEach((element) => element.dataset.photoParallax = '');
+          window.addEventListener('scroll', requestParallax, { passive: true });
+          window.addEventListener('resize', requestParallax, { passive: true });
+          requestParallax();
+        }
+
+        const observer = new IntersectionObserver((entries) => {
+          entries.forEach((entry) => {
+            if (!entry.isIntersecting) return;
+            entry.target.classList.add('is-motion-visible');
+            observer.unobserve(entry.target);
+          });
+        }, { threshold: .12, rootMargin: '0px 0px -7% 0px' });
+        targets.forEach((target) => observer.observe(target));
+      })();
+    </script>
+  </body>
+</html>

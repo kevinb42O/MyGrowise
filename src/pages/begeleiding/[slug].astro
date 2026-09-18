@@ -1,0 +1,144 @@
+---
+import MainLayout from '../../layouts/MainLayout.astro';
+import { practitioners } from '../../content/site';
+import { getAvailabilityRules, getBookableSlots, getPractitionerBySlug } from '../../lib/practiceStore';
+import { getPractitionerProfile } from '../../lib/practiceDb';
+
+const person = practitioners.find((item) => item.slug === Astro.params.slug);
+const practitioner = getPractitionerBySlug(Astro.params.slug || '');
+if (!person || !practitioner) return Astro.redirect('/begeleiding');
+const publicProfile = getPractitionerProfile(practitioner.id);
+if (!publicProfile) return Astro.redirect('/begeleiding');
+const slots = getBookableSlots(practitioner.id, publicProfile.bookingHorizonDays);
+const requested = Astro.url.searchParams.get('requested') === '1';
+const unavailable = Astro.url.searchParams.get('unavailable') === '1';
+const error = Astro.url.searchParams.get('error') === '1';
+const zoneParts = (date: Date) => Object.fromEntries(new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Brussels', year: 'numeric', month: '2-digit', day: '2-digit', weekday: 'short' }).formatToParts(date).filter((part) => part.type !== 'literal').map((part) => [part.type, part.value]));
+const weekdayNumber: Record<string, number> = { Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6, Sun: 7 };
+const rulesByDay = Map.groupBy(getAvailabilityRules(practitioner.id), (rule) => rule.weekday);
+const slotsByDate = Map.groupBy(slots, (slot) => {
+  const parts = zoneParts(new Date(slot.startsAt));
+  return `${parts.year}-${parts.month}-${parts.day}`;
+});
+const minutesBetween = (start: string, end: string) => { const [sh, sm] = start.split(':').map(Number); const [eh, em] = end.split(':').map(Number); return (eh * 60 + em) - (sh * 60 + sm); };
+const nowParts = zoneParts(new Date());
+const today = `${nowParts.year}-${nowParts.month}-${nowParts.day}`;
+const bookingEndParts = zoneParts(new Date(Date.now() + (publicProfile.bookingHorizonDays - 1) * 86400000 + 12 * 3600000));
+const bookingEnd = `${bookingEndParts.year}-${bookingEndParts.month}-${bookingEndParts.day}`;
+const calendarStart = new Date(Date.UTC(Number(nowParts.year), Number(nowParts.month) - 1, 1));
+const calendarEnd = new Date(Date.UTC(Number(bookingEndParts.year), Number(bookingEndParts.month), 0));
+const calendarLength = Math.round((calendarEnd.getTime() - calendarStart.getTime()) / 86400000) + 1;
+const calendarDays = Array.from({ length: calendarLength }, (_, offset) => {
+  const reference = new Date(calendarStart.getTime() + offset * 86400000);
+  const date = reference.toISOString().slice(0, 10);
+  const weekday = reference.getUTCDay() === 0 ? 7 : reference.getUTCDay();
+  const inBookingWindow = date >= today && date <= bookingEnd;
+  const total = inBookingWindow ? (rulesByDay.get(weekday) || []).reduce((sum, rule) => sum + Math.floor(minutesBetween(rule.startTime, rule.endTime) / publicProfile.appointmentDurationMinutes), 0) : 0;
+  const available = slotsByDate.get(date)?.length || 0;
+  const status = date < today ? 'past' : date > bookingEnd ? 'outside' : total === 0 ? 'closed' : available === 0 ? 'full' : available / total <= .5 ? 'limited' : 'available';
+  return { date, available, total, status, isToday: date === today };
+});
+const slotData = slots.map(({ startsAt, endsAt, timeLabel }) => { const parts = zoneParts(new Date(startsAt)); return { date: `${parts.year}-${parts.month}-${parts.day}`, startsAt, endsAt, timeLabel }; });
+---
+<MainLayout activeNav="begeleiding" title={`Boek bij ${publicProfile.name} — MyGrowise`} description={`Bekijk de beschikbare online momenten van ${publicProfile.name} en vraag veilig een afspraak aan.`} noindex={true}>
+  <section class="booking-page"><div class="container booking-layout"><aside class="booking-person"><a href="/begeleiding">← Terug naar alle professionals</a><img class:list={{ 'is-margot': person.slug === 'margot' }} src={person.image} alt={publicProfile.name}/><span>{publicProfile.publicRole}</span><h1>{publicProfile.name}</h1><p>{publicProfile.bio}</p><div class="booking-person__tags">{publicProfile.expertise.map((item) => <small>{item}</small>)}</div><p class="booking-person__languages">Gesprek mogelijk in {publicProfile.languages.join(' · ')}</p><dl class="booking-person__practical"><div><dt>Duur</dt><dd>{publicProfile.appointmentDurationMinutes} minuten</dd></div><div><dt>Vandaag boeken</dt><dd>{publicProfile.minimumNoticeHours === 0 ? 'Mogelijk tot de start' : `Mogelijk vanaf ${publicProfile.minimumNoticeHours} uur vooraf`}</dd></div></dl><div class="notice"><strong>Zo werkt het</strong><br/>Kies een vrij moment en verstuur je aanvraag. Zodra {publicProfile.name} bevestigt, staat je sessie definitief ingepland.</div></aside>
+    <main class="booking-form-wrap">
+      {requested ? <div class="booking-success"><span>✓</span><h2>Je aanvraag is verstuurd</h2><p>{publicProfile.name} bekijkt je gekozen moment. Zodra de aanvraag bevestigd is, verschijnt de sessie automatisch in je overzicht.</p><a class="button button-primary" href="/account/begeleiding">Bekijk mijn afspraken</a></div> : <><span class="eyebrow">Plan een online sessie</span><h2>Kies een moment dat past.</h2><p class="lead">Selecteer eerst een datum en daarna een startuur. De beschikbaarheid wordt voortdurend bijgewerkt.</p>{unavailable&&<div class="booking-alert">Dit tijdstip werd intussen ingenomen. De kalender is bijgewerkt; kies gerust een ander vrij moment.</div>}{error&&<div class="booking-alert">We konden je aanvraag nog niet verwerken. Controleer je gegevens en kies opnieuw een tijdstip.</div>}{slots.length ? <form action="/api/bookings" method="post"><input type="hidden" name="practitioner" value={person.slug}/><fieldset><legend><span>1</span> Selecteer een datum</legend><div class="booking-calendar" data-days={JSON.stringify(calendarDays)} data-slots={JSON.stringify(slotData)}><header><button type="button" data-calendar-prev aria-label="Vorige maand">←</button><strong data-calendar-title></strong><button type="button" data-calendar-next aria-label="Volgende maand">→</button></header><div class="booking-calendar__weekdays" aria-hidden="true"><span>ma</span><span>di</span><span>wo</span><span>do</span><span>vr</span><span>za</span><span>zo</span></div><div class="booking-calendar__grid" data-calendar-grid></div><div class="booking-calendar__legend"><span><i class="is-available"></i>Veel keuze</span><span><i class="is-limited"></i>Nog enkele momenten</span><span><i class="is-full"></i>Volzet</span><span><i class="is-past"></i>Niet boekbaar</span></div></div></fieldset><fieldset class="booking-times" disabled><legend><span>2</span> Kies een startuur</legend><h3 data-selected-date>Kies hierboven eerst een beschikbare datum</h3><p class="booking-times__hint">Tijdzone: Europe/Brussels</p><div data-time-slots></div></fieldset><div class="booking-contact"><label><span>Je naam</span><input name="name" required minlength="2" maxlength="100" autocomplete="name"/></label><label><span>Je e-mailadres</span><input type="email" name="email" required maxlength="254" autocomplete="email"/></label></div><button class="button button-primary" type="submit" disabled>Verstuur mijn aanvraag →</button><small>We gebruiken je gegevens alleen om deze afspraak te organiseren. Deel hier geen gevoelige gezondheidsinformatie.</small></form> : <div class="booking-empty"><h3>Er zijn momenteel geen vrije momenten</h3><p>De agenda van {publicProfile.name} bevat op dit moment geen boekbare uren. Bekijk later opnieuw of kies een andere professional.</p><a class="button button-primary button-arrow" href="/begeleiding">Bekijk alle professionals</a></div>}</>}
+    </main></div></section>
+</MainLayout>
+<style>
+  .booking-page{padding-block:clamp(3rem,7vw,7rem);background:var(--cream)}.booking-layout{display:grid;gap:2rem;align-items:start}.booking-person,.booking-form-wrap{padding:clamp(1.3rem,4vw,3rem);border:1px solid var(--line);border-radius:var(--radius-lg);background:var(--white)}.booking-person>a{display:block;margin-bottom:2rem;color:var(--muted);font-size:.75rem;font-weight:700;text-decoration:none}.booking-person img{width:8rem;height:8rem;margin-bottom:1.5rem;border-radius:50%;object-fit:cover;object-position:top}.booking-person img.is-margot{object-position:center 42%}.booking-person>span{color:var(--pink);font-size:.68rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase}.booking-person h1{margin:.4rem 0 1rem;font-size:3rem}.booking-person>p{color:var(--muted);line-height:1.7}.booking-person__tags{display:flex;flex-wrap:wrap;gap:.35rem}.booking-person__tags small{padding:.35rem .5rem;border-radius:.4rem;background:var(--paper);color:var(--muted);font-size:.65rem;font-weight:700}.booking-person__languages{margin-top:1rem;font-size:.75rem;font-weight:700}.booking-person__practical{display:grid;gap:.7rem;margin:1.5rem 0 0;padding-top:1.25rem;border-top:1px solid var(--line)}.booking-person__practical div{display:flex;justify-content:space-between;gap:1rem}.booking-person__practical dt,.booking-person__practical dd{margin:0;font-size:.75rem}.booking-person__practical dt{color:var(--muted)}.booking-person__practical dd{font-weight:700;text-align:right}.booking-person .notice{margin-top:2rem}.booking-form-wrap h2{margin-bottom:1rem;font-size:clamp(2.5rem,5vw,4.5rem)}.booking-form-wrap>.lead{margin-bottom:1.2rem}.booking-form-wrap form{display:grid;gap:1.6rem}.booking-form-wrap fieldset{margin:0;padding:0;border:0}.booking-form-wrap legend{margin-bottom:1rem;font-size:.78rem;font-weight:700}.booking-calendar{padding:1rem;border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--paper)}.booking-calendar>header{display:grid;grid-template-columns:2.5rem 1fr 2.5rem;align-items:center;margin-bottom:1rem;text-align:center}.booking-calendar>header button{height:2.5rem;border:1px solid var(--line);border-radius:50%;background:#fff;cursor:pointer}.booking-calendar>header button:disabled{opacity:.25;cursor:default}.booking-calendar>header strong{text-transform:capitalize}.booking-calendar__weekdays,.booking-calendar__grid{display:grid;grid-template-columns:repeat(7,1fr);gap:.35rem}.booking-calendar__weekdays{margin-bottom:.35rem;text-align:center;color:var(--muted);font-size:.65rem;font-weight:700;text-transform:uppercase}.booking-calendar__grid button,.booking-calendar__grid>span{display:grid;min-height:3.3rem;place-content:center;border:1px solid transparent;border-radius:.65rem;font-weight:700}.booking-calendar__grid button{cursor:pointer}.booking-calendar__grid button small{display:block;margin-top:.1rem;font-size:.52rem;font-weight:600}.booking-calendar__grid .is-available{border-color:#b8d7c4;background:#e7f4eb;color:#245a36}.booking-calendar__grid .is-limited{border-color:#ead29a;background:#fff2cd;color:#765817}.booking-calendar__grid .is-full{border-color:#e0c2c2;background:#f6e5e5;color:#875151;cursor:not-allowed}.booking-calendar__grid .is-closed{background:#eee;color:#aaa;cursor:not-allowed}.booking-calendar__grid button.is-selected{outline:3px solid var(--ink);outline-offset:1px}.booking-calendar__legend{display:flex;flex-wrap:wrap;gap:.8rem;margin-top:1rem;color:var(--muted);font-size:.62rem;font-weight:700}.booking-calendar__legend span{display:flex;align-items:center;gap:.3rem}.booking-calendar__legend i{width:.7rem;height:.7rem;border-radius:50%}.booking-calendar__legend .is-available{background:#80b890}.booking-calendar__legend .is-limited{background:#e0b84c}.booking-calendar__legend .is-full{background:#c98b8b}.booking-times{padding:1rem!important;border:1px solid var(--line)!important;border-radius:var(--radius-sm)!important}.booking-times[disabled]{opacity:.55}.booking-times h3{margin:0 0 .8rem;font-family:'DM Sans',sans-serif;font-size:.85rem;letter-spacing:0}.booking-times>div{display:flex;flex-wrap:wrap;gap:.5rem}.booking-times label input{position:absolute;opacity:0}.booking-times label span{display:block;padding:.7rem 1rem;border:1px solid var(--line);border-radius:.55rem;background:white;font-size:.75rem;font-weight:700;cursor:pointer}.booking-times input:checked+span{border-color:var(--ink);background:var(--ink);color:white}.booking-contact{display:grid;gap:1rem}.booking-contact label{display:grid;gap:.45rem}.booking-contact label>span{font-size:.72rem;font-weight:700}.booking-contact input{min-height:3rem;padding:.7rem .9rem;border:1px solid var(--line);border-radius:.65rem;background:white}.booking-form-wrap form>.button{justify-self:start}.booking-form-wrap form>.button:disabled{opacity:.45;cursor:not-allowed}.booking-form-wrap form>small{color:var(--muted);font-size:.68rem}.booking-alert{padding:1rem;margin-bottom:1.2rem;border-left:4px solid var(--pink);background:var(--pink-soft);font-size:.8rem}.booking-empty{padding:2rem;border:1px dashed var(--line);border-radius:var(--radius-md);background:var(--paper)}.booking-empty h3{font-family:'DM Sans',sans-serif;font-size:1rem;font-weight:700;letter-spacing:0}.booking-empty p{color:var(--muted);line-height:1.7}.booking-success{display:grid;min-height:30rem;place-content:center;text-align:center}.booking-success>span{display:grid;width:4rem;height:4rem;margin:0 auto 1.5rem;place-content:center;border-radius:50%;background:var(--ink);color:white;font-size:1.5rem}.booking-success p{max-width:48ch;margin-inline:auto;color:var(--muted);line-height:1.7}.booking-success .button{justify-self:center;margin-top:1rem}@media(min-width:800px){.booking-layout{grid-template-columns:.72fr 1.28fr}.booking-person{position:sticky;top:2rem}.booking-contact{grid-template-columns:1fr 1fr}}@media(max-width:520px){.booking-calendar{padding:.7rem}.booking-calendar__weekdays,.booking-calendar__grid{gap:.2rem}.booking-calendar__grid button,.booking-calendar__grid>span{min-height:2.75rem;font-size:.7rem}.booking-calendar__grid button small{display:none}}
+  .booking-form-wrap legend{display:flex;align-items:center;gap:.55rem}
+  .booking-form-wrap legend>span{display:grid;width:1.45rem;height:1.45rem;place-content:center;border-radius:50%;background:var(--ink);color:#fff;font-size:.65rem}
+  .booking-calendar__legend .is-past{background:#b8b8b3}
+  .booking-times__hint{margin:-.35rem 0 .9rem;color:var(--muted);font-size:.65rem}
+</style>
+<style is:global>
+  /* Alleen elementen die door de kalender-JavaScript worden aangemaakt moeten
+     globaal aanspreekbaar zijn. De rest van de pagina blijft Astro-scoped. */
+  .booking-calendar__grid button,
+  .booking-calendar__grid > span { display:grid;min-width:0;min-height:3.3rem;padding:.25rem;place-content:center;border:1px solid transparent;border-radius:.65rem;font-weight:700; }
+  .booking-calendar__grid button { appearance:none;font:inherit;cursor:pointer; }
+  .booking-calendar__grid button small { display:block;margin-top:.1rem;font-size:.52rem;font-weight:600; }
+  .booking-calendar__grid button.is-available { border-color:#b8d7c4;background:#e7f4eb;color:#245a36; }
+  .booking-calendar__grid button.is-limited { border-color:#ead29a;background:#fff2cd;color:#765817; }
+  .booking-calendar__grid button.is-full { border-color:#e0c2c2;background:#f6e5e5;color:#875151;cursor:not-allowed; }
+  .booking-calendar__grid button.is-closed { background:#eee;color:#aaa;cursor:not-allowed; }
+  .booking-calendar__grid button.is-past,
+  .booking-calendar__grid button.is-outside { border-color:#e6e4df;background:#f1f0ed;color:#aaa;cursor:not-allowed; }
+  .booking-calendar__grid button.is-today { box-shadow:inset 0 0 0 2px var(--ink); }
+  .booking-calendar__grid button.is-selected { outline:3px solid var(--ink);outline-offset:1px; }
+  .booking-times label input { position:absolute;width:1px;height:1px;opacity:0; }
+  .booking-times label span { display:block;padding:.7rem 1rem;border:1px solid var(--line);border-radius:.55rem;background:white;font-size:.75rem;font-weight:700;cursor:pointer; }
+  .booking-times label input:checked + span { border-color:var(--ink);background:var(--ink);color:white; }
+  .booking-times label input:focus-visible + span { outline:3px solid var(--yellow);outline-offset:2px; }
+  @media(max-width:520px){
+    .booking-calendar__grid button,.booking-calendar__grid>span{min-height:2.65rem;padding:.15rem;font-size:.7rem}
+    .booking-calendar__grid button small{display:none}
+  }
+</style>
+<script is:inline>
+  document.querySelectorAll('.booking-calendar').forEach((calendar) => {
+    const days = JSON.parse(calendar.dataset.days || '[]');
+    const slots = JSON.parse(calendar.dataset.slots || '[]');
+    if (!days.length) return;
+    const form = calendar.closest('form');
+    const grid = calendar.querySelector('[data-calendar-grid]');
+    const title = calendar.querySelector('[data-calendar-title]');
+    const previous = calendar.querySelector('[data-calendar-prev]');
+    const next = calendar.querySelector('[data-calendar-next]');
+    const times = form.querySelector('.booking-times');
+    const timeGrid = form.querySelector('[data-time-slots]');
+    const selectedTitle = form.querySelector('[data-selected-date]');
+    const submit = form.querySelector('button[type="submit"]');
+    const availableMonths = [...new Set(days.map((day) => day.date.slice(0, 7)))];
+    let monthIndex = 0;
+    let selectedDate = '';
+    const dayLabel = (date) => new Intl.DateTimeFormat('nl-BE', { weekday: 'long', day: 'numeric', month: 'long' }).format(new Date(`${date}T12:00:00`));
+    const renderTimes = (date) => {
+      selectedDate = date;
+      times.disabled = false;
+      submit.disabled = true;
+      selectedTitle.textContent = dayLabel(date);
+      timeGrid.replaceChildren(...slots.filter((slot) => slot.date === date).map((slot) => {
+        const label = document.createElement('label');
+        const input = document.createElement('input');
+        const text = document.createElement('span');
+        input.type = 'radio'; input.name = 'slot'; input.required = true; input.value = `${slot.startsAt}|${slot.endsAt}`;
+        input.addEventListener('change', () => { submit.disabled = false; });
+        text.textContent = slot.timeLabel;
+        label.append(input, text);
+        return label;
+      }));
+      renderMonth();
+    };
+    const renderMonth = () => {
+      const month = availableMonths[monthIndex];
+      const [year, monthNumber] = month.split('-').map(Number);
+      title.textContent = new Intl.DateTimeFormat('nl-BE', { month: 'long', year: 'numeric' }).format(new Date(year, monthNumber - 1, 1));
+      previous.disabled = monthIndex === 0;
+      next.disabled = monthIndex === availableMonths.length - 1;
+      const visibleDays = days.filter((day) => day.date.startsWith(month));
+      const offset = (new Date(`${visibleDays[0].date}T12:00:00`).getDay() + 6) % 7;
+      const cells = Array.from({ length: offset }, () => document.createElement('span'));
+      visibleDays.forEach((day) => {
+        const button = document.createElement('button');
+        const number = document.createTextNode(String(Number(day.date.slice(-2))));
+        const detail = document.createElement('small');
+        const statusLabel = day.status === 'available' || day.status === 'limited' ? `${day.available} vrij` : day.status === 'full' ? 'volzet' : day.status === 'past' ? 'voorbij' : 'niet boekbaar';
+        detail.textContent = day.isToday ? `vandaag · ${statusLabel}` : statusLabel;
+        button.type = 'button'; button.className = `is-${day.status}${day.isToday ? ' is-today' : ''}${day.date === selectedDate ? ' is-selected' : ''}`;
+        button.disabled = day.available === 0;
+        if (day.isToday) button.setAttribute('aria-current', 'date');
+        button.setAttribute('aria-label', `${dayLabel(day.date)}: ${detail.textContent}`);
+        button.append(number, detail);
+        button.addEventListener('click', () => renderTimes(day.date));
+        cells.push(button);
+      });
+      grid.replaceChildren(...cells);
+    };
+    previous.addEventListener('click', () => { if (monthIndex > 0) { monthIndex -= 1; renderMonth(); } });
+    next.addEventListener('click', () => { if (monthIndex < availableMonths.length - 1) { monthIndex += 1; renderMonth(); } });
+    renderMonth();
+  });
+</script>

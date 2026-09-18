@@ -1,0 +1,43 @@
+---
+import PracticeLayout from '../../layouts/PracticeLayout.astro';
+import AdminIcon from '../../components/admin/AdminIcon.astro';
+import { getPractitionerProfile } from '../../lib/practiceDb';
+
+const user = Astro.locals.currentUser!;
+const profile = getPractitionerProfile(user.practitionerId!);
+if (!profile) return Astro.redirect('/praktijk');
+const saved = Astro.url.searchParams.get('saved') === '1';
+const error = Astro.url.searchParams.get('error');
+const completion = [profile.name, profile.publicRole, profile.bio, profile.expertise.length, profile.languages.length].filter(Boolean).length;
+const previewPortraits: Record<string, string> = {
+  virginie: '/images/practitioners/virginie-real.jpg',
+  margot: '/images/practitioners/margot-real.jpg',
+  amy: '/images/practitioners/amy-real.jpg',
+};
+const previewPortrait = previewPortraits[profile.slug] || null;
+---
+<PracticeLayout title="Mijn profiel" description="Beheer wat cliënten over jou zien en hoe zij een afspraak kunnen aanvragen.">
+  <div class="admin-page admin-page--form practice-profile-page">
+    <section class="admin-page-heading"><div><p class="admin-eyebrow">Mijn praktijk · Publiek</p><h1>Mijn professionele profiel</h1><p>Deze gegevens verschijnen op je MyGrowise-profiel. Je bepaalt zelf wanneer cliënten een aanvraag kunnen indienen.</p></div><a class="admin-button" href={`/begeleiding/${profile.slug}`} target="_blank" rel="noreferrer"><AdminIcon name="external" size={15}/> Bekijk publiek profiel</a></section>
+    {saved && <div class="practice-feedback is-success"><AdminIcon name="check" size={16}/><span><strong>Profiel opgeslagen.</strong> Je publieke gegevens en boekingsinstellingen zijn meteen bijgewerkt.</span></div>}
+    {error && <div class="practice-feedback is-error"><AdminIcon name="warning" size={16}/><span><strong>Nog niet opgeslagen.</strong> Vul alle velden zorgvuldig in; je introductie moet minstens 40 tekens bevatten.</span></div>}
+    <div class="practice-profile-layout">
+      <form class="practice-profile-form" action="/api/praktijk/profiel" method="post">
+        <section class="admin-panel"><header class="admin-panel__header"><div><h2>Hoe cliënten jou zien</h2><p>Professionele, publieksgerichte informatie — geen cliëntgegevens.</p></div><span class="admin-state">{completion}/5 volledig</span></header><div class="practice-fields">
+          <label><span>Naam op je profiel</span><input name="name" required minlength="2" maxlength="80" value={profile.name}/></label>
+          <label><span>Professionele titel</span><input name="public_role" required minlength="2" maxlength="100" value={profile.publicRole} placeholder="bv. Erkend klinisch psycholoog"/></label>
+          <label class="practice-fields__wide"><span>Persoonlijke introductie <small>40–1.200 tekens</small></span><textarea name="bio" required minlength="40" maxlength="1200" rows="6">{profile.bio}</textarea><small class="practice-field-help">Schrijf warm en helder: met wie werk je en wat mogen mensen van je begeleiding verwachten?</small></label>
+          <label><span>Expertise <small>gescheiden door komma’s</small></span><input name="expertise" required value={profile.expertise.join(', ')} placeholder="bv. Stress, Angst, EMDR"/></label>
+          <label><span>Talen <small>gescheiden door komma’s</small></span><input name="languages" required value={profile.languages.join(', ')} placeholder="bv. Nederlands, Engels"/></label>
+        </div></section>
+        <section class="admin-panel"><header class="admin-panel__header"><div><h2>Online boekingen</h2><p>Deze instellingen bepalen alleen de momenten die je zelf via Beschikbaarheid openzet.</p></div><span class:list={['admin-product-status', profile.requestsEnabled ? 'is-active' : 'is-draft']}>{profile.requestsEnabled ? 'Aanvragen open' : 'Aanvragen gesloten'}</span></header><div class="practice-booking-settings">
+          <label class="practice-switch-row"><input type="checkbox" name="requests_enabled" checked={profile.requestsEnabled}/><span><strong>Nieuwe boekingsaanvragen toelaten</strong><small>Wanneer je dit uitzet, worden er geen vrije momenten op je publieke pagina getoond. Bestaande aanvragen blijven zichtbaar in je dashboard.</small></span></label>
+          <div class="practice-select-grid"><label><span>Duur van een sessie</span><select name="appointment_duration_minutes"><option value="45" selected={profile.appointmentDurationMinutes === 45}>45 minuten</option><option value="60" selected={profile.appointmentDurationMinutes === 60}>60 minuten</option><option value="75" selected={profile.appointmentDurationMinutes === 75}>75 minuten</option><option value="90" selected={profile.appointmentDurationMinutes === 90}>90 minuten</option></select></label><label><span>Voorbereidingstijd vóór een boeking</span><select name="minimum_notice_hours"><option value="0" selected={profile.minimumNoticeHours === 0}>Geen — meteen boekbaar</option><option value="1" selected={profile.minimumNoticeHours === 1}>1 uur</option><option value="2" selected={profile.minimumNoticeHours === 2}>2 uur · aanbevolen</option><option value="4" selected={profile.minimumNoticeHours === 4}>4 uur</option><option value="12" selected={profile.minimumNoticeHours === 12}>12 uur</option><option value="24" selected={profile.minimumNoticeHours === 24}>24 uur</option><option value="48" selected={profile.minimumNoticeHours === 48}>48 uur</option><option value="72" selected={profile.minimumNoticeHours === 72}>72 uur</option></select><small>Met 0–4 uur kunnen klanten ook vandaag nog een vrij moment kiezen.</small></label><label><span>Hoe ver vooruit zichtbaar</span><select name="booking_horizon_days"><option value="14" selected={profile.bookingHorizonDays === 14}>14 dagen</option><option value="30" selected={profile.bookingHorizonDays === 30}>30 dagen</option><option value="45" selected={profile.bookingHorizonDays === 45}>45 dagen</option><option value="60" selected={profile.bookingHorizonDays === 60}>60 dagen</option><option value="90" selected={profile.bookingHorizonDays === 90}>90 dagen</option></select></label></div>
+          <p class="practice-field-help"><AdminIcon name="lock" size={14}/> Cliënten zien uitsluitend vrije tijdstippen, nooit je privéagenda of de naam van andere cliënten.</p>
+        </div></section>
+        <div class="admin-form-actions"><p class="practice-form-note"><AdminIcon name="eye" size={14}/> Wijzigingen zijn publiek zichtbaar zodra je opslaat.</p><button class="admin-button admin-button--primary" type="submit">Profiel opslaan <AdminIcon name="check" size={15}/></button></div>
+      </form>
+      <aside class="practice-profile-side"><section class="practice-profile-preview"><span class="practice-preview-label">Live samenvatting</span><div class:list={['practice-preview-avatar', { 'has-portrait': Boolean(previewPortrait) }]}>{previewPortrait ? <img src={previewPortrait} alt={`Portret van ${profile.name}`} width="240" height="240" /> : profile.name.slice(0, 1).toUpperCase()}</div><span>{profile.publicRole}</span><h2>{profile.name}</h2><p>{profile.bio}</p><div>{profile.expertise.map((item) => <small>{item}</small>)}</div><strong class:list={{ 'is-open': profile.requestsEnabled }}>{profile.requestsEnabled ? 'Boekingsaanvragen open' : 'Boekingsaanvragen tijdelijk gesloten'}</strong></section><section class="practice-tip-card"><AdminIcon name="heart"/><div><h2>Een sterk profiel werkt</h2><p>Vermeld duidelijk je doelgroep, aanpak en expertise. Dat helpt cliënten de juiste professional kiezen.</p><a href={`/begeleiding/${profile.slug}`} target="_blank" rel="noreferrer">Controleer je publieke pagina →</a></div></section></aside>
+    </div>
+  </div>
+</PracticeLayout>

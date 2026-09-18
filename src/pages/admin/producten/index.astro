@@ -1,0 +1,70 @@
+---
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+import AdminIcon from '../../../components/admin/AdminIcon.astro';
+import { formatProductPrice, listProducts, productStatusLabel, productTypeLabel, type ProductStatus, type ProductType } from '../../../lib/adminProducts';
+
+const products = await listProducts();
+const q = (Astro.url.searchParams.get('q') || '').trim().toLowerCase();
+const status = Astro.url.searchParams.get('status') || '';
+const type = Astro.url.searchParams.get('type') || '';
+const filtered = products.filter((product) =>
+  (!q || product.title.toLowerCase().includes(q) || product.slug.includes(q)) &&
+  (!status || product.status === status) &&
+  (!type || product.type === type)
+);
+const published = products.filter((product) => product.status === 'published').length;
+const needsReview = products.filter((product) => product.status === 'review').length;
+const drafts = products.filter((product) => product.status === 'draft').length;
+const message = Astro.url.searchParams.get('message');
+---
+
+<AdminLayout title="Producten" description="Beheer het verkoopbare aanbod van MyGrowise">
+  <div class="admin-page">
+    <section class="admin-page-heading" aria-labelledby="products-title">
+      <div><p class="admin-eyebrow">Catalogus</p><h1 id="products-title">Producten</h1><p>Beheer profielen, modules en e-books met hun prijs, verkoopstatus en publieke URL.</p></div>
+      <div class="admin-page-actions"><a class="admin-button admin-button--primary" href="/admin/producten/nieuw"><AdminIcon name="plus" size={16} /> Nieuw product</a></div>
+    </section>
+
+    {message && <div class="admin-login__alert admin-login__alert--success" role="status"><AdminIcon name="check" size={17} />{message}</div>}
+
+    <section class="admin-catalog-stats" aria-label="Productstatus">
+      <article><span>Totaal</span><strong>{products.length}</strong></article>
+      <article><span>Gepubliceerd</span><strong>{published}</strong></article>
+      <article><span>In review</span><strong>{needsReview}</strong></article>
+      <article><span>Concepten</span><strong>{drafts}</strong></article>
+    </section>
+
+    <section class="admin-panel">
+      <form class="admin-filterbar" method="get" action="/admin/producten">
+        <label class="admin-search"><span class="sr-only">Product zoeken</span><AdminIcon name="products" size={15} /><input type="search" name="q" value={q} placeholder="Zoek op naam of slug…" /></label>
+        <select name="type" aria-label="Filter op type"><option value="">Alle types</option><option value="profile" selected={type === 'profile'}>Persoonlijk profiel</option><option value="module" selected={type === 'module'}>Online module</option><option value="ebook" selected={type === 'ebook'}>E-book</option></select>
+        <select name="status" aria-label="Filter op status"><option value="">Alle statussen</option><option value="published" selected={status === 'published'}>Gepubliceerd</option><option value="review" selected={status === 'review'}>In review</option><option value="draft" selected={status === 'draft'}>Concept</option><option value="archived" selected={status === 'archived'}>Gearchiveerd</option></select>
+        <button class="admin-button" type="submit">Filteren</button>
+        {(q || type || status) && <a class="admin-text-link" href="/admin/producten">Wissen</a>}
+      </form>
+
+      {filtered.length ? (
+        <div class="admin-table-wrap">
+          <table class="admin-table">
+            <caption class="sr-only">Producten van MyGrowise</caption>
+            <thead><tr><th>Product</th><th>Type</th><th>Status</th><th>Prijs</th><th>Gewijzigd</th><th><span class="sr-only">Actie</span></th></tr></thead>
+            <tbody>
+              {filtered.map((product) => (
+                <tr>
+                  <td data-label="Product"><span class="admin-product-cell"><span class={`admin-product-icon admin-product-icon--${product.type}`}><AdminIcon name={product.type === 'module' ? 'modules' : 'profiles'} size={16} /></span><span><strong>{product.title}</strong><small>/{product.slug}</small></span></span></td>
+                  <td data-label="Type">{productTypeLabel[product.type as ProductType]}</td>
+                  <td data-label="Status"><span class={`admin-product-status admin-product-status--${product.status}`}><i></i>{productStatusLabel[product.status as ProductStatus]}</span></td>
+                  <td data-label="Prijs"><strong class="admin-table-price">{formatProductPrice(product.priceCents)}</strong></td>
+                  <td data-label="Gewijzigd"><time datetime={product.updatedAt}>{new Intl.DateTimeFormat('nl-BE', { day: '2-digit', month: 'short', year: 'numeric' }).format(new Date(product.updatedAt))}</time></td>
+                  <td data-label="Actie"><a class="admin-row-action" href={`/admin/producten/${product.id}`}>Bewerken <AdminIcon name="arrow" size={13} /></a></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        <div class="admin-empty-row"><div><span><AdminIcon name="products" size={17} /></span><strong>Geen producten gevonden</strong><p>Pas de filters aan of maak een nieuw product.</p></div></div>
+      )}
+    </section>
+  </div>
+</AdminLayout>

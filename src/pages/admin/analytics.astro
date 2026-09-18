@@ -1,0 +1,102 @@
+---
+import AdminLayout from '../../layouts/AdminLayout.astro';
+import AdminIcon from '../../components/admin/AdminIcon.astro';
+
+const metrics = [
+  { label: 'Sessies', value: '0', detail: 'Wacht op consent-meetlaag', icon: 'customers' },
+  { label: 'Productweergaven', value: '0', detail: 'Geen events ontvangen', icon: 'products' },
+  { label: 'Checkout gestart', value: '0', detail: 'Checkout nog niet actief', icon: 'cart' },
+  { label: 'Aankoopconversie', value: '—', detail: 'Onvoldoende data', icon: 'trend' },
+];
+
+const commerceFunnel = [
+  ['Sessies', 0, '0'], ['Route “zelf aan de slag”', 0, '0'], ['Product bekeken', 0, '0'], ['Checkout gestart', 0, '0'], ['Betaling geslaagd', 0, '0']
+];
+const careFunnel = [
+  ['Sessies', 0, '0'], ['Route “begeleiding”', 0, '0'], ['Professional bekeken', 0, '0'], ['Boeking geklikt', 0, '0'], ['Boeking bevestigd', 0, '—']
+];
+---
+
+<AdminLayout title="Analytics" description="Privacyvriendelijke groei- en conversieanalytics voor MyGrowise">
+  <div class="admin-page">
+    <section class="admin-page-heading" aria-labelledby="analytics-title">
+      <div>
+        <p class="admin-eyebrow">Groei & conversie</p>
+        <h1 id="analytics-title">Analytics</h1>
+        <p>Volg acquisitie, gedrag en conversie over beide klantroutes—zonder antwoorden, scores of therapeutische informatie te verzamelen.</p>
+      </div>
+      <div class="admin-page-actions">
+        <a class="admin-button" href="/admin/instellingen"><AdminIcon name="content" size={16} /> Meetinstellingen</a>
+      </div>
+    </section>
+
+    <div class="admin-preview-notice" role="status">
+      <AdminIcon name="warning" size={18} />
+      <div><strong>Tracking is nog niet actief</strong>Deze interface toont het definitieve meetmodel en blijft leeg totdat toestemming, eventvalidatie en interne-trafficfilters werken.</div>
+    </div>
+
+    <div class="analytics-toolbar">
+      <nav class="analytics-tabs" aria-label="Analyticsweergaven">
+        <a class="is-active" href="/admin/analytics" aria-current="page">Overzicht</a>
+        <a href="/admin/analytics#acquisitie">Acquisitie</a>
+        <a href="/admin/analytics#funnels">Funnels</a>
+        <a href="/admin/analytics#content">Content</a>
+        <a href="/admin/analytics#kwaliteit">Datakwaliteit</a>
+      </nav>
+      <label class="analytics-range">Periode <select><option>Laatste 30 dagen</option><option>Laatste 7 dagen</option><option>Laatste 90 dagen</option><option>Dit jaar</option></select></label>
+    </div>
+
+    <section class="admin-metrics" aria-label="Analytics kerncijfers">
+      {metrics.map((metric) => (
+        <article class="admin-metric">
+          <div class="admin-metric__head"><span class="admin-metric__label">{metric.label}</span><span class="admin-metric__icon"><AdminIcon name={metric.icon} size={15} /></span></div>
+          <strong>{metric.value}</strong><small class="status-waiting">{metric.detail}</small>
+        </article>
+      ))}
+    </section>
+
+    <section class="admin-panel" aria-labelledby="traffic-title">
+      <header class="admin-panel__header"><div><h2 id="traffic-title">Sessies & conversie</h2><p>Dagelijkse trend voor de geselecteerde periode</p></div><span class="admin-state admin-state--blocked">Geen data</span></header>
+      <div class="admin-chart">
+        <div class="admin-chart__empty"><div><span><AdminIcon name="analytics" size={18} /></span><strong>De meetlaag wacht op implementatie</strong><p>De eerste gevalideerde page_view opent deze grafiek. Test- en intern verkeer worden apart gehouden.</p></div></div>
+      </div>
+    </section>
+
+    <div class="analytics-grid" id="funnels">
+      <section class="admin-panel" aria-labelledby="self-funnel-title">
+        <header class="admin-panel__header"><div><h2 id="self-funnel-title">Funnel · Zelf aan de slag</h2><p>Van eerste bezoek tot veilige digitale levering</p></div></header>
+        <div class="analytics-funnel">
+          {commerceFunnel.map(([label, width, value]) => (
+            <div class="analytics-funnel__row"><span class="analytics-funnel__label">{label}</span><span class="analytics-funnel__bar"><i style={`width:${width}%`}></i></span><span class="analytics-funnel__value">{value}</span></div>
+          ))}
+        </div>
+      </section>
+
+      <section class="admin-panel" aria-labelledby="care-funnel-title">
+        <header class="admin-panel__header"><div><h2 id="care-funnel-title">Funnel · Begeleiding</h2><p>Van oriëntatie tot externe boeking</p></div></header>
+        <div class="analytics-funnel">
+          {careFunnel.map(([label, width, value]) => (
+            <div class="analytics-funnel__row"><span class="analytics-funnel__label">{label}</span><span class="analytics-funnel__bar"><i style={`width:${width}%`}></i></span><span class="analytics-funnel__value">{value}</span></div>
+          ))}
+        </div>
+      </section>
+
+      <section class="admin-panel" aria-labelledby="privacy-title">
+        <header class="admin-panel__header"><div><h2 id="privacy-title">Privacygrens</h2><p>Wat analytics expliciet nooit registreert</p></div></header>
+        <div class="analytics-privacy"><span><AdminIcon name="heart" size={17} /></span><div><h3>Commerciële events, geen gezondheidsdossier</h3><p>Geen antwoorden, vragenlijstscores, vermoedelijke diagnoses, intakegegevens, berichtinhoud of sessienotities. Producten krijgen neutrale interne ID’s; rapportages zijn geaggregeerd.</p></div></div>
+      </section>
+
+      <section class="admin-panel" id="kwaliteit" aria-labelledby="quality-title">
+        <header class="admin-panel__header"><div><h2 id="quality-title">Datakwaliteit</h2><p>Voorwaarden voordat cijfers beslissingen mogen sturen</p></div></header>
+        <div class="analytics-quality">
+          <div class="analytics-quality__row"><span>Consent & cookiestatus</span><span class="admin-state admin-state--blocked">Te koppelen</span></div>
+          <div class="analytics-quality__row"><span>Interne bezoeken uitgesloten</span><span class="admin-state">Gepland</span></div>
+          <div class="analytics-quality__row"><span>Checkout-events gevalideerd</span><span class="admin-state">Niet getest</span></div>
+          <div class="analytics-quality__row"><span>Laatste event ontvangen</span><small>Nooit</small></div>
+        </div>
+      </section>
+    </div>
+
+    <div class="admin-lock-note"><strong>Definitiekeuze:</strong> “Boeking bevestigd” verschijnt alleen wanneer de gekozen afsprakenprovider dit via een betrouwbare webhook terugkoppelt. Tot dan rapporteren we uitsluitend de aantoonbare klik naar de externe boekingsflow.</div>
+  </div>
+</AdminLayout>

@@ -1,0 +1,71 @@
+---
+import AdminIcon from '../components/admin/AdminIcon.astro';
+import '../styles/admin.css';
+
+interface Props { title: string; description?: string }
+const { title, description = 'Mijn praktijk bij MyGrowise' } = Astro.props;
+const user = Astro.locals.currentUser;
+const currentPath = Astro.url.pathname.replace(/\/$/, '') || '/praktijk';
+const initials = (user?.name || '?').split(/\s+/).map((part) => part[0]).join('').slice(0, 2).toUpperCase();
+const nav = [
+  { label: 'Vandaag', href: '/praktijk', icon: 'overview', exact: true },
+  { label: 'Mijn agenda', href: '/praktijk/agenda', icon: 'calendar' },
+  { label: 'Boekingsaanvragen', href: '/praktijk/boekingen', icon: 'messages' },
+  { label: 'Beschikbaarheid', href: '/praktijk/beschikbaarheid', icon: 'clock' },
+  { label: 'Mijn profiel', href: '/praktijk/profiel', icon: 'professionals' },
+  { label: 'Account', href: '/praktijk/account', icon: 'settings' },
+];
+const active = (item: { href: string; exact?: boolean }) => item.exact ? currentPath === item.href : currentPath.startsWith(item.href);
+---
+
+<!doctype html>
+<html lang="nl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex, nofollow, noarchive" />
+    <meta name="theme-color" content="#fafafa" />
+    <meta name="description" content={description} />
+    <link rel="icon" type="image/png" href="/images/logo-lelie.png" />
+    <title>{title} · Mijn praktijk</title>
+  </head>
+  <body class="admin-body practice-body">
+    <a class="admin-skip-link" href="#practice-main">Naar de hoofdinhoud</a>
+    <div class="admin-shell">
+      <div class="admin-sidebar-scrim" data-sidebar-close></div>
+      <aside class="admin-sidebar practice-sidebar" id="practice-sidebar" aria-label="Praktijknavigatie">
+        <div class="admin-brand"><a href="/praktijk"><img class="admin-brand__mark" src="/images/logo-lelie.webp" alt="" width="382" height="289" /><span><strong>MyGrowise</strong><small>Mijn praktijk</small></span></a><button class="admin-icon-button admin-sidebar__close" type="button" aria-label="Menu sluiten" data-sidebar-close><AdminIcon name="close" /></button></div>
+        <nav class="admin-nav"><section class="admin-nav__group"><h2>Mijn werkruimte</h2><ul>{nav.map((item) => <li><a href={item.href} class:list={{ 'is-active': active(item) }} aria-current={active(item) ? 'page' : undefined}><AdminIcon name={item.icon} /><span>{item.label}</span></a></li>)}</ul></section></nav>
+        <div class="admin-sidebar__footer">
+          {user?.roles.includes('super_admin') && <a class="practice-switch" href="/admin"><AdminIcon name="overview" /> Naar organisatiebeheer</a>}
+          <a href="/begeleiding" target="_blank" rel="noreferrer"><AdminIcon name="external" /> Publiek profiel bekijken</a>
+          <div class="admin-user"><span>{initials}</span><span><strong>{user?.name}</strong><small>Professional</small></span><form action="/api/admin/logout" method="post"><button type="submit" aria-label="Afmelden" title="Afmelden"><AdminIcon name="logout" size={16} /></button></form></div>
+        </div>
+      </aside>
+      <div class="admin-workspace">
+        <header class="admin-topbar"><div class="admin-topbar__left"><button class="admin-icon-button admin-menu-button" type="button" aria-label="Menu openen" aria-controls="practice-sidebar" aria-expanded="false" data-sidebar-open><AdminIcon name="menu" /></button><span class="admin-topbar__crumb">Mijn praktijk</span><span aria-hidden="true">/</span><strong>{title}</strong></div><div class="admin-topbar__right"><span class="practice-private-badge"><AdminIcon name="lock" size={13} /> Privé</span></div></header>
+        <main id="practice-main" class="admin-main"><slot /></main>
+      </div>
+    </div>
+    <script is:inline>
+      const body = document.body;
+      const openButton = document.querySelector('[data-sidebar-open]');
+      const closeButtons = document.querySelectorAll('[data-sidebar-close]');
+      const setSidebar = (open) => { body.classList.toggle('admin-menu-open', open); openButton?.setAttribute('aria-expanded', String(open)); };
+      openButton?.addEventListener('click', () => setSidebar(true));
+      closeButtons.forEach((button) => button.addEventListener('click', () => setSidebar(false)));
+      document.addEventListener('keydown', (event) => { if (event.key === 'Escape') setSidebar(false); });
+    </script>
+    <script is:inline>
+      (() => {
+        if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+        const targets = document.querySelectorAll('.admin-page-heading, .admin-preview-notice, .admin-metrics > *, .admin-dashboard-grid > *, .admin-panel, .practice-profile-layout > *, .practice-account-layout > *, .practice-availability-form, .practice-bookings > *, .practice-agenda-days > *, .practice-week > *, .practice-feedback');
+        targets.forEach((target, index) => {
+          target.dataset.practiceMotion = '';
+          target.style.setProperty('--practice-motion-delay', `${Math.min(index * 55, 330)}ms`);
+        });
+        requestAnimationFrame(() => requestAnimationFrame(() => document.body.classList.add('practice-motion-ready')));
+      })();
+    </script>
+  </body>
+</html>

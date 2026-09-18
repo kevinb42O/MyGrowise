@@ -1,0 +1,378 @@
+---
+import MainLayout from '../layouts/MainLayout.astro';
+import { products, practitioners, homeFaqs, recognitionItems } from '../content/site';
+const featured = products[0];
+---
+
+<MainLayout activeNav="home" title="MyGrowise — psychologisch inzicht en online begeleiding" description="Begrijp wat er bij jou gebeurt en kies ondersteuning die past: zelfstandig met een persoonlijk profiel of samen met een professional.">
+  <section class="hero" data-parallax-section>
+    <div class="hero-glow hero-glow--one" aria-hidden="true"></div>
+    <div class="hero-glow hero-glow--two" aria-hidden="true"></div>
+    <div class="hero-orbit hero-orbit--one" aria-hidden="true"></div>
+    <div class="hero-orbit hero-orbit--two" aria-hidden="true"></div>
+    <div class="container hero-grid">
+      <div class="hero-copy motion-hero">
+        <span class="eyebrow">Psychologisch platform voor inzicht & groei</span>
+        <h1>Begrijp wat er speelt. <em>Kies wat nu past.</em></h1>
+        <p class="lead">Wanneer je hoofd blijft doorgaan en je draagkracht kleiner wordt, helpt helder inzicht je om niet zomaar iets te proberen. Start zelfstandig of kies persoonlijke begeleiding.</p>
+        <div class="hero-actions">
+          <a class="button button-primary" href="/startpunt">Vind je startpunt <span aria-hidden="true">→</span></a>
+          <a class="button button-light" href="/begeleiding">Persoonlijke begeleiding</a>
+        </div>
+        <ul class="hero-proof" aria-label="Belangrijkste kenmerken">
+          <li>Online en op eigen tempo</li>
+          <li>Professionele begeleiding</li>
+          <li>Helder zonder snelle labels</li>
+        </ul>
+      </div>
+
+      <div class="hero-visual motion-hero">
+        <div class="hero-image" data-parallax="-0.08"><img src="/images/editorial/mygrowise-74.jpg" alt="Virginie werkt online vanuit haar praktijk" width="1920" height="1529" fetchpriority="high" /></div>
+        <div class="hero-note"><span>01</span><p>Je hoeft nog niet precies te weten wat je nodig hebt om te kunnen beginnen.</p></div>
+        <div class="hero-stamp" aria-hidden="true">rust · inzicht · richting ·</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="recognition section-sm">
+    <div class="container recognition-grid">
+      <div data-reveal>
+        <span class="eyebrow">Misschien herken je dit</span>
+        <h2 class="heading-lg">Je houdt veel vol. Maar niet zonder kost.</h2>
+      </div>
+      <ol>
+        {recognitionItems.map((item, index) => <li data-reveal style={`--reveal-delay: ${index * 90}ms`}><span>{String(index + 1).padStart(2, '0')}</span><p>{item}</p></li>)}
+      </ol>
+    </div>
+  </section>
+
+  <section class="routes section" id="start">
+    <div class="container">
+      <div class="section-head" data-reveal>
+        <div><span class="eyebrow">Twee manieren om te starten</span><h2 class="heading-lg">Niet iedereen heeft vandaag hetzelfde nodig.</h2></div>
+        <p class="lead">Daarom maken we het verschil tussen zelfstandig inzicht en persoonlijke begeleiding meteen duidelijk.</p>
+      </div>
+      <div class="route-grid">
+        <article class="route-card self-route" data-reveal>
+          <div class="route-number">01</div>
+          <div class="route-content">
+            <span class="route-label">Zelfstandig</span>
+            <h3>Ik wil eerst begrijpen wat er gebeurt.</h3>
+            <p>Werk op je eigen tempo met een persoonlijk profiel, een module of verdiepende informatie.</p>
+            <ul><li>Geen afspraak nodig</li><li>Rustig en discreet starten</li><li>Een concreet overzicht als resultaat</li></ul>
+            <span class="route-cta">Bekijk profielen <b aria-hidden="true">→</b></span>
+          </div>
+          <img src="/images/editorial/mygrowise-50.jpg" alt="Zelfstandig werken met MyGrowise" loading="lazy" />
+          <a class="route-card-hit" data-tilt href="/profielen" aria-label="Bekijk profielen: ik wil eerst begrijpen wat er gebeurt."></a>
+        </article>
+        <article class="route-card guide-route" data-reveal style="--reveal-delay: 110ms">
+          <div class="route-number">02</div>
+          <div class="route-content">
+            <span class="route-label">Samen</span>
+            <h3>Ik wil mijn verhaal met iemand bespreken.</h3>
+            <p>Kies een professional die aansluit bij je hulpvraag en vraag rechtstreeks een online afspraak aan via MyGrowise.</p>
+            <ul><li>Online vanuit een vertrouwde plek</li><li>Zelf je professional kiezen</li><li>Heldere praktische informatie</li></ul>
+            <span class="route-cta">Ontdek begeleiding <b aria-hidden="true">→</b></span>
+          </div>
+          <img src="/images/editorial/mygrowise-46.jpg" alt="Psychologische begeleiding bij MyGrowise" loading="lazy" />
+          <a class="route-card-hit" data-tilt href="/begeleiding" aria-label="Ontdek begeleiding: ik wil mijn verhaal met iemand bespreken."></a>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section class="featured section">
+    <div class="container featured-grid">
+      <div class="featured-visual" data-reveal data-parallax="0.035">
+        <img src={featured.image} alt="Uitleg bij het stress- en emotieprofiel" loading="lazy" />
+        <span class="visual-caption">Persoonlijk inzicht, helder vertaald</span>
+      </div>
+      <div class="featured-copy" data-reveal style="--reveal-delay: 120ms">
+        <span class="eyebrow">Aanbevolen vertrekpunt</span>
+        <h2 class="heading-lg">Het stress- en emotieprofiel</h2>
+        <p class="lead">{featured.summary}</p>
+        <div class="feature-list">
+          {featured.features.map((feature, index) => <div><span>{index + 1}</span><p>{feature}</p></div>)}
+        </div>
+        <div class="price-row">
+          <div><small>Prijs</small><strong>€{featured.price}</strong></div>
+          <a class="button button-primary" href={`/profielen/${featured.slug}`}>Bekijk wat je ontvangt <span aria-hidden="true">→</span></a>
+        </div>
+        <p class="disclaimer">Een persoonlijk profiel ondersteunt inzicht en oriëntatie. Het is geen diagnose en vervangt geen individueel klinisch onderzoek.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="journey section" id="werkwijze">
+    <div class="container journey-layout">
+      <div class="journey-visual" data-reveal><img src="/images/editorial/mygrowise-13.jpg" alt="Een rustig moment in de praktijk van MyGrowise" loading="lazy" /><div class="journey-visual__note"><span>Jouw tempo</span><p>Geen vast programma. Wel een richting die kan meegroeien.</p></div></div>
+      <div class="journey-content">
+        <div class="journey-head" data-reveal><span class="eyebrow">Hoe MyGrowise samenhangt</span><h2 class="heading-lg">Eerst inzicht. Daarna kies jij hoe je verdergaat.</h2><p class="lead">Je hoeft niet alles tegelijk aan te pakken. Elk onderdeel kan op zichzelf helpen, maar samen vormen ze een rustige, heldere route.</p></div>
+        <ol class="journey-list">
+          <li data-reveal>
+            <span class="journey-number">01</span><div><span class="journey-label">Start met inzicht</span><h3>Breng je patronen in kaart.</h3><p>Een persoonlijkheidsprofiel geeft zicht op stress, emoties, draagkracht en de strategieën die je inzet onder druk.</p><a class="text-link" href="/profielen">Ontdek de profielen</a></div>
+          </li>
+          <li data-reveal style="--reveal-delay: 90ms">
+            <span class="journey-number">02</span><div><span class="journey-label">Kies je verdieping</span><h3>Werk zelfstandig of samen.</h3><p>Gebruik modules rond stress en regulatie, of verdiep wat je ontdekt in persoonlijke online begeleiding.</p><div class="journey-links"><a href="/modules">Bekijk modules</a><a href="/begeleiding">Ontdek begeleiding</a></div></div>
+          </li>
+          <li data-reveal style="--reveal-delay: 180ms">
+            <span class="journey-number">03</span><div><span class="journey-label">Blijf verbonden</span><h3>Een rustige plek naast je proces.</h3><p>Na je profiel kan je terecht in de besloten community voor herkenning, reflecties en extra ondersteuning.</p><a class="text-link" href="/community">Meer over de community</a></div>
+          </li>
+        </ol>
+      </div>
+    </div>
+  </section>
+
+  <section class="team section">
+    <div class="container">
+      <div class="section-head team-head" data-reveal>
+        <div><span class="eyebrow">Persoonlijke begeleiding</span><h2 class="heading-lg">Een mens tegenover je. Niet nóg een systeem.</h2></div>
+        <a class="text-link" href="/begeleiding">Bekijk alle begeleiding</a>
+      </div>
+      <div class="team-grid">
+        {practitioners.map((person, index) => (
+          <article class="person-card" data-reveal style={`--reveal-delay: ${index * 100}ms`}>
+            <a class="person-image" href={`/begeleiding/${person.slug}`} aria-label={`Bekijk het profiel en de momenten van ${person.name}`}><img src={person.image} alt={person.name} loading="lazy" /><span>{String(index + 1).padStart(2, '0')}</span><i aria-hidden="true">Bekijk profiel <b>↗</b></i></a>
+            <div><h3>{person.name}</h3><p class="person-role">{person.role}</p><p>{person.focus}</p><a href={`/begeleiding/${person.slug}`}>Bekijk profiel en momenten <span aria-hidden="true">→</span></a></div>
+          </article>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <section class="founder section">
+    <div class="container founder-grid">
+      <div class="founder-copy" data-reveal>
+        <span class="eyebrow">Ontstaan vanuit de praktijk</span>
+        <blockquote>“Mensen hebben niet altijd méér informatie nodig. Ze hebben vooral nood aan inzicht dat ergens naartoe leidt.”</blockquote>
+        <p class="body-copy">MyGrowise werd opgericht door Virginie vanuit haar ervaring met stress, emotionele belasting en trauma. Het platform brengt zelfstandig inzicht en professionele begeleiding samen, zodat je niet langer hoeft te zoeken tussen losse antwoorden.</p>
+        <a class="text-link" href="/over-ons">Lees het verhaal van MyGrowise</a>
+      </div>
+      <div class="founder-image" data-reveal data-parallax="0.045" style="--reveal-delay: 120ms"><img src="/images/editorial/mygrowise-17.jpg" alt="Virginie, oprichter van Mygrowise" loading="lazy" /></div>
+    </div>
+  </section>
+
+  <section class="faq section">
+    <div class="container faq-grid">
+      <div data-reveal><span class="eyebrow">Veelgestelde vragen</span><h2 class="heading-lg">Eerst nog even weten hoe het zit?</h2><p class="lead">Logisch. Goede hulp begint met duidelijke informatie.</p></div>
+      <div class="faq-list">
+        {homeFaqs.map((item, index) => (
+          <details open={index === 0} data-reveal style={`--reveal-delay: ${index * 80}ms`}><summary><span>{String(index + 1).padStart(2, '0')}</span>{item.question}<i aria-hidden="true"></i></summary><p>{item.answer}</p></details>
+        ))}
+      </div>
+    </div>
+  </section>
+</MainLayout>
+
+<style>
+  .hero { position: relative; isolation: isolate; overflow: hidden; padding: clamp(2.5rem, 6vw, 6rem) 0 clamp(4rem, 8vw, 7rem); background: var(--cream); }
+  .hero::before { content: ''; position: absolute; inset: auto auto -9rem -7rem; width: 24rem; height: 24rem; border: 1px solid rgba(23,61,53,.2); border-radius: 50%; }
+  .hero::after { position:absolute; z-index:-1; inset:0; opacity:.45; background-image:linear-gradient(rgba(23,61,53,.045) 1px,transparent 1px),linear-gradient(90deg,rgba(23,61,53,.045) 1px,transparent 1px); background-size:4.8rem 4.8rem; mask-image:linear-gradient(90deg,transparent 0%,black 44%,transparent 100%); content:''; }
+  .hero-glow { position:absolute; z-index:-1; border-radius:50%; filter:blur(2px); pointer-events:none; }
+  .hero-glow--one { top:-10rem; right:-8rem; width:31rem; height:31rem; background:radial-gradient(circle,rgba(242,111,129,.26),rgba(242,111,129,0) 67%); }
+  .hero-glow--two { bottom:-14rem; left:27%; width:38rem; height:38rem; background:radial-gradient(circle,rgba(233,185,47,.2),rgba(233,185,47,0) 68%); }
+  .hero-orbit { position:absolute; z-index:-1; border:1px solid rgba(23,61,53,.13); border-radius:50%; pointer-events:none; }
+  .hero-orbit--one { top:12%; left:45%; width:21rem; height:21rem; }
+  .hero-orbit--two { right:5%; bottom:-20rem; width:37rem; height:37rem; }
+  .hero-grid { position:relative; display: grid; gap: 3.5rem; align-items: center; }
+  .hero-copy h1 { max-width: 10ch; margin-bottom: 1.5rem; color: var(--ink-deep); font-size: clamp(3.5rem, 8.5vw, 7.8rem); line-height: .9; }
+  .hero-copy h1 em { color: var(--pink); font-weight: 400; }
+  .hero-actions { display: flex; flex-wrap: wrap; gap: .8rem; margin: 2rem 0; }
+  .hero-proof { display: flex; flex-wrap: wrap; gap: .55rem 1.4rem; margin: 0; padding: 1.35rem 0 0; border-top: 1px solid var(--line); color: var(--muted); font-size: .75rem; list-style: none; }
+  .hero-proof li::before { content: '•'; margin-right: .5rem; color: var(--pink); }
+  .hero-visual { position: relative; min-height: 34rem; }
+  .hero-image { position: absolute; inset: 0 0 2.8rem 2rem; overflow: hidden; border-radius: 12rem 12rem var(--radius-lg) var(--radius-lg); background: var(--pink-soft); box-shadow: var(--shadow); }
+  .hero-image img { width: 100%; height: 100%; object-fit: cover; object-position: 63% center; transform:scale(1.035); }
+  .hero-note { position: absolute; bottom: 0; left: 0; display: grid; width: min(19rem, 80%); grid-template-columns: auto 1fr; gap: .8rem; padding: 1.15rem; border: 1px solid var(--ink); border-radius: var(--radius-sm); background: var(--yellow); box-shadow: 0 12px 30px rgba(14,43,37,.16); }
+  .hero-note span { font-size: .7rem; font-weight: 700; }
+  .hero-note p { margin: 0; font-family: 'DM Serif Display', Georgia, serif; font-size: 1rem; line-height: 1.25; }
+  .hero-stamp { position: absolute; top: 2rem; right: -1.4rem; display: grid; width: 7.3rem; height: 7.3rem; place-content: center; border-radius: 50%; background: var(--pink); color: white; font-size: .65rem; font-weight: 700; letter-spacing: .15em; text-align: center; text-transform: uppercase; transform: rotate(12deg); }
+  .recognition { border-block: 1px solid var(--line); background: var(--white); }
+  .recognition-grid { display: grid; gap: 2.5rem; }
+  .recognition ol { margin: 0; padding: 0; list-style: none; }
+  .recognition li { display: grid; grid-template-columns: 2.6rem 1fr; gap: 1rem; padding: 1.2rem 0; border-top: 1px solid var(--line); }
+  .recognition li:last-child { border-bottom: 1px solid var(--line); }
+  .recognition li span { color: var(--pink); font-size: .72rem; font-weight: 700; }
+  .recognition li p { margin: 0; color: var(--ink); font-size: clamp(1rem, 1.6vw, 1.25rem); line-height: 1.5; }
+  .routes { background: var(--paper); }
+  .section-head { display: grid; gap: 1.5rem; align-items: end; margin-bottom: 3rem; }
+  .section-head h2 { margin-bottom: 0; }
+  .route-grid { display: grid; gap: 1rem; }
+  .route-card { position: relative; display: grid; min-height: 42rem; overflow: hidden; border-radius: var(--radius-lg); transform-style:preserve-3d; }
+  .route-card::before { position:absolute; z-index:1; inset:0; opacity:0; background:radial-gradient(26rem circle at var(--pointer-x,50%) var(--pointer-y,50%),rgba(255,255,255,.2),transparent 42%); content:''; mix-blend-mode:soft-light; transition:opacity 400ms ease; pointer-events:none; }
+  .route-card::after { z-index:1; content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, transparent 10%, rgba(14,43,37,.8) 84%); transition:background 500ms ease; }
+  .route-card > img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; transition:transform 800ms cubic-bezier(.16,1,.3,1),filter 700ms ease; }
+  .route-number { position: absolute; z-index: 2; top: 1.4rem; right: 1.4rem; display: grid; width: 3.2rem; height: 3.2rem; place-content: center; border: 1px solid rgba(255,255,255,.7); border-radius: 50%; color: white; font-size: .75rem; }
+  .route-content { position: relative; z-index: 2; align-self: end; padding: 2rem; color: white; transform:translateZ(24px); }
+  .route-label { display: inline-block; margin-bottom: .8rem; color: var(--yellow); font-size: .72rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; }
+  .route-content h3 { max-width: 13ch; margin-bottom: 1rem; font-size: clamp(2.1rem, 4vw, 3.5rem); line-height: 1; }
+  .route-content > p { max-width: 46ch; color: rgba(255,255,255,.8); font-size: .9rem; line-height: 1.6; }
+  .route-content ul { display: flex; flex-wrap: wrap; gap: .45rem; margin: 1.2rem 0 1.7rem; padding: 0; list-style: none; }
+  .route-content li { padding: .45rem .65rem; border: 1px solid rgba(255,255,255,.3); border-radius: 999px; background: rgba(14,43,37,.22); font-size: .68rem; }
+  .route-cta { display:inline-flex; min-height:3.35rem; align-items:center; gap:.95rem; padding:.86rem 1rem 0.86rem 1.3rem; border-radius:999px; background:var(--white); color:var(--ink-deep); box-shadow:0 .8rem 1.7rem rgba(0,0,0,.16); font-size:.88rem; font-weight:700; }
+  .route-cta b { display:grid; width:1.65rem; height:1.65rem; place-content:center; border-radius:50%; background:var(--ink); color:white; font-size:1rem; line-height:1; transition:transform 350ms cubic-bezier(.16,1,.3,1),background 300ms ease; }
+  .route-card-hit { position:absolute; z-index:3; inset:0; border-radius:inherit; cursor:pointer; }
+  .route-card-hit:focus-visible { outline:3px solid var(--yellow); outline-offset:-.55rem; }
+  .featured { background: var(--pink-soft); }
+  .featured-grid { display: grid; gap: 3.5rem; align-items: center; }
+  .featured-visual { position: relative; min-height: 30rem; overflow: hidden; border-radius: 10rem 10rem var(--radius-md) var(--radius-md); }
+  .featured-visual img { width: 100%; height: 100%; object-fit: cover; position: absolute; transform:scale(1.035); transition:transform 1.2s cubic-bezier(.16,1,.3,1); }
+  .visual-caption { position: absolute; right: 1rem; bottom: 1rem; left: 1rem; padding: .85rem 1rem; border-radius: .8rem; background: rgba(255,253,249,.9); color: var(--ink); font-size: .75rem; font-weight: 700; backdrop-filter: blur(8px); }
+  .feature-list { margin-block: 2rem; border-top: 1px solid var(--line); }
+  .feature-list div { display: grid; grid-template-columns: 2rem 1fr; gap: 1rem; padding: 1rem 0; border-bottom: 1px solid var(--line); transition:padding 350ms ease,background 350ms ease; }
+  .feature-list span { display: grid; width: 1.55rem; height: 1.55rem; place-content: center; border-radius: 50%; background: var(--yellow); font-size: .65rem; font-weight: 700; }
+  .feature-list p { margin: 0; font-size: .9rem; font-weight: 600; }
+  .price-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 1rem; }
+  .price-row div { display: flex; flex-direction: column; }
+  .price-row small { color: var(--muted); font-size: .7rem; text-transform: uppercase; }
+  .price-row strong { font-family: 'DM Serif Display', Georgia, serif; font-size: 2.4rem; font-weight: 400; }
+  .disclaimer { margin: 1.3rem 0 0; color: var(--muted); font-size: .68rem; line-height: 1.6; }
+  .journey { border-block: 1px solid var(--line); background: var(--paper); }
+  .journey-layout { display: block; }
+  .journey-visual { display: none; }
+  .journey-content { display: grid; grid-template-columns: minmax(16rem, .82fr) minmax(0, 1.18fr); gap: clamp(2.5rem, 5vw, 6rem); align-items: start; }
+  .journey-head { position: sticky; top: 7rem; min-width: 0; max-width: 48rem; margin-bottom: 0; }
+  .journey-head h2 { margin-bottom: 1.2rem; }
+  .journey-list { margin: 0; padding: 0; border-top: 1px solid var(--line); list-style: none; }
+  .journey-list li { display: grid; grid-template-columns: 3.4rem 1fr; gap: .9rem; padding: 1.55rem 0; border-bottom: 1px solid var(--line); }
+  .journey-number { display: grid; width: 2.3rem; height: 2.3rem; place-content: center; border-radius: 50%; background: var(--yellow); color: var(--ink); font-size: .68rem; font-weight: 700; }
+  .journey-label { display:block; margin: .1rem 0 .5rem; color: var(--pink); font-size: .66rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; }
+  .journey-list h3 { position:relative; display:table; width:fit-content; max-width:100%; margin-bottom: .8rem; color: var(--ink-deep); font-size: clamp(1.8rem, 3vw, 2.5rem); line-height: 1; }
+  .journey-list h3::after { content:''; position:absolute; right:0; bottom:-.25rem; left:0; height:1.5px; background:linear-gradient(90deg,var(--pink),rgba(241,101,121,.2)); transform:scaleX(0); transform-origin:left center; transition:transform 820ms cubic-bezier(.22,1,.36,1); }
+  .journey-list p { max-width: 47ch; margin-bottom: 1rem; color: var(--muted); font-size: .87rem; line-height: 1.65; }
+  .journey-links { display: flex; flex-wrap: wrap; gap: .5rem 1rem; }
+  .journey-links a { border-bottom: 1px solid var(--ink); color: var(--ink); font-size: .78rem; font-weight: 700; text-decoration: none; }
+  .team { background: var(--ink); color: white; }
+  .team .eyebrow, .team .heading-lg { color: white; }
+  .team .text-link { color: var(--yellow); }
+  .team-grid { display: grid; gap: 2rem; }
+  .person-image { position: relative; display:block; aspect-ratio: 4 / 5; overflow: hidden; margin-bottom: 1.3rem; border-radius: var(--radius-md); background: var(--cream); box-shadow:0 0 0 rgba(0,0,0,0); transition:box-shadow 450ms ease,transform 450ms cubic-bezier(.16,1,.3,1); }
+  .person-image img { width: 100%; height: 100%; object-fit: cover; object-position: top; filter: saturate(.92); transition: transform 500ms ease; }
+  .person-card:hover img { transform: scale(1.025); }
+  .person-image span { position: absolute; right: .8rem; bottom: .8rem; display: grid; width: 2.4rem; height: 2.4rem; place-content: center; border-radius: 50%; background: var(--yellow); color: var(--ink); font-size: .68rem; font-weight: 700; transition:transform 450ms cubic-bezier(.16,1,.3,1); }
+  .person-image i { position:absolute; right:1rem; bottom:1rem; left:1rem; display:flex; align-items:center; justify-content:space-between; padding:.72rem .8rem; border:1px solid rgba(255,255,255,.45); border-radius:.65rem; background:rgba(14,43,37,.72); color:white; font-size:.7rem; font-style:normal; font-weight:700; opacity:0; transform:translateY(.75rem); backdrop-filter:blur(8px); transition:opacity 350ms ease,transform 450ms cubic-bezier(.16,1,.3,1); }
+  .person-image i b { display:grid; width:1.3rem; height:1.3rem; place-content:center; border-radius:50%; background:var(--yellow); color:var(--ink); font-size:.72rem; }
+  .person-image:focus-visible { outline:3px solid var(--yellow); outline-offset:4px; }
+  .person-card h3 { margin-bottom: .15rem; font-size: 2rem; }
+  .person-card p { color: rgba(255,255,255,.65); font-size: .83rem; line-height: 1.55; }
+  .person-card .person-role { margin-bottom: .7rem; color: var(--pink); font-weight: 700; }
+  .person-card a { display: inline-flex; gap: .45rem; color: white; font-size: .78rem; font-weight: 700; text-decoration: none; }
+  .founder { background: var(--yellow-soft); }
+  .founder-grid { display: grid; gap: 3rem; align-items: center; }
+  .founder-copy blockquote { max-width: 15ch; margin: 0 0 2rem; color: var(--ink-deep); font-family: 'DM Serif Display', Georgia, serif; font-size: clamp(2.4rem, 5vw, 4.5rem); line-height: 1.02; }
+  .founder-copy .body-copy { max-width: 55ch; }
+  .founder-image { min-height: 36rem; overflow: hidden; border-radius: 12rem 12rem var(--radius-md) var(--radius-md); }
+  .founder-image img { width: 100%; height: 100%; object-fit: cover; transform:scale(1.035); transition:transform 1.2s cubic-bezier(.16,1,.3,1); }
+  .faq { background: var(--white); }
+  .faq-grid { display: grid; gap: 3rem; align-items: start; }
+  .faq-list { border-top: 1px solid var(--line); }
+  .faq-list details { border-bottom: 1px solid var(--line); }
+  .faq-list summary { display: grid; grid-template-columns: 2rem 1fr auto; gap: .8rem; align-items: center; padding: 1.3rem 0; color: var(--ink); font-size: .95rem; font-weight: 700; cursor: pointer; list-style: none; }
+  .faq-list summary::-webkit-details-marker { display: none; }
+  .faq-list summary > span { color: var(--pink); font-size: .68rem; }
+  .faq-list summary i { position: relative; width: 1.2rem; height: 1.2rem; }
+  .faq-list summary i::before, .faq-list summary i::after { content: ''; position: absolute; top: 50%; left: 0; width: 100%; height: 1px; background: var(--ink); transition: transform 180ms ease; }
+  .faq-list summary i::after { transform: rotate(90deg); }
+  .faq-list details[open] summary i::after { transform: rotate(0); }
+  .faq-list details > p { margin: 0 0 1.4rem 2.8rem; color: var(--muted); font-size: .9rem; line-height: 1.7; }
+  @media (hover:hover) and (pointer:fine) {
+    .route-card:hover::before { opacity:1; }
+    .route-card:hover::after { background:linear-gradient(180deg,rgba(14,43,37,.02) 10%,rgba(14,43,37,.88) 86%); }
+    .route-card:hover > img { transform:scale(1.07); filter:saturate(1.06); }
+    .route-card:hover .route-cta b { transform:translateX(.25rem) rotate(-20deg); background:var(--pink); }
+    .feature-list div:hover { padding-inline:.7rem; background:rgba(255,253,249,.32); }
+    .journey-list li:hover h3::after { transform:scaleX(1); }
+    .person-card:hover .person-image { transform:translateY(-.45rem); box-shadow:0 1.25rem 2.5rem rgba(0,0,0,.2); }
+    .person-card:hover .person-image span { transform:rotate(18deg) scale(1.1); }
+    .person-card:hover .person-image i { opacity:1; transform:translateY(0); }
+    .person-card:hover img { transform:scale(1.07); }
+    .featured-visual:hover img,.founder-image:hover img { transform:scale(1.08); }
+  }
+  @media (prefers-reduced-motion:no-preference) {
+    .motion-hero > * { opacity:0; animation:hero-enter 1s cubic-bezier(.16,1,.3,1) both; }
+    .hero-copy > :nth-child(1) { animation-delay:80ms; }.hero-copy > :nth-child(2) { animation-delay:150ms; }.hero-copy > :nth-child(3) { animation-delay:230ms; }.hero-copy > :nth-child(4) { animation-delay:310ms; }.hero-copy > :nth-child(5) { animation-delay:390ms; }
+    .hero-visual > :nth-child(1) { animation-delay:190ms; }.hero-visual > :nth-child(2) { animation-delay:420ms; }.hero-visual > :nth-child(3) { animation-delay:520ms; }
+    .hero-stamp { animation:hero-enter 1s cubic-bezier(.16,1,.3,1) 520ms both,stamp-drift 8s ease-in-out 1.6s infinite; }
+    .hero-orbit--one { animation:orbit-drift 16s ease-in-out infinite; }.hero-orbit--two { animation:orbit-drift 19s ease-in-out -5s infinite reverse; }
+    html.motion-enabled [data-reveal] { opacity:0; transform:translate3d(var(--tilt-x,0),calc(3rem + var(--parallax-y,0px)),0) rotateX(var(--tilt-rx,0deg)) rotateY(var(--tilt-ry,0deg)); transition:opacity 800ms cubic-bezier(.16,1,.3,1) var(--reveal-delay,0ms),transform 950ms cubic-bezier(.16,1,.3,1) var(--reveal-delay,0ms); will-change:transform,opacity; }
+    html.motion-enabled [data-reveal].is-visible { opacity:1; transform:translate3d(var(--tilt-x,0),var(--parallax-y,0px),0) rotateX(var(--tilt-rx,0deg)) rotateY(var(--tilt-ry,0deg)); }
+    [data-parallax] { transform:translate3d(0,var(--parallax-y,0px),0); will-change:transform; }
+    .hero-image { transition:transform .8s cubic-bezier(.16,1,.3,1); }
+  }
+  @keyframes hero-enter { from { opacity:0; transform:translateY(2.2rem) scale(.985); } to { opacity:1; transform:translateY(0) scale(1); } }
+  @keyframes stamp-drift { 0%,100% { transform:rotate(12deg) translate3d(0,0,0); } 50% { transform:rotate(2deg) translate3d(-.45rem,.5rem,0); } }
+  @keyframes orbit-drift { 0%,100% { transform:translate3d(0,0,0) rotate(0deg); } 50% { transform:translate3d(1.5rem,-1rem,0) rotate(10deg); } }
+  @media (max-width: 680px) { .journey-content { display: block; } .journey-head { position: static; margin-bottom: 2.75rem; } }
+  @media (min-width: 720px) { .team-grid { grid-template-columns: repeat(3, 1fr); } .route-grid { grid-template-columns: 1fr 1fr; } }
+  @media (min-width: 900px) { .hero-grid { grid-template-columns: 1.05fr .95fr; } .hero-visual { min-height: 42rem; } .recognition-grid { grid-template-columns: .9fr 1.1fr; align-items: start; } .section-head { grid-template-columns: 1.2fr .8fr; } .featured-grid { grid-template-columns: .9fr 1.1fr; } .featured-visual { min-height: 45rem; } .founder-grid { grid-template-columns: 1.1fr .9fr; } .faq-grid { grid-template-columns: .85fr 1.15fr; } }
+</style>
+
+<script>
+  const faqItems = [...document.querySelectorAll<HTMLDetailsElement>('.faq-list details')];
+  faqItems.forEach((item) => {
+    item.addEventListener('toggle', () => {
+      if (!item.open) return;
+      faqItems.forEach((other) => {
+        if (other !== item) other.open = false;
+      });
+    });
+  });
+
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+
+  if (!reduceMotion.matches) {
+    document.documentElement.classList.add('motion-enabled');
+
+    const revealItems = [...document.querySelectorAll<HTMLElement>('[data-reveal]')];
+    const revealObserver = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (!entry.isIntersecting) return;
+        (entry.target as HTMLElement).classList.add('is-visible');
+        revealObserver.unobserve(entry.target);
+      });
+    }, { threshold: 0.14, rootMargin: '0px 0px -6% 0px' });
+    revealItems.forEach((item) => revealObserver.observe(item));
+
+    const parallaxItems = [...document.querySelectorAll<HTMLElement>('[data-parallax]')];
+    let frameRequested = false;
+    const updateParallax = () => {
+      const viewportCenter = window.innerHeight / 2;
+      parallaxItems.forEach((item) => {
+        const rect = item.getBoundingClientRect();
+        const factor = Number(item.dataset.parallax || '0');
+        const distanceFromCenter = rect.top + rect.height / 2 - viewportCenter;
+        item.style.setProperty('--parallax-y', `${Math.round(distanceFromCenter * factor)}px`);
+      });
+      frameRequested = false;
+    };
+    const requestParallax = () => {
+      if (frameRequested) return;
+      frameRequested = true;
+      window.requestAnimationFrame(updateParallax);
+    };
+    requestParallax();
+    window.addEventListener('scroll', requestParallax, { passive: true });
+    window.addEventListener('resize', requestParallax, { passive: true });
+
+    document.querySelectorAll<HTMLElement>('[data-tilt]').forEach((trigger) => {
+      const card = trigger.closest<HTMLElement>('.route-card');
+      if (!card) return;
+      trigger.addEventListener('pointermove', (event) => {
+        if (event.pointerType === 'touch') return;
+        const rect = card.getBoundingClientRect();
+        const x = (event.clientX - rect.left) / rect.width;
+        const y = (event.clientY - rect.top) / rect.height;
+        card.style.setProperty('--pointer-x', `${x * 100}%`);
+        card.style.setProperty('--pointer-y', `${y * 100}%`);
+        card.style.setProperty('--tilt-x', `${(x - .5) * 4}px`);
+        card.style.setProperty('--tilt-rx', `${(0.5 - y) * 1.5}deg`);
+        card.style.setProperty('--tilt-ry', `${(x - .5) * 1.5}deg`);
+      });
+      trigger.addEventListener('pointerleave', () => {
+        card.style.removeProperty('--tilt-x');
+        card.style.removeProperty('--tilt-rx');
+        card.style.removeProperty('--tilt-ry');
+      });
+    });
+  }
+</script>

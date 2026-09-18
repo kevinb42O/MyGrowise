@@ -1,0 +1,110 @@
+---
+import AdminLayout from '../../layouts/AdminLayout.astro';
+import AdminIcon from '../../components/admin/AdminIcon.astro';
+import { listProductAuditEvents, listProducts } from '../../lib/adminProducts';
+
+const catalogProducts = await listProducts();
+const recentProductActivity = await listProductAuditEvents(5);
+const publishedProducts = catalogProducts.filter((product) => product.status === 'published').length;
+
+const metrics = [
+  { label: 'Netto-omzet', value: '€ 0,00', detail: 'Wacht op betaalintegratie', icon: 'euro' },
+  { label: 'Betaalde bestellingen', value: '0', detail: 'Nog geen checkout actief', icon: 'cart' },
+  { label: 'Aankoopconversie', value: '—', detail: 'Wacht op analytics', icon: 'trend' },
+  { label: 'Boekingsklikken', value: '0', detail: 'Nog geen meetdata', icon: 'heart' },
+];
+
+const setup = [
+  { title: 'Beheeromgeving & informatiemodel', detail: 'Navigatie, rollen en datadomeinen', state: 'Ontworpen', tone: 'ready' },
+  { title: 'Lokale authenticatie', detail: 'Hash, sessiecookie en routeguard', state: 'Actief', tone: 'ready' },
+  { title: 'Productbeheer', detail: `${catalogProducts.length} producten · ${publishedProducts} gepubliceerd`, state: 'Actief', tone: 'ready' },
+  { title: 'Betaling & levering', detail: 'Provider, webhook en toegangsrechten', state: 'Beslissing nodig', tone: 'blocked' },
+  { title: 'Privacyvriendelijke analytics', detail: 'Events, funnels en rapportages', state: 'Gespecificeerd', tone: 'ready' },
+];
+---
+
+<AdminLayout title="Dashboard" description="Operationeel overzicht voor MyGrowise">
+  <div class="admin-page">
+    <section class="admin-page-heading" aria-labelledby="admin-title">
+      <div>
+        <p class="admin-eyebrow">Operationeel overzicht</p>
+        <h1 id="admin-title">Goedemiddag, Virginie.</h1>
+        <p>Hier zie je straks wat verkoopt, waar klanten afhaken en welke acties vandaag aandacht nodig hebben.</p>
+      </div>
+      <div class="admin-page-actions">
+        <a class="admin-button" href="/" target="_blank" rel="noreferrer"><AdminIcon name="external" size={16} /> Website bekijken</a>
+        <a class="admin-button admin-button--primary" href="/admin/producten/nieuw"><AdminIcon name="plus" size={16} /> Nieuw product</a>
+      </div>
+    </section>
+
+    <div class="admin-preview-notice" role="status">
+      <AdminIcon name="warning" size={18} />
+      <div><strong>Previewmodus — nog geen live bedrijfsdata</strong>De dashboardstructuur staat klaar. Cijfers blijven bewust op nul tot checkout, analytics en authenticatie veilig gekoppeld zijn.</div>
+    </div>
+
+    <section class="admin-metrics" aria-label="Kerncijfers">
+      {metrics.map((metric) => (
+        <article class="admin-metric">
+          <div class="admin-metric__head">
+            <span class="admin-metric__label">{metric.label}</span>
+            <span class="admin-metric__icon"><AdminIcon name={metric.icon} size={15} /></span>
+          </div>
+          <strong>{metric.value}</strong>
+          <small class="status-waiting">{metric.detail}</small>
+        </article>
+      ))}
+    </section>
+
+    <div class="admin-dashboard-grid">
+      <section class="admin-panel" aria-labelledby="revenue-title">
+        <header class="admin-panel__header">
+          <div><h2 id="revenue-title">Omzetontwikkeling</h2><p>Betaalde bestellingen, exclusief terugbetalingen</p></div>
+          <div class="admin-panel__header-actions">
+            <select class="admin-select" aria-label="Periode"><option>Laatste 30 dagen</option><option>Laatste 7 dagen</option><option>Dit jaar</option></select>
+            <a class="admin-text-link" href="/admin/analytics">Details <AdminIcon name="arrow" size={13} /></a>
+          </div>
+        </header>
+        <div class="admin-chart">
+          <div class="admin-chart__summary"><strong>€ 0,00</strong><span>Geen vergelijking beschikbaar</span></div>
+          <div class="admin-chart__empty">
+            <div><span><AdminIcon name="analytics" size={18} /></span><strong>Nog geen omzetdata</strong><p>Zodra een eerste testbetaling en webhook succesvol zijn verwerkt, verschijnt hier de tijdlijn.</p></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="admin-panel" aria-labelledby="setup-title">
+        <header class="admin-panel__header"><div><h2 id="setup-title">Lancering gereedmaken</h2><p>5 essentiële bouwblokken</p></div></header>
+        <ol class="admin-setup-list">
+          {setup.map((item, index) => (
+            <li>
+              <span class="admin-setup-list__number">{index + 1}</span>
+              <span><strong>{item.title}</strong><small>{item.detail}</small></span>
+              <span class:list={['admin-state', item.tone && `admin-state--${item.tone}`]}>{item.state}</span>
+            </li>
+          ))}
+        </ol>
+      </section>
+    </div>
+
+    <section class="admin-panel admin-activity" aria-labelledby="activity-title">
+      <header class="admin-panel__header">
+        <div><h2 id="activity-title">Recente activiteit</h2><p>Bestellingen, boekingen, berichten en contentwijzigingen</p></div>
+        <a class="admin-text-link" href="/admin/producten">Producten bekijken <AdminIcon name="arrow" size={13} /></a>
+      </header>
+      {recentProductActivity.length ? (
+        <div class="admin-activity-list">
+          {recentProductActivity.map((event) => (
+            <a href={`/admin/producten/${event.objectId}`} class="admin-activity-row">
+              <span class="admin-activity-row__icon"><AdminIcon name="products" size={16} /></span>
+              <span class="admin-activity-row__main"><strong>{event.action === 'product.created' ? 'Product aangemaakt' : 'Product bijgewerkt'}</strong><small>{event.after?.title || event.before?.title || event.objectId}</small></span>
+              <span class="admin-activity-row__meta"><strong>{event.actor.split('@')[0]}</strong><time datetime={event.occurredAt}>{new Intl.DateTimeFormat('nl-BE', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }).format(new Date(event.occurredAt))}</time></span>
+              <AdminIcon name="arrow" size={14} />
+            </a>
+          ))}
+        </div>
+      ) : (
+        <div class="admin-empty-row"><div><span><AdminIcon name="clock" size={17} /></span><strong>Nog geen activiteit</strong><p>Nieuwe gebeurtenissen verschijnen hier chronologisch en met verantwoordelijke gebruiker.</p></div></div>
+      )}
+    </section>
+  </div>
+</AdminLayout>
