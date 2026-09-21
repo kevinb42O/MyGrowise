@@ -707,8 +707,10 @@ html { background: var(--admin-canvas); }
 .agenda-day-heading.is-today strong { background:var(--admin-green); color:white; }
 .agenda-grid__body { position:relative; display:grid; grid-template-columns:52px repeat(var(--agenda-days), minmax(116px, 1fr)); min-height:784px; background:repeating-linear-gradient(to bottom, transparent 0, transparent calc(var(--agenda-cell-height) - 1px), #efefee calc(var(--agenda-cell-height) - 1px), #efefee var(--agenda-cell-height)); }
 .agenda-time-axis { position:relative; grid-column:1; border-right:1px solid var(--admin-border); background:rgba(252,252,251,.82); }
-.agenda-time-label { position:absolute; right:8px; transform:translateY(-6px); color:var(--admin-faint); font-size:8px; font-variant-numeric:tabular-nums; }
-.agenda-day-column { position:relative; min-height:784px; border-left:1px solid #f0f0ef; }
+.agenda-time-label { position:absolute; right:8px; transform:translateY(-7px); color:var(--admin-faint); font-size:9px; font-variant-numeric:tabular-nums; white-space:nowrap; }
+.agenda-day-column { position:relative; min-height:784px; border-left:1px solid #f0f0ef; cursor:crosshair; }
+.agenda-day-column:hover { background:linear-gradient(90deg, rgba(23,61,53,.022), rgba(23,61,53,.012)); }
+.agenda-day-column:focus-visible { z-index:4; outline:2px solid var(--admin-green); outline-offset:-2px; }
 .agenda-event { position:absolute; z-index:2; left:4px; right:4px; display:flex; overflow:hidden; align-items:flex-start; flex-direction:column; gap:2px; padding:6px 7px; border:1px solid; border-radius:5px; color:inherit; text-align:left; cursor:pointer; }
 .agenda-event:hover { z-index:3; filter:brightness(.975); box-shadow:0 4px 12px rgba(0,0,0,.09); }
 .agenda-event > span, .agenda-event > small { display:block; overflow:hidden; width:100%; text-overflow:ellipsis; white-space:nowrap; }
@@ -740,6 +742,7 @@ html { background: var(--admin-canvas); }
 .agenda-calendar__footer { display:flex; align-items:center; justify-content:space-between; gap:14px; padding:11px 16px; border-top:1px solid var(--admin-border); color:var(--admin-faint); font-size:9px; }
 .agenda-calendar__footer > span, .agenda-calendar__footer > a { display:inline-flex; align-items:center; gap:6px; }
 .agenda-calendar__footer > a { color:var(--admin-green); font-weight:600; white-space:nowrap; }
+.agenda-calendar__footer > span:first-child::after { content:'Klik op een tijdsvak om meteen een Itransform-moment toe te voegen.'; margin-left:8px; color:var(--admin-muted); }
 .agenda-shortcuts { margin-left:auto; }
 .agenda-shortcuts kbd { min-width:17px; padding:1px 4px; border:1px solid var(--admin-border); border-bottom-color:#c8c8c8; border-radius:4px; background:#fff; color:var(--admin-muted); font:600 8px/1.35 'Geist', sans-serif; text-align:center; }
 .agenda-guide { display:grid; grid-template-columns:repeat(3, 1fr); gap:0; margin-top:18px; border:1px solid var(--admin-border); border-radius:var(--admin-radius); background:white; }
