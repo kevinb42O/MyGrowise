@@ -1,25 +1,23 @@
 ---
 import AdminLayout from '../../layouts/AdminLayout.astro';
 import AdminIcon from '../../components/admin/AdminIcon.astro';
-import { listProductAuditEvents, listProducts } from '../../lib/adminProducts';
+import { getSuperadminOverview } from '../../lib/superAdmin';
 
-const catalogProducts = await listProducts();
-const recentProductActivity = await listProductAuditEvents(5);
-const publishedProducts = catalogProducts.filter((product) => product.status === 'published').length;
+const overview = await getSuperadminOverview();
 
 const metrics = [
-  { label: 'Netto-omzet', value: '€ 0,00', detail: 'Wacht op betaalintegratie', icon: 'euro' },
-  { label: 'Betaalde bestellingen', value: '0', detail: 'Nog geen checkout actief', icon: 'cart' },
-  { label: 'Aankoopconversie', value: '—', detail: 'Wacht op analytics', icon: 'trend' },
-  { label: 'Boekingsklikken', value: '0', detail: 'Nog geen meetdata', icon: 'heart' },
+  { label: 'Netto-omzet', value: overview.netRevenue, detail: 'Betaald en geleverd, exclusief refunds', icon: 'euro' },
+  { label: 'Betaalde bestellingen', value: String(overview.paidOrders), detail: 'Op basis van gevalideerde orderstatus', icon: 'cart' },
+  { label: 'Aankoopconversie', value: overview.conversion === null ? '—' : new Intl.NumberFormat('nl-BE', { style: 'percent', maximumFractionDigits: 1 }).format(overview.conversion), detail: overview.conversion === null ? 'Nog onvoldoende consent-data' : 'Betaling per consented sessie', icon: 'trend' },
+  { label: 'Boekingsaanvragen', value: String(overview.pendingBookings), detail: 'Openstaande aanvragen om op te volgen', icon: 'heart' },
 ];
 
 const setup = [
-  { title: 'Beheeromgeving & informatiemodel', detail: 'Navigatie, rollen en datadomeinen', state: 'Ontworpen', tone: 'ready' },
-  { title: 'Lokale authenticatie', detail: 'Hash, sessiecookie en routeguard', state: 'Actief', tone: 'ready' },
-  { title: 'Productbeheer', detail: `${catalogProducts.length} producten · ${publishedProducts} gepubliceerd`, state: 'Actief', tone: 'ready' },
-  { title: 'Betaling & levering', detail: 'Provider, webhook en toegangsrechten', state: 'Beslissing nodig', tone: 'blocked' },
-  { title: 'Privacyvriendelijke analytics', detail: 'Events, funnels en rapportages', state: 'Gespecificeerd', tone: 'ready' },
+  { title: 'Supabase & toegangsmodel', detail: 'RLS, audittrail en server-only credentials', state: 'Actief', tone: 'ready' },
+  { title: 'Productbeheer', detail: `${overview.productCount} producten · ${overview.publishedProducts} gepubliceerd`, state: 'Actief', tone: 'ready' },
+  { title: 'Betaling & levering', detail: overview.integrations.find((item) => item.key === 'payments')?.detail || 'Controle vereist', state: overview.integrations.find((item) => item.key === 'payments')?.state === 'healthy' ? 'Actief' : 'Actie nodig', tone: overview.integrations.find((item) => item.key === 'payments')?.state === 'healthy' ? 'ready' : 'blocked' },
+  { title: 'E-mail & uitnodigingen', detail: overview.integrations.find((item) => item.key === 'email')?.detail || 'Controle vereist', state: overview.integrations.find((item) => item.key === 'email')?.state === 'healthy' ? 'Actief' : 'Actie nodig', tone: overview.integrations.find((item) => item.key === 'email')?.state === 'healthy' ? 'ready' : 'blocked' },
+  { title: 'Privacyvriendelijke analytics', detail: `${overview.analyticsEvents} consented events in de laatste 30 dagen`, state: overview.analyticsEvents ? 'Ontvangt data' : 'Klaar om te koppelen', tone: 'ready' },
 ];
 ---
 
@@ -39,7 +37,7 @@ const setup = [
 
     <div class="admin-preview-notice" role="status">
       <AdminIcon name="warning" size={18} />
-      <div><strong>Previewmodus — nog geen live bedrijfsdata</strong>De dashboardstructuur staat klaar. Cijfers blijven bewust op nul tot checkout, analytics en authenticatie veilig gekoppeld zijn.</div>
+      <div><strong>Operationele status</strong>Financiële cijfers worden pas gevuld door een gevalideerde betaalwebhook. Het dashboard toont nooit browserredirects als betaalbewijs.</div>
     </div>
 
     <section class="admin-metrics" aria-label="Kerncijfers">
@@ -65,7 +63,7 @@ const setup = [
           </div>
         </header>
         <div class="admin-chart">
-          <div class="admin-chart__summary"><strong>€ 0,00</strong><span>Geen vergelijking beschikbaar</span></div>
+          <div class="admin-chart__summary"><strong>{overview.netRevenue}</strong><span>Betaalde en geleverde orders</span></div>
           <div class="admin-chart__empty">
             <div><span><AdminIcon name="analytics" size={18} /></span><strong>Nog geen omzetdata</strong><p>Zodra een eerste testbetaling en webhook succesvol zijn verwerkt, verschijnt hier de tijdlijn.</p></div>
           </div>
@@ -91,13 +89,13 @@ const setup = [
         <div><h2 id="activity-title">Recente activiteit</h2><p>Bestellingen, boekingen, berichten en contentwijzigingen</p></div>
         <a class="admin-text-link" href="/admin/producten">Producten bekijken <AdminIcon name="arrow" size={13} /></a>
       </header>
-      {recentProductActivity.length ? (
+      {overview.activity.length ? (
         <div class="admin-activity-list">
-          {recentProductActivity.map((event) => (
-            <a href={`/admin/producten/${event.objectId}`} class="admin-activity-row">
+          {overview.activity.map((event) => (
+            <a href={event.objectType === 'product' ? `/admin/producten/${event.objectId}` : '/admin'} class="admin-activity-row">
               <span class="admin-activity-row__icon"><AdminIcon name="products" size={16} /></span>
-              <span class="admin-activity-row__main"><strong>{event.action === 'product.created' ? 'Product aangemaakt' : 'Product bijgewerkt'}</strong><small>{event.after?.title || event.before?.title || event.objectId}</small></span>
-              <span class="admin-activity-row__meta"><strong>{event.actor.split('@')[0]}</strong><time datetime={event.occurredAt}>{new Intl.DateTimeFormat('nl-BE', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }).format(new Date(event.occurredAt))}</time></span>
+              <span class="admin-activity-row__main"><strong>{event.action}</strong><small>{event.objectType} · {event.objectId}</small></span>
+              <span class="admin-activity-row__meta"><strong>Superadmin</strong><time datetime={event.occurredAt}>{new Intl.DateTimeFormat('nl-BE', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }).format(new Date(event.occurredAt))}</time></span>
               <AdminIcon name="arrow" size={14} />
             </a>
           ))}

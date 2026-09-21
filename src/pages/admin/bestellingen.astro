@@ -1,0 +1,14 @@
+---
+import AdminLayout from '../../layouts/AdminLayout.astro';
+import AdminIcon from '../../components/admin/AdminIcon.astro';
+import { listAdminOrders } from '../../lib/superAdmin';
+
+const orders = await listAdminOrders();
+const formatMoney = (value: number, currency: string) => new Intl.NumberFormat('nl-BE', { style: 'currency', currency }).format(value / 100);
+const label: Record<string, string> = { draft: 'Concept', pending_payment: 'In afwachting', paid: 'Betaald', fulfilled: 'Geleverd', cancelled: 'Geannuleerd', partially_refunded: 'Deels terugbetaald', refunded: 'Terugbetaald', disputed: 'Betwist' };
+---
+<AdminLayout title="Bestellingen" description="Geverifieerde verkoop- en leveringsstatussen">
+  <div class="admin-page"><section class="admin-page-heading"><div><p class="admin-eyebrow">Verkoop</p><h1>Bestellingen</h1><p>Alleen de server en gevalideerde providerwebhooks mogen financiële of leveringsstatussen wijzigen.</p></div></section>
+  <section class="admin-catalog-stats"><article><span>Totaal</span><strong>{orders.length}</strong></article><article><span>Betaald</span><strong>{orders.filter((o) => o.status === 'paid' || o.status === 'fulfilled').length}</strong></article><article><span>Opvolging nodig</span><strong>{orders.filter((o) => ['pending_payment', 'disputed', 'partially_refunded'].includes(o.status)).length}</strong></article><article><span>Terugbetaald</span><strong>{orders.filter((o) => o.status === 'refunded').length}</strong></article></section>
+  <section class="admin-panel">{orders.length ? <div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>Bestelling</th><th>Datum</th><th>Status</th><th>Totaal</th><th>Klant-ID</th></tr></thead><tbody>{orders.map((order) => <tr><td data-label="Bestelling"><strong>{order.id.slice(0, 8).toUpperCase()}</strong></td><td data-label="Datum"><time datetime={order.createdAt}>{new Intl.DateTimeFormat('nl-BE', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(order.createdAt))}</time></td><td data-label="Status"><span class={`admin-product-status admin-product-status--${order.status === 'fulfilled' || order.status === 'paid' ? 'published' : 'draft'}`}><i></i>{label[order.status] || order.status}</span></td><td data-label="Totaal"><strong class="admin-table-price">{formatMoney(order.totalCents, order.currency)}</strong></td><td data-label="Klant-ID"><code>{order.customerId.slice(0, 8)}…</code></td></tr>)}</tbody></table></div> : <div class="admin-empty-row"><div><span><AdminIcon name="cart" size={17}/></span><strong>Nog geen bestellingen</strong><p>De lijst vult zich uitsluitend na een gevalideerde betaalprovider-webhook.</p></div></div>}</section></div>
+</AdminLayout>

@@ -1,5 +1,5 @@
 import { defineMiddleware } from 'astro:middleware';
-import { ADMIN_COOKIE, CUSTOMER_COOKIE, hasRole, verifyUserSession } from './lib/adminAuth';
+import { ADMIN_COOKIE, CUSTOMER_COOKIE, SUPABASE_ADMIN_COOKIE, hasRole, isSupabaseAdminAuthEnabled, verifySupabaseAdminSession, verifyUserSession } from './lib/adminAuth';
 
 export const onRequest = defineMiddleware(async (context, next) => {
   const path = context.url.pathname;
@@ -15,7 +15,14 @@ export const onRequest = defineMiddleware(async (context, next) => {
 
   // Staff and customers deliberately use separate cookies. A customer login must never
   // replace a professional's active session on the same browser.
-  const staffSession = verifyUserSession(context.cookies.get(ADMIN_COOKIE)?.value);
+  const localStaffSession = verifyUserSession(context.cookies.get(ADMIN_COOKIE)?.value);
+  // The Supabase session protects only the organisation dashboard. Practice routes
+  // intentionally keep their existing local session until their own account migration.
+  const supabaseAdminSession = (isAdminPage || isAdminApi || path === '/admin/login') && isSupabaseAdminAuthEnabled()
+    ? await verifySupabaseAdminSession(context.cookies.get(SUPABASE_ADMIN_COOKIE)?.value)
+    : null;
+  const isSupabaseProtectedAdminRoute = (isAdminPage || isAdminApi || path === '/admin/login') && isSupabaseAdminAuthEnabled();
+  const staffSession = isSupabaseProtectedAdminRoute ? supabaseAdminSession : localStaffSession;
   const customerSession = verifyUserSession(context.cookies.get(CUSTOMER_COOKIE)?.value);
   const staffHome = () => {
     if (hasRole(staffSession, 'super_admin')) return '/admin';
@@ -46,7 +53,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
 
   const isCustomerRoute = isAccountPage || isAccountApi;
   const session = isCustomerRoute ? customerSession : staffSession;
-  const activeCookie = isCustomerRoute ? CUSTOMER_COOKIE : ADMIN_COOKIE;
+  const activeCookie = isCustomerRoute ? CUSTOMER_COOKIE : (isAdminPage || isAdminApi) && isSupabaseAdminAuthEnabled() ? SUPABASE_ADMIN_COOKIE : ADMIN_COOKIE;
   if (!session) {
     context.cookies.delete(activeCookie, { path: '/' });
     if (isAdminApi || isPracticeApi || isAccountApi) {

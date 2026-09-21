@@ -10,6 +10,7 @@ interface Props {
 const { title, description = 'Beheer MyGrowise' } = Astro.props;
 const currentPath = Astro.url.pathname.replace(/\/$/, '') || '/';
 const adminUser = Astro.locals.adminUser;
+const environmentLabel = import.meta.env.PROD ? 'Productie' : 'Lokaal';
 
 const navGroups = [
   {
@@ -128,7 +129,7 @@ const isActive = (item: { href: string; exact?: boolean }) =>
             <strong>{title}</strong>
           </div>
           <div class="admin-topbar__right">
-            <span class="admin-environment"><i></i> Preview</span>
+            <span class="admin-environment"><i></i> {environmentLabel}</span>
             <a class="admin-topbar__site-link" href="/" target="_blank" rel="noreferrer">
               <AdminIcon name="external" size={16} />
               <span>Website</span>

@@ -1,7 +1,10 @@
 import { createHmac, randomBytes, scryptSync, timingSafeEqual } from 'node:crypto';
+import { createClient } from '@supabase/supabase-js';
 import { getUserByEmail, getUserById, recordUserLogin, type LocalUser, type UserRole } from './practiceDb';
+import { getSupabaseAdmin } from './supabase/server';
 
 export const ADMIN_COOKIE = 'mg_admin_session';
+export const SUPABASE_ADMIN_COOKIE = 'mg_supabase_admin_session';
 export const CUSTOMER_COOKIE = 'mg_customer_session';
 export const SESSION_TTL_SECONDS = 60 * 60 * 8;
 
@@ -12,6 +15,7 @@ export type UserSession = {
 
 const sessionSecret = () => String(import.meta.env.ADMIN_SESSION_SECRET || '').trim();
 export const isAdminAuthConfigured = () => sessionSecret().length >= 64;
+export const isSupabaseAdminAuthEnabled = () => import.meta.env.ADMIN_AUTH_MODE === 'supabase';
 const safeEqual = (left: Buffer, right: Buffer) => left.length === right.length && timingSafeEqual(left, right);
 
 export const authenticateUser = (email: string, password: string): LocalUser | null => {
@@ -69,5 +73,37 @@ export const verifyUserSession = (token?: string): UserSession | null => {
 
 export const hasRole = (session: UserSession | null, role: UserRole) => Boolean(session?.roles.includes(role));
 export const adminCookieOptions = () => ({ httpOnly: true, secure: import.meta.env.PROD, sameSite: 'strict' as const, path: '/', maxAge: SESSION_TTL_SECONDS });
+export const supabaseAdminCookieOptions = () => ({ httpOnly: true, secure: import.meta.env.PROD, sameSite: 'strict' as const, path: '/', maxAge: 60 * 60 });
 export const isTrustedFormOrigin = (request: Request) => !request.headers.get('origin') || request.headers.get('origin') === new URL(request.url).origin;
 export const sanitizeAppRedirect = (value: FormDataEntryValue | null) => typeof value === 'string' && (value.startsWith('/admin') || value.startsWith('/praktijk') || value.startsWith('/account')) && !value.startsWith('//') && !value.includes('/inloggen') && !value.includes('/login') ? value : '';
+
+const toSupabaseSession = async (user: { id: string; email?: string | null; user_metadata?: Record<string, unknown> }, expiresAt?: number): Promise<UserSession | null> => {
+  const client = getSupabaseAdmin();
+  const [{ data: roleRows, error: roleError }, { data: practitioner, error: practitionerError }] = await Promise.all([
+    client.from('user_roles').select('role').eq('user_id', user.id),
+    client.from('practitioners').select('id').eq('user_id', user.id).maybeSingle(),
+  ]);
+  if (roleError || practitionerError) return null;
+  const roles = (roleRows || []).map((row: { role: string }) => row.role).filter((role): role is UserRole => role === 'super_admin' || role === 'practitioner' || role === 'customer');
+  if (!roles.includes('super_admin')) return null;
+  const now = Math.floor(Date.now() / 1000);
+  return { sub: user.id, email: user.email || '', name: String(user.user_metadata?.full_name || user.email || 'Superadmin'), roles, practitionerId: practitioner?.id || null, sessionVersion: 1, issuedAt: now, expiresAt: expiresAt || now + 3600, nonce: 'supabase' };
+};
+
+export const authenticateSupabaseAdmin = async (email: string, password: string) => {
+  const url = import.meta.env.PUBLIC_SUPABASE_URL?.trim();
+  const publishableKey = import.meta.env.PUBLIC_SUPABASE_PUBLISHABLE_KEY?.trim();
+  if (!url || !publishableKey) return null;
+  const client = createClient(url, publishableKey, { auth: { autoRefreshToken: false, persistSession: false } });
+  const { data, error } = await client.auth.signInWithPassword({ email, password });
+  if (error || !data.user || !data.session) return null;
+  const user = await toSupabaseSession(data.user, data.session.expires_at);
+  return user ? { user, accessToken: data.session.access_token } : null;
+};
+
+export const verifySupabaseAdminSession = async (token?: string): Promise<UserSession | null> => {
+  if (!token || !isSupabaseAdminAuthEnabled()) return null;
+  const { data, error } = await getSupabaseAdmin().auth.getUser(token);
+  if (error || !data.user) return null;
+  return toSupabaseSession(data.user);
+};

@@ -7,17 +7,26 @@
     "start": "astro dev --host",
     "build": "astro build",
     "preview": "astro preview",
-    "astro": "astro"
+    "astro": "astro",
+    "supabase:link": "supabase link --project-ref bwkqkehumzpfodmcesab",
+    "supabase:push": "dotenv -e .env -- sh -c 'supabase db push --db-url \"$SUPABASE_DB_URL\"'",
+    "supabase:pull": "dotenv -e .env -- sh -c 'supabase db pull --db-url \"$SUPABASE_DB_URL\"'",
+    "supabase:types": "dotenv -e .env -- sh -c 'supabase gen types typescript --project-id \"$SUPABASE_PROJECT_REF\" > src/lib/supabase/database.types.ts'",
+    "supabase:migrate-catalog": "dotenv -e .env -- node scripts/migrate-local-catalog-to-supabase.mjs",
+    "supabase:migrate-practice": "dotenv -e .env -- node scripts/migrate-local-practice-to-supabase.mjs"
   },
   "dependencies": {
     "@astrojs/react": "^6.0.5",
     "@astrojs/vercel": "^11.0.10",
+    "@supabase/supabase-js": "^2.116.0",
     "astro": "^7.2.4",
     "framer-motion": "^13.3.0",
     "react": "^19.3.0",
     "react-dom": "^19.3.0"
   },
   "devDependencies": {
+    "dotenv-cli": "^11.0.0",
+    "supabase": "^2.117.0",
     "typescript": "^5.7.3"
   }
 }

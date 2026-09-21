@@ -1,12 +1,15 @@
 ---
 import AdminLayout from '../../layouts/AdminLayout.astro';
 import AdminIcon from '../../components/admin/AdminIcon.astro';
+import { getSuperadminOverview } from '../../lib/superAdmin';
+
+const overview = await getSuperadminOverview();
 
 const metrics = [
-  { label: 'Sessies', value: '0', detail: 'Wacht op consent-meetlaag', icon: 'customers' },
-  { label: 'Productweergaven', value: '0', detail: 'Geen events ontvangen', icon: 'products' },
-  { label: 'Checkout gestart', value: '0', detail: 'Checkout nog niet actief', icon: 'cart' },
-  { label: 'Aankoopconversie', value: '—', detail: 'Onvoldoende data', icon: 'trend' },
+  { label: 'Gevalideerde events', value: String(overview.analyticsEvents), detail: 'Alleen consented events in de laatste 30 dagen', icon: 'customers' },
+  { label: 'Producten gepubliceerd', value: String(overview.publishedProducts), detail: 'Catalogus in Supabase', icon: 'products' },
+  { label: 'Open boekingsaanvragen', value: String(overview.pendingBookings), detail: 'Operationele opvolging', icon: 'cart' },
+  { label: 'Aankoopconversie', value: overview.conversion === null ? '—' : new Intl.NumberFormat('nl-BE', { style: 'percent', maximumFractionDigits: 1 }).format(overview.conversion), detail: overview.conversion === null ? 'Onvoldoende consent-data' : 'Gevalideerde betaling per sessie', icon: 'trend' },
 ];
 
 const commerceFunnel = [
@@ -32,7 +35,7 @@ const careFunnel = [
 
     <div class="admin-preview-notice" role="status">
       <AdminIcon name="warning" size={18} />
-      <div><strong>Tracking is nog niet actief</strong>Deze interface toont het definitieve meetmodel en blijft leeg totdat toestemming, eventvalidatie en interne-trafficfilters werken.</div>
+      <div><strong>Privacygrens actief</strong>De schema- en consentgrens staat klaar. Grafieken blijven bewust leeg totdat een first-party eventlaag is gekoppeld; nul is nooit een verzonnen prestatiecijfer.</div>
     </div>
 
     <div class="analytics-toolbar">

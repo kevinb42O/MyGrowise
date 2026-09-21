@@ -1,12 +1,16 @@
 import type { APIRoute } from 'astro';
 import {
   ADMIN_COOKIE,
+  SUPABASE_ADMIN_COOKIE,
   adminCookieOptions,
   authenticateUser,
+  authenticateSupabaseAdmin,
   createUserSession,
   isAdminAuthConfigured,
+  isSupabaseAdminAuthEnabled,
   isTrustedFormOrigin,
   sanitizeAppRedirect,
+  supabaseAdminCookieOptions,
 } from '../../../lib/adminAuth';
 
 export const prerender = false;
@@ -26,7 +30,7 @@ const redirectToLogin = (url: URL, error: string, next = '/admin') => {
 
 export const POST: APIRoute = async ({ request, cookies, url }) => {
   if (!isTrustedFormOrigin(request)) return new Response('Ongeldige aanvraag.', { status: 403 });
-  if (!isAdminAuthConfigured()) return redirectToLogin(url, 'configuration');
+  if (!isSupabaseAdminAuthEnabled() && !isAdminAuthConfigured()) return redirectToLogin(url, 'configuration');
 
   let form: FormData;
   try {
@@ -49,7 +53,8 @@ export const POST: APIRoute = async ({ request, cookies, url }) => {
   if (previous && previous.resetAt <= now) attempts.delete(clientKey);
 
   const validShape = email.length <= 254 && password.length > 0 && password.length <= 256;
-  const user = validShape ? authenticateUser(email, password) : null;
+  const supabaseLogin = validShape && isSupabaseAdminAuthEnabled() ? await authenticateSupabaseAdmin(email, password) : null;
+  const user = supabaseLogin?.user || (validShape && !isSupabaseAdminAuthEnabled() ? authenticateUser(email, password) : null);
   if (!user || !user.roles.some((role) => role === 'super_admin' || role === 'practitioner')) {
     const current = attempts.get(clientKey);
     attempts.set(clientKey, {
@@ -61,7 +66,8 @@ export const POST: APIRoute = async ({ request, cookies, url }) => {
   }
 
   attempts.delete(clientKey);
-  cookies.set(ADMIN_COOKIE, createUserSession(user), adminCookieOptions());
+  if (supabaseLogin) cookies.set(SUPABASE_ADMIN_COOKIE, supabaseLogin.accessToken, supabaseAdminCookieOptions());
+  else cookies.set(ADMIN_COOKIE, createUserSession(user), adminCookieOptions());
   const destination = requestedNext || '/admin';
   const canOpenRequested = (destination.startsWith('/admin') && user.roles.includes('super_admin')) || (destination.startsWith('/praktijk') && user.roles.includes('practitioner'));
   if (!canOpenRequested) return redirectToLogin(url, 'forbidden', destination);
