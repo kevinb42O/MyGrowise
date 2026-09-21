@@ -18,6 +18,12 @@
   "dependencies": {
     "@astrojs/react": "^6.0.5",
     "@astrojs/vercel": "^11.0.10",
+    "@fullcalendar/core": "^6.1.21",
+    "@fullcalendar/daygrid": "^6.1.21",
+    "@fullcalendar/interaction": "^6.1.21",
+    "@fullcalendar/list": "^6.1.21",
+    "@fullcalendar/react": "^7.1.0",
+    "@fullcalendar/timegrid": "^6.1.21",
     "@supabase/supabase-js": "^2.116.0",
     "astro": "^7.2.4",
     "framer-motion": "^13.3.0",
