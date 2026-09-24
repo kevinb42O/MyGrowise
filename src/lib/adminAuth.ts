@@ -51,10 +51,10 @@ export const authenticateSupabaseUser = async (email: string, password: string, 
   return user ? { user, accessToken: data.session.access_token } : null;
 };
 
-export const registerSupabaseCustomer = async (name: string, email: string, password: string) => {
+export const registerSupabaseCustomer = async (name: string, email: string, password: string, emailRedirectTo: string) => {
   if (!configured()) throw new Error('configuration');
   if (name.trim().length < 2 || name.trim().length > 120 || password.length < 12 || password.length > 256) throw new Error('invalid');
-  const { data, error } = await publicAuthClient().auth.signUp({ email, password, options: { data: { full_name: name.trim().replace(/\s+/g, ' ') } } });
+  const { data, error } = await publicAuthClient().auth.signUp({ email, password, options: { data: { full_name: name.trim().replace(/\s+/g, ' ') }, emailRedirectTo } });
   if (error || !data.user) {
     if (error?.message.toLowerCase().includes('already')) throw new Error('email_taken');
     throw new Error('invalid');
@@ -62,6 +62,12 @@ export const registerSupabaseCustomer = async (name: string, email: string, pass
   if (!data.session) return { confirmationRequired: true as const };
   const user = await toSession(data.user, data.session.expires_at);
   return user ? { confirmationRequired: false as const, user, accessToken: data.session.access_token } : { confirmationRequired: true as const };
+};
+
+export const resendSupabaseCustomerConfirmation = async (email: string, emailRedirectTo: string) => {
+  if (!configured()) throw new Error('configuration');
+  const { error } = await publicAuthClient().auth.resend({ type: 'signup', email, options: { emailRedirectTo } });
+  if (error) throw error;
 };
 
 export const verifySupabaseSession = async (token?: string): Promise<UserSession | null> => {

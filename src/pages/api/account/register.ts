@@ -7,7 +7,8 @@ export const POST: APIRoute = async ({ request, cookies }) => {
   const form = await request.formData(); const password = String(form.get('password') || '');
   if (password !== String(form.get('confirm_password') || '')) return Response.redirect(new URL('/account/aanmaken?error=invalid', request.url), 303);
   try {
-    const result = await registerSupabaseCustomer(String(form.get('name') || ''), String(form.get('email') || '').trim().toLowerCase(), password);
+    const confirmationUrl = new URL('/account/inloggen?confirmed=1', request.url).toString();
+    const result = await registerSupabaseCustomer(String(form.get('name') || ''), String(form.get('email') || '').trim().toLowerCase(), password, confirmationUrl);
     if (result.confirmationRequired) return Response.redirect(new URL('/account/inloggen?error=registered', request.url), 303);
     cookies.set(SUPABASE_SESSION_COOKIE, result.accessToken, supabaseSessionCookieOptions());
     return Response.redirect(new URL(sanitizeAppRedirect(form.get('next')) || '/account', request.url), 303);
