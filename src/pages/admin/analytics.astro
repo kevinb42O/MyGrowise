@@ -58,7 +58,7 @@ const careFunnel = [['Sessies', 100, String(analytics.care.sessions)], ['Route â
       <div class="website-traffic-chart" data-analytics-chart data-points={chartData}>
         <div class="website-chart-tooltip" data-chart-tooltip role="status" hidden></div>
         <svg viewBox={`0 0 ${chartWidth} ${chartHeight}`} role="img" aria-label={`${isHourly ? 'Uurlijkse' : 'Dagelijkse'} bezoeken voor ${selectedRange.label}`} preserveAspectRatio="none">
-          <defs><linearGradient id="website-traffic-fill" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stop-color="#2848b9" stop-opacity=".18"/><stop offset="100%" stop-color="#2848b9" stop-opacity="0"/></linearGradient></defs>
+          <defs><linearGradient id="website-traffic-fill" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stop-color="var(--admin-green)" stop-opacity=".18"/><stop offset="100%" stop-color="var(--admin-green)" stop-opacity="0"/></linearGradient></defs>
           {[0, .25, .5, .75, 1].map((tick) => { const y = chartTop + tick * (chartHeight - chartTop - chartBottom); const value = Math.round(maxValue * (1 - tick)); return <g><line x1={chartLeft} x2={chartWidth - chartRight} y1={y} y2={y}/><text x={chartLeft - 8} y={y + 4}>{value}</text></g> })}
           {area && <polygon points={area} class="website-traffic-chart__area"/>}<polyline points={line} class="website-traffic-chart__line"/>
           <line class="website-traffic-chart__hover-guide" data-chart-guide x1="0" x2="0" y1={chartTop} y2={baseline} hidden/><circle class="website-traffic-chart__hover-dot" data-chart-dot cx="0" cy="0" r="4" hidden/>
