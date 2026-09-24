@@ -1,4 +1,5 @@
 import { getSupabaseAdmin } from './supabase/server';
+import { toDataURL } from 'qrcode';
 
 type Row = Record<string, unknown>;
 const fail = (error: { message?: string } | null) => { if (error) throw new Error(error.message || 'database_error'); };
@@ -50,6 +51,44 @@ export const getWiseManualDetails = (): WiseManualDetails | null => {
   const bic = String(process.env.WISE_BIC || 'TRWIBEB1XXX').replace(/\s+/g, '').toUpperCase();
   if (!accountName || !isValidIban(iban) || (bic && !/^[A-Z]{6}[A-Z0-9]{2}([A-Z0-9]{3})?$/.test(bic))) return null;
   return { accountName, iban, bic };
+};
+
+export const createEpcSepaQr = async (input: {
+  details: WiseManualDetails;
+  amountCents: number;
+  currency: string;
+  reference: string;
+}): Promise<string | null> => {
+  const currency = input.currency.trim().toUpperCase();
+  if (currency !== 'EUR') return null;
+
+  const amount = input.amountCents / 100;
+  const accountName = input.details.accountName.replace(/[\r\n]+/g, ' ').trim();
+  const iban = input.details.iban.replace(/\s+/g, '').toUpperCase();
+  const bic = input.details.bic.replace(/\s+/g, '').toUpperCase();
+  const reference = input.reference.trim();
+  if (!Number.isSafeInteger(input.amountCents) || input.amountCents < 1 || amount > 999_999_999.99
+    || !accountName || accountName.length > 70 || !isValidIban(iban)
+    || !/^[A-Z]{6}[A-Z0-9]{2}([A-Z0-9]{3})?$/.test(bic)
+    || !reference || reference.length > 140 || /[\r\n]/.test(reference)) {
+    throw new Error('invalid_sepa_qr_data');
+  }
+
+  // EPC069-12 v3.1, version 001: show the same payment details beside the
+  // QR so customers can verify the transfer before authorising it.
+  const payload = [
+    'BCD', '001', '1', 'SCT', bic, accountName, iban,
+    `EUR${amount.toFixed(2)}`, '', reference,
+  ].join('\n');
+  if (Buffer.byteLength(payload, 'utf8') > 331) throw new Error('sepa_qr_payload_too_large');
+
+  return toDataURL(payload, {
+    type: 'image/png',
+    errorCorrectionLevel: 'M',
+    width: 320,
+    margin: 4,
+    color: { dark: '#173d35', light: '#ffffff' },
+  });
 };
 
 export const getWiseManualProduct = async (slug: string) => {
