@@ -18,7 +18,7 @@ const friendlyError = (error: unknown) => {
   return 'invalid_input';
 };
 
-export const POST: APIRoute = async ({ request, locals }) => {
+export const POST: APIRoute = async ({ request, locals, redirect }) => {
   if (!isTrustedFormOrigin(request)) return new Response('Ongeldige aanvraag.', { status: 403 });
   const user = locals.currentUser!; const form = await request.formData();
   const actor = auditActor(user, locals.requestId, '/api/admin/clienten');
@@ -27,13 +27,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const patientId = fromBooking
       ? await createPatientFromBooking(String(form.get('booking_id') || ''), user, actor)
       : await createPatient({ fullName: form.get('full_name'), email: form.get('email'), assigneeUserId: form.get('assignee_user_id') }, user, actor);
-    const destination = new URL(`/admin/clienten/${patientId}`, request.url);
-    destination.searchParams.set('melding', fromBooking ? 'afspraak' : 'aangemaakt');
-    return Response.redirect(destination, 303);
+    const destination = new URLSearchParams({ melding: fromBooking ? 'afspraak' : 'aangemaakt' });
+    return redirect(`/admin/clienten/${encodeURIComponent(patientId)}?${destination}`, 303);
   } catch (error) {
-    const destination = new URL('/admin/clienten', request.url);
-    destination.searchParams.set('fout', friendlyError(error));
-    return Response.redirect(destination, 303);
+    const destination = new URLSearchParams({ fout: friendlyError(error) });
+    return redirect(`/admin/clienten?${destination}`, 303);
   }
 };
 

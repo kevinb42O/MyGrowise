@@ -1,11 +1,12 @@
 import type { APIRoute } from 'astro';
+import { isTrustedFormOrigin } from '../../lib/adminAuth';
 import { getSupabaseAdmin } from '../../lib/supabase/server';
 export const prerender = false;
 const events = new Set(['page_view', 'route_selected', 'product_viewed', 'checkout_started', 'professional_viewed', 'booking_clicked']);
 const attempts = new Map<string, { count: number; resetAt: number }>();
 export const POST: APIRoute = async ({ request, cookies }) => {
   if (cookies.get('mg_analytics_consent')?.value !== 'granted') return new Response(null, { status: 204 });
-  if (request.headers.get('origin') && request.headers.get('origin') !== new URL(request.url).origin) return new Response(null, { status: 403 });
+  if (!isTrustedFormOrigin(request)) return new Response(null, { status: 403 });
   let payload: { event?: unknown; path?: unknown; route?: unknown }; try { payload = await request.json(); } catch { return new Response(null, { status: 400 }); }
   const event = String(payload.event || ''); const path = String(payload.path || ''); const route = String(payload.route || '');
   if (!events.has(event) || !/^\/[a-z0-9/_-]{0,499}$/i.test(path) || (route && !['self', 'care'].includes(route))) return new Response(null, { status: 400 });

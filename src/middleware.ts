@@ -1,9 +1,18 @@
 import { defineMiddleware } from 'astro:middleware';
-import { SUPABASE_SESSION_COOKIE, hasPermission, hasRole, isCustomerAccount, isSupabaseAuthConfigured, sanitizeAppRedirect, verifySupabaseSession } from './lib/adminAuth';
+import { SUPABASE_SESSION_COOKIE, hasPermission, hasRole, isCustomerAccount, isSupabaseAuthConfigured, isTrustedFormOrigin, sanitizeAppRedirect, verifySupabaseSession } from './lib/adminAuth';
 import { firstAccessibleAdminPath, requiredAdminPermission } from './lib/adminPermissions';
 import { hasInternalMessagingAccess } from './lib/adminPermissions';
 
 export const onRequest = defineMiddleware(async (context, next) => {
+  const request = context.request;
+  const isSafeMethod = ['GET', 'HEAD', 'OPTIONS'].includes(request.method.toUpperCase());
+  const contentType = request.headers.get('content-type')?.toLowerCase() || '';
+  const isFormLikeRequest = !request.headers.has('content-type') || ['application/x-www-form-urlencoded', 'multipart/form-data', 'text/plain'].some((type) => contentType.includes(type));
+  const hasOrigin = request.headers.has('origin');
+  if (!isSafeMethod && (isFormLikeRequest || hasOrigin) && (!hasOrigin || !isTrustedFormOrigin(request, context.url.origin))) {
+    return new Response(`Cross-site ${request.method} form submissions are forbidden`, { status: 403 });
+  }
+
   const path = context.url.pathname;
   context.locals.requestId = crypto.randomUUID();
   const isAdminPage = path.startsWith('/admin');
