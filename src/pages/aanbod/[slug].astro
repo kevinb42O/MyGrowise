@@ -32,7 +32,7 @@ const statusLabels: Record<string, string> = { pending_payment: 'Wacht op betali
         <h1>{product.title}</h1>
         <p class="lead">{product.summary}</p>
         <div class="wise-checkout__price"><span>Te betalen</span><strong>{money}</strong><small>Handmatige overschrijving via Wise</small></div>
-        <div class="wise-checkout__steps"><div><b>1</b><p>Maak een bestelling aan met je MyGrowise-account.</p></div><div><b>2</b><p>Maak het bedrag over via Wise en gebruik de unieke betalingsreferentie.</p></div><div><b>3</b><p>Virginie controleert de bijschrijving; daarna wordt je bestelling geactiveerd.</p></div></div>
+        <div class="wise-checkout__steps"><div><b>1</b><p>Maak een bestelling aan met je MyGrowise-account.</p></div><div><b>2</b><p>Maak het bedrag over via Wise en gebruik de unieke betalingsreferentie.</p></div><div><b>3</b><p>Na ontvangst en controle van je betaling activeren we je bestelling.</p></div></div>
       </div>
       <aside class="wise-checkout__card" aria-label="Bestellen en betalen via Wise">
         {order ? <>
@@ -41,7 +41,7 @@ const statusLabels: Record<string, string> = { pending_payment: 'Wacht op betali
           <strong class="payment-amount">{new Intl.NumberFormat('nl-BE', { style: 'currency', currency: order.currency }).format(order.totalCents / 100)}</strong>
           {order.status === 'pending_payment' && wiseDetails ? <>
             <dl class="transfer-details"><div><dt>Begunstigde</dt><dd>{wiseDetails.accountName}</dd></div><div><dt>IBAN</dt><dd>{wiseDetails.iban}</dd></div>{wiseDetails.bic && <div><dt>BIC / SWIFT</dt><dd>{wiseDetails.bic}</dd></div>}<div><dt>Mededeling</dt><dd><strong>{order.reference}</strong></dd></div></dl>
-            {reported || order.paymentClaimedAt ? <p class="notice" role="status">Je betaalmelding is ontvangen. We controleren de Wise-bijschrijving en bevestigen je bestelling zodra het bedrag is aangekomen.</p> : <>
+            {reported || order.paymentClaimedAt ? <p class="notice" role="status">Je betaalmelding is ontvangen. Na ontvangst en controle van je Wise-betaling bevestigen we je bestelling.</p> : <>
               <p>Vermeld exact de referentie hierboven bij je overschrijving. Zonder die referentie kan de betaling moeilijker teruggevonden worden.</p>
               <form action="/api/checkout/wise-claim" method="post"><input type="hidden" name="order" value={order.id}/><input type="hidden" name="product" value={product.slug}/><button class="button button-primary" type="submit">Ik heb betaald</button></form>
             </>}
