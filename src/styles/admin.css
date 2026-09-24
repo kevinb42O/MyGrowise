@@ -1362,3 +1362,88 @@ html { background: var(--admin-canvas); }
 .content-editor .admin-button--primary, .content-editor .admin-button--primary:hover { color: var(--admin-green); }
 .practice-day__toggle input:checked + span { background: var(--admin-green-soft); }
 .practice-day__toggle input:checked + span::after { background: var(--admin-green); }
+
+.settings-page { display: grid; gap: 18px; }
+.settings-page .admin-page-heading { margin-bottom: 2px; }
+.settings-section-nav { display: flex; flex-wrap: wrap; gap: 8px; }
+.settings-section-nav a { padding: 8px 12px; border: 1px solid var(--admin-border); border-radius: 999px; background: white; color: var(--admin-muted); font-size: 11px; font-weight: 600; text-decoration: none; }
+.settings-section-nav a:hover { border-color: var(--admin-border-strong); background: var(--admin-green-soft); color: var(--admin-green); }
+.settings-overview { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.settings-summary { display: grid; min-height: 138px; align-content: start; gap: 8px; padding: 17px 19px; border: 1px solid var(--admin-border); border-radius: var(--admin-radius); background: white; }
+.settings-summary--cost { border-color: #cbded6; background: linear-gradient(135deg, #f7fbf8, white 70%); }
+.settings-summary--unknown { border-color: #eadba7; background: #fffdf5; }
+.settings-summary__label { color: var(--admin-muted); font-size: 10px; font-weight: 650; letter-spacing: .04em; text-transform: uppercase; }
+.settings-summary strong { color: var(--admin-text); font-size: 21px; font-weight: 650; letter-spacing: -.025em; }
+.settings-summary strong small { color: var(--admin-muted); font-size: 11px; font-weight: 550; letter-spacing: 0; }
+.settings-summary > span:not(.settings-summary__label) { color: var(--admin-muted); font-size: 11px; line-height: 1.45; }
+.settings-summary em { color: var(--admin-green); font-size: 11px; font-style: normal; font-weight: 650; }
+.settings-panel { scroll-margin-top: 18px; }
+.settings-integrations { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 22px; padding: 4px 18px; }
+.settings-integration { min-width: 0; padding: 15px 0; border-bottom: 1px solid var(--admin-border); }
+.settings-integration__heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.settings-integration__heading strong, .settings-integration__heading small { display: block; }
+.settings-integration__heading strong { color: var(--admin-text); font-size: 11px; font-weight: 650; }
+.settings-integration__heading small { margin-top: 3px; color: var(--admin-faint); font-size: 9px; line-height: 1.4; }
+.settings-integration > p { margin: 9px 0 7px; color: var(--admin-muted); font-size: 10px; line-height: 1.55; }
+.settings-integration__time { display: block; color: var(--admin-faint); font-size: 9px; }
+.admin-state--unknown { background: #f3f2ee; color: #6a6a62; }
+.admin-state--manual { background: #edf2f0; color: #46645a; }
+.admin-state--failed { background: #f9e8e7; color: #9d3d35; }
+.settings-note { padding: 12px 18px; border-top: 1px solid var(--admin-border); background: #fafbf9; color: var(--admin-muted); font-size: 10px; line-height: 1.55; }
+.settings-note strong { color: var(--admin-text); }
+.settings-cost-list { padding: 16px; }
+.settings-cost-card { padding: 20px; border: 1px solid var(--admin-border); border-radius: 10px; background: linear-gradient(180deg, #fff, #fcfdfb); }
+.settings-cost-card__heading { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding-bottom: 17px; border-bottom: 1px solid var(--admin-border); }
+.settings-cost-card__eyebrow { color: var(--admin-green); font-size: 9px; font-weight: 700; letter-spacing: .09em; text-transform: uppercase; }
+.settings-cost-card h3 { margin: 5px 0 0; color: var(--admin-text); font-size: 18px; font-weight: 650; letter-spacing: -.02em; }
+.settings-cost-countdown { flex: 0 0 auto; padding: 7px 10px; border-radius: 999px; background: var(--admin-green-soft); color: var(--admin-green); font-size: 10px; font-weight: 700; }
+.settings-cost-countdown--soon { background: var(--admin-yellow-soft); color: var(--admin-warning-text); }
+.settings-cost-countdown--overdue { background: #f9e8e7; color: #9d3d35; }
+.settings-cost-facts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; padding: 18px 0; }
+.settings-cost-facts > div > span, .settings-cost-facts strong { display: block; }
+.settings-cost-facts > div > span { margin-bottom: 5px; color: var(--admin-faint); font-size: 9px; }
+.settings-cost-facts strong { color: var(--admin-text); font-size: 12px; font-weight: 650; line-height: 1.4; }
+.settings-cost-facts strong small { color: var(--admin-muted); font-size: 10px; font-weight: 550; }
+.settings-cost-actions { display: grid; grid-template-columns: minmax(180px, .65fr) minmax(0, 1.35fr); align-items: start; gap: 12px; padding-top: 15px; border-top: 1px solid var(--admin-border); }
+.settings-cost-edit > summary { width: max-content; cursor: pointer; list-style: none; }
+.settings-cost-edit > summary::-webkit-details-marker { display: none; }
+.settings-cost-form, .settings-cost-paid-form { display: grid; gap: 10px; }
+.settings-cost-form { grid-template-columns: repeat(2, minmax(0, 1fr)); margin-top: 12px; padding: 14px; border: 1px solid var(--admin-border); border-radius: 8px; background: white; }
+.settings-cost-form label, .settings-cost-paid-form label { display: grid; gap: 5px; }
+.settings-cost-form label > span, .settings-cost-paid-form label > span { color: var(--admin-muted); font-size: 9px; font-weight: 600; }
+.settings-cost-form input, .settings-cost-paid-form input { width: 100%; min-height: 36px; padding: 8px 9px; border: 1px solid var(--admin-border-strong); border-radius: 6px; background: white; color: var(--admin-text); font: inherit; font-size: 11px; }
+.settings-cost-form button { grid-column: 1 / -1; justify-self: start; }
+.settings-cost-paid-form { grid-template-columns: minmax(0, 1fr) auto; align-items: end; }
+.settings-payment-history { margin-top: 17px; padding-top: 14px; border-top: 1px solid var(--admin-border); }
+.settings-payment-history > strong { color: var(--admin-text); font-size: 10px; }
+.settings-payment-history ul { display: grid; gap: 8px; margin: 9px 0 0; padding: 0; list-style: none; }
+.settings-payment-history li { display: grid; gap: 3px; color: var(--admin-muted); font-size: 10px; }
+.settings-payment-history li small, .settings-cost-empty { color: var(--admin-faint); font-size: 9px; }
+.settings-cost-empty { margin: 14px 0 0; }
+.settings-task-create { padding: 14px 18px; border-bottom: 1px solid var(--admin-border); }
+.settings-task-create > summary { width: max-content; cursor: pointer; list-style: none; }
+.settings-task-create > summary::-webkit-details-marker { display: none; }
+.settings-task-form { display: grid; gap: 12px; margin-top: 13px; padding: 14px; border: 1px solid var(--admin-border); border-radius: 8px; background: #fafbf9; }
+.settings-task-form__row { display: grid; grid-template-columns: 1.5fr .7fr 1fr 1.2fr; gap: 10px; }
+.settings-task-form label { display: grid; min-width: 0; gap: 5px; }
+.settings-task-form label > span { color: var(--admin-muted); font-size: 9px; font-weight: 600; }
+.settings-task-form input, .settings-task-form select { width: 100%; min-height: 36px; padding: 8px 9px; border: 1px solid var(--admin-border-strong); border-radius: 6px; background: white; color: var(--admin-text); font: inherit; font-size: 11px; }
+.settings-task-form > button { justify-self: start; }
+
+@media (max-width: 800px) {
+  .settings-overview { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .settings-integrations { grid-template-columns: 1fr; }
+  .settings-cost-actions { grid-template-columns: 1fr; }
+  .settings-task-form__row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 560px) {
+  .settings-overview { grid-template-columns: 1fr; }
+  .settings-cost-card { padding: 15px; }
+  .settings-cost-card__heading { align-items: flex-start; flex-direction: column; }
+  .settings-cost-facts { grid-template-columns: 1fr; gap: 13px; }
+  .settings-cost-form { grid-template-columns: 1fr; }
+  .settings-cost-form button { grid-column: auto; }
+  .settings-cost-paid-form { grid-template-columns: 1fr; }
+  .settings-task-form__row { grid-template-columns: 1fr; }
+}

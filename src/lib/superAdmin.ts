@@ -5,7 +5,7 @@ type RecordRow = Record<string, any>;
 export type AdminOrder = { id: string; status: string; totalCents: number; currency: string; createdAt: string; customerId: string };
 export type AdminOrderDetail = { id: string; status: string; totalCents: number; currency: string; createdAt: string; customerId: string; customerName: string; provider: string; reference: string; paymentClaimedAt: string | null; paymentVerifiedAt: string | null; productTitles: string[] };
 export type AdminBooking = { id: string; practitionerId: string; practitionerName: string; patientId: string | null; clientName: string; clientEmail: string; startsAt: string; endsAt: string; status: string; createdAt: string };
-export type AdminTask = { id: string; title: string; category: string; priority: number; status: string; dueAt: string | null; createdAt: string };
+export type AdminTask = { id: string; title: string; category: string; priority: number; status: string; dueAt: string | null; createdAt: string; assignedToName: string | null };
 export type IntegrationCheck = { key: string; label: string; state: 'healthy' | 'degraded' | 'not_configured' | 'failed'; detail: string | null; lastCheckedAt: string | null };
 
 const fail = (error: { message?: string } | null) => { if (error) throw new Error(error.message || 'Supabase query failed.'); };
@@ -72,9 +72,18 @@ export const updateAdminBookingStatus = async (id: string, nextStatus: string, a
 };
 
 export const listAdminTasks = async (limit = 12): Promise<AdminTask[]> => {
-  const { data, error } = await getSupabaseAdmin().from('admin_work_items').select('id,title,category,priority,status,due_at,created_at').in('status', ['open', 'in_progress', 'blocked']).order('priority', { ascending: true }).order('due_at', { ascending: true, nullsFirst: false }).limit(limit);
+  const client = getSupabaseAdmin();
+  const { data, error } = await client.from('admin_work_items').select('id,title,category,priority,status,due_at,created_at,assigned_to').in('status', ['open', 'in_progress', 'blocked']).order('priority', { ascending: true }).order('due_at', { ascending: true, nullsFirst: false }).limit(limit);
   fail(error);
-  return ((data || []) as RecordRow[]).map((row) => ({ id: String(row.id), title: String(row.title), category: String(row.category), priority: Number(row.priority), status: String(row.status), dueAt: row.due_at ? String(row.due_at) : null, createdAt: String(row.created_at) }));
+  const rows = (data || []) as RecordRow[];
+  const assignedIds = [...new Set(rows.map((row) => row.assigned_to ? String(row.assigned_to) : '').filter(Boolean))];
+  const assigneeNames = new Map<string, string>();
+  if (assignedIds.length) {
+    const { data: profiles, error: profilesError } = await client.from('profiles').select('id,full_name').in('id', assignedIds);
+    fail(profilesError);
+    ((profiles || []) as RecordRow[]).forEach((profile) => assigneeNames.set(String(profile.id), String(profile.full_name || 'Naam niet ingevuld')));
+  }
+  return rows.map((row) => ({ id: String(row.id), title: String(row.title), category: String(row.category), priority: Number(row.priority), status: String(row.status), dueAt: row.due_at ? String(row.due_at) : null, createdAt: String(row.created_at), assignedToName: row.assigned_to ? assigneeNames.get(String(row.assigned_to)) || null : null }));
 };
 
 export const listIntegrationChecks = async (): Promise<IntegrationCheck[]> => {

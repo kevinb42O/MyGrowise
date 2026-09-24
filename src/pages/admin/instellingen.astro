@@ -1,13 +1,158 @@
 ---
 import AdminLayout from '../../layouts/AdminLayout.astro';
 import AdminIcon from '../../components/admin/AdminIcon.astro';
-import { listAdminTasks, listIntegrationChecks } from '../../lib/superAdmin';
-const [integrations, tasks] = await Promise.all([listIntegrationChecks(), listAdminTasks()]);
-const saved = Astro.url.searchParams.get('message') === 'work-item-updated';
-const stateLabel = { healthy: 'Gezond', degraded: 'Vertraagd', not_configured: 'Niet gekoppeld', failed: 'Fout' };
+import { getAdminSettingsIntegrations } from '../../lib/adminSettings';
+import { daysUntilDue, listAdminRecurringCosts, recurringIntervalLabel } from '../../lib/adminRecurringCosts';
+import { listAdminTaskAssignees } from '../../lib/adminWorkItems';
+import { listAdminTasks } from '../../lib/superAdmin';
+
+const [integrations, tasks, recurringCosts, taskAssignees] = await Promise.all([
+  getAdminSettingsIntegrations(), listAdminTasks(), listAdminRecurringCosts(), listAdminTaskAssignees(),
+]);
+Astro.response.headers.set('Cache-Control', 'private, no-store, max-age=0');
+Astro.response.headers.set('Referrer-Policy', 'no-referrer');
+const costMessage = Astro.url.searchParams.get('kosten');
+const costMessages: Record<string, string> = {
+  paid: 'Betaling geregistreerd. De volgende betaaldatum is bijgewerkt.',
+  updated: 'Kosten en betaaldatum bijgewerkt.',
+  invalid: 'Controleer het bedrag, de frequentie en de datum.',
+  failed: 'Opslaan is niet gelukt. Probeer het opnieuw.',
+  'not-found': 'Deze terugkerende kost werd niet gevonden.',
+};
+const stateLabel = { healthy: 'Gezond', warning: 'Aandacht', unknown: 'Niet gecontroleerd', manual: 'Handmatig', failed: 'Fout' } as const;
+const stateTone = { healthy: 'ready', warning: 'blocked', unknown: 'unknown', manual: 'manual', failed: 'failed' } as const;
+const taskCategoryLabel: Record<string, string> = { payment: 'Betaling', delivery: 'Levering', booking: 'Boeking', content: 'Content', support: 'Support', privacy: 'Privacy', system: 'Systeem' };
+const priorityLabel: Record<number, string> = { 1: 'Hoog', 2: 'Normaal', 3: 'Laag', 4: 'Later' };
+const dateLabel = (value: string, time = false) => new Intl.DateTimeFormat('nl-BE', time
+  ? { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Europe/Brussels' }
+  : { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Europe/Brussels' }).format(new Date(value));
+const money = (cents: number, currency: string) => new Intl.NumberFormat('nl-BE', { style: 'currency', currency }).format(cents / 100);
+const daysLabel = (days: number) => days < 0 ? `${Math.abs(days)} dagen achterstallig` : days === 0 ? 'Vervalt vandaag' : `Nog ${days} dagen`;
+const authStatus = integrations.find((item) => item.key === 'auth');
+const smtpStatus = integrations.find((item) => item.key === 'smtp');
+const nextCost = recurringCosts[0];
+const nextCostDays = nextCost ? daysUntilDue(nextCost.nextDueOn) : null;
+const actionMessage = Astro.url.searchParams.get('actie');
+const actionMessages: Record<string, string> = {
+  created: 'Actie aangemaakt.', invalid: 'Controleer de titel, deadline en toewijzing.', failed: 'Actie aanmaken is niet gelukt.',
+};
 ---
-<AdminLayout title="Instellingen" description="Integraties, veiligheid en operationele opvolging">
-  <div class="admin-page"><section class="admin-page-heading"><div><p class="admin-eyebrow">Organisatie</p><h1>Instellingen</h1><p>Secrets blijven buiten deze interface. Deze pagina rapporteert alleen verbindingsstatus en operationele opvolging.</p></div><div class="admin-page-actions"><a class="admin-button" href="/admin/privacy"><AdminIcon name="lock" size={16}/> Privacy & retentie</a><a class="admin-button admin-button--primary" href="/admin/gebruikers"><AdminIcon name="customers" size={16}/> Gebruikers & rollen</a></div></section>{saved && <div class="admin-login__alert admin-login__alert--success" role="status"><AdminIcon name="check" size={17}/> Werkitem bijgewerkt.</div>}
-  <div class="admin-dashboard-grid"><section class="admin-panel"><header class="admin-panel__header"><div><h2>Integraties</h2><p>Geen geheime waarden worden weergegeven</p></div></header><div class="analytics-quality">{integrations.map((integration) => <div class="analytics-quality__row"><span>{integration.label}<small>{integration.detail || 'Geen detail beschikbaar'}</small></span><span class:list={['admin-state', integration.state === 'healthy' ? 'admin-state--ready' : 'admin-state--blocked']}>{stateLabel[integration.state]}</span></div>)}</div></section><section class="admin-panel"><header class="admin-panel__header"><div><h2>Actiecentrum</h2><p>Gekoppeld aan auditbare werkitems</p></div></header>{tasks.length ? <ol class="admin-setup-list">{tasks.map((task, index) => <li><span class="admin-setup-list__number">{index + 1}</span><span><strong>{task.title}</strong><small>{task.category} · prioriteit {task.priority}{task.dueAt ? ` · deadline ${new Intl.DateTimeFormat('nl-BE', { dateStyle: 'short' }).format(new Date(task.dueAt))}` : ''}</small></span><form method="post" action={`/api/admin/work-items/${task.id}`}><input type="hidden" name="status" value={task.status === 'open' ? 'in_progress' : 'resolved'}/><button class="admin-button" type="submit">{task.status === 'open' ? 'Start' : 'Afronden'}</button></form></li>)}</ol> : <div class="admin-empty-row"><div><span><AdminIcon name="check" size={17}/></span><strong>Geen openstaande werkitems</strong><p>Nieuwe operationele uitzonderingen worden hier als auditbare taken geplaatst.</p></div></div>}</section></div>
-  <div class="admin-lock-note"><strong>Veilig beheerd:</strong> gebruikers- en integratiegegevens zijn alleen beschikbaar in deze beveiligde beheeromgeving.</div></div>
+
+<AdminLayout title="Instellingen" description="Organisatiegegevens, integraties en terugkerende kosten">
+  <div class="admin-page settings-page">
+    <section class="admin-page-heading">
+      <div>
+        <p class="admin-eyebrow">Organisatie</p>
+        <h1>Instellingen</h1>
+        <p>Bekijk wat MyGrowise gebruikt, wanneer statussen zijn gecontroleerd en welke vaste kosten eraan komen.</p>
+      </div>
+      <div class="admin-page-actions">
+        <a class="admin-button" href="/admin/privacy"><AdminIcon name="lock" size={16}/> Privacy & retentie</a>
+        <a class="admin-button admin-button--primary" href="/admin/gebruikers"><AdminIcon name="customers" size={16}/> Gebruikers & rollen</a>
+      </div>
+    </section>
+
+    <nav class="settings-section-nav" aria-label="Instellingenonderdelen">
+      <a href="#overzicht">Overzicht</a>
+      <a href="#integraties">Integraties</a>
+      <a href="#kosten">Kosten & contracten</a>
+      <a href="#acties">Acties</a>
+    </nav>
+
+    <section id="overzicht" class="settings-overview" aria-label="Instellingenoverzicht">
+      <article class="settings-summary settings-summary--cost">
+        <span class="settings-summary__label">Volgende backendbetaling</span>
+        {nextCost ? <><strong>{money(nextCost.amountCents, nextCost.currency)} <small>{recurringIntervalLabel(nextCost.intervalMonths)}</small></strong><span>{dateLabel(nextCost.nextDueOn)}</span><em>{daysLabel(nextCostDays!)}</em></> : <><strong>Geen kosten geregistreerd</strong><span>Voeg terugkerende kosten toe aan het register.</span></>}
+      </article>
+      <article class="settings-summary">
+        <span class="settings-summary__label">Supabase Auth</span>
+        <strong>{authStatus ? stateLabel[authStatus.state] : 'Onbekend'}</strong>
+        <span>{authStatus?.detail || 'Auth-status niet beschikbaar.'}</span>
+      </article>
+      <article class="settings-summary settings-summary--unknown">
+        <span class="settings-summary__label">SMTP-bezorging</span>
+        <strong>{smtpStatus ? stateLabel[smtpStatus.state] : 'Onbekend'}</strong>
+        <span>De mailprovider is niet rechtstreeks uitleesbaar vanuit deze app.</span>
+      </article>
+    </section>
+
+    {costMessage && costMessages[costMessage] && <div class:list={['admin-login__alert', costMessage === 'paid' || costMessage === 'updated' ? 'admin-login__alert--success' : 'admin-login__alert--error']} role="status">{costMessages[costMessage]}</div>}
+
+    <section id="integraties" class="admin-panel settings-panel" aria-labelledby="settings-integrations-title">
+      <header class="admin-panel__header">
+        <div><h2 id="settings-integrations-title">Integraties en systeemstatus</h2><p>We tonen de bron en controledatum zodat een opgeslagen label niet voor een live check wordt aangezien.</p></div>
+      </header>
+      <div class="settings-integrations">
+        {integrations.map((integration) => (
+          <article class="settings-integration">
+            <div class="settings-integration__heading">
+              <div><strong>{integration.label}</strong><small>{integration.source}</small></div>
+              <span class:list={['admin-state', `admin-state--${stateTone[integration.state]}`]}>{stateLabel[integration.state]}</span>
+            </div>
+            <p>{integration.detail}</p>
+            <small class="settings-integration__time">{integration.checkedAt ? `Laatst gecontroleerd: ${dateLabel(integration.checkedAt, true)}` : 'Geen controledatum beschikbaar'}</small>
+          </article>
+        ))}
+      </div>
+      <div class="settings-note"><strong>SMTP controleren:</strong> bekijk de mailserverinstellingen in Supabase Auth. Deze pagina vraagt geen SMTP-wachtwoord op en toont geen geheime waarden.</div>
+    </section>
+
+    <section id="kosten" class="admin-panel settings-panel" aria-labelledby="settings-costs-title">
+      <header class="admin-panel__header">
+        <div><h2 id="settings-costs-title">Kosten & contracten</h2><p>Terugkerende backendkosten en hun volgende betaaldatum.</p></div>
+      </header>
+      {recurringCosts.length ? <div class="settings-cost-list">
+        {recurringCosts.map((cost) => {
+          const days = daysUntilDue(cost.nextDueOn);
+          const dueTone = days < 0 ? 'overdue' : days <= 30 ? 'soon' : 'upcoming';
+          return <article class="settings-cost-card">
+            <div class="settings-cost-card__heading">
+              <div><span class="settings-cost-card__eyebrow">Terugkerende backendkost</span><h3>{cost.label}</h3></div>
+              <span class:list={['settings-cost-countdown', `settings-cost-countdown--${dueTone}`]}>{daysLabel(days)}</span>
+            </div>
+            <div class="settings-cost-facts">
+              <div><span>Bedrag</span><strong>{money(cost.amountCents, cost.currency)} <small>{recurringIntervalLabel(cost.intervalMonths)}</small></strong></div>
+              <div><span>Opnieuw betalen vóór</span><strong>{dateLabel(cost.nextDueOn)}</strong></div>
+              <div><span>Laatst als betaald geregistreerd</span><strong>{cost.lastPaidAt ? dateLabel(cost.lastPaidAt) : 'Nog geen betaling geregistreerd'}</strong></div>
+            </div>
+            <div class="settings-cost-actions">
+              <details class="settings-cost-edit">
+                <summary class="admin-button">Gegevens wijzigen</summary>
+                <form method="post" action={`/api/admin/recurring-costs/${cost.id}`} class="settings-cost-form">
+                  <input type="hidden" name="operation" value="update"/>
+                  <label><span>Naam van de kost</span><input name="label" required minlength="3" maxlength="120" value={cost.label}/></label>
+                  <label><span>Bedrag per periode (€)</span><input name="amount" type="number" inputmode="decimal" min="0.01" max="1000000" step="0.01" required value={(cost.amountCents / 100).toFixed(2)}/></label>
+                  <label><span>Frequentie (maanden)</span><input name="interval_months" type="number" min="1" max="120" step="1" required value={cost.intervalMonths}/></label>
+                  <label><span>Volgende betaaldatum</span><input name="next_due_on" type="date" required value={cost.nextDueOn}/></label>
+                  <button class="admin-button admin-button--primary" type="submit">Wijzigingen opslaan</button>
+                </form>
+              </details>
+              <form method="post" action={`/api/admin/recurring-costs/${cost.id}`} class="settings-cost-paid-form" onsubmit="return confirm('Registreer je dat deze backendkost is betaald? De volgende betaaldatum schuift door met de ingestelde frequentie.');">
+                <input type="hidden" name="operation" value="paid"/>
+                <label><span>Notitie of factuurreferentie (optioneel)</span><input name="note" maxlength="500" placeholder="Bijvoorbeeld factuurnummer"/></label>
+                <button class="admin-button admin-button--primary" type="submit">Markeer als betaald</button>
+              </form>
+            </div>
+            {cost.payments.length ? <div class="settings-payment-history"><strong>Betaalgeschiedenis</strong><ul>{cost.payments.slice(0, 3).map((payment) => <li><span>{dateLabel(payment.paidAt)} · {money(payment.amountCents, payment.currency)}</span><small>Volgende datum: {dateLabel(payment.nextDueOn)}{payment.note ? ` · ${payment.note}` : ''}</small></li>)}</ul></div> : <p class="settings-cost-empty">Na de eerste registratie als betaald verschijnt hier de betaalgeschiedenis.</p>}
+          </article>;
+        })}
+      </div> : <div class="admin-empty-row"><div><span><AdminIcon name="euro" size={17}/></span><strong>Geen terugkerende kosten geregistreerd</strong><p>Voeg een contract of vaste backendkost toe om de betaaldatum te volgen.</p></div></div>}
+    </section>
+
+    <section id="acties" class="admin-panel settings-panel" aria-labelledby="settings-actions-title">
+      <header class="admin-panel__header"><div><h2 id="settings-actions-title">Acties</h2><p>Open operationele werkitems</p></div></header>
+      <details class="settings-task-create"><summary class="admin-button admin-button--primary"><AdminIcon name="plus" size={14}/> Nieuwe actie</summary><form method="post" action="/api/admin/work-items" class="settings-task-form">
+        <label><span>Taak</span><input name="title" required minlength="3" maxlength="240" placeholder="Wat moet opgevolgd worden?"/></label>
+        <div class="settings-task-form__row">
+          <label><span>Categorie</span><select name="category" required><option value="system">Systeem</option><option value="payment">Betaling</option><option value="delivery">Levering</option><option value="booking">Boeking</option><option value="content">Content</option><option value="support">Support</option><option value="privacy">Privacy</option></select></label>
+          <label><span>Prioriteit</span><select name="priority"><option value="1">Hoog</option><option value="2" selected>Normaal</option><option value="3">Laag</option><option value="4">Later</option></select></label>
+          <label><span>Deadline</span><input name="due_on" type="date"/></label>
+          <label><span>Toewijzen aan</span><select name="assigned_to"><option value="">Niemand</option>{taskAssignees.map((assignee) => <option value={assignee.id}>{assignee.name}</option>)}</select></label>
+        </div>
+        <button class="admin-button admin-button--primary" type="submit">Actie opslaan</button>
+      </form></details>
+      {actionMessage && actionMessages[actionMessage] && <div class:list={['admin-login__alert', actionMessage === 'created' ? 'admin-login__alert--success' : 'admin-login__alert--error']} role="status">{actionMessages[actionMessage]}</div>}
+      {tasks.length ? <ol class="admin-setup-list">{tasks.map((task, index) => <li><span class="admin-setup-list__number">{index + 1}</span><span><strong>{task.title}</strong><small>{taskCategoryLabel[task.category] || task.category} · {priorityLabel[task.priority] || `Prioriteit ${task.priority}`}{task.dueAt ? ` · deadline ${dateLabel(task.dueAt)}` : ''}{task.assignedToName ? ` · toegewezen aan ${task.assignedToName}` : ' · niet toegewezen'}</small></span><form method="post" action={`/api/admin/work-items/${task.id}`}><input type="hidden" name="status" value={task.status === 'open' ? 'in_progress' : 'resolved'}/><button class="admin-button" type="submit">{task.status === 'open' ? 'Start' : 'Afronden'}</button></form></li>)}</ol> : <div class="admin-empty-row"><div><span><AdminIcon name="check" size={17}/></span><strong>Geen openstaande acties</strong><p>Maak een actie aan als er iets operationeel opgevolgd moet worden.</p></div></div>}
+    </section>
+  </div>
 </AdminLayout>
