@@ -7,13 +7,13 @@ const overview = await getSuperadminOverview();
 
 const metrics = [
   { label: 'Netto-omzet', value: overview.netRevenue, detail: 'Betaald en geleverd, exclusief refunds', icon: 'euro' },
-  { label: 'Betaalde bestellingen', value: String(overview.paidOrders), detail: 'Op basis van gevalideerde orderstatus', icon: 'cart' },
-  { label: 'Aankoopconversie', value: overview.conversion === null ? '—' : new Intl.NumberFormat('nl-BE', { style: 'percent', maximumFractionDigits: 1 }).format(overview.conversion), detail: overview.conversion === null ? 'Nog onvoldoende consent-data' : 'Betaling per consented sessie', icon: 'trend' },
+  { label: 'Betaalde bestellingen', value: String(overview.paidOrders), detail: 'Geregistreerde betalingen', icon: 'cart' },
+  { label: 'Aankoopconversie', value: overview.conversion === null ? '—' : new Intl.NumberFormat('nl-BE', { style: 'percent', maximumFractionDigits: 1 }).format(overview.conversion), detail: overview.conversion === null ? 'Nog geen meetgegevens' : 'Aankopen per bezoek met toestemming', icon: 'trend' },
   { label: 'Boekingsaanvragen', value: String(overview.pendingBookings), detail: 'Openstaande aanvragen om op te volgen', icon: 'heart' },
 ];
 
 const setup = [
-  { title: 'Supabase & toegangsmodel', detail: 'RLS, audittrail en server-only credentials', state: 'Actief', tone: 'ready' },
+  { title: 'Beveiliging & toegangsbeheer', detail: 'Gebruikersrollen en gegevensbescherming', state: 'Actief', tone: 'ready' },
   { title: 'Productbeheer', detail: `${overview.productCount} producten · ${overview.publishedProducts} gepubliceerd`, state: 'Actief', tone: 'ready' },
   { title: 'Betaling & levering', detail: overview.integrations.find((item) => item.key === 'payments')?.detail || 'Controle vereist', state: overview.integrations.find((item) => item.key === 'payments')?.state === 'healthy' ? 'Actief' : 'Actie nodig', tone: overview.integrations.find((item) => item.key === 'payments')?.state === 'healthy' ? 'ready' : 'blocked' },
   { title: 'E-mail & uitnodigingen', detail: overview.integrations.find((item) => item.key === 'email')?.detail || 'Controle vereist', state: overview.integrations.find((item) => item.key === 'email')?.state === 'healthy' ? 'Actief' : 'Actie nodig', tone: overview.integrations.find((item) => item.key === 'email')?.state === 'healthy' ? 'ready' : 'blocked' },
@@ -34,11 +34,6 @@ const setup = [
         <a class="admin-button admin-button--primary" href="/admin/producten/nieuw"><AdminIcon name="plus" size={16} /> Nieuw product</a>
       </div>
     </section>
-
-    <div class="admin-preview-notice" role="status">
-      <AdminIcon name="warning" size={18} />
-      <div><strong>Operationele status</strong>Financiële cijfers worden pas gevuld door een gevalideerde betaalwebhook. Het dashboard toont nooit browserredirects als betaalbewijs.</div>
-    </div>
 
     <section class="admin-metrics" aria-label="Kerncijfers">
       {metrics.map((metric) => (
@@ -65,7 +60,7 @@ const setup = [
         <div class="admin-chart">
           <div class="admin-chart__summary"><strong>{overview.netRevenue}</strong><span>Betaalde en geleverde orders</span></div>
           <div class="admin-chart__empty">
-            <div><span><AdminIcon name="analytics" size={18} /></span><strong>Nog geen omzetdata</strong><p>Zodra een eerste testbetaling en webhook succesvol zijn verwerkt, verschijnt hier de tijdlijn.</p></div>
+            <div><span><AdminIcon name="analytics" size={18} /></span><strong>Nog geen omzetdata</strong><p>De omzetgrafiek verschijnt zodra er bestellingen zijn betaald.</p></div>
           </div>
         </div>
       </section>

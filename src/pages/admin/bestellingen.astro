@@ -1,14 +1,175 @@
 ---
 import AdminLayout from '../../layouts/AdminLayout.astro';
 import AdminIcon from '../../components/admin/AdminIcon.astro';
-import { listAdminOrders } from '../../lib/superAdmin';
+import { listAdminOrderDetails } from '../../lib/superAdmin';
+import { hasPermission } from '../../lib/adminAuth';
 
-const orders = await listAdminOrders();
+const orders = (await listAdminOrderDetails()).sort((a, b) => {
+  const aOpen = a.provider === 'wise_manual' && a.status === 'pending_payment';
+  const bOpen = b.provider === 'wise_manual' && b.status === 'pending_payment';
+  if (aOpen !== bOpen) return aOpen ? -1 : 1;
+  if (aOpen && bOpen) {
+    if (a.paymentClaimedAt && b.paymentClaimedAt) return a.paymentClaimedAt.localeCompare(b.paymentClaimedAt);
+    if (a.paymentClaimedAt) return -1;
+    if (b.paymentClaimedAt) return 1;
+  }
+  return b.createdAt.localeCompare(a.createdAt);
+});
+
+const canVerify = hasPermission(Astro.locals.adminUser, 'orders.verify');
+const message = Astro.url.searchParams.get('melding');
 const formatMoney = (value: number, currency: string) => new Intl.NumberFormat('nl-BE', { style: 'currency', currency }).format(value / 100);
-const label: Record<string, string> = { draft: 'Concept', pending_payment: 'In afwachting', paid: 'Betaald', fulfilled: 'Geleverd', cancelled: 'Geannuleerd', partially_refunded: 'Deels terugbetaald', refunded: 'Terugbetaald', disputed: 'Betwist' };
+const formatDate = (value: string) => new Intl.DateTimeFormat('nl-BE', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Europe/Brussels' }).format(new Date(value));
+const isManualWise = (order: (typeof orders)[number]) => order.provider === 'wise_manual';
+const isWisePayment = (order: (typeof orders)[number]) => order.provider === 'wise_manual' || order.provider === 'wise_qr';
+const filterStatus = (order: (typeof orders)[number]) => {
+  if (isManualWise(order) && order.status === 'pending_payment') return order.paymentClaimedAt ? 'reported' : 'pending';
+  if (order.status === 'paid' || order.status === 'fulfilled') return 'paid';
+  if (order.status === 'pending_payment' || order.status === 'draft') return 'pending';
+  return 'other';
+};
+const statusLabel: Record<string, string> = {
+  draft: 'Concept', pending_payment: 'In afwachting', paid: 'Betaald', fulfilled: 'Geleverd',
+  cancelled: 'Geannuleerd', partially_refunded: 'Deels terugbetaald', refunded: 'Terugbetaald', disputed: 'Betwist',
+};
+const statusText = (order: (typeof orders)[number]) => {
+  if (isManualWise(order) && order.status === 'pending_payment' && order.paymentClaimedAt) return 'Betaling gemeld';
+  return statusLabel[order.status] || 'In behandeling';
+};
+const statusTone = (order: (typeof orders)[number]) => {
+  const category = filterStatus(order);
+  return category === 'paid' ? 'paid' : category === 'reported' ? 'reported' : category === 'pending' ? 'pending' : 'other';
+};
+const paymentMethods: Record<string, string> = { wise_manual: 'Wise', wise_qr: 'Wise', stripe: 'Kaart', mollie: 'Mollie' };
+const paymentMethod = (provider: string) => paymentMethods[provider] || '—';
+const awaitingReview = orders.filter((order) => isManualWise(order) && order.status === 'pending_payment');
+const paymentReported = awaitingReview.filter((order) => order.paymentClaimedAt).length;
+const paidOrders = orders.filter((order) => order.status === 'paid' || order.status === 'fulfilled').length;
 ---
-<AdminLayout title="Bestellingen" description="Geverifieerde verkoop- en leveringsstatussen">
-  <div class="admin-page"><section class="admin-page-heading"><div><p class="admin-eyebrow">Verkoop</p><h1>Bestellingen</h1><p>Alleen de server en gevalideerde providerwebhooks mogen financiële of leveringsstatussen wijzigen.</p></div></section>
-  <section class="admin-catalog-stats"><article><span>Totaal</span><strong>{orders.length}</strong></article><article><span>Betaald</span><strong>{orders.filter((o) => o.status === 'paid' || o.status === 'fulfilled').length}</strong></article><article><span>Opvolging nodig</span><strong>{orders.filter((o) => ['pending_payment', 'disputed', 'partially_refunded'].includes(o.status)).length}</strong></article><article><span>Terugbetaald</span><strong>{orders.filter((o) => o.status === 'refunded').length}</strong></article></section>
-  <section class="admin-panel">{orders.length ? <div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>Bestelling</th><th>Datum</th><th>Status</th><th>Totaal</th><th>Klant-ID</th></tr></thead><tbody>{orders.map((order) => <tr><td data-label="Bestelling"><strong>{order.id.slice(0, 8).toUpperCase()}</strong></td><td data-label="Datum"><time datetime={order.createdAt}>{new Intl.DateTimeFormat('nl-BE', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(order.createdAt))}</time></td><td data-label="Status"><span class={`admin-product-status admin-product-status--${order.status === 'fulfilled' || order.status === 'paid' ? 'published' : 'draft'}`}><i></i>{label[order.status] || order.status}</span></td><td data-label="Totaal"><strong class="admin-table-price">{formatMoney(order.totalCents, order.currency)}</strong></td><td data-label="Klant-ID"><code>{order.customerId.slice(0, 8)}…</code></td></tr>)}</tbody></table></div> : <div class="admin-empty-row"><div><span><AdminIcon name="cart" size={17}/></span><strong>Nog geen bestellingen</strong><p>De lijst vult zich uitsluitend na een gevalideerde betaalprovider-webhook.</p></div></div>}</section></div>
+
+<AdminLayout title="Bestellingen" description="Bestellingen, betalingen en toegang beheren">
+  <div class="admin-page orders-page">
+    <section class="admin-page-heading">
+      <div><p class="admin-eyebrow">Verkoop</p><h1>Bestellingen</h1><p>Bestellingen en betalingen op één plek.</p></div>
+    </section>
+
+    {message === 'bevestigd' && <div class="orders-flash" role="status"><AdminIcon name="check" size={17}/> Betaling bevestigd. De bestelling is geactiveerd.</div>}
+    {message === 'fout' && <div class="orders-flash orders-flash--error" role="alert"><AdminIcon name="warning" size={17}/> Betaling kon niet worden bevestigd. Vernieuw de pagina en probeer opnieuw.</div>}
+
+    <section class="admin-catalog-stats orders-stats" aria-label="Bestellingsoverzicht">
+      <article><span>Alle bestellingen</span><strong>{orders.length}</strong></article>
+      <article><span>Te controleren</span><strong>{awaitingReview.length}</strong></article>
+      <article><span>Betaling gemeld</span><strong>{paymentReported}</strong></article>
+      <article><span>Betaald</span><strong>{paidOrders}</strong></article>
+    </section>
+
+    <section class="admin-panel orders-panel">
+      {orders.length ? <>
+        <div class="admin-filterbar orders-filterbar">
+          <label class="admin-search"><AdminIcon name="search" size={16}/><span class="sr-only">Zoek bestellingen</span><input type="search" placeholder="Zoek op bestelling, klant of product" autocomplete="off" data-order-search /></label>
+          <label class="orders-status-filter"><span class="sr-only">Filter bestellingen op status</span><select data-order-status><option value="all">Alle statussen</option><option value="reported">Betaling gemeld</option><option value="pending">In afwachting</option><option value="paid">Betaald</option><option value="other">Overige statussen</option></select></label>
+        </div>
+        <div class="admin-table-wrap orders-table-wrap"><table class="admin-table orders-table">
+          <thead><tr><th>Bestelling</th><th>Klant</th><th>Betaalmethode</th><th>Bedrag</th><th>Datum</th><th>Status</th><th><span class="sr-only">Actie</span></th></tr></thead>
+          <tbody>
+            {orders.map((order) => {
+              const products = order.productTitles.length ? order.productTitles.join(', ') : 'Bestelling';
+              const orderNumber = order.id.slice(-8).toUpperCase();
+              return <tr data-order-row data-status={filterStatus(order)} data-search={`${products} ${order.customerName} ${order.reference} ${order.id} ${orderNumber}`.toLocaleLowerCase()}>
+                <td data-label="Bestelling"><strong class="orders-product">{products}</strong><small class="orders-number">#{orderNumber}</small></td>
+                <td data-label="Klant"><strong class="orders-customer">{order.customerName}</strong></td>
+                <td data-label="Betaalmethode"><span class="orders-method">{paymentMethod(order.provider)}</span>{isWisePayment(order) && order.reference && <span class="orders-reference"><code>{order.reference}</code><button type="button" class="orders-copy" data-copy={order.reference} aria-label={`Kopieer referentie ${order.reference}`} title="Kopieer referentie"><AdminIcon name="copy" size={14}/></button></span>}</td>
+                <td data-label="Bedrag"><strong class="admin-table-price">{formatMoney(order.totalCents, order.currency)}</strong></td>
+                <td data-label="Datum"><time datetime={order.createdAt}>{formatDate(order.createdAt)}</time></td>
+                <td data-label="Status"><span class={`orders-status orders-status--${statusTone(order)}`}><i></i>{statusText(order)}</span>{order.paymentClaimedAt && order.status === 'pending_payment' && <small class="orders-status-detail">Gemeld {formatDate(order.paymentClaimedAt)}</small>}{order.paymentVerifiedAt && <small class="orders-status-detail">Bevestigd {formatDate(order.paymentVerifiedAt)}</small>}</td>
+                <td data-label="Actie">{isManualWise(order) && order.status === 'pending_payment' && canVerify ? <form action={`/api/admin/wise-reconciliation/${order.id}`} method="post"><button type="submit" class="admin-button admin-button--primary orders-confirm">Bevestig betaling</button></form> : <span class="orders-no-action" aria-hidden="true">—</span>}</td>
+              </tr>;
+            })}
+          </tbody>
+        </table></div>
+        <p class="orders-empty-filter" data-order-empty hidden>Geen bestellingen gevonden.</p>
+      </> : <div class="admin-empty-row orders-empty"><div><span><AdminIcon name="cart" size={17}/></span><strong>Nog geen bestellingen</strong><p>Bestellingen verschijnen hier zodra ze zijn geplaatst.</p></div></div>}
+    </section>
+  </div>
 </AdminLayout>
+
+<script>
+  const search = document.querySelector<HTMLInputElement>('[data-order-search]');
+  const status = document.querySelector<HTMLSelectElement>('[data-order-status]');
+  const rows = [...document.querySelectorAll<HTMLElement>('[data-order-row]')];
+  const empty = document.querySelector<HTMLElement>('[data-order-empty]');
+
+  const filterOrders = () => {
+    const query = search?.value.trim().toLocaleLowerCase() || '';
+    const selectedStatus = status?.value || 'all';
+    let visible = 0;
+    rows.forEach((row) => {
+      const matchesText = (row.dataset.search || '').includes(query);
+      const matchesStatus = selectedStatus === 'all' || row.dataset.status === selectedStatus;
+      row.hidden = !matchesText || !matchesStatus;
+      if (!row.hidden) visible += 1;
+    });
+    if (empty) empty.hidden = visible > 0;
+  };
+
+  search?.addEventListener('input', filterOrders);
+  status?.addEventListener('change', filterOrders);
+
+  document.querySelectorAll<HTMLButtonElement>('[data-copy]').forEach((button) => {
+    button.addEventListener('click', async () => {
+      const reference = button.dataset.copy || '';
+      try {
+        await navigator.clipboard.writeText(reference);
+        button.setAttribute('aria-label', 'Referentie gekopieerd');
+        window.setTimeout(() => button.setAttribute('aria-label', `Kopieer referentie ${reference}`), 1600);
+      } catch { window.prompt('Kopieer de betalingsreferentie', reference); }
+    });
+  });
+
+</script>
+
+<style>
+  .orders-flash { display: flex; align-items: center; gap: .6rem; margin: 0 0 1rem; padding: .85rem 1rem; border: 1px solid #cbded3; border-radius: var(--admin-radius); background: var(--admin-green-soft); color: var(--admin-green); font-size: 12px; font-weight: 600; }
+  .orders-flash--error { border-color: #f0c9cb; background: #fff4f4; color: #a8323b; }
+  .orders-stats { margin-bottom: 18px; }
+  .orders-panel { overflow: hidden; }
+  .orders-filterbar { gap: 12px; }
+  .orders-status-filter select { height: 36px; padding: 0 30px 0 10px; border: 1px solid var(--admin-border); border-radius: 6px; background: #fff; color: var(--admin-text); font-size: 10px; }
+  .orders-table { min-width: 1050px; }
+  .orders-table th, .orders-table td { white-space: nowrap; }
+  .orders-table td:first-child { max-width: 260px; white-space: normal; }
+  .orders-product, .orders-customer { display: block; max-width: 245px; overflow: hidden; color: var(--admin-text); font-size: 11px; font-weight: 600; text-overflow: ellipsis; }
+  .orders-number, .orders-status-detail { display: block; margin-top: 4px; color: var(--admin-faint); font-size: 9px; }
+  .orders-method { display: block; color: var(--admin-text); font-size: 10px; font-weight: 600; }
+  .orders-reference { display: flex; align-items: center; gap: 4px; margin-top: 5px; }
+  .orders-reference code { color: var(--admin-muted); font-size: 9px; }
+  .orders-copy { display: grid; width: 23px; height: 23px; place-items: center; border: 0; border-radius: 5px; background: var(--admin-subtle); color: var(--admin-muted); cursor: pointer; }
+  .orders-copy:hover { background: var(--admin-green-soft); color: var(--admin-green); }
+  .orders-status { display: inline-flex; min-height: 25px; align-items: center; gap: 6px; padding: 4px 8px; border: 1px solid var(--admin-border); border-radius: 999px; background: var(--admin-subtle); color: var(--admin-muted); font-size: 9px; font-weight: 600; white-space: nowrap; }
+  .orders-status i { width: 6px; height: 6px; border-radius: 50%; background: var(--admin-faint); }
+  .orders-status--pending, .orders-status--reported { border-color: #ead9a8; background: var(--admin-yellow-soft); color: var(--admin-warning-text); }
+  .orders-status--pending i, .orders-status--reported i { background: var(--admin-yellow); }
+  .orders-status--paid { border-color: #cbded3; background: var(--admin-green-soft); color: var(--admin-green); }
+  .orders-status--paid i { background: var(--admin-success); }
+  .orders-confirm { min-height: 33px; padding: 6px 10px; font-size: 10px; white-space: nowrap; }
+  .orders-no-action { color: var(--admin-faint); }
+  .orders-empty-filter { margin: 0; padding: 20px; color: var(--admin-muted); font-size: 11px; }
+  .orders-table tr[hidden] { display: none; }
+  @media (max-width: 620px) {
+    .orders-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .orders-stats article { border-bottom: 1px solid var(--admin-border); }
+    .orders-stats article:nth-child(2n) { border-right: 0; }
+    .orders-stats article:nth-child(n + 3) { border-bottom: 0; }
+    .orders-filterbar { align-items: stretch; flex-direction: column; }
+    .orders-status-filter select { width: 100%; }
+    .orders-table { min-width: 0; }
+    .orders-table tr { grid-template-columns: 1fr 1fr; gap: 13px; }
+    .orders-table td:first-child { grid-column: 1 / -1; }
+    .orders-table td:first-child::before { display: none; }
+    .orders-table td[data-label="Betaalmethode"], .orders-table td[data-label="Status"], .orders-table td[data-label="Actie"] { grid-column: 1 / -1; }
+    .orders-product, .orders-customer { max-width: 100%; }
+    .orders-table td:last-child { align-items: stretch; }
+    .orders-confirm { width: 100%; }
+    .orders-no-action { display: none; }
+  }
+</style>

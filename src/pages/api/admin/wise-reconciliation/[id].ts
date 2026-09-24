@@ -11,8 +11,8 @@ export const POST: APIRoute = async ({ request, params, locals }) => {
   const actor = locals.adminUser;
   if (!actor?.sub) return new Response('Niet aangemeld.', { status: 401 });
   const { error } = await getSupabaseAdmin().rpc('confirm_wise_manual_payment', { p_order_id: id, p_actor_id: actor.sub });
-  if (error) return Response.redirect(new URL('/admin/betalingen?melding=fout', request.url), 303);
-  return Response.redirect(new URL('/admin/betalingen?melding=bevestigd', request.url), 303);
+  if (error) return Response.redirect(new URL('/admin/bestellingen?melding=fout', request.url), 303);
+  return Response.redirect(new URL('/admin/bestellingen?melding=bevestigd', request.url), 303);
 };
 
 export const ALL: APIRoute = () => new Response('Methode niet toegestaan.', { status: 405 });
