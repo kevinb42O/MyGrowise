@@ -77,17 +77,38 @@ export const getSuperadminOverview = async () => {
 };
 
 export const listAdminCustomers = async () => {
-  const [profilesResult, orders] = await Promise.all([
-    getSupabaseAdmin().from('profiles').select('id,full_name,created_at').order('created_at', { ascending: false }).limit(200), listAdminOrders(500),
-  ]);
-  fail(profilesResult.error);
+  const client = getSupabaseAdmin();
+  const orders = await listAdminOrders(500);
+  const profiles: RecordRow[] = [];
+  for (let offset = 0; ; offset += 500) {
+    const { data, error } = await client.from('admin_customer_profiles').select('id,full_name,created_at').order('created_at', { ascending: false }).range(offset, offset + 499);
+    fail(error);
+    const page = (data || []) as RecordRow[];
+    profiles.push(...page);
+    if (page.length < 500) break;
+  }
   const totals = new Map<string, { orders: number; spent: number }>();
   orders.forEach((order) => { const current = totals.get(order.customerId) || { orders: 0, spent: 0 }; current.orders += 1; current.spent += order.status === 'paid' || order.status === 'fulfilled' ? order.totalCents : 0; totals.set(order.customerId, current); });
-  return ((profilesResult.data || []) as RecordRow[]).map((profile) => ({ id: String(profile.id), name: String(profile.full_name || 'Naam niet ingevuld'), createdAt: String(profile.created_at), orderCount: totals.get(String(profile.id))?.orders || 0, totalCents: totals.get(String(profile.id))?.spent || 0 }));
+  const customerIds = new Set(profiles.map((profile) => String(profile.id)));
+  const users: RecordRow[] = [];
+  for (let page = 1; ; page += 1) {
+    const { data, error } = await client.auth.admin.listUsers({ page, perPage: 100 });
+    if (error) throw new Error('users_unavailable');
+    users.push(...data.users.filter((user) => customerIds.has(user.id)));
+    if (data.users.length < 100) break;
+  }
+  const emails = new Map(users.map((user) => [String(user.id), String(user.email || 'E-mail ontbreekt')]));
+  return profiles.map((profile) => {
+    const id = String(profile.id);
+    return { id, name: String(profile.full_name || 'Naam niet ingevuld'), email: emails.get(id) || 'E-mail ontbreekt', createdAt: String(profile.created_at), orderCount: totals.get(id)?.orders || 0, totalCents: totals.get(id)?.spent || 0 };
+  });
 };
 
 export const getAdminCustomer = async (id: string) => {
   const client = getSupabaseAdmin();
+  const { data: customerProfile, error: customerError } = await client.from('admin_customer_profiles').select('id').eq('id', id).maybeSingle();
+  fail(customerError);
+  if (!customerProfile) return null;
   const [{ data: profile, error: profileError }, { data: authData, error: authError }, ordersResult, entitlementsResult, bookingsResult, requestsResult] = await Promise.all([
     client.from('profiles').select('id,full_name,timezone,created_at').eq('id', id).maybeSingle(),
     client.auth.admin.getUserById(id),
