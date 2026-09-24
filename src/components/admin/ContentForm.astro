@@ -1,5 +1,6 @@
 ---
 import type { AdminContent } from '../../lib/adminContent';
+import AdminIcon from './AdminIcon.astro';
 
 interface Props {
   content?: AdminContent;
@@ -11,18 +12,51 @@ interface Props {
 const { content, action, canPublish, error = '' } = Astro.props;
 const value = content || { kind: 'article', status: 'draft', title: '', slug: '', excerpt: '', bodyText: '', seoTitle: '', seoDescription: '' };
 const formStatus = !canPublish && value.status === 'published' ? 'review' : value.status;
+const isArticle = value.kind === 'article';
+const publicPrefix = isArticle ? 'mygrowise.be/inspiratie/' : 'mygrowise.be/';
+const statusHint = canPublish
+  ? 'Gepubliceerde content is onmiddellijk zichtbaar op de website.'
+  : 'Je kan een concept bewaren of ter review klaarzetten.';
 ---
 
-{error && <div class="admin-login__alert admin-login__alert--error" role="alert">{error}</div>}
-<form class="admin-product-form" method="post" action={action}>
-  <div class="admin-form-grid">
-    <label><span>Type *</span><select name="kind" required><option value="article" selected={value.kind === 'article'}>Artikel</option><option value="page" selected={value.kind === 'page'}>Pagina</option></select></label>
-    <label><span>Status *</span><select name="status" required><option value="draft" selected={formStatus === 'draft'}>Concept</option><option value="review" selected={formStatus === 'review'}>In review</option>{canPublish && <option value="published" selected={formStatus === 'published'}>Gepubliceerd</option>}<option value="archived" selected={formStatus === 'archived'}>Gearchiveerd</option></select><small>{canPublish ? 'Publicatie wordt onmiddellijk zichtbaar op de publieke route.' : value.status === 'published' ? 'Opslaan maakt een nieuwe reviewversie; de huidige publieke versie verdwijnt pas wanneer die versie wordt opgeslagen.' : 'Je kan inhoud voorbereiden en ter review zetten; publicatie vereist een bevoegde rol.'}</small></label>
+{error && <div class="admin-form-alert" role="alert"><AdminIcon name="warning" size={17} />{error}</div>}
+<form class="admin-product-form content-editor" method="post" action={action}>
+  <div class="content-editor__topline">
+    <div><span class="content-editor__step">01 · Basis</span><p>Geef je content een heldere titel en kies hoe je ermee verdergaat.</p></div>
+    <span class={`admin-product-status admin-product-status--${formStatus}`}><i></i>{formStatus === 'draft' ? 'Concept' : formStatus === 'review' ? 'In review' : formStatus === 'published' ? 'Gepubliceerd' : 'Gearchiveerd'}</span>
   </div>
-  <label><span>Titel *</span><input name="title" required minlength="3" maxlength="160" value={value.title} autocomplete="off"/></label>
-  <label><span>URL-slug *</span><input name="slug" required maxlength="80" value={value.slug} pattern="[a-z0-9]+(?:-[a-z0-9]+)*"/><small>Alleen kleine letters, cijfers en koppeltekens. Een gepubliceerde slugwijziging maakt automatisch een redirect.</small></label>
-  <label><span>Korte samenvatting</span><textarea name="excerpt" maxlength="360" rows="3">{value.excerpt}</textarea></label>
-  <label><span>Inhoud *</span><textarea name="body" maxlength="20000" rows="15" required={value.status === 'published'}>{value.bodyText}</textarea><small>Gebruik lege regels voor nieuwe alinea’s. Scripts en HTML worden niet als markup uitgevoerd.</small></label>
-  <fieldset class="admin-fieldset"><legend>SEO</legend><label><span>SEO-titel</span><input name="seo_title" maxlength="70" value={value.seoTitle}/></label><label><span>Meta description</span><textarea name="seo_description" maxlength="170" rows="3">{value.seoDescription}</textarea></label></fieldset>
-  <div class="admin-form-actions"><button class="admin-button admin-button--primary" type="submit">{content ? 'Wijzigingen opslaan' : 'Content aanmaken'}</button></div>
+
+  <div class="admin-form-grid content-editor__grid">
+    <label class="admin-field admin-field--wide"><span>Titel <i>*</i></span><input name="title" required minlength="3" maxlength="160" value={value.title} autocomplete="off" placeholder="Bijv. Hoe herken je langdurige stress?" data-content-title /><small>De titel die bezoekers op de website zien.</small></label>
+    <label class="admin-field admin-field--wide"><span>URL-slug <i>*</i></span><div class="admin-slug-field"><em data-content-prefix>{publicPrefix}</em><input name="slug" required maxlength="80" value={value.slug} pattern="[a-z0-9]+(?:-[a-z0-9]+)*" placeholder="hoe-herken-je-langdurige-stress" data-content-slug /></div><small>Kleine letters, cijfers en koppeltekens. Een gepubliceerde slugwijziging krijgt automatisch een redirect.</small></label>
+    <label class="admin-field"><span>Type <i>*</i></span><select name="kind" required data-content-kind><option value="article" selected={isArticle}>Artikel</option><option value="page" selected={!isArticle}>Pagina</option></select><small>Een artikel komt in Inspiratie; een pagina staat op een eigen route.</small></label>
+    <label class="admin-field"><span>Status <i>*</i></span><select name="status" required><option value="draft" selected={formStatus === 'draft'}>Concept</option><option value="review" selected={formStatus === 'review'}>In review</option>{canPublish && <option value="published" selected={formStatus === 'published'}>Gepubliceerd</option>}<option value="archived" selected={formStatus === 'archived'}>Gearchiveerd</option></select><small>{statusHint}</small></label>
+    <label class="admin-field admin-field--wide"><span>Korte samenvatting</span><textarea name="excerpt" maxlength="360" rows="4" placeholder="Een korte introductie die lezers helpt beslissen of dit artikel voor hen relevant is." data-content-excerpt>{value.excerpt}</textarea><small><span data-excerpt-count>{value.excerpt.length}</span>/360 tekens · verschijnt waar een samenvatting wordt getoond.</small></label>
+    <section class="content-editor__writing admin-field--wide" aria-labelledby="content-writing-heading"><div class="content-editor__writing-head"><div><span id="content-writing-heading">Inhoud <i>*</i></span><small>Gebruik lege regels voor nieuwe alinea’s. HTML en scripts worden nooit uitgevoerd.</small></div><span><span data-body-count>{value.bodyText.length}</span>/20.000</span></div><textarea name="body" maxlength="20000" rows="16" required={value.status === 'published'} placeholder="Schrijf hier de inhoud van je artikel…" data-content-body>{value.bodyText}</textarea></section>
+  </div>
+
+  <details class="content-editor__seo"><summary><span>SEO-instellingen</span><small>Optioneel · titel en omschrijving voor zoekmachines</small></summary><div class="content-editor__seo-fields"><label class="admin-field"><span>SEO-titel</span><input name="seo_title" maxlength="70" value={value.seoTitle} placeholder={value.title || 'Titel voor zoekmachines'} data-seo-title /><small><span data-seo-title-count>{value.seoTitle.length}</span>/70 tekens</small></label><label class="admin-field"><span>Meta description</span><textarea name="seo_description" maxlength="170" rows="3" placeholder="Een aantrekkelijke omschrijving voor in de zoekresultaten." data-seo-description>{value.seoDescription}</textarea><small><span data-seo-description-count>{value.seoDescription.length}</span>/170 tekens</small></label></div></details>
+
+  <footer class="admin-form-actions content-editor__actions"><a class="admin-button" href="/admin/content">Annuleren</a><button class="admin-button admin-button--primary" type="submit"><AdminIcon name="check" size={16} />{content ? 'Wijzigingen opslaan' : 'Content aanmaken'}</button></footer>
 </form>
+
+<script is:inline>
+  const title = document.querySelector('[data-content-title]');
+  const slug = document.querySelector('[data-content-slug]');
+  const kind = document.querySelector('[data-content-kind]');
+  const prefix = document.querySelector('[data-content-prefix]');
+  const excerpt = document.querySelector('[data-content-excerpt]');
+  const body = document.querySelector('[data-content-body]');
+  const seoTitle = document.querySelector('[data-seo-title]');
+  const seoDescription = document.querySelector('[data-seo-description]');
+  let slugTouched = Boolean(slug?.value);
+  const slugify = (value) => value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 80);
+  const setCount = (selector, value) => { const target = document.querySelector(selector); if (target) target.textContent = String(value.length); };
+  slug?.addEventListener('input', () => { slugTouched = Boolean(slug.value); });
+  title?.addEventListener('input', () => { if (!slugTouched && slug) slug.value = slugify(title.value); });
+  kind?.addEventListener('change', () => { if (prefix) prefix.textContent = kind.value === 'article' ? 'mygrowise.be/inspiratie/' : 'mygrowise.be/'; });
+  excerpt?.addEventListener('input', () => setCount('[data-excerpt-count]', excerpt.value));
+  body?.addEventListener('input', () => setCount('[data-body-count]', body.value));
+  seoTitle?.addEventListener('input', () => setCount('[data-seo-title-count]', seoTitle.value));
+  seoDescription?.addEventListener('input', () => setCount('[data-seo-description-count]', seoDescription.value));
+</script>
