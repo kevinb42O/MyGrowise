@@ -8,7 +8,9 @@
 - Professionals overview with links to the existing secure booking environment.
 - Modules, pricing, story, contact, privacy and conditions routes.
 - Centralized public content in `src/content/site.ts`.
-- Safe disabled API routes: no mock payment can be marked as paid.
+- Product CTA leads to the MyGrowise account and manual Wise order flow.
+- Wise orders use a unique transfer reference; customer payment claims remain pending until a superadmin verifies the incoming transfer.
+- Admin Wise reconciliation shows open/claimed/confirmed orders. Virginie compares references, amount and currency against a Wise statement she opens locally; the statement is not uploaded to MyGrowise.
 - Astro 7 server build with no React runtime, Supabase mock or Mollie mock.
 - One H1 per page, canonical metadata, skip link, reduced-motion support and mobile navigation.
 
@@ -22,14 +24,13 @@ npm run build
 
 ## Launch blockers
 
-1. Confirm whether Wise must be the customer checkout or only the payout account.
-2. Connect and test the approved production payment provider.
-3. Replace e-mail purchase requests with a real order and entitlement flow.
+1. Add Virginie's confirmed Wise account name, IBAN and optional BIC to the server environment; checkout stays unavailable until these are configured.
+2. Apply the manual-Wise database migration and confirm the account/order flow in the intended deployment.
+3. Agree and implement the operational delivery step for the Stress- en Emotieprofiel after payment confirmation; account entitlement alone does not send questionnaires or the report.
 4. Connect a user-friendly CMS after the owner completes the CMS usability test.
 5. Verify all professional titles, profile price, biographies and booking URLs.
 6. Supply and approve the final privacy statement and terms.
-7. Decide the exact deliverable and access flow for the first profile.
-8. Configure deployment, domain, redirects, analytics and transactional e-mail.
+7. Configure deployment, domain, redirects, analytics and transactional e-mail.
 
 ## Content editing during this stage
 
@@ -41,7 +42,8 @@ This is deliberately a temporary structured source. It should be replaced by the
 
 ## Safety decisions
 
-- Checkout endpoints return `503` until a real provider is configured.
+- The retired hosted Wise checkout endpoint returns `410`; the manual Wise checkout requires configured account details and a human payment confirmation before entitlement activation.
+- Wise statement PDFs stay outside MyGrowise: do not upload or store them. The reconciliation screen stores order and confirmation data only.
 - The retired Mollie webhook returns `410`.
 - Internal booking endpoints are disabled; the site uses the existing client environment.
 - Privacy and conditions pages are `noindex` and explicitly marked as pre-launch drafts.

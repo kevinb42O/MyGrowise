@@ -3,6 +3,7 @@ import { writeSecurityAudit, type AuditActor } from './securityAudit';
 
 type RecordRow = Record<string, any>;
 export type AdminOrder = { id: string; status: string; totalCents: number; currency: string; createdAt: string; customerId: string };
+export type WiseReconciliationOrder = { id: string; status: string; totalCents: number; currency: string; createdAt: string; customerId: string; customerName: string; reference: string; paymentClaimedAt: string | null; paymentVerifiedAt: string | null; productTitle: string };
 export type AdminBooking = { id: string; practitionerId: string; practitionerName: string; clientName: string; clientEmail: string; startsAt: string; endsAt: string; status: string; createdAt: string };
 export type AdminTask = { id: string; title: string; category: string; priority: number; status: string; dueAt: string | null; createdAt: string };
 export type IntegrationCheck = { key: string; label: string; state: 'healthy' | 'degraded' | 'not_configured' | 'failed'; detail: string | null; lastCheckedAt: string | null };
@@ -14,6 +15,23 @@ export const listAdminOrders = async (limit = 100): Promise<AdminOrder[]> => {
   const { data, error } = await getSupabaseAdmin().from('orders').select('id,status,total_cents,currency,created_at,customer_user_id').order('created_at', { ascending: false }).limit(limit);
   fail(error);
   return ((data || []) as RecordRow[]).map((row) => ({ id: String(row.id), status: String(row.status), totalCents: Number(row.total_cents), currency: String(row.currency), createdAt: String(row.created_at), customerId: String(row.customer_user_id) }));
+};
+
+export const listWiseReconciliationOrders = async (): Promise<WiseReconciliationOrder[]> => {
+  const { data, error } = await getSupabaseAdmin().from('orders')
+    .select('id,status,total_cents,currency,created_at,customer_user_id,provider_reference,payment_claimed_at,payment_verified_at,profiles!orders_customer_user_id_fkey(full_name),order_items(product_title)')
+    .eq('provider', 'wise_manual').order('created_at', { ascending: false }).limit(250);
+  fail(error);
+  return ((data || []) as RecordRow[]).map((row) => {
+    const profile = Array.isArray(row.profiles) ? row.profiles[0] : row.profiles;
+    const item = Array.isArray(row.order_items) ? row.order_items[0] : row.order_items;
+    return {
+      id: String(row.id), status: String(row.status), totalCents: Number(row.total_cents), currency: String(row.currency),
+      createdAt: String(row.created_at), customerId: String(row.customer_user_id), customerName: String(profile?.full_name || 'Naam niet ingevuld'),
+      reference: String(row.provider_reference || ''), paymentClaimedAt: row.payment_claimed_at ? String(row.payment_claimed_at) : null,
+      paymentVerifiedAt: row.payment_verified_at ? String(row.payment_verified_at) : null, productTitle: String(item?.product_title || 'Product'),
+    };
+  });
 };
 
 export const listAdminBookings = async (limit = 100): Promise<AdminBooking[]> => {

@@ -13,6 +13,7 @@ export const ADMIN_PERMISSIONS = [
   'dashboard.read',
   'analytics.read',
   'orders.read',
+  'orders.verify',
   'orders.refund',
   'customers.read',
   'customers.export',
@@ -76,7 +77,7 @@ export const firstAccessibleAdminPath = (roles: readonly UserRole[]) => {
 export const requiredAdminPermission = (path: string, method = 'GET'): AdminPermission | null => {
   if (path === '/admin') return 'dashboard.read';
   if (path === '/admin/analytics') return 'analytics.read';
-  if (path === '/admin/bestellingen') return 'orders.read';
+  if (path === '/admin/bestellingen' || path === '/admin/betalingen') return 'orders.read';
   if (path === '/admin/klanten' || path.startsWith('/admin/klanten/')) return 'customers.read';
   if (path === '/admin/boekingen') return 'bookings.read';
   if (path === '/admin/agenda') return 'agenda.read';
@@ -90,6 +91,7 @@ export const requiredAdminPermission = (path: string, method = 'GET'): AdminPerm
 
   if (path === '/api/admin/agenda') return method === 'GET' ? 'agenda.read' : 'agenda.write';
   if (path.startsWith('/api/admin/products')) return method === 'GET' ? 'products.read' : 'products.write';
+  if (path.startsWith('/api/admin/wise-reconciliation')) return method === 'GET' ? 'orders.read' : 'orders.verify';
   if (path.startsWith('/api/admin/content')) return method === 'GET' ? 'content.read' : 'content.write';
   if (path.startsWith('/api/admin/support')) return method === 'GET' ? 'support.read' : 'support.write';
   if (path.startsWith('/api/admin/privacy')) return method === 'GET' ? 'privacy.read' : 'privacy.manage';

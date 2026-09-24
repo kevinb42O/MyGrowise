@@ -8,11 +8,18 @@ export const POST: APIRoute = async ({ request, cookies }) => {
   const form = await request.formData(); const password = String(form.get('password') || '');
   if (password !== String(form.get('confirm_password') || '')) return redirect303(new URL('/account/aanmaken?error=invalid', request.url));
   try {
-    const confirmationUrl = new URL('/account/inloggen?confirmed=1', request.url).toString();
+    const next = sanitizeAppRedirect(form.get('next'));
+    const confirmation = new URL('/account/inloggen?confirmed=1', request.url);
+    if (next) confirmation.searchParams.set('next', next);
+    const confirmationUrl = confirmation.toString();
     const result = await registerSupabaseCustomer(String(form.get('name') || ''), String(form.get('email') || '').trim().toLowerCase(), password, confirmationUrl);
-    if (result.confirmationRequired) return redirect303(new URL('/account/inloggen?error=registered', request.url));
+    if (result.confirmationRequired) {
+      const login = new URL('/account/inloggen?error=registered', request.url);
+      if (next) login.searchParams.set('next', next);
+      return redirect303(login);
+    }
     cookies.set(SUPABASE_SESSION_COOKIE, result.accessToken, supabaseSessionCookieOptions());
-    return redirect303(new URL(sanitizeAppRedirect(form.get('next')) || '/account', request.url));
+    return redirect303(new URL(next || '/account', request.url));
   } catch (error) {
     const code = error instanceof Error && error.message === 'email_taken' ? 'email_taken' : error instanceof Error && error.message === 'configuration' ? 'configuration' : 'invalid';
     return redirect303(new URL(`/account/aanmaken?error=${code}`, request.url));

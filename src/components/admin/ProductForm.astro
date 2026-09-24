@@ -45,11 +45,7 @@ const price = priceValue ?? (product?.priceCents === null || product?.priceCents
       <div class="admin-price-field"><em>€</em><input name="price" value={price} inputmode="decimal" placeholder="0,00" maxlength="10" /></div>
       <small>Verplicht wanneer de status “Gepubliceerd” is.</small>
     </label>
-    <label class="admin-field admin-field--wide">
-      <span>Wise-betaallink</span>
-      <input name="wise_payment_url" value={product?.wisePaymentUrl || ''} type="url" inputmode="url" maxlength="1000" placeholder="https://wise.com/..." />
-      <small>Maak eerst in Wise Business een QR-code of betaalverzoek met het vaste productbedrag. Plak hier de officiële Wise-link; MyGrowise genereert daaruit lokaal de QR-code. Laat leeg zolang het product niet via Wise mag worden verkocht.</small>
-    </label>
+    <div class="admin-field admin-field--wide"><span>Betaalwijze</span><div class="admin-product-form-note">Handmatige overschrijving via Wise. De klant krijgt per bestelling een unieke betalingsreferentie; de rekeninggegevens worden centraal ingesteld.</div></div>
     <label class="admin-field admin-field--wide">
       <span>Korte omschrijving <i>*</i></span>
       <textarea name="summary" required minlength="20" maxlength="320" rows="5" data-summary>{product?.summary || ''}</textarea>

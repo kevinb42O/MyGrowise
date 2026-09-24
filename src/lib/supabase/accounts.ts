@@ -4,7 +4,7 @@ type Row = Record<string, unknown>;
 const fail = (error: { message?: string } | null) => { if (error) throw new Error(error.message || 'Supabase query failed.'); };
 
 export type CustomerBooking = { id: string; practitionerName: string; practitionerSlug: string; startsAt: string; endsAt: string; status: string };
-export type CustomerTransaction = { id: string; createdAt: string; status: string; totalCents: number; currency: string };
+export type CustomerTransaction = { id: string; createdAt: string; status: string; totalCents: number; currency: string; provider: string | null; productSlug: string | null };
 export type CustomerEntitlement = { id: string; productTitle: string; productSlug: string; productType: string; status: string; grantedAt: string };
 export type NotificationPreferences = { bookingEmailEnabled: boolean; bookingReminderEnabled: boolean; weeklyDigestEnabled: boolean; timezone: string };
 export type SecurityActivity = { occurredAt: string; action: string; metadata: Record<string, unknown> };
@@ -15,9 +15,9 @@ export const listCustomerBookings = async (userId: string): Promise<CustomerBook
   return ((data || []) as Row[]).map((row) => { const practitioner = (Array.isArray(row.practitioners) ? row.practitioners[0] : row.practitioners || {}) as Row; return { id: String(row.id), practitionerName: String(practitioner.name || 'Professional'), practitionerSlug: String(practitioner.slug || ''), startsAt: String(row.starts_at), endsAt: String(row.ends_at), status: String(row.status) }; });
 };
 export const listCustomerTransactions = async (userId: string): Promise<CustomerTransaction[]> => {
-  const { data, error } = await getSupabaseAdmin().from('orders').select('id,created_at,status,total_cents,currency').eq('customer_user_id', userId).order('created_at', { ascending: false });
+  const { data, error } = await getSupabaseAdmin().from('orders').select('id,created_at,status,total_cents,currency,provider,order_items(product_slug)').eq('customer_user_id', userId).order('created_at', { ascending: false });
   fail(error);
-  return ((data || []) as Row[]).map((row) => ({ id: String(row.id), createdAt: String(row.created_at), status: String(row.status), totalCents: Number(row.total_cents), currency: String(row.currency) }));
+  return ((data || []) as Row[]).map((row) => { const item = (Array.isArray(row.order_items) ? row.order_items[0] : row.order_items) as Row | null; return { id: String(row.id), createdAt: String(row.created_at), status: String(row.status), totalCents: Number(row.total_cents), currency: String(row.currency), provider: row.provider ? String(row.provider) : null, productSlug: item?.product_slug ? String(item.product_slug) : null }; });
 };
 export const listCustomerEntitlements = async (userId: string): Promise<CustomerEntitlement[]> => {
   const { data, error } = await getSupabaseAdmin().from('entitlements').select('id,product_title,product_slug,product_type,status,granted_at').eq('customer_user_id', userId).order('granted_at', { ascending: false });

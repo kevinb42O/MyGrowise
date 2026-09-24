@@ -2,10 +2,12 @@
 import AdminLayout from '../../../layouts/AdminLayout.astro';
 import ProductForm from '../../../components/admin/ProductForm.astro';
 import AdminIcon from '../../../components/admin/AdminIcon.astro';
+import { getWiseManualDetails } from '../../../lib/wiseCheckout';
 import { decodeProductFormFlash, formatProductPrice, getProduct, PRODUCT_FLASH_COOKIE, productStatusLabel, productTypeLabel } from '../../../lib/adminProducts';
 
 const product = await getProduct(Astro.params.id || '');
 if (!product) return Astro.redirect('/admin/producten?message=Product+niet+gevonden.');
+const wiseConfigured = Boolean(getWiseManualDetails());
 const flash = decodeProductFormFlash(Astro.cookies.get(PRODUCT_FLASH_COOKIE)?.value);
 Astro.cookies.delete(PRODUCT_FLASH_COOKIE, { path: '/admin/producten' });
 const formProduct = flash?.id === product.id ? {
@@ -39,7 +41,7 @@ const created = Astro.url.searchParams.get('created') === '1';
       <aside class="admin-panel admin-product-aside" aria-labelledby="product-summary-title">
         <header class="admin-panel__header"><div><h2 id="product-summary-title">Samenvatting</h2><p>Technische productstatus</p></div></header>
         <dl><div><dt>Interne ID</dt><dd>{product.id}</dd></div><div><dt>Prijs</dt><dd>{formatProductPrice(product.priceCents)}</dd></div><div><dt>Aangemaakt</dt><dd>{new Intl.DateTimeFormat('nl-BE', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(product.createdAt))}</dd></div><div><dt>Gewijzigd</dt><dd>{new Intl.DateTimeFormat('nl-BE', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(product.updatedAt))}</dd></div></dl>
-        <div class="admin-product-aside__note"><AdminIcon name={product.wisePaymentUrl ? 'check' : 'warning'} size={16} /><p>{product.wisePaymentUrl ? <><strong>Wise QR klaar om te publiceren.</strong> De publieke aanbodpagina genereert een QR-code uit deze officiële Wise-betaallink. Betalingen blijven in afwachting tot controle.</> : <><strong>Nog geen Wise-betaallink.</strong> Maak in Wise Business een vast bedrag-verzoek en plak de officiële link in het productformulier voordat je dit product via QR verkoopt.</>}</p></div>
+        <div class="admin-product-aside__note"><AdminIcon name={wiseConfigured ? 'check' : 'warning'} size={16} /><p>{wiseConfigured ? <><strong>Handmatige Wise-betaling ingesteld.</strong> Klanten betalen met een unieke referentie. Virginie vergelijkt de overschrijving met het Wise-afschrift en bevestigt die in het betalingsoverzicht.</> : <><strong>Wise-rekeninggegevens nog niet ingesteld.</strong> De afrekenpagina staat klaar; betalen wordt beschikbaar zodra de begunstigde en rekeninggegevens zijn ingevuld.</>}</p></div>
       </aside>
     </div>
   </div>

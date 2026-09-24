@@ -1,0 +1,102 @@
+---
+import AdminLayout from '../../layouts/AdminLayout.astro';
+import AdminIcon from '../../components/admin/AdminIcon.astro';
+import { listWiseReconciliationOrders } from '../../lib/superAdmin';
+import { hasPermission } from '../../lib/adminAuth';
+
+const orders = (await listWiseReconciliationOrders()).sort((a, b) => {
+  const aOpen = a.status === 'pending_payment' ? 0 : 1;
+  const bOpen = b.status === 'pending_payment' ? 0 : 1;
+  if (aOpen !== bOpen) return aOpen - bOpen;
+  if (a.paymentClaimedAt && b.paymentClaimedAt) return a.paymentClaimedAt.localeCompare(b.paymentClaimedAt);
+  if (a.paymentClaimedAt) return -1;
+  if (b.paymentClaimedAt) return 1;
+  return b.createdAt.localeCompare(a.createdAt);
+});
+const pending = orders.filter((order) => order.status === 'pending_payment');
+const claimed = pending.filter((order) => order.paymentClaimedAt);
+const paid = orders.filter((order) => order.status === 'paid' || order.status === 'fulfilled');
+const message = Astro.url.searchParams.get('melding');
+const money = (cents: number, currency: string) => new Intl.NumberFormat('nl-BE', { style: 'currency', currency }).format(cents / 100);
+const date = (value: string) => new Intl.DateTimeFormat('nl-BE', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Europe/Brussels' }).format(new Date(value));
+const status = (value: string) => value === 'pending_payment' ? 'Wacht op betaling' : value === 'paid' || value === 'fulfilled' ? 'Betaald en geactiveerd' : value;
+const canVerify = hasPermission(Astro.locals.adminUser, 'orders.verify');
+---
+
+<AdminLayout title="Wise-afstemming" description="Vergelijk openstaande MyGrowise-bestellingen met het Wise-afschrift">
+  <div class="admin-page wise-reconciliation">
+    <section class="admin-page-heading">
+      <div><p class="admin-eyebrow">Handmatige betaling</p><h1>Wise-afstemming</h1><p>Open het Wise-afschrift zelf in Wise en vergelijk de referenties met deze lijst.</p></div>
+    </section>
+
+    {message === 'bevestigd' && <div class="wise-flash" role="status"><AdminIcon name="check" size={17}/> Betaling bevestigd; toegang is geactiveerd.</div>}
+    {message === 'fout' && <div class="wise-flash wise-flash--error" role="alert"><AdminIcon name="warning" size={17}/> Deze bestelling kon niet worden bevestigd. Vernieuw de lijst en probeer opnieuw.</div>}
+
+    <section class="wise-reconciliation__guide" aria-label="Werkwijze">
+      <span><AdminIcon name="lock" size={18}/></span>
+      <div><strong>Vergelijk met het Wise-afschrift</strong><p>Download je PDF bij Wise en open die naast deze pagina. Upload of deel het afschrift niet. Zoek de unieke referentie uit deze lijst en controleer of bedrag en valuta overeenkomen. Bevestig daarna alleen die bestelling.</p></div>
+    </section>
+
+    <section class="admin-catalog-stats">
+      <article><span>Openstaand</span><strong>{pending.length}</strong></article>
+      <article><span>Klant meldde betaling</span><strong>{claimed.length}</strong></article>
+      <article><span>Bevestigd en geactiveerd</span><strong>{paid.length}</strong></article>
+    </section>
+
+    <section class="admin-panel wise-reconciliation__panel">
+      <header class="admin-panel__header"><div><h2>Bestellingen vergelijken</h2><p>Betalingen die een klant heeft gemeld staan bovenaan.</p></div></header>
+      {orders.length ? <>
+        <label class="wise-reconciliation__search">Zoek op klant, product of referentie<input type="search" placeholder="Bijvoorbeeld MG-…" autocomplete="off" data-wise-filter /></label>
+        <div class="admin-table-wrap"><table class="admin-table">
+          <thead><tr><th>Bestelling / klant</th><th>Bedrag</th><th>Wise-referentie</th><th>Aangemaakt</th><th>Status</th><th>Actie</th></tr></thead>
+          <tbody>
+            {orders.map((order) => <tr data-wise-row data-search={`${order.customerName} ${order.productTitle} ${order.reference} ${order.id}`.toLowerCase()}>
+              <td data-label="Bestelling / klant"><strong>{order.productTitle}</strong><small>{order.customerName} · {order.id.slice(-8).toUpperCase()}</small></td>
+              <td data-label="Bedrag"><strong>{money(order.totalCents, order.currency)}</strong></td>
+              <td data-label="Wise-referentie"><div class="wise-ref"><code>{order.reference || 'Geen referentie'}</code>{order.reference && <button type="button" class="wise-copy" data-copy={order.reference} aria-label={`Kopieer referentie ${order.reference}`} title="Kopieer referentie"><AdminIcon name="copy" size={15}/></button>}</div></td>
+              <td data-label="Aangemaakt"><time datetime={order.createdAt}>{date(order.createdAt)}</time>{order.paymentClaimedAt && <small class="wise-claim">Klant meldde betaling · {date(order.paymentClaimedAt)}</small>}</td>
+              <td data-label="Status"><span class:list={['admin-product-status', order.status === 'pending_payment' ? 'admin-product-status--draft' : 'admin-product-status--published']}><i></i>{status(order.status)}</span>{order.paymentVerifiedAt && <small>Gecontroleerd · {date(order.paymentVerifiedAt)}</small>}</td>
+              <td data-label="Actie">{order.status === 'pending_payment' && canVerify ? <form action={`/api/admin/wise-reconciliation/${order.id}`} method="post" data-wise-confirm><button class="button button-primary wise-verify" type="submit">Betaling bevestigd<br/>en activeer</button></form> : order.status === 'pending_payment' ? <span>Wacht op eigenaar</span> : <span class="wise-done"><AdminIcon name="check" size={16}/> Afgerond</span>}</td>
+            </tr>)}
+          </tbody>
+        </table></div>
+        <p class="wise-reconciliation__empty" data-wise-empty hidden>Geen bestellingen gevonden bij deze zoekterm.</p>
+      </> : <div class="admin-empty-row"><div><span><AdminIcon name="check" size={17}/></span><strong>Nog geen Wise-bestellingen</strong><p>Nieuwe handmatige Wise-bestellingen verschijnen hier zodra de betaalgegevens zijn ingesteld.</p></div></div>}
+    </section>
+  </div>
+</AdminLayout>
+
+<script>
+  const filter = document.querySelector<HTMLInputElement>('[data-wise-filter]');
+  const rows = [...document.querySelectorAll<HTMLElement>('[data-wise-row]')];
+  const empty = document.querySelector<HTMLElement>('[data-wise-empty]');
+  filter?.addEventListener('input', () => {
+    const query = filter.value.trim().toLocaleLowerCase();
+    let visible = 0;
+    rows.forEach((row) => {
+      const match = (row.dataset.search || '').includes(query);
+      row.hidden = !match;
+      if (match) visible += 1;
+    });
+    if (empty) empty.hidden = visible > 0;
+  });
+  document.querySelectorAll<HTMLButtonElement>('[data-copy]').forEach((button) => {
+    button.addEventListener('click', async () => {
+      const value = button.dataset.copy || '';
+      try {
+        await navigator.clipboard.writeText(value);
+        button.setAttribute('aria-label', 'Referentie gekopieerd');
+        window.setTimeout(() => button.setAttribute('aria-label', `Kopieer referentie ${value}`), 1600);
+      } catch { window.prompt('Kopieer de referentie:', value); }
+    });
+  });
+  document.querySelectorAll<HTMLFormElement>('[data-wise-confirm]').forEach((form) => {
+    form.addEventListener('submit', (event) => {
+      if (!window.confirm('Heb je deze Wise-bijschrijving in het afschrift gecontroleerd op referentie, bedrag en valuta? Alleen dan wordt de bestelling geactiveerd.')) event.preventDefault();
+    });
+  });
+</script>
+
+<style>
+  .wise-reconciliation__guide{display:grid;grid-template-columns:2.5rem 1fr;gap:.85rem;margin-bottom:1.5rem;padding:1.15rem 1.25rem;border:1px solid var(--line);border-radius:var(--radius-md);background:var(--cream)}.wise-reconciliation__guide>span{display:grid;width:2.2rem;height:2.2rem;place-items:center;border-radius:50%;background:var(--white);color:var(--green)}.wise-reconciliation__guide strong{display:block;margin:.1rem 0 .25rem}.wise-reconciliation__guide p{margin:0;color:var(--muted);font-size:.82rem;line-height:1.55}.wise-reconciliation__panel{padding:1.2rem}.wise-reconciliation__search{display:grid;gap:.45rem;max-width:32rem;margin:1.25rem 0;font-size:.76rem;font-weight:700}.wise-reconciliation__search input{min-height:2.9rem;padding:.7rem .85rem;border:1px solid var(--line);border-radius:.6rem;background:var(--paper);font:inherit;font-weight:500}.wise-reconciliation td small{display:block;margin-top:.35rem;color:var(--muted);font-size:.7rem}.wise-ref{display:flex;align-items:center;gap:.35rem}.wise-ref code{font-size:.76rem;font-weight:800;letter-spacing:.04em}.wise-copy{display:grid;width:1.9rem;height:1.9rem;place-items:center;border:0;border-radius:.4rem;background:var(--cream);color:var(--ink);cursor:pointer}.wise-claim{color:var(--green)!important;font-weight:800}.wise-verify{min-width:9rem;min-height:2.8rem;padding:.5rem .65rem;font-size:.68rem;line-height:1.25}.wise-done{display:inline-flex;align-items:center;gap:.35rem;color:var(--green);font-size:.75rem;font-weight:800}.wise-flash{display:flex;align-items:center;gap:.6rem;margin-bottom:1rem;padding:.85rem 1rem;border-radius:.65rem;background:var(--green-soft,#e3eee8);color:var(--green);font-size:.85rem;font-weight:700}.wise-flash--error{background:var(--pink-soft);color:var(--pink)}.wise-reconciliation__empty{padding:1rem;color:var(--muted);font-size:.85rem}.wise-reconciliation tr[hidden]{display:none}@media(max-width:720px){.wise-reconciliation__panel{padding:.85rem}.wise-verify{width:100%}}
+</style>
