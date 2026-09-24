@@ -18,7 +18,35 @@ export const isCustomerAccount = (session: UserSession | null | undefined) =>
 export const hasPermission = (session: UserSession | null | undefined, permission: AdminPermission) =>
   Boolean(session && hasAdminPermission(session.roles, permission));
 export const supabaseSessionCookieOptions = () => ({ httpOnly: true, secure: import.meta.env.PROD, sameSite: 'strict' as const, path: '/', maxAge: SESSION_TTL_SECONDS });
-export const isTrustedFormOrigin = (request: Request) => !request.headers.get('origin') || request.headers.get('origin') === new URL(request.url).origin;
+const trustedAppHosts = new Set(['mygrowise.be', 'www.mygrowise.be', 'mygrowise.vercel.app']);
+const firstHeaderValue = (value: string | null) => value?.split(',')[0]?.trim() || '';
+export const isTrustedFormOrigin = (request: Request) => {
+  const originHeader = request.headers.get('origin');
+  if (!originHeader) return true;
+
+  let origin: URL;
+  const requestUrl = new URL(request.url);
+  try {
+    origin = new URL(originHeader);
+  } catch {
+    return false;
+  }
+  if (originHeader !== origin.origin) return false;
+
+  const forwardedHost = firstHeaderValue(request.headers.get('x-forwarded-host'));
+  const requestedProtocol = firstHeaderValue(request.headers.get('x-forwarded-proto')).replace(/:$/, '');
+  const forwardedProtocol = ['http', 'https'].includes(requestedProtocol) ? requestedProtocol : requestUrl.protocol.slice(0, -1);
+  if (forwardedHost && !/[\\/]/.test(forwardedHost) && ['http', 'https'].includes(forwardedProtocol)) {
+    try {
+      const forwardedOrigin = new URL(`${forwardedProtocol}://${forwardedHost}`);
+      if (trustedAppHosts.has(forwardedOrigin.hostname)) return origin.origin === forwardedOrigin.origin;
+    } catch {
+      return false;
+    }
+  }
+
+  return origin.origin === requestUrl.origin;
+};
 export const sanitizeAppRedirect = (value: unknown) => {
   if (typeof value !== 'string' || !value.startsWith('/') || value.startsWith('//') || value.includes('\\') || /[\u0000-\u001f]/.test(value)) return '';
   let target: URL;

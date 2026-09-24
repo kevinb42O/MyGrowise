@@ -62,7 +62,7 @@ const dateTime = (value: string) => new Intl.DateTimeFormat('nl-BE', { timeZone:
       <header class="admin-panel__header"><div><h2>Cliënt toevoegen</h2><p>Medewerkers worden automatisch aan hun eigen nieuwe cliënt toegewezen.</p></div><span class="practice-private-badge"><AdminIcon name="lock" size={13}/> Privé</span></header>
       <form class="client-create-form" method="post" action="/api/admin/clienten">
         <label><span>Naam cliënt</span><input name="full_name" required minlength="2" maxlength="120" autocomplete="off" placeholder="Voor- en achternaam"/></label>
-        <label><span>E-mailadres <small>optioneel</small></span><input name="email" type="email" maxlength="254" autocomplete="off" placeholder="naam@voorbeeld.be"/><small>Wordt alleen gebruikt om het dossier praktisch terug te vinden en om afspraken handmatig te herkennen.</small></label>
+        <label><span>E-mailadres <small>optioneel</small></span><input name="email" type="email" maxlength="254" autocomplete="off" placeholder="naam@voorbeeld.be"/></label>
         {canAssign && <label><span>Toegewezen aan <small>optioneel</small></span><select name="assignee_user_id"><option value="">Nog niet toegewezen</option>{staff.map((member) => <option value={member.id}>{member.name}{member.roles.includes('practitioner') ? ' · Professional' : member.roles.includes('super_admin') ? ' · Superadmin' : ' · Medewerker'}</option>)}</select></label>}
         <button class="admin-button admin-button--primary" type="submit"><AdminIcon name="check" size={15}/> Cliënt aanmaken</button>
       </form>
