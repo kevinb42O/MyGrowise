@@ -105,6 +105,7 @@ export const requiredAdminPermission = (path: string, method = 'GET'): AdminPerm
   if (path === '/api/admin/agenda') return method === 'GET' ? 'agenda.read' : 'agenda.write';
   if (path.startsWith('/api/admin/products')) return method === 'GET' ? 'products.read' : 'products.write';
   if (path.startsWith('/api/admin/content')) return method === 'GET' ? 'content.read' : 'content.write';
+  if (path.startsWith('/api/admin/support')) return method === 'GET' ? 'support.read' : 'support.write';
   if (path.startsWith('/api/admin/privacy')) return method === 'GET' ? 'privacy.read' : 'privacy.manage';
   if (path.startsWith('/api/admin/bookings')) return method === 'GET' ? 'bookings.read' : 'bookings.manage';
   if (path.startsWith('/api/internal/messages')) return 'internal_messages.read';

@@ -10,7 +10,7 @@ export type StaffContact = { id: string; name: string; email: string; roles: str
 export type InternalThread = { id: string; subject: string; lastMessageAt: string; unread: boolean; participants: string[]; lastMessagePreview: string };
 export type InternalMessage = { id: string; senderId: string; senderName: string; body: string; createdAt: string };
 export type InternalThreadDetail = { id: string; subject: string; participants: StaffContact[]; messages: InternalMessage[] };
-export type InternalNotification = { id: string; threadId: string | null; title: string; createdAt: string };
+export type InternalNotification = { id: string; threadId: string | null; supportConversationId: string | null; title: string; createdAt: string };
 
 const profileNames = async (ids: string[]) => {
   const unique = [...new Set(ids.filter(uuid))];
@@ -105,8 +105,8 @@ export const sendInternalMessage = async (input: { threadId: string; senderId: s
 };
 
 export const listUnreadNotifications = async (userId: string): Promise<InternalNotification[]> => {
-  const { data, error } = await getSupabaseAdmin().from('internal_notifications').select('id,thread_id,title,created_at').eq('recipient_user_id', userId).is('read_at', null).order('created_at', { ascending: false }).limit(20);
-  fail(error); return ((data || []) as Row[]).map((item) => ({ id: String(item.id), threadId: item.thread_id ? String(item.thread_id) : null, title: String(item.title), createdAt: String(item.created_at) }));
+  const { data, error } = await getSupabaseAdmin().from('internal_notifications').select('id,thread_id,support_conversation_id,title,created_at').eq('recipient_user_id', userId).is('read_at', null).order('created_at', { ascending: false }).limit(20);
+  fail(error); return ((data || []) as Row[]).map((item) => ({ id: String(item.id), threadId: item.thread_id ? String(item.thread_id) : null, supportConversationId: item.support_conversation_id ? String(item.support_conversation_id) : null, title: String(item.title), createdAt: String(item.created_at) }));
 };
 
 export const markNotificationsRead = async (userId: string, ids?: string[]) => {

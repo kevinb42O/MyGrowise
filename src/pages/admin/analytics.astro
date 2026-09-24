@@ -2,22 +2,20 @@
 import AdminLayout from '../../layouts/AdminLayout.astro';
 import AdminIcon from '../../components/admin/AdminIcon.astro';
 import { getSuperadminOverview } from '../../lib/superAdmin';
+import { getAdminAnalytics } from '../../lib/adminAnalytics';
 
-const overview = await getSuperadminOverview();
+const [overview, analytics] = await Promise.all([getSuperadminOverview(), getAdminAnalytics()]);
 
 const metrics = [
-  { label: 'Gevalideerde events', value: String(overview.analyticsEvents), detail: 'Alleen consented events in de laatste 30 dagen', icon: 'customers' },
+  { label: 'Consented sessies', value: String(analytics.sessions), detail: 'First-party, laatste 30 dagen', icon: 'customers' },
   { label: 'Producten gepubliceerd', value: String(overview.publishedProducts), detail: 'Catalogus in Supabase', icon: 'products' },
-  { label: 'Open boekingsaanvragen', value: String(overview.pendingBookings), detail: 'Operationele opvolging', icon: 'cart' },
-  { label: 'Aankoopconversie', value: overview.conversion === null ? '—' : new Intl.NumberFormat('nl-BE', { style: 'percent', maximumFractionDigits: 1 }).format(overview.conversion), detail: overview.conversion === null ? 'Onvoldoende consent-data' : 'Gevalideerde betaling per sessie', icon: 'trend' },
+  { label: 'Checkout gestart', value: String(analytics.checkoutStarted), detail: 'Nog geen betaalstatus afgeleid', icon: 'cart' },
+  { label: 'Boeking geklikt', value: String(analytics.bookingClicks), detail: 'First-party event', icon: 'trend' },
 ];
 
-const commerceFunnel = [
-  ['Sessies', 0, '0'], ['Route “zelf aan de slag”', 0, '0'], ['Product bekeken', 0, '0'], ['Checkout gestart', 0, '0'], ['Betaling geslaagd', 0, '0']
-];
-const careFunnel = [
-  ['Sessies', 0, '0'], ['Route “begeleiding”', 0, '0'], ['Professional bekeken', 0, '0'], ['Boeking geklikt', 0, '0'], ['Boeking bevestigd', 0, '—']
-];
+const width = (value: number, base: number) => base ? Math.max(4, Math.round(value / base * 100)) : 0;
+const commerceFunnel = [['Sessies', 100, String(analytics.self.sessions)], ['Route “zelf aan de slag”', width(analytics.self.route, analytics.self.sessions), String(analytics.self.route)], ['Product bekeken', width(analytics.self.product, analytics.self.sessions), String(analytics.self.product)], ['Checkout gestart', width(analytics.self.checkout, analytics.self.sessions), String(analytics.self.checkout)], ['Betaling geslaagd', 0, '—']];
+const careFunnel = [['Sessies', 100, String(analytics.care.sessions)], ['Route “begeleiding”', width(analytics.care.route, analytics.care.sessions), String(analytics.care.route)], ['Professional bekeken', width(analytics.care.professional, analytics.care.sessions), String(analytics.care.professional)], ['Boeking geklikt', width(analytics.care.booking, analytics.care.sessions), String(analytics.care.booking)], ['Boeking bevestigd', 0, '—']];
 ---
 
 <AdminLayout title="Analytics" description="Privacyvriendelijke groei- en conversieanalytics voor MyGrowise">
@@ -33,10 +31,7 @@ const careFunnel = [
       </div>
     </section>
 
-    <div class="admin-preview-notice" role="status">
-      <AdminIcon name="warning" size={18} />
-      <div><strong>Privacygrens actief</strong>De schema- en consentgrens staat klaar. Grafieken blijven bewust leeg totdat een first-party eventlaag is gekoppeld; nul is nooit een verzonnen prestatiecijfer.</div>
-    </div>
+    <div class="admin-preview-notice" role="status"><AdminIcon name="check" size={18} /><div><strong>First-party eventlaag actief</strong>Alleen na expliciete toestemming worden route- en conversie-events verzameld. Geen inhoud van berichten, profielen of gezondheidsinformatie.</div></div>
 
     <div class="analytics-toolbar">
       <nav class="analytics-tabs" aria-label="Analyticsweergaven">
@@ -59,9 +54,9 @@ const careFunnel = [
     </section>
 
     <section class="admin-panel" aria-labelledby="traffic-title">
-      <header class="admin-panel__header"><div><h2 id="traffic-title">Sessies & conversie</h2><p>Dagelijkse trend voor de geselecteerde periode</p></div><span class="admin-state admin-state--blocked">Geen data</span></header>
+      <header class="admin-panel__header"><div><h2 id="traffic-title">Sessies & conversie</h2><p>Dagelijkse trend voor de geselecteerde periode</p></div><span class="admin-state">{analytics.events} events</span></header>
       <div class="admin-chart">
-        <div class="admin-chart__empty"><div><span><AdminIcon name="analytics" size={18} /></span><strong>De meetlaag wacht op implementatie</strong><p>De eerste gevalideerde page_view opent deze grafiek. Test- en intern verkeer worden apart gehouden.</p></div></div>
+        {analytics.trend.length ? <div class="analytics-trend">{analytics.trend.map((point) => <div title={`${point.date}: ${point.value} sessies`}><i style={`height:${Math.max(8, Math.round(point.value / Math.max(...analytics.trend.map((item) => item.value)) * 100))}%`}></i><small>{point.date.slice(5)}</small></div>)}</div> : <div class="admin-chart__empty"><div><span><AdminIcon name="analytics" size={18} /></span><strong>Nog geen consented sessies</strong><p>De meetlaag is actief; de grafiek vult zodra een bezoeker toestemming geeft.</p></div></div>}
       </div>
     </section>
 
@@ -92,10 +87,10 @@ const careFunnel = [
       <section class="admin-panel" id="kwaliteit" aria-labelledby="quality-title">
         <header class="admin-panel__header"><div><h2 id="quality-title">Datakwaliteit</h2><p>Voorwaarden voordat cijfers beslissingen mogen sturen</p></div></header>
         <div class="analytics-quality">
-          <div class="analytics-quality__row"><span>Consent & cookiestatus</span><span class="admin-state admin-state--blocked">Te koppelen</span></div>
-          <div class="analytics-quality__row"><span>Interne bezoeken uitgesloten</span><span class="admin-state">Gepland</span></div>
-          <div class="analytics-quality__row"><span>Checkout-events gevalideerd</span><span class="admin-state">Niet getest</span></div>
-          <div class="analytics-quality__row"><span>Laatste event ontvangen</span><small>Nooit</small></div>
+          <div class="analytics-quality__row"><span>Consent & cookiestatus</span><span class="admin-state">Actief</span></div>
+          <div class="analytics-quality__row"><span>First-party route-events</span><span class="admin-state">Actief</span></div>
+          <div class="analytics-quality__row"><span>Checkout-events gevalideerd</span><span class="admin-state admin-state--blocked">Volgende stap</span></div>
+          <div class="analytics-quality__row"><span>Laatste event ontvangen</span><small>{analytics.lastEventAt ? new Intl.DateTimeFormat('nl-BE', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(analytics.lastEventAt)) : 'Nog geen'}</small></div>
         </div>
       </section>
     </div>
