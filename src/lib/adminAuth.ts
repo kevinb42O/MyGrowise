@@ -56,8 +56,13 @@ export const registerSupabaseCustomer = async (name: string, email: string, pass
   if (name.trim().length < 2 || name.trim().length > 120 || password.length < 12 || password.length > 256) throw new Error('invalid');
   const { data, error } = await publicAuthClient().auth.signUp({ email, password, options: { data: { full_name: name.trim().replace(/\s+/g, ' ') }, emailRedirectTo } });
   if (error || !data.user) {
-    if (error?.message.toLowerCase().includes('already')) throw new Error('email_taken');
-    throw new Error('invalid');
+    if (error?.message.toLowerCase().includes('already') || error?.code === 'email_exists' || error?.code === 'user_already_exists') throw new Error('email_taken');
+    if (error) {
+      // Keep PII and provider response text out of logs; status/code are enough to diagnose Auth failures.
+      console.error('[account.register] Supabase signup failed', { status: error.status ?? null, code: error.code ?? null });
+      if (error.code === 'email_address_invalid' || error.code === 'validation_failed' || error.code === 'weak_password') throw new Error('invalid');
+    }
+    throw new Error('signup_unavailable');
   }
   if (!data.session) return { confirmationRequired: true as const };
   const user = await toSession(data.user, data.session.expires_at);

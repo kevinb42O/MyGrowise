@@ -21,7 +21,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     cookies.set(SUPABASE_SESSION_COOKIE, result.accessToken, supabaseSessionCookieOptions());
     return redirect303(new URL(next || '/account', request.url));
   } catch (error) {
-    const code = error instanceof Error && error.message === 'email_taken' ? 'email_taken' : error instanceof Error && error.message === 'configuration' ? 'configuration' : 'invalid';
+    const code = error instanceof Error && ['email_taken', 'configuration', 'invalid'].includes(error.message) ? error.message : 'signup_unavailable';
     return redirect303(new URL(`/account/aanmaken?error=${code}`, request.url));
   }
 };
