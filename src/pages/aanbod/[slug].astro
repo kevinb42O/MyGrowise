@@ -48,7 +48,7 @@ const statusLabels: Record<string, string> = { pending_payment: 'Wacht op betali
           <p class="order-status" role="status">{statusLabels[order.status] || order.status}</p>
           <strong class="payment-amount">{new Intl.NumberFormat('nl-BE', { style: 'currency', currency: order.currency }).format(order.totalCents / 100)}</strong>
           {order.status === 'pending_payment' && wiseDetails ? <>
-            {paymentQr && <div class="wise-checkout__qr"><img src={paymentQr} width="240" height="240" alt={`SEPA-betaalcode voor ${order.reference}`} /><div><strong>Scan met je bankapp</strong><p>Bedrag en mededeling staan alvast ingevuld.</p><a href={paymentQr} download={`MyGrowise-${order.reference}.png`}>QR-code downloaden</a></div></div>}
+            {paymentQr && <div class="wise-checkout__qr"><img src={paymentQr} width="240" height="240" alt={`SEPA-betaalcode voor ${order.reference}`} /><div><strong>Scan met je bankapp</strong><p>Bedrag en mededeling staan alvast ingevuld.</p></div></div>}
             <dl class="transfer-details"><div><dt>Begunstigde</dt><dd>{wiseDetails.accountName}</dd></div><div><dt>IBAN</dt><dd>{wiseDetails.iban}</dd></div>{wiseDetails.bic && <div><dt>BIC / SWIFT</dt><dd>{wiseDetails.bic}</dd></div>}<div><dt>Mededeling</dt><dd><strong>{order.reference}</strong></dd></div></dl>
             {reported || order.paymentClaimedAt ? <p class="notice" role="status">Je betaalmelding is ontvangen. Na ontvangst en controle van je Wise-betaling bevestigen we je bestelling.</p> : <>
               <p>Controleer bedrag en mededeling in je bankapp voordat je de overschrijving bevestigt.</p>
