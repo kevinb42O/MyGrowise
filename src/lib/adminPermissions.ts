@@ -1,16 +1,13 @@
 export const APP_ROLES = [
   'super_admin',
-  'admin',
-  'content_editor',
-  'clinical_reviewer',
   'support',
-  'analyst',
+  'employee',
   'practitioner',
   'customer',
 ] as const;
 
 export type UserRole = (typeof APP_ROLES)[number];
-export type AdminRole = Exclude<UserRole, 'practitioner' | 'customer'>;
+export type AdminRole = Exclude<UserRole, 'employee' | 'practitioner' | 'customer'>;
 
 export const ADMIN_PERMISSIONS = [
   'dashboard.read',
@@ -58,25 +55,14 @@ const permissions = (values: AdminPermission[]) => new Set<AdminPermission>(valu
  */
 const ROLE_PERMISSIONS: Record<AdminRole, ReadonlySet<AdminPermission>> = {
   super_admin: all,
-  admin: permissions([
-    'dashboard.read', 'analytics.read', 'orders.read', 'orders.refund', 'customers.read',
-    'products.read', 'products.write', 'products.review', 'products.publish',
-    'bookings.read', 'bookings.manage', 'agenda.read', 'agenda.write',
-    'professionals.read', 'professionals.write', 'content.read', 'content.write', 'internal_messages.read', 'internal_messages.write',
-    'content.publish', 'support.read', 'support.write', 'privacy.read',
-    'privacy.manage', 'operations.manage', 'integrations.read', 'audit.read',
-  ]),
-  content_editor: permissions(['dashboard.read', 'products.read', 'products.write', 'content.read', 'content.write', 'internal_messages.read', 'internal_messages.write']),
-  clinical_reviewer: permissions(['dashboard.read', 'products.read', 'products.review', 'internal_messages.read', 'internal_messages.write']),
   support: permissions(['dashboard.read', 'orders.read', 'customers.read', 'bookings.read', 'bookings.manage', 'support.read', 'support.write', 'privacy.read', 'privacy.manage', 'internal_messages.read', 'internal_messages.write']),
-  analyst: permissions(['analytics.read', 'internal_messages.read', 'internal_messages.write']),
 };
 
 export const isUserRole = (value: string): value is UserRole => (APP_ROLES as readonly string[]).includes(value);
 export const isAdminRole = (role: UserRole): role is AdminRole => role in ROLE_PERMISSIONS;
 export const hasAdminPermission = (roles: readonly UserRole[], permission: AdminPermission) =>
   roles.some((role) => isAdminRole(role) && ROLE_PERMISSIONS[role].has(permission));
-export const hasInternalMessagingAccess = (roles: readonly UserRole[]) => roles.includes('practitioner') || hasAdminPermission(roles, 'internal_messages.read');
+export const hasInternalMessagingAccess = (roles: readonly UserRole[]) => roles.includes('employee') || roles.includes('practitioner') || hasAdminPermission(roles, 'internal_messages.read');
 
 export const firstAccessibleAdminPath = (roles: readonly UserRole[]) => {
   if (hasAdminPermission(roles, 'dashboard.read')) return '/admin';

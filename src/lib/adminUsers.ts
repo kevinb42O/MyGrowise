@@ -1,7 +1,8 @@
 import { getSupabaseAdmin } from './supabase/server';
 import { writeSecurityAudit, type AuditActor } from './securityAudit';
 
-export const STAFF_ROLES = ['super_admin', 'admin', 'content_editor', 'clinical_reviewer', 'support', 'analyst'] as const;
+/** The only human-manageable organisation roles. Practitioner/customer are scoped capabilities. */
+export const STAFF_ROLES = ['super_admin', 'support', 'employee'] as const;
 export type StaffRole = (typeof STAFF_ROLES)[number];
 export type AdminUser = {
   id: string;
@@ -64,7 +65,6 @@ export const changeStaffRole = async (input: { userId: string; role: StaffRole; 
   const { data: existingRows, error } = await client.from('user_roles').select('role').eq('user_id', input.userId);
   if (error || !existingRows?.length) throw new Error('not_found');
   const existingRoles = existingRows.map((row) => String(row.role));
-  if (existingRoles.includes('practitioner')) throw new Error('practitioner_role_managed_elsewhere');
   const oldStaffRole = existingRoles.find((role): role is StaffRole => requireValidStaffRole(role));
   if (oldStaffRole === input.role) return;
   if (oldStaffRole === 'super_admin' && input.role !== 'super_admin') {
