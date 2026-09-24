@@ -1,7 +1,7 @@
 ---
 import AccountLayout from '../../layouts/AccountLayout.astro';
-import { listCustomerTransactions } from '../../lib/practiceDb';
-const transactions = listCustomerTransactions(Astro.locals.currentUser!.sub);
+import { listCustomerTransactions } from '../../lib/supabase/accounts';
+const transactions = await listCustomerTransactions(Astro.locals.currentUser!.sub);
 const labels: Record<string, string> = { draft: 'In voorbereiding', pending_payment: 'Wacht op betaling', paid: 'Betaald', fulfilled: 'Geleverd', cancelled: 'Geannuleerd', partially_refunded: 'Deels terugbetaald', refunded: 'Terugbetaald', disputed: 'In behandeling' };
 ---
 <AccountLayout title="Transacties"><section class="account-heading"><span class="eyebrow">Transacties</span><h1>Een helder overzicht.</h1><p>Hier zie je de status van je aankopen bij MyGrowise.</p></section>{transactions.length ? <div class="transactions">{transactions.map((transaction) => <article><div><strong>{new Intl.DateTimeFormat('nl-BE',{day:'numeric',month:'long',year:'numeric'}).format(new Date(transaction.createdAt))}</strong><small>Bestelling {transaction.id.slice(-8).toUpperCase()}</small></div><span>{labels[transaction.status] || transaction.status}</span><b>{new Intl.NumberFormat('nl-BE',{style:'currency',currency:transaction.currency}).format(transaction.totalCents / 100)}</b></article>)}</div> : <section class="account-empty"><span>€</span><h2>Nog geen transacties.</h2><p>Wanneer je iets koopt, zie je hier de datum, het bedrag en de betaalstatus. We tonen geen gevoelige productdetails in dit overzicht.</p></section>}</AccountLayout>

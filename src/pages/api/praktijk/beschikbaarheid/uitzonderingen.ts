@@ -10,7 +10,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   const endsAt = String(form.get('ends_at') || '');
   const reason = String(form.get('reason') || '');
   try {
-    createAvailabilityException(locals.currentUser!.practitionerId!, locals.currentUser!.sub, startsAt, endsAt, reason);
+    await createAvailabilityException(locals.currentUser!.practitionerId!, locals.currentUser!.sub, startsAt, endsAt, reason);
     return new Response(null, { status: 303, headers: { location: '/praktijk/beschikbaarheid?exception_saved=1' } });
   } catch {
     return new Response(null, { status: 303, headers: { location: '/praktijk/beschikbaarheid?exception_error=1' } });

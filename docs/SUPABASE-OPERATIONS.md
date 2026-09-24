@@ -19,10 +19,10 @@ never prefix either with `PUBLIC_` or place either in an Astro client bundle.
 `SUPABASE_ACCESS_TOKEN` is a local-only personal token used to generate database types;
 it is not a deployment secret and should not be set in Vercel.
 
-`ADMIN_AUTH_MODE=supabase` switches only `/admin` and `/api/admin` to Supabase Auth.
-Do this only after an owner has been created and verified in **Admin → Settings → Users &
-roles**. The practitioner and customer portals retain their independent migration paths,
-so the cutover does not silently change their session model.
+All account, practice, and admin routes use Supabase Auth. Legacy local identities can be
+imported with `npm run supabase:migrate-identities`; it creates no outbound mail and assigns
+an inaccessible random credential, so each existing person must use the normal password-reset
+flow before their first sign-in.
 
 ## Database workflow
 
@@ -44,13 +44,15 @@ connection string directly.
    exact callback URL. Keep localhost callbacks only for development.
 2. In **Authentication → Providers**, enable only providers that are implemented. For
    email/password, require email confirmation and keep secure password changes enabled.
-3. Configure a production SMTP provider before inviting real users; the default email
-   delivery is not appropriate for production.
-4. Store payment/email provider credentials as Supabase Edge Function secrets or Vercel
+3. Configure a production SMTP provider before inviting real users or enabling password resets;
+   the default email delivery is not appropriate for production.
+4. Add `/account/wachtwoord-herstellen` on the production domain to Supabase Auth's exact
+   redirect allow-list before activating password reset.
+5. Store payment/email provider credentials as Supabase Edge Function secrets or Vercel
    server environment variables—never in the database, a migration, or a `PUBLIC_` value.
-5. Keep the database network restriction on Supabase’s managed default until there is a
+6. Keep the database network restriction on Supabase’s managed default until there is a
    stable production egress IP. Enforce SSL for every external database client.
-6. Enable daily backups/PITR according to the selected Supabase plan and test restoration
+7. Enable daily backups/PITR according to the selected Supabase plan and test restoration
    before relying on it for customer records.
 
 ## Security model

@@ -9,7 +9,7 @@ export const POST: APIRoute = async ({ request, locals, params }) => {
   const form = await request.formData();
   const status = String(form.get('status') || '') as BookingStatus;
   try {
-    updateBookingStatus(params.id || '', user.practitionerId!, user.sub, status);
+    await updateBookingStatus(params.id || '', user.practitionerId!, user.sub, status);
     return new Response(null, { status: 303, headers: { location: '/praktijk/boekingen?updated=1' } });
   } catch (error) {
     const code = error instanceof Error && error.message === 'not_found' ? 404 : 409;

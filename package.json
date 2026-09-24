@@ -8,12 +8,16 @@
     "build": "astro build",
     "preview": "astro preview",
     "astro": "astro",
+    "typecheck": "tsc --noEmit",
+    "check": "npm run typecheck && npm run build",
+    "security:audit": "npm audit --omit=dev",
     "supabase:link": "supabase link --project-ref bwkqkehumzpfodmcesab",
     "supabase:push": "dotenv -e .env -- sh -c 'supabase db push --db-url \"$SUPABASE_DB_URL\"'",
     "supabase:pull": "dotenv -e .env -- sh -c 'supabase db pull --db-url \"$SUPABASE_DB_URL\"'",
-    "supabase:types": "dotenv -e .env -- sh -c 'supabase gen types typescript --project-id \"$SUPABASE_PROJECT_REF\" > src/lib/supabase/database.types.ts'",
+    "supabase:types": "dotenv -e .env -- sh -c 'generated_types=$(mktemp); if supabase gen types typescript --project-id \"$SUPABASE_PROJECT_REF\" > \"$generated_types\"; then mv \"$generated_types\" src/lib/supabase/database.types.ts; else rm -f \"$generated_types\"; exit 1; fi'",
     "supabase:migrate-catalog": "dotenv -e .env -- node scripts/migrate-local-catalog-to-supabase.mjs",
-    "supabase:migrate-practice": "dotenv -e .env -- node scripts/migrate-local-practice-to-supabase.mjs"
+    "supabase:migrate-practice": "dotenv -e .env -- node scripts/migrate-local-practice-to-supabase.mjs",
+    "supabase:migrate-identities": "dotenv -e .env -- node scripts/migrate-local-identities-to-supabase.mjs"
   },
   "dependencies": {
     "@astrojs/react": "^6.0.5",
@@ -31,8 +35,12 @@
     "react-dom": "^19.3.0"
   },
   "devDependencies": {
+    "@types/node": "^24.13.6",
     "dotenv-cli": "^11.0.0",
     "supabase": "^2.117.0",
     "typescript": "^5.7.3"
+  },
+  "overrides": {
+    "path-to-regexp": "6.3.0"
   }
 }

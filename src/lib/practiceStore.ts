@@ -1,174 +1,180 @@
-import { randomUUID } from 'node:crypto';
-import { getPracticeDb, getPractitioner, getPractitionerProfile, listPractitioners } from './practiceDb';
+import { getSupabaseAdmin } from './supabase/server';
 
 export type AvailabilityRule = { weekday: number; startTime: string; endTime: string };
 export type BookingStatus = 'pending' | 'confirmed' | 'declined' | 'cancelled' | 'completed' | 'no_show';
 export type PracticeBooking = { id: string; practitionerId: string; clientName: string; clientEmail: string; startsAt: string; endsAt: string; status: BookingStatus; calendarBookedAt: string | null; createdAt: string; updatedAt: string };
 export type BookableSlot = { practitionerId: string; practitionerSlug: string; startsAt: string; endsAt: string; dateLabel: string; timeLabel: string };
 export type AvailabilityException = { id: string; practitionerId: string; startsAt: string; endsAt: string; kind: 'available' | 'unavailable'; privateReason: string | null; createdAt: string };
+export type PractitionerProfile = {
+  id: string; slug: string; name: string; email: string; active: boolean; publicRole: string; bio: string;
+  expertise: string[]; languages: string[]; appointmentDurationMinutes: number; minimumNoticeHours: number;
+  bookingHorizonDays: number; requestsEnabled: boolean; profileUpdatedAt: string | null;
+};
 
+type Row = Record<string, unknown>;
 const TIME_ZONE = 'Europe/Brussels';
 const timePattern = /^(?:[01]\d|2[0-3]):[0-5]\d$/;
-const rowToRule = (row: any): AvailabilityRule => ({ weekday: Number(row.weekday), startTime: String(row.start_time), endTime: String(row.end_time) });
-const rowToBooking = (row: any): PracticeBooking => ({ id: String(row.id), practitionerId: String(row.practitioner_id), clientName: String(row.client_name), clientEmail: String(row.client_email), startsAt: String(row.starts_at), endsAt: String(row.ends_at), status: row.status as BookingStatus, calendarBookedAt: row.calendar_booked_at ? String(row.calendar_booked_at) : null, createdAt: String(row.created_at), updatedAt: String(row.updated_at) });
+const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const legacyPractitionerSlugs: Record<string, string> = { prac_virginie: 'virginie', prac_margot: 'margot', prac_amy: 'amy' };
+const fail = (error: { message?: string } | null) => { if (error) throw new Error(error.message || 'Supabase query failed.'); };
+const list = (value: unknown) => Array.isArray(value) ? value.map(String) : [];
+const format = (value: string, options: Intl.DateTimeFormatOptions) => new Intl.DateTimeFormat('nl-BE', { timeZone: TIME_ZONE, ...options }).format(new Date(value));
 
-export const getAvailabilityRules = (practitionerId: string) => getPracticeDb().prepare('SELECT weekday, start_time, end_time FROM availability_rules WHERE practitioner_id = ? ORDER BY weekday, start_time').all(practitionerId).map(rowToRule);
+const settingsOf = (row: Row) => {
+  const nested = row.practitioner_settings;
+  return (Array.isArray(nested) ? nested[0] : nested || {}) as Row;
+};
+const profileFromRow = (row: Row): PractitionerProfile => {
+  const settings = settingsOf(row);
+  return {
+    id: String(row.id), slug: String(row.slug), name: String(row.name), email: '', active: Boolean(row.active),
+    publicRole: String(row.public_role || ''), bio: String(row.bio || ''), expertise: list(row.expertise), languages: list(row.languages),
+    appointmentDurationMinutes: Number(settings.appointment_duration_minutes ?? 60), minimumNoticeHours: Number(settings.minimum_notice_hours ?? 2),
+    bookingHorizonDays: Number(settings.booking_horizon_days ?? 30), requestsEnabled: Boolean(settings.requests_enabled ?? true),
+    profileUpdatedAt: row.updated_at ? String(row.updated_at) : null,
+  };
+};
+const bookingFromRow = (row: Row): PracticeBooking => ({
+  id: String(row.id), practitionerId: String(row.practitioner_id), clientName: String(row.client_name), clientEmail: String(row.client_email),
+  startsAt: String(row.starts_at), endsAt: String(row.ends_at), status: String(row.status) as BookingStatus,
+  calendarBookedAt: row.calendar_booked_at ? String(row.calendar_booked_at) : null, createdAt: String(row.created_at), updatedAt: String(row.updated_at),
+});
 
-export const saveAvailabilityRules = (practitionerId: string, actorUserId: string, rules: AvailabilityRule[]) => {
+// Local IDs exist only in legacy signed sessions. Resolve them to the durable remote
+// identity before every data operation, so no booking or availability data returns to SQLite.
+const resolvePractitioner = async (idOrSlug: string): Promise<PractitionerProfile | null> => {
+  const slug = legacyPractitionerSlugs[idOrSlug] || (!uuidPattern.test(idOrSlug) ? idOrSlug : '');
+  const query = getSupabaseAdmin().from('practitioners').select('id,slug,name,active,public_role,bio,expertise,languages,updated_at,practitioner_settings(appointment_duration_minutes,minimum_notice_hours,booking_horizon_days,requests_enabled)');
+  const { data, error } = slug ? await query.eq('slug', slug).maybeSingle() : await query.eq('id', idOrSlug).maybeSingle();
+  fail(error);
+  return data ? profileFromRow(data as Row) : null;
+};
+
+export const getPractitionerBySlug = (slug: string) => resolvePractitioner(slug.trim().toLowerCase());
+export const getPractitionerProfile = (idOrSlug: string) => resolvePractitioner(idOrSlug);
+
+export const getAvailabilityRules = async (idOrSlug: string): Promise<AvailabilityRule[]> => {
+  const practitioner = await resolvePractitioner(idOrSlug);
+  if (!practitioner) return [];
+  const { data, error } = await getSupabaseAdmin().from('availability_rules').select('weekday,start_time,end_time').eq('practitioner_id', practitioner.id).order('weekday').order('start_time');
+  fail(error);
+  return ((data || []) as Row[]).map((row) => ({ weekday: Number(row.weekday), startTime: String(row.start_time), endTime: String(row.end_time) }));
+};
+
+export const getBookableSlots = async (idOrSlug: string, days = 14): Promise<BookableSlot[]> => {
+  const practitioner = await resolvePractitioner(idOrSlug);
+  if (!practitioner?.active || !practitioner.requestsEnabled) return [];
+  const visibleDays = Math.min(Math.max(days, 1), practitioner.bookingHorizonDays);
+  const { data, error } = await getSupabaseAdmin().rpc('get_bookable_slots', { p_practitioner_slug: practitioner.slug, p_days: visibleDays });
+  fail(error);
+  return ((data || []) as Row[]).map((row) => {
+    const startsAt = String(row.starts_at); const endsAt = String(row.ends_at);
+    return { practitionerId: practitioner.id, practitionerSlug: practitioner.slug, startsAt, endsAt, dateLabel: format(startsAt, { weekday: 'short', day: 'numeric', month: 'short' }), timeLabel: format(startsAt, { hour: '2-digit', minute: '2-digit' }) };
+  });
+};
+
+export const saveAvailabilityRules = async (idOrSlug: string, actorUserId: string, rules: AvailabilityRule[]) => {
+  const practitioner = await resolvePractitioner(idOrSlug);
+  if (!practitioner) throw new Error('not_found');
   const normalized = rules.filter((rule) => Number.isInteger(rule.weekday) && rule.weekday >= 1 && rule.weekday <= 7 && timePattern.test(rule.startTime) && timePattern.test(rule.endTime) && rule.startTime < rule.endTime);
   if (normalized.length !== rules.length) throw new Error('invalid_availability');
   for (let weekday = 1; weekday <= 7; weekday += 1) {
     const periods = normalized.filter((rule) => rule.weekday === weekday).sort((a, b) => a.startTime.localeCompare(b.startTime));
     if (periods.length > 4 || periods.some((period, index) => index > 0 && period.startTime < periods[index - 1].endTime)) throw new Error('invalid_availability');
   }
-  const db = getPracticeDb();
-  db.exec('BEGIN IMMEDIATE');
-  try {
-    db.prepare('DELETE FROM availability_rules WHERE practitioner_id = ?').run(practitionerId);
-    const insert = db.prepare('INSERT INTO availability_rules (practitioner_id, weekday, start_time, end_time) VALUES (?, ?, ?, ?)');
-    for (const rule of normalized) insert.run(practitionerId, rule.weekday, rule.startTime, rule.endTime);
-    db.prepare('INSERT INTO practice_audit_log (occurred_at, actor_user_id, action, object_type, object_id, metadata) VALUES (?, ?, ?, ?, ?, ?)').run(new Date().toISOString(), actorUserId, 'availability.updated', 'practitioner', practitionerId, JSON.stringify({ rules: normalized }));
-    db.exec('COMMIT');
-  } catch (error) {
-    db.exec('ROLLBACK');
-    throw error;
-  }
+  const client = getSupabaseAdmin();
+  const { error: replaceError } = await client.rpc('replace_availability_rules', { p_practitioner_id: practitioner.id, p_rules: normalized.map((rule) => ({ weekday: rule.weekday, start_time: rule.startTime, end_time: rule.endTime })) });
+  fail(replaceError);
+  const { error: auditError } = await client.from('security_audit_log').insert({ actor_user_id: uuidPattern.test(actorUserId) ? actorUserId : null, action: 'availability.updated', object_type: 'practitioner', object_id: practitioner.id, metadata: { rules: normalized } });
+  fail(auditError);
 };
 
-const rowToException = (row: any): AvailabilityException => ({ id: String(row.id), practitionerId: String(row.practitioner_id), startsAt: String(row.starts_at), endsAt: String(row.ends_at), kind: row.kind as AvailabilityException['kind'], privateReason: row.private_reason ? String(row.private_reason) : null, createdAt: String(row.created_at) });
-export const listAvailabilityExceptions = (practitionerId: string) => getPracticeDb().prepare('SELECT * FROM availability_exceptions WHERE practitioner_id = ? AND ends_at >= ? ORDER BY starts_at LIMIT 50').all(practitionerId, new Date().toISOString()).map(rowToException);
+export const listAvailabilityExceptions = async (idOrSlug: string): Promise<AvailabilityException[]> => {
+  const practitioner = await resolvePractitioner(idOrSlug);
+  if (!practitioner) return [];
+  const { data, error } = await getSupabaseAdmin().from('availability_exceptions').select('id,practitioner_id,starts_at,ends_at,kind,private_reason,created_at').eq('practitioner_id', practitioner.id).gte('ends_at', new Date().toISOString()).order('starts_at').limit(50);
+  fail(error);
+  return ((data || []) as Row[]).map((row) => ({ id: String(row.id), practitionerId: String(row.practitioner_id), startsAt: String(row.starts_at), endsAt: String(row.ends_at), kind: String(row.kind) as AvailabilityException['kind'], privateReason: row.private_reason ? String(row.private_reason) : null, createdAt: String(row.created_at) }));
+};
 
-export const createAvailabilityException = (practitionerId: string, actorUserId: string, startsAt: string, endsAt: string, privateReason: string) => {
+export const createAvailabilityException = async (idOrSlug: string, actorUserId: string, startsAt: string, endsAt: string, privateReason: string) => {
+  const practitioner = await resolvePractitioner(idOrSlug);
   const start = new Date(startsAt); const end = new Date(endsAt);
+  if (!practitioner) throw new Error('not_found');
   if (!Number.isFinite(start.getTime()) || !Number.isFinite(end.getTime()) || end <= start || end.getTime() - start.getTime() > 366 * 86400000) throw new Error('invalid_exception');
-  const exception: AvailabilityException = { id: `avail_${randomUUID()}`, practitionerId, startsAt: start.toISOString(), endsAt: end.toISOString(), kind: 'unavailable', privateReason: privateReason.trim().slice(0, 80) || null, createdAt: new Date().toISOString() };
-  const db = getPracticeDb();
-  db.prepare('INSERT INTO availability_exceptions (id, practitioner_id, starts_at, ends_at, kind, private_reason, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)').run(exception.id, practitionerId, exception.startsAt, exception.endsAt, exception.kind, exception.privateReason, exception.createdAt);
-  db.prepare('INSERT INTO practice_audit_log (occurred_at, actor_user_id, action, object_type, object_id, metadata) VALUES (?, ?, ?, ?, ?, ?)').run(exception.createdAt, actorUserId, 'availability.exception_created', 'availability_exception', exception.id, JSON.stringify({ practitionerId, startsAt: exception.startsAt, endsAt: exception.endsAt }));
-  return exception;
+  const { data, error } = await getSupabaseAdmin().from('availability_exceptions').insert({ practitioner_id: practitioner.id, starts_at: start.toISOString(), ends_at: end.toISOString(), kind: 'unavailable', private_reason: privateReason.trim().slice(0, 80) || null }).select('id,practitioner_id,starts_at,ends_at,kind,private_reason,created_at').single();
+  fail(error);
+  if (!data) throw new Error('Availability exception could not be created.');
+  await getSupabaseAdmin().from('security_audit_log').insert({ actor_user_id: uuidPattern.test(actorUserId) ? actorUserId : null, action: 'availability.exception_created', object_type: 'availability_exception', object_id: String(data.id), metadata: { practitionerId: practitioner.id } });
+  return { id: String(data.id), practitionerId: String(data.practitioner_id), startsAt: String(data.starts_at), endsAt: String(data.ends_at), kind: String(data.kind) as AvailabilityException['kind'], privateReason: data.private_reason ? String(data.private_reason) : null, createdAt: String(data.created_at) };
 };
 
-export const deleteAvailabilityException = (id: string, practitionerId: string, actorUserId: string) => {
-  const db = getPracticeDb();
-  const exception = db.prepare('SELECT * FROM availability_exceptions WHERE id = ? AND practitioner_id = ?').get(id, practitionerId) as any;
-  if (!exception) throw new Error('not_found');
-  db.prepare('DELETE FROM availability_exceptions WHERE id = ? AND practitioner_id = ?').run(id, practitionerId);
-  db.prepare('INSERT INTO practice_audit_log (occurred_at, actor_user_id, action, object_type, object_id, metadata) VALUES (?, ?, ?, ?, ?, ?)').run(new Date().toISOString(), actorUserId, 'availability.exception_deleted', 'availability_exception', id, JSON.stringify({ practitionerId }));
+export const deleteAvailabilityException = async (id: string, idOrSlug: string, actorUserId: string) => {
+  const practitioner = await resolvePractitioner(idOrSlug);
+  if (!practitioner) throw new Error('not_found');
+  const { data, error } = await getSupabaseAdmin().from('availability_exceptions').delete().eq('id', id).eq('practitioner_id', practitioner.id).select('id').maybeSingle();
+  fail(error);
+  if (!data) throw new Error('not_found');
+  await getSupabaseAdmin().from('security_audit_log').insert({ actor_user_id: uuidPattern.test(actorUserId) ? actorUserId : null, action: 'availability.exception_deleted', object_type: 'availability_exception', object_id: id, metadata: { practitionerId: practitioner.id } });
 };
 
-export const listBookings = (practitionerId: string, status?: BookingStatus) => {
-  const query = status ? 'SELECT * FROM bookings WHERE practitioner_id = ? AND status = ? ORDER BY starts_at' : 'SELECT * FROM bookings WHERE practitioner_id = ? ORDER BY starts_at';
-  const rows = status ? getPracticeDb().prepare(query).all(practitionerId, status) : getPracticeDb().prepare(query).all(practitionerId);
-  return rows.map(rowToBooking);
+export const listBookings = async (idOrSlug: string, status?: BookingStatus): Promise<PracticeBooking[]> => {
+  const practitioner = await resolvePractitioner(idOrSlug);
+  if (!practitioner) return [];
+  let query = getSupabaseAdmin().from('bookings').select('id,practitioner_id,client_name,client_email,starts_at,ends_at,status,calendar_booked_at,created_at,updated_at').eq('practitioner_id', practitioner.id).order('starts_at');
+  if (status) query = query.eq('status', status);
+  const { data, error } = await query;
+  fail(error);
+  return ((data || []) as Row[]).map(bookingFromRow);
 };
 
-const transitions: Record<BookingStatus, BookingStatus[]> = {
-  pending: ['confirmed', 'declined'], confirmed: ['cancelled', 'completed', 'no_show'], declined: [], cancelled: [], completed: [], no_show: [],
+const transitions: Record<BookingStatus, BookingStatus[]> = { pending: ['confirmed', 'declined'], confirmed: ['cancelled', 'completed', 'no_show'], declined: [], cancelled: [], completed: [], no_show: [] };
+export const updateBookingStatus = async (bookingId: string, idOrSlug: string, actorUserId: string, nextStatus: BookingStatus) => {
+  const practitioner = await resolvePractitioner(idOrSlug);
+  if (!practitioner) throw new Error('not_found');
+  const client = getSupabaseAdmin();
+  const { data: existing, error: existingError } = await client.from('bookings').select('id,status').eq('id', bookingId).eq('practitioner_id', practitioner.id).maybeSingle();
+  fail(existingError);
+  if (!existing) throw new Error('not_found');
+  if (!transitions[String(existing.status) as BookingStatus]?.includes(nextStatus)) throw new Error('invalid_transition');
+  const update: Row = { status: nextStatus };
+  if (nextStatus === 'confirmed') update.calendar_booked_at = new Date().toISOString();
+  const { error } = await client.from('bookings').update(update).eq('id', bookingId).eq('practitioner_id', practitioner.id);
+  fail(error);
+  await client.from('security_audit_log').insert({ actor_user_id: uuidPattern.test(actorUserId) ? actorUserId : null, action: 'booking.status_updated', object_type: 'booking', object_id: bookingId, metadata: { from: existing.status, to: nextStatus, practitionerId: practitioner.id } });
 };
 
-export const updateBookingStatus = (bookingId: string, practitionerId: string, actorUserId: string, nextStatus: BookingStatus) => {
-  const db = getPracticeDb();
-  db.exec('BEGIN IMMEDIATE');
-  try {
-    const booking = db.prepare('SELECT * FROM bookings WHERE id = ? AND practitioner_id = ?').get(bookingId, practitionerId) as any;
-    if (!booking) throw new Error('not_found');
-    if (!transitions[booking.status as BookingStatus]?.includes(nextStatus)) throw new Error('invalid_transition');
-    const now = new Date().toISOString();
-    db.prepare('UPDATE bookings SET status = ?, updated_at = ?, calendar_booked_at = CASE WHEN ? = \'confirmed\' THEN ? ELSE calendar_booked_at END WHERE id = ? AND practitioner_id = ?').run(nextStatus, now, nextStatus, now, bookingId, practitionerId);
-    db.prepare('INSERT INTO practice_audit_log (occurred_at, actor_user_id, action, object_type, object_id, metadata) VALUES (?, ?, ?, ?, ?, ?)').run(now, actorUserId, 'booking.status_updated', 'booking', bookingId, JSON.stringify({ from: booking.status, to: nextStatus, practitionerId }));
-    db.exec('COMMIT');
-  } catch (error) {
-    db.exec('ROLLBACK');
-    throw error;
-  }
+export const createBookingRequest = async (slug: string, clientName: string, clientEmail: string, startsAt: string, endsAt: string) => {
+  const practitioner = await getPractitionerBySlug(slug);
+  if (!practitioner) throw new Error('slot_unavailable');
+  const { data, error } = await getSupabaseAdmin().rpc('request_booking', { p_practitioner_slug: practitioner.slug, p_client_name: clientName, p_client_email: clientEmail, p_starts_at: startsAt, p_ends_at: endsAt });
+  fail(error);
+  return String(data);
 };
 
-const partsInZone = (date: Date) => Object.fromEntries(new Intl.DateTimeFormat('en-CA', { timeZone: TIME_ZONE, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23' }).formatToParts(date).filter((part) => part.type !== 'literal').map((part) => [part.type, Number(part.value)]));
-const localToUtc = (date: string, time: string) => {
-  const [year, month, day] = date.split('-').map(Number);
-  const [hour, minute] = time.split(':').map(Number);
-  let result = new Date(Date.UTC(year, month - 1, day, hour, minute));
-  for (let i = 0; i < 2; i += 1) {
-    const p = partsInZone(result);
-    const rendered = Date.UTC(p.year, p.month - 1, p.day, p.hour, p.minute, p.second);
-    result = new Date(result.getTime() - (rendered - Date.UTC(year, month - 1, day, hour, minute)));
-  }
-  return result;
+const parseList = (value: string, maximum: number) => Array.from(new Set(value.split(/[\n,]/).map((item) => item.trim().replace(/\s+/g, ' ')).filter((item) => item.length >= 2 && item.length <= 60))).slice(0, maximum);
+const oneOfNumber = (value: unknown, allowed: number[], fallback: number) => allowed.includes(Number(value)) ? Number(value) : fallback;
+export const updatePractitionerProfile = async (idOrSlug: string, actorUserId: string, input: { name: string; publicRole: string; bio: string; expertise: string; languages: string; appointmentDurationMinutes: unknown; minimumNoticeHours: unknown; bookingHorizonDays: unknown; requestsEnabled: boolean }) => {
+  const practitioner = await resolvePractitioner(idOrSlug);
+  if (!practitioner) throw new Error('not_found');
+  const name = input.name.trim().replace(/\s+/g, ' '); const publicRole = input.publicRole.trim().replace(/\s+/g, ' '); const bio = input.bio.trim().replace(/\s+/g, ' ');
+  const expertise = parseList(input.expertise, 8); const languages = parseList(input.languages, 6);
+  if (name.length < 2 || name.length > 80 || publicRole.length < 2 || publicRole.length > 100 || bio.length < 40 || bio.length > 1200 || expertise.length === 0 || languages.length === 0) throw new Error('invalid_profile');
+  const duration = oneOfNumber(input.appointmentDurationMinutes, [45, 60, 75, 90], 60);
+  const notice = oneOfNumber(input.minimumNoticeHours, [0, 1, 2, 4, 12, 24, 48, 72], 2);
+  const horizon = oneOfNumber(input.bookingHorizonDays, [14, 30, 45, 60, 90], 30);
+  const client = getSupabaseAdmin();
+  const { error: profileError } = await client.from('practitioners').update({ name, public_role: publicRole, bio, expertise, languages }).eq('id', practitioner.id);
+  fail(profileError);
+  const { error: settingsError } = await client.from('practitioner_settings').upsert({ practitioner_id: practitioner.id, appointment_duration_minutes: duration, minimum_notice_hours: notice, booking_horizon_days: horizon, requests_enabled: input.requestsEnabled });
+  fail(settingsError);
+  const { error: auditError } = await client.from('security_audit_log').insert({ actor_user_id: uuidPattern.test(actorUserId) ? actorUserId : null, action: 'profile.updated', object_type: 'practitioner', object_id: practitioner.id, metadata: { duration, notice, horizon, requestsEnabled: input.requestsEnabled } });
+  fail(auditError);
+  return getPractitionerProfile(practitioner.id);
 };
 
-const dateKeyInZone = (date: Date) => {
-  const p = partsInZone(date);
-  return `${p.year}-${String(p.month).padStart(2, '0')}-${String(p.day).padStart(2, '0')}`;
-};
-
-const weekdayInZone = (date: Date) => {
-  const label = new Intl.DateTimeFormat('en-US', { timeZone: TIME_ZONE, weekday: 'short' }).format(date);
-  return ({ Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6, Sun: 7 } as Record<string, number>)[label];
-};
-
-export const getBookableSlots = (practitionerId: string, days = 14): BookableSlot[] => {
-  const practitioner = getPractitionerProfile(practitionerId);
-  if (!practitioner?.active || !practitioner.requestsEnabled) return [];
-  const durationMinutes = practitioner.appointmentDurationMinutes;
-  const rules = Map.groupBy(getAvailabilityRules(practitionerId), (rule) => rule.weekday);
-  const now = new Date();
-  const todayKey = dateKeyInZone(now);
-  const [todayYear, todayMonth, todayDay] = todayKey.split('-').map(Number);
-  const from = now.toISOString();
-  const visibleDays = Math.min(Math.max(days, 1), practitioner.bookingHorizonDays);
-  const until = new Date(now.getTime() + visibleDays * 86400000).toISOString();
-  const bookings = listBookings(practitionerId).filter((booking) => ['pending', 'confirmed'].includes(booking.status) && booking.endsAt >= from && booking.startsAt <= until);
-  const exceptions = getPracticeDb().prepare('SELECT starts_at, ends_at, kind FROM availability_exceptions WHERE practitioner_id = ? AND ends_at >= ? AND starts_at <= ?').all(practitionerId, from, until) as any[];
-  const slots: BookableSlot[] = [];
-
-  for (let offset = 0; offset < visibleDays; offset += 1) {
-    // Anchor every calendar day at UTC noon. Adding twelve hours to the current
-    // clock time can cross midnight and used to make "today" disappear after noon.
-    const dayReference = new Date(Date.UTC(todayYear, todayMonth - 1, todayDay + offset, 12));
-    const dayRules = rules.get(weekdayInZone(dayReference)) || [];
-    if (!dayRules.length) continue;
-    const dateKey = dateKeyInZone(dayReference);
-    for (const rule of dayRules) {
-      let cursor = localToUtc(dateKey, rule.startTime);
-      const boundary = localToUtc(dateKey, rule.endTime);
-      while (cursor.getTime() + durationMinutes * 60000 <= boundary.getTime()) {
-        const end = new Date(cursor.getTime() + durationMinutes * 60000);
-        const isFuture = cursor.getTime() >= now.getTime() + practitioner.minimumNoticeHours * 3600000;
-        const overlapsBooking = bookings.some((booking) => new Date(booking.startsAt) < end && new Date(booking.endsAt) > cursor);
-        const unavailable = exceptions.some((exception) => exception.kind === 'unavailable' && new Date(exception.starts_at) < end && new Date(exception.ends_at) > cursor);
-        if (isFuture && !overlapsBooking && !unavailable) slots.push({ practitionerId, practitionerSlug: practitioner.slug, startsAt: cursor.toISOString(), endsAt: end.toISOString(), dateLabel: new Intl.DateTimeFormat('nl-BE', { timeZone: TIME_ZONE, weekday: 'short', day: 'numeric', month: 'short' }).format(cursor), timeLabel: new Intl.DateTimeFormat('nl-BE', { timeZone: TIME_ZONE, hour: '2-digit', minute: '2-digit' }).format(cursor) });
-        cursor = end;
-      }
-    }
-  }
-  return slots;
-};
-
-export const getPracticeSummary = (practitionerId: string) => {
-  const bookings = listBookings(practitionerId);
+export const getPracticeSummary = async (idOrSlug: string) => {
+  const [bookings, rules, nextSlots] = await Promise.all([listBookings(idOrSlug), getAvailabilityRules(idOrSlug), getBookableSlots(idOrSlug, 14)]);
   const now = new Date().toISOString();
-  return { pending: bookings.filter((booking) => booking.status === 'pending').length, upcoming: bookings.filter((booking) => booking.status === 'confirmed' && booking.startsAt >= now).length, availabilityDays: new Set(getAvailabilityRules(practitionerId).map((rule) => rule.weekday)).size, nextSlots: getBookableSlots(practitionerId, 14).slice(0, 4) };
-};
-
-export const getPractitionerBySlug = (slug: string) => listPractitioners().find((practitioner) => practitioner.slug === slug && practitioner.active) || null;
-
-export const createBookingRequest = (practitionerId: string, clientName: string, clientEmail: string, startsAt: string, endsAt: string) => {
-  const horizon = getPractitionerProfile(practitionerId)?.bookingHorizonDays || 30;
-  const available = getBookableSlots(practitionerId, horizon).some((slot) => slot.startsAt === startsAt && slot.endsAt === endsAt);
-  if (!available) throw new Error('slot_unavailable');
-  const db = getPracticeDb();
-  const id = `book_${randomUUID()}`;
-  const now = new Date().toISOString();
-  db.exec('BEGIN IMMEDIATE');
-  try {
-    const overlap = db.prepare("SELECT 1 FROM bookings WHERE practitioner_id = ? AND status IN ('pending','confirmed') AND starts_at < ? AND ends_at > ? LIMIT 1").get(practitionerId, endsAt, startsAt);
-    if (overlap) throw new Error('slot_unavailable');
-    const customer = db.prepare("SELECT id FROM users WHERE email = ? COLLATE NOCASE AND roles LIKE '%customer%' LIMIT 1").get(clientEmail.trim().toLowerCase()) as any;
-    db.prepare('INSERT INTO bookings (id, practitioner_id, client_name, client_email, customer_user_id, starts_at, ends_at, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)').run(id, practitionerId, clientName, clientEmail.trim().toLowerCase(), customer?.id || null, startsAt, endsAt, 'pending', now, now);
-    db.exec('COMMIT');
-    return id;
-  } catch (error) {
-    db.exec('ROLLBACK');
-    throw error;
-  }
+  return { pending: bookings.filter((booking) => booking.status === 'pending').length, upcoming: bookings.filter((booking) => booking.status === 'confirmed' && booking.startsAt >= now).length, availabilityDays: new Set(rules.map((rule) => rule.weekday)).size, nextSlots: nextSlots.slice(0, 4) };
 };

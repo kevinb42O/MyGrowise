@@ -78,6 +78,7 @@ export const createPracticeAgendaEvent = async (input: CreatePracticeAgendaEvent
     .select('id,title,starts_at,ends_at,status,event_kind,location,color')
     .single();
   fail(error);
+  if (!data) throw new Error('Agenda event could not be created.');
   await getSupabaseAdmin().from('security_audit_log').insert({
     action: 'practice_calendar_event.created', object_type: 'practice_calendar_event', object_id: String(data.id),
     metadata: { actor: actorEmail, event_kind: input.kind, starts_at: input.startsAt },

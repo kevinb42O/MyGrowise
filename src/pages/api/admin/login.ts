@@ -1,77 +1,24 @@
 import type { APIRoute } from 'astro';
-import {
-  ADMIN_COOKIE,
-  SUPABASE_ADMIN_COOKIE,
-  adminCookieOptions,
-  authenticateUser,
-  authenticateSupabaseAdmin,
-  createUserSession,
-  isAdminAuthConfigured,
-  isSupabaseAdminAuthEnabled,
-  isTrustedFormOrigin,
-  sanitizeAppRedirect,
-  supabaseAdminCookieOptions,
-} from '../../../lib/adminAuth';
+import { SUPABASE_SESSION_COOKIE, authenticateSupabaseUser, isSupabaseAuthConfigured, isTrustedFormOrigin, sanitizeAppRedirect, supabaseSessionCookieOptions } from '../../../lib/adminAuth';
 
 export const prerender = false;
-
 type Attempt = { count: number; resetAt: number };
-const attempts = new Map<string, Attempt>();
-const WINDOW_MS = 15 * 60 * 1000;
-const MAX_ATTEMPTS = 5;
-
-const redirectToLogin = (url: URL, error: string, next = '/admin') => {
-  const loginPath = next.startsWith('/praktijk') ? '/praktijk/login' : '/admin/login';
-  const target = new URL(loginPath, url);
-  target.searchParams.set('error', error);
-  if (next !== '/admin') target.searchParams.set('next', next);
-  return new Response(null, { status: 303, headers: { location: target.pathname + target.search } });
-};
+const attempts = new Map<string, Attempt>(); const WINDOW_MS = 15 * 60 * 1000; const MAX_ATTEMPTS = 5;
+const redirectToLogin = (url: URL, error: string, next = '/admin') => { const loginPath = next.startsWith('/praktijk') ? '/praktijk/login' : '/admin/login'; const target = new URL(loginPath, url); target.searchParams.set('error', error); if (next !== '/admin') target.searchParams.set('next', next); return new Response(null, { status: 303, headers: { location: target.pathname + target.search } }); };
 
 export const POST: APIRoute = async ({ request, cookies, url }) => {
   if (!isTrustedFormOrigin(request)) return new Response('Ongeldige aanvraag.', { status: 403 });
-  if (!isSupabaseAdminAuthEnabled() && !isAdminAuthConfigured()) return redirectToLogin(url, 'configuration');
-
-  let form: FormData;
-  try {
-    form = await request.formData();
-  } catch {
-    return redirectToLogin(url, 'invalid');
-  }
-
-  const email = typeof form.get('email') === 'string' ? String(form.get('email')).trim().toLowerCase() : '';
-  const password = typeof form.get('password') === 'string' ? String(form.get('password')) : '';
-  const requestedNext = sanitizeAppRedirect(form.get('next'));
-  const forwardedFor = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim();
-  const clientKey = `${forwardedFor || 'local'}:${email.slice(0, 160)}`;
-  const now = Date.now();
-  const previous = attempts.get(clientKey);
-
-  if (previous && previous.resetAt > now && previous.count >= MAX_ATTEMPTS) {
-    return redirectToLogin(url, 'rate_limited', requestedNext || '/admin');
-  }
+  if (!isSupabaseAuthConfigured()) return redirectToLogin(url, 'configuration');
+  let form: FormData; try { form = await request.formData(); } catch { return redirectToLogin(url, 'invalid'); }
+  const email = typeof form.get('email') === 'string' ? String(form.get('email')).trim().toLowerCase() : ''; const password = typeof form.get('password') === 'string' ? String(form.get('password')) : ''; const requestedNext = sanitizeAppRedirect(form.get('next'));
+  const clientKey = `${request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'local'}:${email.slice(0, 160)}`; const now = Date.now(); const previous = attempts.get(clientKey);
+  if (previous && previous.resetAt > now && previous.count >= MAX_ATTEMPTS) return redirectToLogin(url, 'rate_limited', requestedNext || '/admin');
   if (previous && previous.resetAt <= now) attempts.delete(clientKey);
-
-  const validShape = email.length <= 254 && password.length > 0 && password.length <= 256;
-  const supabaseLogin = validShape && isSupabaseAdminAuthEnabled() ? await authenticateSupabaseAdmin(email, password) : null;
-  const user = supabaseLogin?.user || (validShape && !isSupabaseAdminAuthEnabled() ? authenticateUser(email, password) : null);
-  if (!user || !user.roles.some((role) => role === 'super_admin' || role === 'practitioner')) {
-    const current = attempts.get(clientKey);
-    attempts.set(clientKey, {
-      count: (current?.count || 0) + 1,
-      resetAt: current?.resetAt && current.resetAt > now ? current.resetAt : now + WINDOW_MS,
-    });
-    await new Promise((resolve) => setTimeout(resolve, 250));
-    return redirectToLogin(url, 'invalid', requestedNext || '/admin');
-  }
-
-  attempts.delete(clientKey);
-  if (supabaseLogin) cookies.set(SUPABASE_ADMIN_COOKIE, supabaseLogin.accessToken, supabaseAdminCookieOptions());
-  else cookies.set(ADMIN_COOKIE, createUserSession(user), adminCookieOptions());
-  const destination = requestedNext || '/admin';
-  const canOpenRequested = (destination.startsWith('/admin') && user.roles.includes('super_admin')) || (destination.startsWith('/praktijk') && user.roles.includes('practitioner'));
-  if (!canOpenRequested) return redirectToLogin(url, 'forbidden', destination);
-  return new Response(null, { status: 303, headers: { location: destination } });
+  const authenticated = email.length <= 254 && password.length > 0 && password.length <= 256 ? await authenticateSupabaseUser(email, password) : null;
+  if (!authenticated || !authenticated.user.roles.some((role) => role === 'super_admin' || role === 'practitioner')) { const current = attempts.get(clientKey); attempts.set(clientKey, { count: (current?.count || 0) + 1, resetAt: current?.resetAt && current.resetAt > now ? current.resetAt : now + WINDOW_MS }); await new Promise((resolve) => setTimeout(resolve, 250)); return redirectToLogin(url, 'invalid', requestedNext || '/admin'); }
+  attempts.delete(clientKey); cookies.set(SUPABASE_SESSION_COOKIE, authenticated.accessToken, supabaseSessionCookieOptions());
+  const destination = requestedNext || (authenticated.user.roles.includes('super_admin') ? '/admin' : '/praktijk');
+  const canOpenRequested = (destination.startsWith('/admin') && authenticated.user.roles.includes('super_admin')) || (destination.startsWith('/praktijk') && authenticated.user.roles.includes('practitioner') && authenticated.user.practitionerId);
+  return canOpenRequested ? new Response(null, { status: 303, headers: { location: destination } }) : redirectToLogin(url, 'forbidden', destination);
 };
-
 export const ALL: APIRoute = () => new Response('Methode niet toegestaan.', { status: 405 });

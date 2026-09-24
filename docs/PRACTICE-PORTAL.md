@@ -1,6 +1,6 @@
 # MyGrowise praktijkportaal
 
-Status: lokale MVP, zonder OAuth of Supabase.  
+Status: Supabase-backed boekingen, beschikbaarheid, professionalprofielen, accounts, voorkeuren en auditdata. Bestaande lokale identiteiten zijn zonder e-mailverzending geïmporteerd en gebruiken de wachtwoordherstelroute voor eerste toegang.
 Routes: `/praktijk`, `/praktijk/agenda`, `/praktijk/boekingen`, `/praktijk/beschikbaarheid`.
 
 ## Accounts en rollen
@@ -48,4 +48,5 @@ confirmed → cancelled | completed | no_show
 3. Transactionele e-mail voor aanvraag, acceptatie, weigering en herinnering.
 4. Persoonlijke agenda-uitzonderingen met tijdzoneconversie die expliciet in de browser wordt vastgelegd.
 5. Eventuele externe agenda-integratie na toestemming en providerselectie.
-6. Productie-hosting met persistente database, back-up, monitoring en juridisch/privacyreview.
+6. Configureer de productie-SMTP-, site- en herstel-URL's in Supabase Auth voordat er echte herstel- of bevestigingsmails worden verstuurd.
+7. Productie-hosting met back-up, monitoring en juridisch/privacyreview.

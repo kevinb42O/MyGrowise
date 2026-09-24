@@ -16,7 +16,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     starts.forEach((startTime, index) => rules.push({ weekday, startTime, endTime: ends[index] }));
   }
   try {
-    saveAvailabilityRules(user.practitionerId!, user.sub, rules);
+    await saveAvailabilityRules(user.practitionerId!, user.sub, rules);
     return new Response(null, { status: 303, headers: { location: '/praktijk/beschikbaarheid?saved=1' } });
   } catch {
     return new Response(null, { status: 303, headers: { location: '/praktijk/beschikbaarheid?error=Controleer+de+gekozen+begin-+en+eindtijden.' } });

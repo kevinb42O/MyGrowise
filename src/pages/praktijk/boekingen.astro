@@ -1,12 +1,11 @@
 ---
 import PracticeLayout from '../../layouts/PracticeLayout.astro';
 import AdminIcon from '../../components/admin/AdminIcon.astro';
-import { listBookings, type BookingStatus } from '../../lib/practiceStore';
-import { getPractitionerProfile } from '../../lib/practiceDb';
+import { getPractitionerProfile, listBookings, type BookingStatus } from '../../lib/practiceStore';
 const user=Astro.locals.currentUser!;
-const profile=getPractitionerProfile(user.practitionerId!);
+const profile=await getPractitionerProfile(user.practitionerId!);
 const selected=(Astro.url.searchParams.get('status') || '') as BookingStatus | '';
-const bookings=listBookings(user.practitionerId!, selected || undefined);
+const bookings=await listBookings(user.practitionerId!, selected || undefined);
 const saved=Astro.url.searchParams.get('updated') === '1';
 const labels:Record<string,string>={pending:'Aangevraagd',confirmed:'Bevestigd',declined:'Geweigerd',cancelled:'Geannuleerd',completed:'Afgerond',no_show:'Niet verschenen'};
 const date=(value:string)=>new Intl.DateTimeFormat('nl-BE',{timeZone:'Europe/Brussels',weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}).format(new Date(value));

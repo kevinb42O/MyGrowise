@@ -1,0 +1,13 @@
+---
+import MainLayout from '../../layouts/MainLayout.astro';
+---
+<MainLayout title="Kies een wachtwoord — Mijn MyGrowise" noindex={true}><section class="account-auth"><div class="account-auth__card"><span class="eyebrow">Mijn MyGrowise</span><h1>Kies een nieuw wachtwoord.</h1><p id="recovery-status">We controleren je herstel-link.</p><form id="recovery-form" hidden><label>Nieuw wachtwoord<input name="password" type="password" autocomplete="new-password" required minlength="12" maxlength="256" /></label><label>Herhaal nieuw wachtwoord<input name="confirm_password" type="password" autocomplete="new-password" required minlength="12" maxlength="256" /></label><button class="button button-primary" type="submit">Wachtwoord opslaan</button></form><p><a href="/account/inloggen">Terug naar inloggen</a></p></div></section></MainLayout>
+<script>
+  import { createBrowserSupabaseClient } from '../../lib/supabase/browser';
+  const status = document.querySelector('#recovery-status'); const form = document.querySelector('#recovery-form'); const client = createBrowserSupabaseClient();
+  const { data: { session } } = await client.auth.getSession();
+  if (!session) status.textContent = 'Deze herstel-link is ongeldig of verlopen. Vraag gerust een nieuwe link aan.';
+  else { status.textContent = 'Kies een nieuw, uniek wachtwoord van minstens 12 tekens.'; form.hidden = false; }
+  form?.addEventListener('submit', async (event) => { event.preventDefault(); const values = new FormData(form); const password = String(values.get('password') || ''); const confirm = String(values.get('confirm_password') || ''); if (password !== confirm || password.length < 12) { status.textContent = 'Gebruik twee gelijke wachtwoorden van minstens 12 tekens.'; return; } const { error } = await client.auth.updateUser({ password }); if (error) { status.textContent = 'Opslaan lukte niet. Vraag eventueel een nieuwe herstel-link aan.'; return; } await client.auth.signOut(); window.location.assign('/account/inloggen?error=password_reset'); });
+</script>
+<style>.account-auth{padding-block:clamp(4rem,9vw,8rem)}.account-auth__card{max-width:32rem;margin:auto;padding:clamp(1.5rem,5vw,3.25rem);border:1px solid var(--line);border-radius:var(--radius-lg);background:var(--white);box-shadow:var(--shadow)}.account-auth h1{margin-bottom:.8rem;font-size:clamp(2.8rem,7vw,4.5rem)}.account-auth p{color:var(--muted);line-height:1.7}.account-auth form{display:grid;gap:1rem;margin:2rem 0}.account-auth label{display:grid;gap:.45rem;font-size:.78rem;font-weight:700}.account-auth input{min-height:3.1rem;padding:.75rem .9rem;border:1px solid var(--line);border-radius:.65rem;background:var(--paper)}.account-auth .button{justify-self:start}</style>

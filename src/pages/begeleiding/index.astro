@@ -3,10 +3,10 @@ import MainLayout from '../../layouts/MainLayout.astro';
 import { practitioners } from '../../content/site';
 import { getBookableSlots, getPractitionerBySlug } from '../../lib/practiceStore';
 
-const availability = Object.fromEntries(practitioners.map((person) => {
-  const practitioner = getPractitionerBySlug(person.slug);
-  return [person.slug, practitioner ? getBookableSlots(practitioner.id, 21).slice(0, 3) : []];
-}));
+const availability = Object.fromEntries(await Promise.all(practitioners.map(async (person) => {
+  const practitioner = await getPractitionerBySlug(person.slug);
+  return [person.slug, practitioner ? (await getBookableSlots(practitioner.id, 21)).slice(0, 3) : []];
+})));
 const themes = [
   ['Stress & emotionele belasting', 'Wanneer je systeem lang “aan” blijft staan, kan begeleiding helpen om stressreacties, lichaamssignalen en terugkerende patronen stap voor stap te begrijpen.'],
   ['Trauma & ingrijpende ervaringen', 'Bij traumagerichte begeleiding, waaronder online EMDR wanneer dat passend is, staan stabiliteit, veiligheid en draagkracht steeds voorop.'],

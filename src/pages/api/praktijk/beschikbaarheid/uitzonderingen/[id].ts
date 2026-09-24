@@ -6,7 +6,7 @@ export const prerender = false;
 export const POST: APIRoute = async ({ request, locals, params }) => {
   if (!isTrustedFormOrigin(request)) return new Response('Ongeldige aanvraag.', { status: 403 });
   try {
-    deleteAvailabilityException(params.id || '', locals.currentUser!.practitionerId!, locals.currentUser!.sub);
+    await deleteAvailabilityException(params.id || '', locals.currentUser!.practitionerId!, locals.currentUser!.sub);
     return new Response(null, { status: 303, headers: { location: '/praktijk/beschikbaarheid?exception_deleted=1' } });
   } catch {
     return new Response('Blokkade niet gevonden.', { status: 404 });

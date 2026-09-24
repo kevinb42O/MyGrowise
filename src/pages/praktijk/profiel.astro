@@ -1,10 +1,10 @@
 ---
 import PracticeLayout from '../../layouts/PracticeLayout.astro';
 import AdminIcon from '../../components/admin/AdminIcon.astro';
-import { getPractitionerProfile } from '../../lib/practiceDb';
+import { getPractitionerProfile } from '../../lib/practiceStore';
 
 const user = Astro.locals.currentUser!;
-const profile = getPractitionerProfile(user.practitionerId!);
+const profile = await getPractitionerProfile(user.practitionerId!);
 if (!profile) return Astro.redirect('/praktijk');
 const saved = Astro.url.searchParams.get('saved') === '1';
 const error = Astro.url.searchParams.get('error');

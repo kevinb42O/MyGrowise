@@ -1,83 +1,22 @@
-import { createHmac, randomBytes, scryptSync, timingSafeEqual } from 'node:crypto';
 import { createClient } from '@supabase/supabase-js';
-import { getUserByEmail, getUserById, recordUserLogin, type LocalUser, type UserRole } from './practiceDb';
 import { getSupabaseAdmin } from './supabase/server';
 
-export const ADMIN_COOKIE = 'mg_admin_session';
-export const SUPABASE_ADMIN_COOKIE = 'mg_supabase_admin_session';
-export const CUSTOMER_COOKIE = 'mg_customer_session';
-export const SESSION_TTL_SECONDS = 60 * 60 * 8;
-
+export const SUPABASE_SESSION_COOKIE = 'mg_session';
+export const SESSION_TTL_SECONDS = 60 * 60;
+export type UserRole = 'super_admin' | 'practitioner' | 'customer';
 export type UserSession = {
   sub: string; email: string; name: string; roles: UserRole[]; practitionerId: string | null;
-  sessionVersion: number; issuedAt: number; expiresAt: number; nonce: string;
+  issuedAt: number; expiresAt: number;
 };
 
-const sessionSecret = () => String(import.meta.env.ADMIN_SESSION_SECRET || '').trim();
-export const isAdminAuthConfigured = () => sessionSecret().length >= 64;
-export const isSupabaseAdminAuthEnabled = () => import.meta.env.ADMIN_AUTH_MODE === 'supabase';
-const safeEqual = (left: Buffer, right: Buffer) => left.length === right.length && timingSafeEqual(left, right);
-
-export const authenticateUser = (email: string, password: string): LocalUser | null => {
-  if (!isAdminAuthConfigured()) return null;
-  const user = getUserByEmail(email.trim().toLowerCase());
-  if (!user || !user.active) {
-    scryptSync(password, '00000000000000000000000000000000', 64);
-    return null;
-  }
-  try {
-    const suppliedHash = scryptSync(password, user.passwordSalt, 64);
-    if (!safeEqual(suppliedHash, Buffer.from(user.passwordHash, 'hex'))) return null;
-    recordUserLogin(user.id);
-    return user;
-  } catch {
-    return null;
-  }
-};
-
-export const verifyUserPassword = (user: LocalUser, password: string) => {
-  if (!password || password.length > 256) return false;
-  try { return safeEqual(scryptSync(password, user.passwordSalt, 64), Buffer.from(user.passwordHash, 'hex')); } catch { return false; }
-};
-
-export const createPasswordCredential = (password: string) => {
-  if (password.length < 12 || password.length > 256) throw new Error('weak_password');
-  const salt = randomBytes(32).toString('hex');
-  return { salt, hash: scryptSync(password, salt, 64).toString('hex') };
-};
-
-const sign = (payload: string) => createHmac('sha256', sessionSecret()).update(payload).digest('base64url');
-
-export const createUserSession = (user: LocalUser): string => {
-  if (!isAdminAuthConfigured()) throw new Error('Authentication is not configured.');
-  const now = Math.floor(Date.now() / 1000);
-  const payload: UserSession = { sub: user.id, email: user.email, name: user.name, roles: user.roles, practitionerId: user.practitionerId, sessionVersion: user.sessionVersion, issuedAt: now, expiresAt: now + SESSION_TTL_SECONDS, nonce: randomBytes(16).toString('hex') };
-  const encoded = Buffer.from(JSON.stringify(payload)).toString('base64url');
-  return `${encoded}.${sign(encoded)}`;
-};
-
-export const verifyUserSession = (token?: string): UserSession | null => {
-  if (!token || !isAdminAuthConfigured()) return null;
-  const [encoded, suppliedSignature, extra] = token.split('.');
-  if (!encoded || !suppliedSignature || extra || !safeEqual(Buffer.from(suppliedSignature), Buffer.from(sign(encoded)))) return null;
-  try {
-    const payload = JSON.parse(Buffer.from(encoded, 'base64url').toString('utf8')) as UserSession;
-    const user = getUserById(payload.sub);
-    const now = Math.floor(Date.now() / 1000);
-    if (!user || !user.active || user.sessionVersion !== payload.sessionVersion || payload.expiresAt <= now || payload.issuedAt > now + 60 || payload.expiresAt - payload.issuedAt > SESSION_TTL_SECONDS) return null;
-    return { ...payload, email: user.email, name: user.name, roles: user.roles, practitionerId: user.practitionerId };
-  } catch {
-    return null;
-  }
-};
-
-export const hasRole = (session: UserSession | null, role: UserRole) => Boolean(session?.roles.includes(role));
-export const adminCookieOptions = () => ({ httpOnly: true, secure: import.meta.env.PROD, sameSite: 'strict' as const, path: '/', maxAge: SESSION_TTL_SECONDS });
-export const supabaseAdminCookieOptions = () => ({ httpOnly: true, secure: import.meta.env.PROD, sameSite: 'strict' as const, path: '/', maxAge: 60 * 60 });
+const configured = () => Boolean(import.meta.env.PUBLIC_SUPABASE_URL?.trim() && import.meta.env.PUBLIC_SUPABASE_PUBLISHABLE_KEY?.trim() && import.meta.env.SUPABASE_SECRET_KEY?.trim());
+export const isSupabaseAuthConfigured = configured;
+export const hasRole = (session: UserSession | null | undefined, role: UserRole) => Boolean(session?.roles.includes(role));
+export const supabaseSessionCookieOptions = () => ({ httpOnly: true, secure: import.meta.env.PROD, sameSite: 'strict' as const, path: '/', maxAge: SESSION_TTL_SECONDS });
 export const isTrustedFormOrigin = (request: Request) => !request.headers.get('origin') || request.headers.get('origin') === new URL(request.url).origin;
 export const sanitizeAppRedirect = (value: FormDataEntryValue | null) => typeof value === 'string' && (value.startsWith('/admin') || value.startsWith('/praktijk') || value.startsWith('/account')) && !value.startsWith('//') && !value.includes('/inloggen') && !value.includes('/login') ? value : '';
 
-const toSupabaseSession = async (user: { id: string; email?: string | null; user_metadata?: Record<string, unknown> }, expiresAt?: number): Promise<UserSession | null> => {
+const toSession = async (user: { id: string; email?: string | null; user_metadata?: Record<string, unknown> }, expiresAt?: number): Promise<UserSession | null> => {
   const client = getSupabaseAdmin();
   const [{ data: roleRows, error: roleError }, { data: practitioner, error: practitionerError }] = await Promise.all([
     client.from('user_roles').select('role').eq('user_id', user.id),
@@ -85,25 +24,49 @@ const toSupabaseSession = async (user: { id: string; email?: string | null; user
   ]);
   if (roleError || practitionerError) return null;
   const roles = (roleRows || []).map((row: { role: string }) => row.role).filter((role): role is UserRole => role === 'super_admin' || role === 'practitioner' || role === 'customer');
-  if (!roles.includes('super_admin')) return null;
+  if (!roles.length) return null;
   const now = Math.floor(Date.now() / 1000);
-  return { sub: user.id, email: user.email || '', name: String(user.user_metadata?.full_name || user.email || 'Superadmin'), roles, practitionerId: practitioner?.id || null, sessionVersion: 1, issuedAt: now, expiresAt: expiresAt || now + 3600, nonce: 'supabase' };
+  return { sub: user.id, email: user.email || '', name: String(user.user_metadata?.full_name || user.email || 'MyGrowise'), roles, practitionerId: practitioner?.id || null, issuedAt: now, expiresAt: expiresAt || now + SESSION_TTL_SECONDS };
 };
 
-export const authenticateSupabaseAdmin = async (email: string, password: string) => {
-  const url = import.meta.env.PUBLIC_SUPABASE_URL?.trim();
-  const publishableKey = import.meta.env.PUBLIC_SUPABASE_PUBLISHABLE_KEY?.trim();
-  if (!url || !publishableKey) return null;
-  const client = createClient(url, publishableKey, { auth: { autoRefreshToken: false, persistSession: false } });
-  const { data, error } = await client.auth.signInWithPassword({ email, password });
+const publicAuthClient = () => {
+  const url = import.meta.env.PUBLIC_SUPABASE_URL?.trim(); const publishableKey = import.meta.env.PUBLIC_SUPABASE_PUBLISHABLE_KEY?.trim();
+  if (!url || !publishableKey) throw new Error('Supabase authentication is not configured.');
+  return createClient(url, publishableKey, { auth: { autoRefreshToken: false, persistSession: false } });
+};
+
+export const authenticateSupabaseUser = async (email: string, password: string, recordAudit = true) => {
+  if (!configured()) return null;
+  const { data, error } = await publicAuthClient().auth.signInWithPassword({ email, password });
   if (error || !data.user || !data.session) return null;
-  const user = await toSupabaseSession(data.user, data.session.expires_at);
+  const user = await toSession(data.user, data.session.expires_at);
+  if (user && recordAudit) await getSupabaseAdmin().from('security_audit_log').insert({ actor_user_id: user.sub, action: 'account.login', object_type: 'user', object_id: user.sub });
   return user ? { user, accessToken: data.session.access_token } : null;
 };
 
-export const verifySupabaseAdminSession = async (token?: string): Promise<UserSession | null> => {
-  if (!token || !isSupabaseAdminAuthEnabled()) return null;
+export const registerSupabaseCustomer = async (name: string, email: string, password: string) => {
+  if (!configured()) throw new Error('configuration');
+  if (name.trim().length < 2 || name.trim().length > 120 || password.length < 12 || password.length > 256) throw new Error('invalid');
+  const { data, error } = await publicAuthClient().auth.signUp({ email, password, options: { data: { full_name: name.trim().replace(/\s+/g, ' ') } } });
+  if (error || !data.user) {
+    if (error?.message.toLowerCase().includes('already')) throw new Error('email_taken');
+    throw new Error('invalid');
+  }
+  if (!data.session) return { confirmationRequired: true as const };
+  const user = await toSession(data.user, data.session.expires_at);
+  return user ? { confirmationRequired: false as const, user, accessToken: data.session.access_token } : { confirmationRequired: true as const };
+};
+
+export const verifySupabaseSession = async (token?: string): Promise<UserSession | null> => {
+  if (!token || !configured()) return null;
   const { data, error } = await getSupabaseAdmin().auth.getUser(token);
   if (error || !data.user) return null;
-  return toSupabaseSession(data.user);
+  return toSession(data.user);
+};
+
+export const verifyCurrentPassword = async (email: string, password: string) => Boolean(await authenticateSupabaseUser(email, password, false));
+export const requestSupabasePasswordReset = async (email: string, redirectTo: string) => {
+  if (!configured()) throw new Error('configuration');
+  const { error } = await publicAuthClient().auth.resetPasswordForEmail(email, { redirectTo });
+  if (error) throw error;
 };

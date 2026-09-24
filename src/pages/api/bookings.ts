@@ -23,12 +23,12 @@ export const POST: APIRoute = async ({ request }) => {
   const name = String(form.get('name') || '').trim();
   const email = String(form.get('email') || '').trim().toLowerCase();
   const [startsAt = '', endsAt = '', extra] = String(form.get('slot') || '').split('|');
-  const practitioner = getPractitionerBySlug(slug);
+  const practitioner = await getPractitionerBySlug(slug);
   const validEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) && email.length <= 254;
   if (!practitioner || name.length < 2 || name.length > 100 || !validEmail || extra || !Number.isFinite(Date.parse(startsAt)) || !Number.isFinite(Date.parse(endsAt))) return redirect(slug || 'onbekend', 'error');
 
   try {
-    createBookingRequest(practitioner.id, name, email, startsAt, endsAt);
+    await createBookingRequest(practitioner.slug, name, email, startsAt, endsAt);
     attempts.delete(ip);
     return redirect(slug, 'requested');
   } catch {

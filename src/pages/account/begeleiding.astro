@@ -1,7 +1,7 @@
 ---
 import AccountLayout from '../../layouts/AccountLayout.astro';
-import { listCustomerBookings } from '../../lib/practiceDb';
-const user = Astro.locals.currentUser!; const all = listCustomerBookings(user.sub); const now = Date.now();
+import { listCustomerBookings } from '../../lib/supabase/accounts';
+const user = Astro.locals.currentUser!; const all = await listCustomerBookings(user.sub); const now = Date.now();
 const future = all.filter((booking) => new Date(booking.startsAt).getTime() > now && ['pending', 'confirmed'].includes(booking.status)).sort((a,b) => a.startsAt.localeCompare(b.startsAt));
 const past = all.filter((booking) => !future.some((item) => item.id === booking.id));
 const status: Record<string, string> = { pending: 'Aanvraag in behandeling', confirmed: 'Bevestigd', declined: 'Niet bevestigd', cancelled: 'Geannuleerd', completed: 'Afgerond', no_show: 'Niet doorgegaan' };

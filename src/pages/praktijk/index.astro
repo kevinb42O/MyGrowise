@@ -5,8 +5,8 @@ import { getPracticeSummary, listBookings } from '../../lib/practiceStore';
 
 const user = Astro.locals.currentUser!;
 const practitionerId = user.practitionerId!;
-const summary = getPracticeSummary(practitionerId);
-const upcoming = listBookings(practitionerId).filter((booking) => booking.status === 'confirmed' && booking.startsAt >= new Date().toISOString()).slice(0, 5);
+const [summary, allBookings] = await Promise.all([getPracticeSummary(practitionerId), listBookings(practitionerId)]);
+const upcoming = allBookings.filter((booking) => booking.status === 'confirmed' && booking.startsAt >= new Date().toISOString()).slice(0, 5);
 const forbidden = Astro.url.searchParams.get('forbidden') === 'admin';
 const formatDate = (value: string) => new Intl.DateTimeFormat('nl-BE', { timeZone: 'Europe/Brussels', weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }).format(new Date(value));
 ---

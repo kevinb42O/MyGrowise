@@ -1,12 +1,10 @@
 ---
 import PracticeLayout from '../../layouts/PracticeLayout.astro';
 import AdminIcon from '../../components/admin/AdminIcon.astro';
-import { getAvailabilityRules, listAvailabilityExceptions } from '../../lib/practiceStore';
-import { getPractitionerProfile } from '../../lib/practiceDb';
+import { getAvailabilityRules, getPractitionerProfile, listAvailabilityExceptions } from '../../lib/practiceStore';
 const user = Astro.locals.currentUser!;
-const rules = Map.groupBy(getAvailabilityRules(user.practitionerId!), (rule) => rule.weekday);
-const profile = getPractitionerProfile(user.practitionerId!);
-const exceptions = listAvailabilityExceptions(user.practitionerId!);
+const [availabilityRules, exceptions, profile] = await Promise.all([getAvailabilityRules(user.practitionerId!), listAvailabilityExceptions(user.practitionerId!), getPractitionerProfile(user.practitionerId!)]);
+const rules = Map.groupBy(availabilityRules, (rule) => rule.weekday);
 const days = [[1,'Maandag'],[2,'Dinsdag'],[3,'Woensdag'],[4,'Donderdag'],[5,'Vrijdag'],[6,'Zaterdag'],[7,'Zondag']] as const;
 const saved = Astro.url.searchParams.get('saved') === '1';
 const error = Astro.url.searchParams.get('error') || '';

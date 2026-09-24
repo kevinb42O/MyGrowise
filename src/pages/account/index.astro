@@ -1,7 +1,7 @@
 ---
 import AccountLayout from '../../layouts/AccountLayout.astro';
 import AccountDashboard from '../../components/account/AccountDashboard';
-import { listCustomerBookings, listCustomerEntitlements, listCustomerTransactions } from '../../lib/practiceDb';
+import { listCustomerBookings, listCustomerEntitlements, listCustomerTransactions } from '../../lib/supabase/accounts';
 
 const user = Astro.locals.currentUser!;
 const now = Date.now();
@@ -13,9 +13,7 @@ const displayDate = (value: string, withTime = true) => new Intl.DateTimeFormat(
   ...(withTime ? { hour: '2-digit', minute: '2-digit' } : {}),
 }).format(new Date(value));
 const shortDate = (value: string) => new Intl.DateTimeFormat('nl-BE', { day: 'numeric', month: 'short', year: 'numeric' }).format(new Date(value));
-const appointments = listCustomerBookings(user.sub);
-const entitlements = listCustomerEntitlements(user.sub);
-const transactions = listCustomerTransactions(user.sub);
+const [appointments, entitlements, transactions] = await Promise.all([listCustomerBookings(user.sub), listCustomerEntitlements(user.sub), listCustomerTransactions(user.sub)]);
 const upcoming = appointments.filter((booking) => ['pending', 'confirmed'].includes(booking.status) && new Date(booking.startsAt).getTime() > now).sort((a, b) => a.startsAt.localeCompare(b.startsAt))[0];
 const demoMode = import.meta.env.DEV && Astro.url.searchParams.get('demo') === '1';
 const demoStartsAt = new Date(now + 1000 * 60 * 60 * 24 * 6).toISOString();
