@@ -5,22 +5,40 @@ import { getSuperadminOverview } from '../../lib/superAdmin';
 import { getAdminAnalytics } from '../../lib/adminAnalytics';
 
 const rangeParam = Astro.url.searchParams.get('periode') || '7d';
-const ranges = [{ key: '1d', label: '24 uur', days: 1 }, { key: '7d', label: '7 dagen', days: 7 }, { key: '30d', label: '30 dagen', days: 30 }, { key: '90d', label: '3 maanden', days: 90 }, { key: '365d', label: '12 maanden', days: 365 }];
+const ranges = [
+  { key: '1d', label: '24 uur', days: 1, hourly: true },
+  { key: '7d', label: '7 dagen', days: 7, hourly: false },
+  { key: '30d', label: '30 dagen', days: 30, hourly: false },
+  { key: '90d', label: '3 maanden', days: 90, hourly: false },
+  { key: '365d', label: '12 maanden', days: 365, hourly: false },
+];
 const selectedRange = ranges.find((range) => range.key === rangeParam) || ranges[1];
-const [overview, analytics] = await Promise.all([getSuperadminOverview(), getAdminAnalytics(selectedRange.days)]);
-const chartWidth = 1000; const chartHeight = 300; const chartLeft = 42; const chartRight = 18; const chartTop = 18; const chartBottom = 34; const maxValue = Math.max(4, ...analytics.trend.map((point) => point.value));
-const toPoint = (point: { value: number }, index: number) => { const x = chartLeft + (analytics.trend.length === 1 ? 0 : index / (analytics.trend.length - 1) * (chartWidth - chartLeft - chartRight)); const y = chartTop + (1 - point.value / maxValue) * (chartHeight - chartTop - chartBottom); return { x: Number(x.toFixed(2)), y: Number(y.toFixed(2)) }; };
-const points = analytics.trend.map(toPoint); const line = points.map((point) => `${point.x},${point.y}`).join(' '); const baseline = chartHeight - chartBottom; const area = points.length ? `${chartLeft},${baseline} ${line} ${points[points.length - 1].x},${baseline}` : '';
-const displayDate = (value: string) => new Intl.DateTimeFormat('nl-BE', { day: 'numeric', month: 'short' }).format(new Date(`${value}T12:00:00Z`));
-const rangeDescription = selectedRange.days === 1 ? 'Vandaag' : `Afgelopen ${selectedRange.label.toLowerCase()} · ${displayDate(analytics.trend[0].date)} – ${displayDate(analytics.trend[analytics.trend.length - 1].date)}`;
-
+const [overview, analytics] = await Promise.all([getSuperadminOverview(), getAdminAnalytics({ days: selectedRange.days, hourly: selectedRange.hourly })]);
+const isHourly = selectedRange.hourly;
+const chartWidth = 1000; const chartHeight = 300; const chartLeft = 42; const chartRight = 18; const chartTop = 18; const chartBottom = 34;
+const maxValue = Math.max(4, ...analytics.trend.map((point) => point.value));
+const toPoint = (point: { value: number }, index: number) => {
+  const x = chartLeft + (analytics.trend.length === 1 ? 0 : index / (analytics.trend.length - 1) * (chartWidth - chartLeft - chartRight));
+  const y = chartTop + (1 - point.value / maxValue) * (chartHeight - chartTop - chartBottom);
+  return { x: Number(x.toFixed(2)), y: Number(y.toFixed(2)) };
+};
+const points = analytics.trend.map(toPoint);
+const line = points.map((point) => `${point.x},${point.y}`).join(' ');
+const baseline = chartHeight - chartBottom;
+const area = points.length ? `${chartLeft},${baseline} ${line} ${points[points.length - 1].x},${baseline}` : '';
+const formatDate = (value: string) => new Intl.DateTimeFormat('nl-BE', { day: 'numeric', month: 'short' }).format(new Date(value));
+const formatHour = (value: string) => new Intl.DateTimeFormat('nl-BE', { hour: '2-digit', minute: '2-digit', day: 'numeric', month: 'short' }).format(new Date(value));
+const formatPoint = (value: string) => isHourly ? formatHour(value) : formatDate(value);
+const rangeDescription = isHourly
+  ? `Afgelopen 24 uur · ${formatHour(analytics.trend[0].timestamp)} – ${formatHour(analytics.trend[analytics.trend.length - 1].timestamp)}`
+  : `Afgelopen ${selectedRange.label.toLowerCase()} · ${formatDate(analytics.trend[0].timestamp)} – ${formatDate(analytics.trend[analytics.trend.length - 1].timestamp)}`;
+const chartData = JSON.stringify(analytics.trend.map((point, index) => ({ x: points[index].x, y: points[index].y, label: formatPoint(point.timestamp), value: point.value })));
 const metrics = [
-  { label: 'Consented sessies', value: String(analytics.sessions), detail: 'First-party, laatste 30 dagen', icon: 'customers' },
+  { label: 'Consented sessies', value: String(analytics.sessions), detail: `First-party, ${selectedRange.label.toLowerCase()}`, icon: 'customers' },
   { label: 'Producten gepubliceerd', value: String(overview.publishedProducts), detail: 'Catalogus in Supabase', icon: 'products' },
   { label: 'Checkout gestart', value: String(analytics.checkoutStarted), detail: 'Nog geen betaalstatus afgeleid', icon: 'cart' },
   { label: 'Boeking geklikt', value: String(analytics.bookingClicks), detail: 'First-party event', icon: 'trend' },
 ];
-
 const width = (value: number, base: number) => base ? Math.max(4, Math.round(value / base * 100)) : 0;
 const commerceFunnel = [['Sessies', 100, String(analytics.self.sessions)], ['Route “zelf aan de slag”', width(analytics.self.route, analytics.self.sessions), String(analytics.self.route)], ['Product bekeken', width(analytics.self.product, analytics.self.sessions), String(analytics.self.product)], ['Checkout gestart', width(analytics.self.checkout, analytics.self.sessions), String(analytics.self.checkout)], ['Betaling geslaagd', 0, '—']];
 const careFunnel = [['Sessies', 100, String(analytics.care.sessions)], ['Route “begeleiding”', width(analytics.care.route, analytics.care.sessions), String(analytics.care.route)], ['Professional bekeken', width(analytics.care.professional, analytics.care.sessions), String(analytics.care.professional)], ['Boeking geklikt', width(analytics.care.booking, analytics.care.sessions), String(analytics.care.booking)], ['Boeking bevestigd', 0, '—']];
@@ -28,55 +46,66 @@ const careFunnel = [['Sessies', 100, String(analytics.care.sessions)], ['Route �
 
 <AdminLayout title="Website-overzicht" description="Privacyvriendelijke websiteanalytics voor MyGrowise">
   <div class="admin-page">
-    <section class="website-overview-head" aria-labelledby="analytics-title"><div><p>Website</p><h1 id="analytics-title">Overzicht</h1><span>Zie in één oogopslag hoe MyGrowise wordt bezocht.</span></div><div class="website-overview-head__actions"><small><AdminIcon name="calendar" size={16}/> {analytics.lastEventAt ? `Bijgewerkt ${new Intl.DateTimeFormat('nl-BE', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }).format(new Date(analytics.lastEventAt))}` : 'Wacht op eerste bezoek'}</small><a class="website-refresh" href={`/admin/analytics?periode=${selectedRange.key}`}><AdminIcon name="arrow" size={16}/> Vernieuwen</a></div></section>
-    <section class="website-period" aria-labelledby="website-period-title"><strong id="website-period-title">Periode</strong><nav aria-label="Selecteer periode">{ranges.map((range) => <a href={`/admin/analytics?periode=${range.key}`} class:list={{ 'is-active': selectedRange.key === range.key }} aria-current={selectedRange.key === range.key ? 'page' : undefined}>{range.label}</a>)}<a href="/admin/analytics?periode=365d">Dit jaar</a></nav><p>{rangeDescription}</p></section>
-
-    <section class="website-traffic-card" aria-labelledby="traffic-title"><header><div><span><AdminIcon name="analytics" size={21}/></span><div><h2 id="traffic-title">Bezoeken doorheen de tijd</h2><p>Het aantal geconsenteerde websitebezoeken per dag.</p></div></div></header><div class="website-traffic-chart"><svg viewBox={`0 0 ${chartWidth} ${chartHeight}`} role="img" aria-label={`Dagelijkse bezoeken voor ${selectedRange.label}`} preserveAspectRatio="none"><defs><linearGradient id="website-traffic-fill" x1="0" x2="0" y1="0" y1="1"><stop offset="0%" stop-color="#2848b9" stop-opacity=".18"/><stop offset="100%" stop-color="#2848b9" stop-opacity="0"/></linearGradient></defs>{[0, .25, .5, .75, 1].map((tick) => { const y = chartTop + tick * (chartHeight - chartTop - chartBottom); const value = Math.round(maxValue * (1 - tick)); return <g><line x1={chartLeft} x2={chartWidth - chartRight} y1={y} y2={y}/><text x={chartLeft - 8} y={y + 4}>{value}</text></g>})}{area && <polygon points={area} class="website-traffic-chart__area"/>}<polyline points={line} class="website-traffic-chart__line"/>{points.map((point, index) => <circle cx={point.x} cy={point.y} r="3" class="website-traffic-chart__point"><title>{`${displayDate(analytics.trend[index].date)}: ${analytics.trend[index].value} bezoeken`}</title></circle>)}</svg><div class="website-traffic-chart__dates">{analytics.trend.filter((_, index) => analytics.trend.length <= 8 || index === 0 || index === analytics.trend.length - 1 || index % Math.ceil(analytics.trend.length / 6) === 0).map((point) => <span>{displayDate(point.date)}</span>)}</div></div><details><summary>Toon cijfers per dag</summary><div>{analytics.trend.map((point) => <p><span>{displayDate(point.date)}</span><strong>{point.value} bezoeken</strong></p>)}</div></details></section>
-
-    <section class="admin-metrics" aria-label="Analytics kerncijfers">
-      {metrics.map((metric) => (
-        <article class="admin-metric">
-          <div class="admin-metric__head"><span class="admin-metric__label">{metric.label}</span><span class="admin-metric__icon"><AdminIcon name={metric.icon} size={15} /></span></div>
-          <strong>{metric.value}</strong><small class="status-waiting">{metric.detail}</small>
-        </article>
-      ))}
+    <section class="website-overview-head" aria-labelledby="analytics-title">
+      <div><p>Website</p><h1 id="analytics-title">Overzicht</h1><span>Zie in één oogopslag hoe MyGrowise wordt bezocht.</span></div>
+      <div class="website-overview-head__actions"><small><AdminIcon name="calendar" size={16}/> {analytics.lastEventAt ? `Bijgewerkt ${new Intl.DateTimeFormat('nl-BE', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }).format(new Date(analytics.lastEventAt))}` : 'Wacht op eerste bezoek'}</small><a class="website-refresh" href={`/admin/analytics?periode=${selectedRange.key}`}><AdminIcon name="arrow" size={16}/> Vernieuwen</a></div>
     </section>
 
+    <section class="website-period" aria-labelledby="website-period-title"><strong id="website-period-title">Periode</strong><nav aria-label="Selecteer periode">{ranges.map((range) => <a href={`/admin/analytics?periode=${range.key}`} class:list={{ 'is-active': selectedRange.key === range.key }} aria-current={selectedRange.key === range.key ? 'page' : undefined}>{range.label}</a>)}<a href="/admin/analytics?periode=365d">Dit jaar</a></nav><p>{rangeDescription}</p></section>
+
+    <section class="website-traffic-card" aria-labelledby="traffic-title">
+      <header><div><span><AdminIcon name="analytics" size={21}/></span><div><h2 id="traffic-title">Bezoeken doorheen de tijd</h2><p>Het aantal geconsenteerde websitebezoeken {isHourly ? 'per uur' : 'per dag'}.</p></div></div></header>
+      <div class="website-traffic-chart" data-analytics-chart data-points={chartData}>
+        <div class="website-chart-tooltip" data-chart-tooltip role="status" hidden></div>
+        <svg viewBox={`0 0 ${chartWidth} ${chartHeight}`} role="img" aria-label={`${isHourly ? 'Uurlijkse' : 'Dagelijkse'} bezoeken voor ${selectedRange.label}`} preserveAspectRatio="none">
+          <defs><linearGradient id="website-traffic-fill" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stop-color="#2848b9" stop-opacity=".18"/><stop offset="100%" stop-color="#2848b9" stop-opacity="0"/></linearGradient></defs>
+          {[0, .25, .5, .75, 1].map((tick) => { const y = chartTop + tick * (chartHeight - chartTop - chartBottom); const value = Math.round(maxValue * (1 - tick)); return <g><line x1={chartLeft} x2={chartWidth - chartRight} y1={y} y2={y}/><text x={chartLeft - 8} y={y + 4}>{value}</text></g> })}
+          {area && <polygon points={area} class="website-traffic-chart__area"/>}<polyline points={line} class="website-traffic-chart__line"/>
+          <line class="website-traffic-chart__hover-guide" data-chart-guide x1="0" x2="0" y1={chartTop} y2={baseline} hidden/><circle class="website-traffic-chart__hover-dot" data-chart-dot cx="0" cy="0" r="4" hidden/>
+          <rect class="website-traffic-chart__capture" data-chart-capture x={chartLeft} y={chartTop} width={chartWidth - chartLeft - chartRight} height={baseline - chartTop} tabindex="0" aria-label={`Beweeg over de grafiek voor cijfers per ${isHourly ? 'uur' : 'dag'}`}/>
+        </svg>
+        <div class="website-traffic-chart__dates">{analytics.trend.filter((_, index) => analytics.trend.length <= 8 || index === 0 || index === analytics.trend.length - 1 || index % Math.ceil(analytics.trend.length / 6) === 0).map((point) => <span>{isHourly ? new Intl.DateTimeFormat('nl-BE', { hour: '2-digit' }).format(new Date(point.timestamp)) : formatDate(point.timestamp)}</span>)}</div>
+      </div>
+      <details><summary>Toon cijfers per {isHourly ? 'uur' : 'dag'}</summary><div>{analytics.trend.map((point) => <p><span>{formatPoint(point.timestamp)}</span><strong>{point.value} bezoeken</strong></p>)}</div></details>
+    </section>
+
+    <section class="admin-metrics" aria-label="Analytics kerncijfers">{metrics.map((metric) => <article class="admin-metric"><div class="admin-metric__head"><span class="admin-metric__label">{metric.label}</span><span class="admin-metric__icon"><AdminIcon name={metric.icon} size={15}/></span></div><strong>{metric.value}</strong><small class="status-waiting">{metric.detail}</small></article>)}</section>
+
     <div class="analytics-grid" id="funnels">
-      <section class="admin-panel" aria-labelledby="self-funnel-title">
-        <header class="admin-panel__header"><div><h2 id="self-funnel-title">Funnel · Zelf aan de slag</h2><p>Van eerste bezoek tot veilige digitale levering</p></div></header>
-        <div class="analytics-funnel">
-          {commerceFunnel.map(([label, width, value]) => (
-            <div class="analytics-funnel__row"><span class="analytics-funnel__label">{label}</span><span class="analytics-funnel__bar"><i style={`width:${width}%`}></i></span><span class="analytics-funnel__value">{value}</span></div>
-          ))}
-        </div>
-      </section>
-
-      <section class="admin-panel" aria-labelledby="care-funnel-title">
-        <header class="admin-panel__header"><div><h2 id="care-funnel-title">Funnel · Begeleiding</h2><p>Van oriëntatie tot externe boeking</p></div></header>
-        <div class="analytics-funnel">
-          {careFunnel.map(([label, width, value]) => (
-            <div class="analytics-funnel__row"><span class="analytics-funnel__label">{label}</span><span class="analytics-funnel__bar"><i style={`width:${width}%`}></i></span><span class="analytics-funnel__value">{value}</span></div>
-          ))}
-        </div>
-      </section>
-
-      <section class="admin-panel" aria-labelledby="privacy-title">
-        <header class="admin-panel__header"><div><h2 id="privacy-title">Privacygrens</h2><p>Wat analytics expliciet nooit registreert</p></div></header>
-        <div class="analytics-privacy"><span><AdminIcon name="heart" size={17} /></span><div><h3>Commerciële events, geen gezondheidsdossier</h3><p>Geen antwoorden, vragenlijstscores, vermoedelijke diagnoses, intakegegevens, berichtinhoud of sessienotities. Producten krijgen neutrale interne ID’s; rapportages zijn geaggregeerd.</p></div></div>
-      </section>
-
-      <section class="admin-panel" id="kwaliteit" aria-labelledby="quality-title">
-        <header class="admin-panel__header"><div><h2 id="quality-title">Datakwaliteit</h2><p>Voorwaarden voordat cijfers beslissingen mogen sturen</p></div></header>
-        <div class="analytics-quality">
-          <div class="analytics-quality__row"><span>Consent & cookiestatus</span><span class="admin-state">Actief</span></div>
-          <div class="analytics-quality__row"><span>First-party route-events</span><span class="admin-state">Actief</span></div>
-          <div class="analytics-quality__row"><span>Checkout-events gevalideerd</span><span class="admin-state admin-state--blocked">Volgende stap</span></div>
-          <div class="analytics-quality__row"><span>Laatste event ontvangen</span><small>{analytics.lastEventAt ? new Intl.DateTimeFormat('nl-BE', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(analytics.lastEventAt)) : 'Nog geen'}</small></div>
-        </div>
-      </section>
+      <section class="admin-panel" aria-labelledby="self-funnel-title"><header class="admin-panel__header"><div><h2 id="self-funnel-title">Funnel · Zelf aan de slag</h2><p>Van eerste bezoek tot veilige digitale levering</p></div></header><div class="analytics-funnel">{commerceFunnel.map(([label, itemWidth, value]) => <div class="analytics-funnel__row"><span class="analytics-funnel__label">{label}</span><span class="analytics-funnel__bar"><i style={`width:${itemWidth}%`}></i></span><span class="analytics-funnel__value">{value}</span></div>)}</div></section>
+      <section class="admin-panel" aria-labelledby="care-funnel-title"><header class="admin-panel__header"><div><h2 id="care-funnel-title">Funnel · Begeleiding</h2><p>Van oriëntatie tot boekingsaanvraag</p></div></header><div class="analytics-funnel">{careFunnel.map(([label, itemWidth, value]) => <div class="analytics-funnel__row"><span class="analytics-funnel__label">{label}</span><span class="analytics-funnel__bar"><i style={`width:${itemWidth}%`}></i></span><span class="analytics-funnel__value">{value}</span></div>)}</div></section>
+      <section class="admin-panel" aria-labelledby="privacy-title"><header class="admin-panel__header"><div><h2 id="privacy-title">Privacygrens</h2><p>Wat analytics expliciet nooit registreert</p></div></header><div class="analytics-privacy"><span><AdminIcon name="heart" size={17}/></span><div><h3>Commerciële events, geen gezondheidsdossier</h3><p>Geen antwoorden, vragenlijstscores, vermoedelijke diagnoses, intakegegevens, berichtinhoud of sessienotities. Producten krijgen neutrale interne ID’s; rapportages zijn geaggregeerd.</p></div></div></section>
+      <section class="admin-panel" id="kwaliteit" aria-labelledby="quality-title"><header class="admin-panel__header"><div><h2 id="quality-title">Datakwaliteit</h2><p>Voorwaarden voordat cijfers beslissingen mogen sturen</p></div></header><div class="analytics-quality"><div class="analytics-quality__row"><span>Consent & cookiestatus</span><span class="admin-state">Actief</span></div><div class="analytics-quality__row"><span>First-party route-events</span><span class="admin-state">Actief</span></div><div class="analytics-quality__row"><span>Checkout-events gevalideerd</span><span class="admin-state admin-state--blocked">Volgende stap</span></div><div class="analytics-quality__row"><span>Laatste event ontvangen</span><small>{analytics.lastEventAt ? new Intl.DateTimeFormat('nl-BE', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(analytics.lastEventAt)) : 'Nog geen'}</small></div></div></section>
     </div>
-
-    <div class="admin-lock-note"><strong>Definitiekeuze:</strong> “Boeking bevestigd” verschijnt alleen wanneer de gekozen afsprakenprovider dit via een betrouwbare webhook terugkoppelt. Tot dan rapporteren we uitsluitend de aantoonbare klik naar de externe boekingsflow.</div>
+    <div class="admin-lock-note"><strong>Definitiekeuze:</strong> “Boeking bevestigd” verschijnt alleen wanneer de gekozen afsprakenprovider dit via een betrouwbare webhook terugkoppelt. Tot dan rapporteren we uitsluitend de aantoonbare klik naar de boekingsflow.</div>
   </div>
 </AdminLayout>
+
+<script is:inline>
+  document.querySelectorAll('[data-analytics-chart]').forEach((chart) => {
+    const points = JSON.parse(chart.dataset.points || '[]');
+    const capture = chart.querySelector('[data-chart-capture]');
+    const tooltip = chart.querySelector('[data-chart-tooltip]');
+    const guide = chart.querySelector('[data-chart-guide]');
+    const dot = chart.querySelector('[data-chart-dot]');
+    const svg = chart.querySelector('svg');
+    if (!capture || !tooltip || !guide || !dot || !svg || !points.length) return;
+    const show = (event) => {
+      const rect = svg.getBoundingClientRect();
+      const captureRect = capture.getBoundingClientRect();
+      const localX = Math.max(0, Math.min(captureRect.width, event.clientX - captureRect.left));
+      const index = Math.round((localX / captureRect.width) * (points.length - 1));
+      const point = points[Math.max(0, Math.min(points.length - 1, index))];
+      guide.setAttribute('x1', point.x); guide.setAttribute('x2', point.x); guide.hidden = false;
+      dot.setAttribute('cx', point.x); dot.setAttribute('cy', point.y); dot.hidden = false;
+      tooltip.textContent = `${point.label} · ${point.value} ${point.value === 1 ? 'bezoek' : 'bezoeken'}`;
+      tooltip.hidden = false;
+      tooltip.style.left = `${Math.max(76, Math.min(rect.width - 76, event.clientX - rect.left))}px`;
+    };
+    const hide = () => { tooltip.hidden = true; guide.hidden = true; dot.hidden = true; };
+    capture.addEventListener('pointermove', show);
+    capture.addEventListener('pointerleave', hide);
+    capture.addEventListener('focus', () => { const bounds = capture.getBoundingClientRect(); show({ clientX: bounds.left + bounds.width / 2 }); });
+    capture.addEventListener('blur', hide);
+  });
+</script>
