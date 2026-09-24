@@ -1,6 +1,7 @@
 import type { APIRoute } from 'astro';
 import { encodeProductFormFlash, PRODUCT_FLASH_COOKIE, productFlashCookieOptions, updateProduct, validateProductForm } from '../../../../lib/adminProducts';
-import { isTrustedFormOrigin } from '../../../../lib/adminAuth';
+import { hasPermission, isTrustedFormOrigin } from '../../../../lib/adminAuth';
+import { auditActor } from '../../../../lib/securityAudit';
 
 export const prerender = false;
 
@@ -18,9 +19,10 @@ export const POST: APIRoute = async ({ request, locals, cookies, params, url }) 
     cookies.set(PRODUCT_FLASH_COOKIE, encodeProductFormFlash(form, Object.values(validation.errors)[0] || 'Controleer de invoer.', id), productFlashCookieOptions());
     return back(id, url);
   }
+  if (!hasPermission(locals.adminUser, 'products.write') || (validation.value.status === 'published' && !hasPermission(locals.adminUser, 'products.publish'))) return new Response('Geen toegang.', { status: 403 });
 
   try {
-    await updateProduct(id, validation.value, locals.adminUser?.email || 'unknown');
+    await updateProduct(id, validation.value, auditActor(locals.adminUser, locals.requestId, `/api/admin/products/${id}`));
     return new Response(null, { status: 303, headers: { location: `/admin/producten/${encodeURIComponent(id)}?saved=1` } });
   } catch (error) {
     if (error instanceof Error && error.message === 'not_found') return new Response('Product niet gevonden.', { status: 404 });

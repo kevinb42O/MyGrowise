@@ -1,5 +1,6 @@
 ---
 import AdminIcon from '../components/admin/AdminIcon.astro';
+import NotificationBell from '../components/admin/NotificationBell.astro';
 import '../styles/admin.css';
 
 interface Props { title: string; description?: string }
@@ -11,6 +12,7 @@ const nav = [
   { label: 'Vandaag', href: '/praktijk', icon: 'overview', exact: true },
   { label: 'Mijn agenda', href: '/praktijk/agenda', icon: 'calendar' },
   { label: 'Boekingsaanvragen', href: '/praktijk/boekingen', icon: 'messages' },
+  { label: 'Berichten', href: '/praktijk/berichten', icon: 'messages' },
   { label: 'Beschikbaarheid', href: '/praktijk/beschikbaarheid', icon: 'clock' },
   { label: 'Mijn profiel', href: '/praktijk/profiel', icon: 'professionals' },
   { label: 'Account', href: '/praktijk/account', icon: 'settings' },
@@ -43,7 +45,7 @@ const active = (item: { href: string; exact?: boolean }) => item.exact ? current
         </div>
       </aside>
       <div class="admin-workspace">
-        <header class="admin-topbar"><div class="admin-topbar__left"><button class="admin-icon-button admin-menu-button" type="button" aria-label="Menu openen" aria-controls="practice-sidebar" aria-expanded="false" data-sidebar-open><AdminIcon name="menu" /></button><span class="admin-topbar__crumb">Mijn praktijk</span><span aria-hidden="true">/</span><strong>{title}</strong></div><div class="admin-topbar__right"><span class="practice-private-badge"><AdminIcon name="lock" size={13} /> Privé</span></div></header>
+        <header class="admin-topbar"><div class="admin-topbar__left"><button class="admin-icon-button admin-menu-button" type="button" aria-label="Menu openen" aria-controls="practice-sidebar" aria-expanded="false" data-sidebar-open><AdminIcon name="menu" /></button><span class="admin-topbar__crumb">Mijn praktijk</span><span aria-hidden="true">/</span><strong>{title}</strong></div><div class="admin-topbar__right">{user && <NotificationBell userId={user.sub} basePath="/praktijk/berichten" />}<span class="practice-private-badge"><AdminIcon name="lock" size={13} /> Privé</span></div></header>
         <main id="practice-main" class="admin-main"><slot /></main>
       </div>
     </div>

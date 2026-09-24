@@ -1,0 +1,8 @@
+---
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+import ContentForm from '../../../components/admin/ContentForm.astro';
+import { hasPermission } from '../../../lib/adminAuth';
+const canPublish = hasPermission(Astro.locals.adminUser, 'content.publish');
+const error = Astro.url.searchParams.get('error') || '';
+---
+<AdminLayout title="Nieuwe content" description="Maak een versieerbaar artikel of pagina"><div class="admin-page admin-page--form"><a class="admin-back-link" href="/admin/content">← Terug naar website & blogs</a><section class="admin-page-heading"><div><p class="admin-eyebrow">Aanbod & content</p><h1>Nieuwe content</h1><p>Nieuwe content start als controleerbare versie. Alleen bevoegde rollen kunnen publiceren.</p></div></section><section class="admin-panel admin-form-panel"><ContentForm action="/api/admin/content" canPublish={canPublish} error={error}/></section></div></AdminLayout>

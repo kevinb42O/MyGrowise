@@ -39,7 +39,7 @@ confirmed → cancelled | completed | no_show
 - De server controleert bij een publieke aanvraag opnieuw of het slot nog vrij is.
 - Een `pending` aanvraag reserveert het slot meteen.
 - Alleen de gekoppelde professional kan een eigen `pending` aanvraag accepteren of weigeren.
-- De statusactie en beschikbaarheidswijzigingen schrijven naar `practice_audit_log`.
+- De statusactie en beschikbaarheidswijzigingen schrijven naar `security_audit_log`.
 
 ## Volgende productieblokken
 

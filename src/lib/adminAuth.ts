@@ -1,9 +1,10 @@
 import { createClient } from '@supabase/supabase-js';
 import { getSupabaseAdmin } from './supabase/server';
+import { hasAdminPermission, isUserRole, type AdminPermission, type UserRole } from './adminPermissions';
 
 export const SUPABASE_SESSION_COOKIE = 'mg_session';
 export const SESSION_TTL_SECONDS = 60 * 60;
-export type UserRole = 'super_admin' | 'practitioner' | 'customer';
+export type { UserRole } from './adminPermissions';
 export type UserSession = {
   sub: string; email: string; name: string; roles: UserRole[]; practitionerId: string | null;
   issuedAt: number; expiresAt: number;
@@ -12,18 +13,24 @@ export type UserSession = {
 const configured = () => Boolean(import.meta.env.PUBLIC_SUPABASE_URL?.trim() && import.meta.env.PUBLIC_SUPABASE_PUBLISHABLE_KEY?.trim() && import.meta.env.SUPABASE_SECRET_KEY?.trim());
 export const isSupabaseAuthConfigured = configured;
 export const hasRole = (session: UserSession | null | undefined, role: UserRole) => Boolean(session?.roles.includes(role));
+export const hasPermission = (session: UserSession | null | undefined, permission: AdminPermission) =>
+  Boolean(session && hasAdminPermission(session.roles, permission));
 export const supabaseSessionCookieOptions = () => ({ httpOnly: true, secure: import.meta.env.PROD, sameSite: 'strict' as const, path: '/', maxAge: SESSION_TTL_SECONDS });
 export const isTrustedFormOrigin = (request: Request) => !request.headers.get('origin') || request.headers.get('origin') === new URL(request.url).origin;
-export const sanitizeAppRedirect = (value: FormDataEntryValue | null) => typeof value === 'string' && (value.startsWith('/admin') || value.startsWith('/praktijk') || value.startsWith('/account')) && !value.startsWith('//') && !value.includes('/inloggen') && !value.includes('/login') ? value : '';
+export const sanitizeAppRedirect = (value: FormDataEntryValue | null) => {
+  if (typeof value !== 'string' || value.startsWith('//') || value.includes('/inloggen') || value.includes('/login')) return '';
+  return value.startsWith('/admin') || value.startsWith('/praktijk') || value.startsWith('/account') || /^\/aanbod\/[a-z0-9]+(?:-[a-z0-9]+)*$/.test(value) ? value : '';
+};
 
-const toSession = async (user: { id: string; email?: string | null; user_metadata?: Record<string, unknown> }, expiresAt?: number): Promise<UserSession | null> => {
+const toSession = async (user: { id: string; email?: string | null; user_metadata?: Record<string, unknown>; banned_until?: string | null }, expiresAt?: number): Promise<UserSession | null> => {
+  if (user.banned_until && new Date(user.banned_until).getTime() > Date.now()) return null;
   const client = getSupabaseAdmin();
   const [{ data: roleRows, error: roleError }, { data: practitioner, error: practitionerError }] = await Promise.all([
     client.from('user_roles').select('role').eq('user_id', user.id),
     client.from('practitioners').select('id').eq('user_id', user.id).maybeSingle(),
   ]);
   if (roleError || practitionerError) return null;
-  const roles = (roleRows || []).map((row: { role: string }) => row.role).filter((role): role is UserRole => role === 'super_admin' || role === 'practitioner' || role === 'customer');
+  const roles = (roleRows || []).map((row: { role: string }) => row.role).filter(isUserRole);
   if (!roles.length) return null;
   const now = Math.floor(Date.now() / 1000);
   return { sub: user.id, email: user.email || '', name: String(user.user_metadata?.full_name || user.email || 'MyGrowise'), roles, practitionerId: practitioner?.id || null, issuedAt: now, expiresAt: expiresAt || now + SESSION_TTL_SECONDS };
@@ -35,12 +42,12 @@ const publicAuthClient = () => {
   return createClient(url, publishableKey, { auth: { autoRefreshToken: false, persistSession: false } });
 };
 
-export const authenticateSupabaseUser = async (email: string, password: string, recordAudit = true) => {
+export const authenticateSupabaseUser = async (email: string, password: string, recordAudit = true, requestId?: string) => {
   if (!configured()) return null;
   const { data, error } = await publicAuthClient().auth.signInWithPassword({ email, password });
   if (error || !data.user || !data.session) return null;
   const user = await toSession(data.user, data.session.expires_at);
-  if (user && recordAudit) await getSupabaseAdmin().from('security_audit_log').insert({ actor_user_id: user.sub, action: 'account.login', object_type: 'user', object_id: user.sub });
+  if (user && recordAudit) await getSupabaseAdmin().from('security_audit_log').insert({ actor_user_id: user.sub, action: 'account.login', object_type: 'user', object_id: user.sub, request_id: requestId || null, metadata: { surface: user.roles.some((role) => role !== 'customer') ? 'staff' : 'account' } });
   return user ? { user, accessToken: data.session.access_token } : null;
 };
 

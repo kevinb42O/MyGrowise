@@ -1,4 +1,5 @@
 import { getSupabaseAdmin } from './supabase/server';
+import { writeSecurityAudit, type AuditActor } from './securityAudit';
 
 type RecordRow = Record<string, any>;
 export type AdminOrder = { id: string; status: string; totalCents: number; currency: string; createdAt: string; customerId: string };
@@ -19,6 +20,25 @@ export const listAdminBookings = async (limit = 100): Promise<AdminBooking[]> =>
   const { data, error } = await getSupabaseAdmin().from('bookings').select('id,practitioner_id,client_name,client_email,starts_at,ends_at,status,created_at,practitioners(name)').order('starts_at', { ascending: true }).limit(limit);
   fail(error);
   return ((data || []) as RecordRow[]).map((row) => ({ id: String(row.id), practitionerId: String(row.practitioner_id), practitionerName: String(row.practitioners?.name || 'Onbekend'), clientName: String(row.client_name), clientEmail: String(row.client_email), startsAt: String(row.starts_at), endsAt: String(row.ends_at), status: String(row.status), createdAt: String(row.created_at) }));
+};
+
+const bookingTransitions: Record<string, string[]> = {
+  pending: ['confirmed', 'declined', 'cancelled'],
+  confirmed: ['completed', 'no_show', 'cancelled'],
+  declined: [], cancelled: [], completed: [], no_show: [],
+};
+
+export const updateAdminBookingStatus = async (id: string, nextStatus: string, actor: AuditActor) => {
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id) || !Object.hasOwn(bookingTransitions, nextStatus)) throw new Error('invalid_input');
+  const client = getSupabaseAdmin();
+  const { data: before, error: beforeError } = await client.from('bookings').select('id,status,practitioner_id,starts_at,ends_at').eq('id', id).maybeSingle();
+  fail(beforeError); if (!before) throw new Error('not_found');
+  if (!bookingTransitions[String(before.status)]?.includes(nextStatus)) throw new Error('invalid_transition');
+  const { data, error } = await client.from('bookings').update({ status: nextStatus, calendar_booked_at: nextStatus === 'confirmed' ? new Date().toISOString() : null }).eq('id', id).select('id,status').single();
+  fail(error);
+  if (!data) throw new Error('database_error');
+  await writeSecurityAudit({ actor, action: 'booking.status_updated_by_admin', objectType: 'booking', objectId: id, before: { status: before.status, practitioner_id: before.practitioner_id, starts_at: before.starts_at, ends_at: before.ends_at }, after: { status: data.status } });
+  return String(data.status);
 };
 
 export const listAdminTasks = async (limit = 12): Promise<AdminTask[]> => {
@@ -64,6 +84,27 @@ export const listAdminCustomers = async () => {
   const totals = new Map<string, { orders: number; spent: number }>();
   orders.forEach((order) => { const current = totals.get(order.customerId) || { orders: 0, spent: 0 }; current.orders += 1; current.spent += order.status === 'paid' || order.status === 'fulfilled' ? order.totalCents : 0; totals.set(order.customerId, current); });
   return ((profilesResult.data || []) as RecordRow[]).map((profile) => ({ id: String(profile.id), name: String(profile.full_name || 'Naam niet ingevuld'), createdAt: String(profile.created_at), orderCount: totals.get(String(profile.id))?.orders || 0, totalCents: totals.get(String(profile.id))?.spent || 0 }));
+};
+
+export const getAdminCustomer = async (id: string) => {
+  const client = getSupabaseAdmin();
+  const [{ data: profile, error: profileError }, { data: authData, error: authError }, ordersResult, entitlementsResult, bookingsResult, requestsResult] = await Promise.all([
+    client.from('profiles').select('id,full_name,timezone,created_at').eq('id', id).maybeSingle(),
+    client.auth.admin.getUserById(id),
+    client.from('orders').select('id,status,total_cents,currency,created_at,order_items(product_title,product_slug,product_type,price_cents)').eq('customer_user_id', id).order('created_at', { ascending: false }).limit(100),
+    client.from('entitlements').select('id,product_title,product_slug,product_type,status,granted_at,revoked_at').eq('customer_user_id', id).order('granted_at', { ascending: false }).limit(100),
+    client.from('bookings').select('id,starts_at,ends_at,status,practitioners(name)').eq('customer_user_id', id).order('starts_at', { ascending: false }).limit(100),
+    client.from('data_subject_requests').select('id,request_type,status,received_at,due_at,resolved_at').eq('customer_user_id', id).order('received_at', { ascending: false }).limit(50),
+  ]);
+  fail(profileError); fail(ordersResult.error); fail(entitlementsResult.error); fail(bookingsResult.error); fail(requestsResult.error);
+  if (!profile || authError || !authData.user) return null;
+  return {
+    id: String(profile.id), name: String(profile.full_name || 'Naam niet ingevuld'), email: authData.user.email || 'E-mail ontbreekt', timezone: String(profile.timezone), createdAt: String(profile.created_at),
+    orders: ((ordersResult.data || []) as RecordRow[]).map((item) => ({ id: String(item.id), status: String(item.status), totalCents: Number(item.total_cents), currency: String(item.currency), createdAt: String(item.created_at), items: Array.isArray(item.order_items) ? item.order_items.map((line: RecordRow) => ({ title: String(line.product_title), slug: String(line.product_slug), type: String(line.product_type), priceCents: Number(line.price_cents) })) : [] })),
+    entitlements: ((entitlementsResult.data || []) as RecordRow[]).map((item) => ({ id: String(item.id), title: String(item.product_title), slug: String(item.product_slug), type: String(item.product_type), status: String(item.status), grantedAt: String(item.granted_at), revokedAt: item.revoked_at ? String(item.revoked_at) : null })),
+    bookings: ((bookingsResult.data || []) as RecordRow[]).map((item) => ({ id: String(item.id), startsAt: String(item.starts_at), endsAt: String(item.ends_at), status: String(item.status), practitionerName: String(item.practitioners?.name || 'Onbekend') })),
+    privacyRequests: ((requestsResult.data || []) as RecordRow[]).map((item) => ({ id: String(item.id), type: String(item.request_type), status: String(item.status), receivedAt: String(item.received_at), dueAt: String(item.due_at), resolvedAt: item.resolved_at ? String(item.resolved_at) : null })),
+  };
 };
 
 export const listAdminPractitioners = async () => {

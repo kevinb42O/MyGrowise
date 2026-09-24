@@ -12,7 +12,8 @@
     "check": "npm run typecheck && npm run build",
     "security:audit": "npm audit --omit=dev",
     "supabase:link": "supabase link --project-ref bwkqkehumzpfodmcesab",
-    "supabase:push": "dotenv -e .env -- sh -c 'supabase db push --db-url \"$SUPABASE_DB_URL\"'",
+    "supabase:push": "dotenv -e .env -- sh -c 'supabase db push --db-url \"$SUPABASE_DB_URL\" \"$@\"' --",
+    "supabase:push:dry-run": "dotenv -e .env -- sh -c 'supabase db push --dry-run --db-url \"$SUPABASE_DB_URL\"'",
     "supabase:pull": "dotenv -e .env -- sh -c 'supabase db pull --db-url \"$SUPABASE_DB_URL\"'",
     "supabase:types": "dotenv -e .env -- sh -c 'generated_types=$(mktemp); if supabase gen types typescript --project-id \"$SUPABASE_PROJECT_REF\" > \"$generated_types\"; then mv \"$generated_types\" src/lib/supabase/database.types.ts; else rm -f \"$generated_types\"; exit 1; fi'",
     "supabase:migrate-catalog": "dotenv -e .env -- node scripts/migrate-local-catalog-to-supabase.mjs",
@@ -31,11 +32,13 @@
     "@supabase/supabase-js": "^2.116.0",
     "astro": "^7.2.4",
     "framer-motion": "^13.3.0",
+    "qrcode": "^1.5.4",
     "react": "^19.3.0",
     "react-dom": "^19.3.0"
   },
   "devDependencies": {
     "@types/node": "^24.13.6",
+    "@types/qrcode": "^1.5.6",
     "dotenv-cli": "^11.0.0",
     "supabase": "^2.117.0",
     "typescript": "^5.7.3"

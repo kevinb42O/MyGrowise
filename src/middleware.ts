@@ -1,22 +1,28 @@
 import { defineMiddleware } from 'astro:middleware';
-import { SUPABASE_SESSION_COOKIE, hasRole, isSupabaseAuthConfigured, verifySupabaseSession } from './lib/adminAuth';
+import { SUPABASE_SESSION_COOKIE, hasPermission, hasRole, isSupabaseAuthConfigured, verifySupabaseSession } from './lib/adminAuth';
+import { firstAccessibleAdminPath, requiredAdminPermission } from './lib/adminPermissions';
+import { hasInternalMessagingAccess } from './lib/adminPermissions';
 
 export const onRequest = defineMiddleware(async (context, next) => {
   const path = context.url.pathname;
+  context.locals.requestId = crypto.randomUUID();
   const isAdminPage = path.startsWith('/admin');
   const isAdminApi = path.startsWith('/api/admin');
   const isPracticePage = path.startsWith('/praktijk');
   const isPracticeApi = path.startsWith('/api/praktijk');
   const isAccountPage = path.startsWith('/account');
   const isAccountApi = path.startsWith('/api/account');
-  if (!isAdminPage && !isAdminApi && !isPracticePage && !isPracticeApi && !isAccountPage && !isAccountApi) return next();
+  const isInternalApi = path.startsWith('/api/internal');
+  const isCheckoutApi = path === '/api/checkout';
+  if (!isAdminPage && !isAdminApi && !isPracticePage && !isPracticeApi && !isAccountPage && !isAccountApi && !isInternalApi && !isCheckoutApi) return next();
 
   if (path === '/api/admin/login' || path === '/api/admin/logout' || path === '/api/account/login' || path === '/api/account/register' || path === '/api/account/logout' || path === '/api/account/password-reset' || path === '/account/wachtwoord-vergeten' || path === '/account/wachtwoord-herstellen') return next();
 
   const session = isSupabaseAuthConfigured() ? await verifySupabaseSession(context.cookies.get(SUPABASE_SESSION_COOKIE)?.value) : null;
   if (path === '/admin/login') {
     if (session) {
-      if (hasRole(session, 'super_admin')) return context.redirect('/admin', 303);
+      const destination = firstAccessibleAdminPath(session.roles);
+      if (destination) return context.redirect(destination, 303);
       // A professional session is valid, but it does not grant access to the
       // organisation dashboard. Keep this login page available to show the
       // access error instead of silently sending the user to /praktijk.
@@ -38,7 +44,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
 
   if (!session) {
     context.cookies.delete(SUPABASE_SESSION_COOKIE, { path: '/' });
-    if (isAdminApi || isPracticeApi || isAccountApi) {
+    if (isAdminApi || isPracticeApi || isAccountApi || isInternalApi || isCheckoutApi) {
       return new Response(JSON.stringify({ error: 'Niet aangemeld.' }), {
         status: 401,
         headers: { 'content-type': 'application/json; charset=utf-8' },
@@ -49,9 +55,13 @@ export const onRequest = defineMiddleware(async (context, next) => {
     return context.redirect(`${loginPath}?next=${encodeURIComponent(destination)}`, 303);
   }
 
-  if ((isAdminPage || isAdminApi) && !hasRole(session, 'super_admin')) {
+  const adminPermission = (isAdminPage || isAdminApi) ? requiredAdminPermission(path, context.request.method) : null;
+  if ((isAdminPage || isAdminApi) && (!adminPermission || !hasPermission(session, adminPermission))) {
     if (isAdminApi) return new Response(JSON.stringify({ error: 'Geen toegang.' }), { status: 403, headers: { 'content-type': 'application/json; charset=utf-8' } });
     return context.redirect('/admin/login?error=forbidden', 303);
+  }
+  if (isInternalApi && !hasInternalMessagingAccess(session.roles)) {
+    return new Response(JSON.stringify({ error: 'Geen toegang.' }), { status: 403, headers: { 'content-type': 'application/json; charset=utf-8' } });
   }
   if ((isPracticePage || isPracticeApi) && (!hasRole(session, 'practitioner') || !session.practitionerId)) {
     if (isPracticeApi) return new Response(JSON.stringify({ error: 'Geen toegang.' }), { status: 403, headers: { 'content-type': 'application/json; charset=utf-8' } });
@@ -61,6 +71,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
     if (isAccountApi) return new Response(JSON.stringify({ error: 'Geen toegang.' }), { status: 403, headers: { 'content-type': 'application/json; charset=utf-8' } });
     return context.redirect('/account/inloggen', 303);
   }
+  if (isCheckoutApi && !hasRole(session, 'customer')) return new Response(JSON.stringify({ error: 'Geen toegang.' }), { status: 403, headers: { 'content-type': 'application/json; charset=utf-8' } });
 
   context.locals.adminUser = session;
   context.locals.currentUser = session;

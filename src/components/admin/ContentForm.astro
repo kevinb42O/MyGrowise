@@ -1,0 +1,28 @@
+---
+import type { AdminContent } from '../../lib/adminContent';
+
+interface Props {
+  content?: AdminContent;
+  action: string;
+  canPublish: boolean;
+  error?: string;
+}
+
+const { content, action, canPublish, error = '' } = Astro.props;
+const value = content || { kind: 'article', status: 'draft', title: '', slug: '', excerpt: '', bodyText: '', seoTitle: '', seoDescription: '' };
+const formStatus = !canPublish && value.status === 'published' ? 'review' : value.status;
+---
+
+{error && <div class="admin-login__alert admin-login__alert--error" role="alert">{error}</div>}
+<form class="admin-product-form" method="post" action={action}>
+  <div class="admin-form-grid">
+    <label><span>Type *</span><select name="kind" required><option value="article" selected={value.kind === 'article'}>Artikel</option><option value="page" selected={value.kind === 'page'}>Pagina</option></select></label>
+    <label><span>Status *</span><select name="status" required><option value="draft" selected={formStatus === 'draft'}>Concept</option><option value="review" selected={formStatus === 'review'}>In review</option>{canPublish && <option value="published" selected={formStatus === 'published'}>Gepubliceerd</option>}<option value="archived" selected={formStatus === 'archived'}>Gearchiveerd</option></select><small>{canPublish ? 'Publicatie wordt onmiddellijk zichtbaar op de publieke route.' : value.status === 'published' ? 'Opslaan maakt een nieuwe reviewversie; de huidige publieke versie verdwijnt pas wanneer die versie wordt opgeslagen.' : 'Je kan inhoud voorbereiden en ter review zetten; publicatie vereist een bevoegde rol.'}</small></label>
+  </div>
+  <label><span>Titel *</span><input name="title" required minlength="3" maxlength="160" value={value.title} autocomplete="off"/></label>
+  <label><span>URL-slug *</span><input name="slug" required maxlength="80" value={value.slug} pattern="[a-z0-9]+(?:-[a-z0-9]+)*"/><small>Alleen kleine letters, cijfers en koppeltekens. Een gepubliceerde slugwijziging maakt automatisch een redirect.</small></label>
+  <label><span>Korte samenvatting</span><textarea name="excerpt" maxlength="360" rows="3">{value.excerpt}</textarea></label>
+  <label><span>Inhoud *</span><textarea name="body" maxlength="20000" rows="15" required={value.status === 'published'}>{value.bodyText}</textarea><small>Gebruik lege regels voor nieuwe alinea’s. Scripts en HTML worden niet als markup uitgevoerd.</small></label>
+  <fieldset class="admin-fieldset"><legend>SEO</legend><label><span>SEO-titel</span><input name="seo_title" maxlength="70" value={value.seoTitle}/></label><label><span>Meta description</span><textarea name="seo_description" maxlength="170" rows="3">{value.seoDescription}</textarea></label></fieldset>
+  <div class="admin-form-actions"><button class="admin-button admin-button--primary" type="submit">{content ? 'Wijzigingen opslaan' : 'Content aanmaken'}</button></div>
+</form>

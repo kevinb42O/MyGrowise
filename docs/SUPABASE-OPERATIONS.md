@@ -63,3 +63,22 @@ availability exceptions, and audit logs are never publicly readable. Browser cli
 no direct table write permissions; booking creation uses a narrowly scoped RPC. All
 privileged writes use the server-only service-role client, which bypasses RLS and therefore
 must remain inside trusted Astro routes/webhooks.
+
+The organisation dashboard applies a deny-by-default permission matrix in
+`src/lib/adminPermissions.ts` on top of Supabase roles. A role alone never grants a route:
+the Astro middleware checks the specific required permission, and privileged endpoints
+recheck action-specific permissions such as product publishing. Unknown `/admin` routes
+are denied. Every new admin route or server mutation must be registered in that matrix.
+
+`security_audit_log` records the authenticated actor, request ID, route, and available
+before/after summaries for privileged dashboard changes. Do not put secrets, full message
+content, clinical notes, or health data in audit snapshots or metadata.
+
+## Interne communicatie
+
+De interne inbox is uitsluitend voor actieve MyGrowise-medewerkers en professionals met een
+account. De database dwingt deelname aan een thread af, maakt een notificatie aan voor elke
+ontvanger (nooit voor de afzender), en houdt de inhoud buiten het auditlog. Het belletje in de
+admin- en praktijknavigatie haalt ongelezen meldingen elke 30 seconden op; het openen van een
+thread markeert de bijhorende meldingen als gelezen. Gebruik deze inbox niet voor cliëntgegevens,
+intakes, diagnoses of sessienotities.

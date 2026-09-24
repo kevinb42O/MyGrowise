@@ -1,0 +1,9 @@
+---
+import MainLayout from '../../../../layouts/MainLayout.astro';
+import { getContent } from '../../../../lib/adminContent';
+const content = await getContent(Astro.params.id || '');
+if (!content) return Astro.redirect('/admin/content');
+const paragraphs = content.bodyText.split(/\n{2,}/).map((paragraph) => paragraph.trim()).filter(Boolean);
+---
+<MainLayout title={`${content.title} — interne preview`} noindex={true}><article class="section"><div class="container preview-copy"><span class="eyebrow">Interne preview · {content.status}</span><h1 class="heading-xl">{content.title}</h1>{content.excerpt && <p class="lead">{content.excerpt}</p>}<div class="preview-body">{paragraphs.length ? paragraphs.map((paragraph) => <p>{paragraph}</p>) : <p><em>Deze content heeft nog geen tekst.</em></p>}</div></div></article></MainLayout>
+<style>.preview-copy{max-width:52rem}.preview-copy h1{margin-block:1rem 1.5rem}.preview-body{max-width:42rem;font-size:1.06rem;line-height:1.8}.preview-body p{margin-bottom:1.3rem}</style>

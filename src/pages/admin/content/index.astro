@@ -1,0 +1,23 @@
+---
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+import AdminIcon from '../../../components/admin/AdminIcon.astro';
+import { listContent, type ContentKind, type ContentStatus } from '../../../lib/adminContent';
+import { hasPermission } from '../../../lib/adminAuth';
+
+const content = await listContent();
+const q = (Astro.url.searchParams.get('q') || '').trim().toLowerCase();
+const kind = Astro.url.searchParams.get('kind') || '';
+const status = Astro.url.searchParams.get('status') || '';
+const filtered = content.filter((item) => (!q || item.title.toLowerCase().includes(q) || item.slug.includes(q)) && (!kind || item.kind === kind) && (!status || item.status === status));
+const canWrite = hasPermission(Astro.locals.adminUser, 'content.write');
+const kindLabel: Record<ContentKind, string> = { article: 'Artikel', page: 'Pagina' };
+const statusLabel: Record<ContentStatus, string> = { draft: 'Concept', review: 'In review', published: 'Gepubliceerd', archived: 'Gearchiveerd' };
+---
+
+<AdminLayout title="Website & blogs" description="Versieerbare redactie, review en publicatie">
+  <div class="admin-page">
+    <section class="admin-page-heading"><div><p class="admin-eyebrow">Aanbod & content</p><h1>Website & blogs</h1><p>Beheer artikelen en pagina’s met versiegeschiedenis, reviewstatus, SEO en veilige interne preview.</p></div>{canWrite && <div class="admin-page-actions"><a class="admin-button admin-button--primary" href="/admin/content/nieuw"><AdminIcon name="plus" size={16}/> Nieuwe content</a></div>}</section>
+    <section class="admin-catalog-stats"><article><span>Totaal</span><strong>{content.length}</strong></article><article><span>Gepubliceerd</span><strong>{content.filter((item) => item.status === 'published').length}</strong></article><article><span>In review</span><strong>{content.filter((item) => item.status === 'review').length}</strong></article><article><span>Concepten</span><strong>{content.filter((item) => item.status === 'draft').length}</strong></article></section>
+    <section class="admin-panel"><form class="admin-filterbar" method="get" action="/admin/content"><label class="admin-search"><span class="sr-only">Content zoeken</span><AdminIcon name="content" size={15}/><input type="search" name="q" value={q} placeholder="Zoek op titel of slug…"/></label><select name="kind" aria-label="Filter op type"><option value="">Alle types</option><option value="article" selected={kind === 'article'}>Artikelen</option><option value="page" selected={kind === 'page'}>Pagina’s</option></select><select name="status" aria-label="Filter op status"><option value="">Alle statussen</option><option value="draft" selected={status === 'draft'}>Concept</option><option value="review" selected={status === 'review'}>In review</option><option value="published" selected={status === 'published'}>Gepubliceerd</option><option value="archived" selected={status === 'archived'}>Gearchiveerd</option></select><button class="admin-button" type="submit">Filteren</button>{(q || kind || status) && <a class="admin-text-link" href="/admin/content">Wissen</a>}</form>{filtered.length ? <div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>Content</th><th>Type</th><th>Status</th><th>Gewijzigd</th><th><span class="sr-only">Actie</span></th></tr></thead><tbody>{filtered.map((item) => <tr><td data-label="Content"><strong>{item.title}</strong><small>{item.kind === 'article' ? `/inspiratie/${item.slug}` : `/${item.slug}`}</small></td><td data-label="Type">{kindLabel[item.kind]}</td><td data-label="Status"><span class={`admin-product-status admin-product-status--${item.status}`}><i></i>{statusLabel[item.status]}</span></td><td data-label="Gewijzigd"><time datetime={item.updatedAt}>{new Intl.DateTimeFormat('nl-BE', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(item.updatedAt))}</time></td><td data-label="Actie"><a class="admin-row-action" href={`/admin/content/${item.id}`}>{canWrite ? 'Bewerken' : 'Bekijken'} <AdminIcon name="arrow" size={13}/></a></td></tr>)}</tbody></table></div> : <div class="admin-empty-row"><div><span><AdminIcon name="content" size={17}/></span><strong>Geen content gevonden</strong><p>Maak een eerste artikel of pas de filters aan.</p></div></div>}</section>
+  </div>
+</AdminLayout>

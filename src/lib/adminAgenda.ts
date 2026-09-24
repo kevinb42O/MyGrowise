@@ -1,4 +1,5 @@
 import { getSupabaseAdmin } from './supabase/server';
+import { writeSecurityAudit, type AuditActor } from './securityAudit';
 
 type RecordRow = Record<string, any>;
 
@@ -66,7 +67,7 @@ export const listAgendaEvents = async (from: string, to: string): Promise<Agenda
   return [...bookings, ...practice].sort((left, right) => left.startsAt.localeCompare(right.startsAt));
 };
 
-export const createPracticeAgendaEvent = async (input: CreatePracticeAgendaEvent, actorEmail: string) => {
+export const createPracticeAgendaEvent = async (input: CreatePracticeAgendaEvent, actor: AuditActor) => {
   const title = input.title.trim();
   const location = input.location.trim(); const color = input.color.trim();
   if (title.length < 2 || title.length > 100 || location.length > 120 || !/^#[0-9a-f]{6}$/i.test(color) || !['appointment', 'personal', 'block'].includes(input.kind) || !validDate(input.startsAt) || !validDate(input.endsAt) || new Date(input.endsAt) <= new Date(input.startsAt)) {
@@ -79,36 +80,32 @@ export const createPracticeAgendaEvent = async (input: CreatePracticeAgendaEvent
     .single();
   fail(error);
   if (!data) throw new Error('Agenda event could not be created.');
-  await getSupabaseAdmin().from('security_audit_log').insert({
-    action: 'practice_calendar_event.created', object_type: 'practice_calendar_event', object_id: String(data.id),
-    metadata: { actor: actorEmail, event_kind: input.kind, starts_at: input.startsAt },
-  });
+  await writeSecurityAudit({ actor, action: 'practice_calendar_event.created', objectType: 'practice_calendar_event', objectId: String(data.id), after: { title, event_kind: input.kind, starts_at: input.startsAt, ends_at: input.endsAt } });
   return data;
 };
 
-export const deletePracticeAgendaEvent = async (id: string, actorEmail: string) => {
-  const { data, error } = await getSupabaseAdmin().from('practice_calendar_events').delete().eq('id', id).select('id,title').maybeSingle();
+export const deletePracticeAgendaEvent = async (id: string, actor: AuditActor) => {
+  const { data, error } = await getSupabaseAdmin().from('practice_calendar_events').delete().eq('id', id).select('id,title,starts_at,ends_at,event_kind').maybeSingle();
   fail(error);
   if (!data) throw new Error('not_found');
-  await getSupabaseAdmin().from('security_audit_log').insert({
-    action: 'practice_calendar_event.deleted', object_type: 'practice_calendar_event', object_id: String(data.id), metadata: { actor: actorEmail },
-  });
+  await writeSecurityAudit({ actor, action: 'practice_calendar_event.deleted', objectType: 'practice_calendar_event', objectId: String(data.id), before: data });
 };
 
-export const updatePracticeAgendaEvent = async (id: string, input: UpdatePracticeAgendaEvent, actorEmail: string) => {
+export const updatePracticeAgendaEvent = async (id: string, input: UpdatePracticeAgendaEvent, actor: AuditActor) => {
   const title = input.title.trim();
   const location = input.location.trim(); const color = input.color.trim();
   if (!title || title.length > 100 || location.length > 120 || !/^#[0-9a-f]{6}$/i.test(color) || !['appointment', 'personal', 'block'].includes(input.kind) || !validDate(input.startsAt) || !validDate(input.endsAt) || new Date(input.endsAt) <= new Date(input.startsAt)) throw new Error('invalid_event');
-  const { data, error } = await getSupabaseAdmin().from('practice_calendar_events')
+  const client = getSupabaseAdmin();
+  const { data: before, error: beforeError } = await client.from('practice_calendar_events').select('id,title,starts_at,ends_at,event_kind,location,color').eq('id', id).maybeSingle();
+  fail(beforeError);
+  if (!before) throw new Error('not_found');
+  const { data, error } = await client.from('practice_calendar_events')
     .update({ title, starts_at: input.startsAt, ends_at: input.endsAt, event_kind: input.kind, location, color })
     .eq('id', id)
     .select('id,title,starts_at,ends_at,status,event_kind,location,color')
     .maybeSingle();
   fail(error);
   if (!data) throw new Error('not_found');
-  await getSupabaseAdmin().from('security_audit_log').insert({
-    action: 'practice_calendar_event.updated', object_type: 'practice_calendar_event', object_id: id,
-    metadata: { actor: actorEmail, event_kind: input.kind, starts_at: input.startsAt },
-  });
+  await writeSecurityAudit({ actor, action: 'practice_calendar_event.updated', objectType: 'practice_calendar_event', objectId: id, before, after: data });
   return data;
 };

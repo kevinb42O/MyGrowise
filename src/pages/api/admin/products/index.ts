@@ -1,6 +1,7 @@
 import type { APIRoute } from 'astro';
 import { createProduct, encodeProductFormFlash, PRODUCT_FLASH_COOKIE, productFlashCookieOptions, validateProductForm } from '../../../../lib/adminProducts';
-import { isTrustedFormOrigin } from '../../../../lib/adminAuth';
+import { hasPermission, isTrustedFormOrigin } from '../../../../lib/adminAuth';
+import { auditActor } from '../../../../lib/securityAudit';
 
 export const prerender = false;
 
@@ -17,9 +18,10 @@ export const POST: APIRoute = async ({ request, locals, cookies, url }) => {
     cookies.set(PRODUCT_FLASH_COOKIE, encodeProductFormFlash(form, Object.values(validation.errors)[0] || 'Controleer de invoer.'), productFlashCookieOptions());
     return back(url);
   }
+  if (!hasPermission(locals.adminUser, 'products.write') || (validation.value.status === 'published' && !hasPermission(locals.adminUser, 'products.publish'))) return new Response('Geen toegang.', { status: 403 });
 
   try {
-    const product = await createProduct(validation.value, locals.adminUser?.email || 'unknown');
+    const product = await createProduct(validation.value, auditActor(locals.adminUser, locals.requestId, '/api/admin/products'));
     return new Response(null, { status: 303, headers: { location: `/admin/producten/${encodeURIComponent(product.id)}?created=1` } });
   } catch (error) {
     cookies.set(PRODUCT_FLASH_COOKIE, encodeProductFormFlash(form, error instanceof Error && error.message === 'duplicate_slug' ? 'Deze URL-slug wordt al gebruikt.' : 'Opslaan is niet gelukt. Probeer opnieuw.'), productFlashCookieOptions());

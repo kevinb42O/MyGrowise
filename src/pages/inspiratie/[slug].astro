@@ -1,0 +1,10 @@
+---
+import MainLayout from '../../layouts/MainLayout.astro';
+import { getPublishedArticle, resolveContentRedirect } from '../../lib/adminContent';
+const slug = Astro.params.slug || '';
+const article = await getPublishedArticle(slug);
+if (!article) { const redirect = await resolveContentRedirect(`/inspiratie/${slug}`); if (redirect) return Astro.redirect(redirect, 301); return Astro.redirect('/inspiratie'); }
+const paragraphs = article.bodyText.split(/\n{2,}/).map((paragraph) => paragraph.trim()).filter(Boolean);
+---
+<MainLayout title={article.seoTitle || `${article.title} — MyGrowise`} description={article.seoDescription || article.excerpt}><article class="section"><div class="container article"><span class="eyebrow">Inzichten{article.publishedAt && ` · ${new Intl.DateTimeFormat('nl-BE', { dateStyle: 'long' }).format(new Date(article.publishedAt))}`}</span><h1 class="heading-xl">{article.title}</h1>{article.excerpt && <p class="lead">{article.excerpt}</p>}<div class="article-body">{paragraphs.map((paragraph) => <p>{paragraph}</p>)}</div></div></article></MainLayout>
+<style>.article{max-width:54rem}.article h1{margin-block:1rem 1.5rem}.article-body{max-width:42rem;margin-top:2.5rem;font-size:1.08rem;line-height:1.85}.article-body p{margin-bottom:1.35rem}</style>

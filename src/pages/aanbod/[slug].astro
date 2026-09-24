@@ -1,0 +1,43 @@
+---
+import QRCode from 'qrcode';
+import MainLayout from '../../layouts/MainLayout.astro';
+import { SUPABASE_SESSION_COOKIE, verifySupabaseSession } from '../../lib/adminAuth';
+import { getWiseCheckoutProduct } from '../../lib/wiseCheckout';
+
+const slug = String(Astro.params.slug || '').toLowerCase();
+const product = await getWiseCheckoutProduct(slug);
+if (!product) return Astro.redirect('/prijzen', 302);
+const session = await verifySupabaseSession(Astro.cookies.get(SUPABASE_SESSION_COOKIE)?.value);
+const canCheckout = Boolean(session?.roles.includes('customer'));
+const loginHref = `/account/inloggen?next=${encodeURIComponent(`/aanbod/${product.slug}`)}`;
+const qrCode = await QRCode.toDataURL(product.paymentUrl, { width: 440, margin: 2, errorCorrectionLevel: 'M', color: { dark: '#173d35', light: '#fffdf8' } });
+const money = new Intl.NumberFormat('nl-BE', { style: 'currency', currency: product.currency }).format(product.priceCents / 100);
+const type = product.type === 'profile' ? 'Persoonlijk profiel' : product.type === 'module' ? 'Online module' : 'E-book';
+---
+
+<MainLayout activeNav="zelf" title={`${product.title} — betalen via Wise`} description={`Veilig betalen via Wise voor ${product.title}.`}>
+  <section class="wise-checkout">
+    <div class="container wise-checkout__grid">
+      <div>
+        <a class="wise-checkout__back" href="/prijzen">← Terug naar het aanbod</a>
+        <span class="eyebrow">{type}</span>
+        <h1>{product.title}</h1>
+        <p class="lead">{product.summary}</p>
+        <div class="wise-checkout__price"><span>Te betalen</span><strong>{money}</strong><small>Inclusief btw</small></div>
+        <div class="wise-checkout__steps"><div><b>1</b><p>Scan de QR-code of open de beveiligde Wise-betaallink.</p></div><div><b>2</b><p>Rond de betaling af in Wise. MyGrowise ontvangt geen betaalkaartgegevens.</p></div><div><b>3</b><p>Je bestelling blijft zichtbaar als “wacht op betaling” tot de ontvangst gecontroleerd is.</p></div></div>
+      </div>
+      <aside class="wise-checkout__card" aria-label="Betalen via Wise">
+        <span class="wise-checkout__provider">Betalen met Wise</span>
+        <img src={qrCode} width="220" height="220" alt={`QR-code voor ${product.title} via Wise`} />
+        <p>Deze QR-code leidt rechtstreeks naar de officiële Wise-betaalpagina voor dit product.</p>
+        {canCheckout ? <form action="/api/checkout" method="post"><input type="hidden" name="product" value={product.slug}/><button class="button button-primary" type="submit">Open beveiligde Wise-betaling <span aria-hidden="true">↗</span></button></form> : <a class="button button-primary" href={loginHref}>Meld aan om te betalen <span aria-hidden="true">→</span></a>}
+        <a class="wise-checkout__fallback" href={product.paymentUrl} target="_blank" rel="noopener noreferrer">Liever niet scannen? Open Wise in een nieuw tabblad ↗</a>
+        <small>Gebruik alleen deze officiële Wise-link. Betaal nooit op basis van betaalinstructies uit een onverwachte e-mail of bericht.</small>
+      </aside>
+    </div>
+  </section>
+</MainLayout>
+
+<style>
+  .wise-checkout{padding-block:clamp(3rem,8vw,7rem);background:var(--cream)}.wise-checkout__grid{display:grid;gap:clamp(2rem,7vw,7rem);align-items:center;max-width:1100px}.wise-checkout__back{display:inline-block;margin-bottom:3rem;color:var(--muted);font-size:.76rem;font-weight:700;text-decoration:none}.wise-checkout h1{max-width:12ch;margin:.6rem 0 1.1rem;font-size:clamp(3.2rem,7vw,6rem);line-height:.92}.wise-checkout .lead{max-width:38rem}.wise-checkout__price{display:grid;grid-template-columns:auto 1fr;align-items:end;gap:.25rem 1rem;margin:2rem 0;padding-block:1.25rem;border-block:1px solid var(--line)}.wise-checkout__price span,.wise-checkout__price small{font-size:.74rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em}.wise-checkout__price strong{grid-row:span 2;font-family:'DM Serif Display',Georgia,serif;font-size:clamp(2.5rem,5vw,4.1rem);font-weight:400;text-align:right}.wise-checkout__price small{color:var(--muted);font-weight:500;text-transform:none;letter-spacing:0}.wise-checkout__steps{display:grid;gap:.9rem;max-width:35rem}.wise-checkout__steps div{display:grid;grid-template-columns:1.7rem 1fr;gap:.7rem;align-items:start}.wise-checkout__steps b{display:grid;width:1.5rem;height:1.5rem;place-items:center;border-radius:50%;background:var(--pink-soft);color:var(--pink);font-size:.68rem}.wise-checkout__steps p{margin:0;color:var(--muted);font-size:.86rem;line-height:1.6}.wise-checkout__card{display:grid;justify-items:center;padding:clamp(1.5rem,4vw,2.5rem);border:1px solid var(--line);border-radius:var(--radius-lg);background:var(--white);box-shadow:var(--shadow);text-align:center}.wise-checkout__provider{margin-bottom:1.1rem;color:var(--green);font-size:.75rem;font-weight:800;letter-spacing:.07em;text-transform:uppercase}.wise-checkout__card img{width:min(100%,220px);height:auto;border:10px solid var(--paper);border-radius:.75rem}.wise-checkout__card p{max-width:26rem;margin:1.25rem 0;color:var(--muted);font-size:.84rem;line-height:1.6}.wise-checkout__card form{width:100%}.wise-checkout__card .button{justify-content:center;width:100%}.wise-checkout__fallback{margin-top:1rem;color:var(--ink);font-size:.78rem;font-weight:700}.wise-checkout__card small{max-width:30rem;margin-top:1.25rem;color:var(--muted);font-size:.68rem;line-height:1.55}@media(min-width:850px){.wise-checkout__grid{grid-template-columns:1.15fr .85fr}}
+</style>
