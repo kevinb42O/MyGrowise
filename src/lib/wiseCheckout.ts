@@ -43,9 +43,11 @@ const isValidIban = (value: string) => {
 };
 
 export const getWiseManualDetails = (): WiseManualDetails | null => {
-  const accountName = String(process.env.WISE_ACCOUNT_NAME || '').trim();
-  const iban = String(process.env.WISE_IBAN || '').replace(/\s+/g, '').toUpperCase();
-  const bic = String(process.env.WISE_BIC || '').replace(/\s+/g, '').toUpperCase();
+  // These are public payment instructions shown to customers. Environment
+  // values may override them for another deployment or account.
+  const accountName = String(process.env.WISE_ACCOUNT_NAME || 'iTransform SLU').trim();
+  const iban = String(process.env.WISE_IBAN || 'BE81 9675 5029 6524').replace(/\s+/g, '').toUpperCase();
+  const bic = String(process.env.WISE_BIC || 'TRWIBEB1XXX').replace(/\s+/g, '').toUpperCase();
   if (!accountName || !isValidIban(iban) || (bic && !/^[A-Z]{6}[A-Z0-9]{2}([A-Z0-9]{3})?$/.test(bic))) return null;
   return { accountName, iban, bic };
 };

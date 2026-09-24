@@ -24,13 +24,12 @@ npm run build
 
 ## Launch blockers
 
-1. Add Virginie's confirmed Wise account name, IBAN and optional BIC to the server environment; checkout stays unavailable until these are configured.
-2. Apply the manual-Wise database migration and confirm the account/order flow in the intended deployment.
-3. Agree and implement the operational delivery step for the Stress- en Emotieprofiel after payment confirmation; account entitlement alone does not send questionnaires or the report.
-4. Connect a user-friendly CMS after the owner completes the CMS usability test.
-5. Verify all professional titles, profile price, biographies and booking URLs.
-6. Supply and approve the final privacy statement and terms.
-7. Configure deployment, domain, redirects, analytics and transactional e-mail.
+1. Apply the manual-Wise database migration and confirm the account/order flow in the intended deployment.
+2. Agree and implement the operational delivery step for the Stress- en Emotieprofiel after payment confirmation; account entitlement alone does not send questionnaires or the report.
+3. Connect a user-friendly CMS after the owner completes the CMS usability test.
+4. Verify all professional titles, profile price, biographies and booking URLs.
+5. Supply and approve the final privacy statement and terms.
+6. Configure deployment, domain, redirects, analytics and transactional e-mail.
 
 ## Content editing during this stage
 
