@@ -1,8 +1,8 @@
 ---
 import MainLayout from '../../layouts/MainLayout.astro';
+import { sanitizeAppRedirect } from '../../lib/adminAuth';
 const error = Astro.url.searchParams.get('error');
-const nextParam = Astro.url.searchParams.get('next') || '/account';
-const next = /^\/aanbod\/[a-z0-9]+(?:-[a-z0-9]+)*$/.test(nextParam) ? nextParam : '/account';
+const next = sanitizeAppRedirect(Astro.url.searchParams.get('next')) || '/account';
 const messages: Record<string, string> = { invalid: 'Controleer je naam, e-mailadres en wachtwoord van minstens 12 tekens.', email_taken: 'Er bestaat al een account met dit e-mailadres.', configuration: 'Accountregistratie is nog niet geconfigureerd.', signup_unavailable: 'Account aanmaken lukt momenteel niet door een probleem met het versturen van de bevestigingsmail. Probeer het later opnieuw.' };
 ---
 <MainLayout title="Account aanmaken — Mijn MyGrowise" noindex={true}><section class="account-auth"><div class="account-auth__card"><span class="eyebrow">Mijn MyGrowise</span><h1>Jouw plek bij MyGrowise.</h1><p>Bewaar je aankopen, volg je afspraken en kom rustig terug wanneer het jou past.</p>{messages[error || ''] && <div class="message">{messages[error || '']}</div>}<form action="/api/account/register" method="post"><input type="hidden" name="next" value={next}/><label>Voor- en achternaam<input name="name" autocomplete="name" required minlength="2" maxlength="100" autofocus /></label><label>E-mailadres<input name="email" type="email" autocomplete="email" required maxlength="254" /></label><label>Wachtwoord<input name="password" type="password" autocomplete="new-password" required minlength="12" maxlength="256" /><small>Gebruik minstens 12 tekens.</small></label><label>Herhaal wachtwoord<input name="confirm_password" type="password" autocomplete="new-password" required minlength="12" maxlength="256" /></label><button class="button button-primary" type="submit">Account aanmaken</button></form><p>Heb je al een account? <a href={`/account/inloggen?next=${encodeURIComponent(next)}`}>Log in</a>.</p></div></section></MainLayout>

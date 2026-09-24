@@ -2,7 +2,7 @@ import { getSupabaseAdmin } from './supabase/server';
 
 export type AvailabilityRule = { weekday: number; startTime: string; endTime: string };
 export type BookingStatus = 'pending' | 'confirmed' | 'declined' | 'cancelled' | 'completed' | 'no_show';
-export type PracticeBooking = { id: string; practitionerId: string; clientName: string; clientEmail: string; startsAt: string; endsAt: string; status: BookingStatus; calendarBookedAt: string | null; createdAt: string; updatedAt: string };
+export type PracticeBooking = { id: string; practitionerId: string; patientId: string | null; clientName: string; clientEmail: string; startsAt: string; endsAt: string; status: BookingStatus; calendarBookedAt: string | null; createdAt: string; updatedAt: string };
 export type BookableSlot = { practitionerId: string; practitionerSlug: string; startsAt: string; endsAt: string; dateLabel: string; timeLabel: string };
 export type AvailabilityException = { id: string; practitionerId: string; startsAt: string; endsAt: string; kind: 'available' | 'unavailable'; privateReason: string | null; createdAt: string };
 export type PractitionerProfile = {
@@ -35,7 +35,7 @@ const profileFromRow = (row: Row): PractitionerProfile => {
   };
 };
 const bookingFromRow = (row: Row): PracticeBooking => ({
-  id: String(row.id), practitionerId: String(row.practitioner_id), clientName: String(row.client_name), clientEmail: String(row.client_email),
+  id: String(row.id), practitionerId: String(row.practitioner_id), patientId: row.patient_id ? String(row.patient_id) : null, clientName: String(row.client_name), clientEmail: String(row.client_email),
   startsAt: String(row.starts_at), endsAt: String(row.ends_at), status: String(row.status) as BookingStatus,
   calendarBookedAt: row.calendar_booked_at ? String(row.calendar_booked_at) : null, createdAt: String(row.created_at), updatedAt: String(row.updated_at),
 });
@@ -121,33 +121,45 @@ export const deleteAvailabilityException = async (id: string, idOrSlug: string, 
 export const listBookings = async (idOrSlug: string, status?: BookingStatus): Promise<PracticeBooking[]> => {
   const practitioner = await resolvePractitioner(idOrSlug);
   if (!practitioner) return [];
-  let query = getSupabaseAdmin().from('bookings').select('id,practitioner_id,client_name,client_email,starts_at,ends_at,status,calendar_booked_at,created_at,updated_at').eq('practitioner_id', practitioner.id).order('starts_at');
+  let query = getSupabaseAdmin().from('bookings').select('id,practitioner_id,patient_id,client_name,client_email,starts_at,ends_at,status,calendar_booked_at,created_at,updated_at').eq('practitioner_id', practitioner.id).order('starts_at');
   if (status) query = query.eq('status', status);
   const { data, error } = await query;
   fail(error);
   return ((data || []) as Row[]).map(bookingFromRow);
 };
 
-const transitions: Record<BookingStatus, BookingStatus[]> = { pending: ['confirmed', 'declined'], confirmed: ['cancelled', 'completed', 'no_show'], declined: [], cancelled: [], completed: [], no_show: [] };
-export const updateBookingStatus = async (bookingId: string, idOrSlug: string, actorUserId: string, nextStatus: BookingStatus) => {
+export const updateBookingStatus = async (bookingId: string, idOrSlug: string, actorUserId: string, nextStatus: BookingStatus, requestId?: string, requestPath?: string) => {
   const practitioner = await resolvePractitioner(idOrSlug);
   if (!practitioner) throw new Error('not_found');
-  const client = getSupabaseAdmin();
-  const { data: existing, error: existingError } = await client.from('bookings').select('id,status').eq('id', bookingId).eq('practitioner_id', practitioner.id).maybeSingle();
-  fail(existingError);
-  if (!existing) throw new Error('not_found');
-  if (!transitions[String(existing.status) as BookingStatus]?.includes(nextStatus)) throw new Error('invalid_transition');
-  const update: Row = { status: nextStatus };
-  if (nextStatus === 'confirmed') update.calendar_booked_at = new Date().toISOString();
-  const { error } = await client.from('bookings').update(update).eq('id', bookingId).eq('practitioner_id', practitioner.id);
+  const { error } = await getSupabaseAdmin().rpc('transition_booking_status', {
+    p_booking_id: bookingId,
+    p_actor_user_id: actorUserId,
+    p_next_status: nextStatus,
+    p_request_id: requestId || null,
+    p_request_path: requestPath || null,
+  });
+  if (error?.code === 'P0002') throw new Error('not_found');
+  if (error?.code === '42501') throw new Error('not_allowed');
+  if (error?.code === '22023') throw new Error('invalid_transition');
   fail(error);
-  await client.from('security_audit_log').insert({ actor_user_id: uuidPattern.test(actorUserId) ? actorUserId : null, action: 'booking.status_updated', object_type: 'booking', object_id: bookingId, metadata: { from: existing.status, to: nextStatus, practitionerId: practitioner.id } });
 };
 
-export const createBookingRequest = async (slug: string, clientName: string, clientEmail: string, startsAt: string, endsAt: string) => {
+export const createBookingRequest = async (slug: string, customerUserId: string, startsAt: string, endsAt: string, submissionKey: string, requestId?: string) => {
   const practitioner = await getPractitionerBySlug(slug);
   if (!practitioner) throw new Error('slot_unavailable');
-  const { data, error } = await getSupabaseAdmin().rpc('request_booking', { p_practitioner_slug: practitioner.slug, p_client_name: clientName, p_client_email: clientEmail, p_starts_at: startsAt, p_ends_at: endsAt });
+  const { data, error } = await getSupabaseAdmin().rpc('request_customer_booking', {
+    p_practitioner_slug: practitioner.slug,
+    p_customer_user_id: customerUserId,
+    p_starts_at: startsAt,
+    p_ends_at: endsAt,
+    p_submission_key: submissionKey,
+    p_request_id: requestId || null,
+  });
+  if (error?.code === 'P0001' || error?.code === '23P01') throw new Error('slot_unavailable');
+  if (error?.code === '42501') throw new Error('customer_required');
+  if (error?.code === '28000') throw new Error('email_confirmation');
+  if (error?.code === '22023') throw new Error('invalid_input');
+  if (error?.code === '23505') throw new Error('idempotency_conflict');
   fail(error);
   return String(data);
 };

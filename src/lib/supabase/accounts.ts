@@ -3,7 +3,9 @@ import { getSupabaseAdmin } from './server';
 type Row = Record<string, unknown>;
 const fail = (error: { message?: string } | null) => { if (error) throw new Error(error.message || 'Supabase query failed.'); };
 
-export type CustomerBooking = { id: string; practitionerName: string; practitionerSlug: string; startsAt: string; endsAt: string; status: string };
+export type CustomerBookingStatusEvent = { fromStatus: string | null; status: string; occurredAt: string };
+export type CustomerBooking = { id: string; practitionerName: string; practitionerSlug: string; startsAt: string; endsAt: string; status: string; statusHistory: CustomerBookingStatusEvent[] };
+export type CustomerBookingNotification = { id: string; bookingId: string; createdAt: string; readAt: string | null; status: string; practitionerName: string; startsAt: string };
 export type CustomerTransaction = { id: string; createdAt: string; status: string; totalCents: number; currency: string; provider: string | null; productSlug: string | null };
 export type CustomerEntitlement = { id: string; productTitle: string; productSlug: string; productType: string; status: string; grantedAt: string };
 export type NotificationPreferences = { bookingEmailEnabled: boolean; bookingReminderEnabled: boolean; weeklyDigestEnabled: boolean; timezone: string };
@@ -12,7 +14,99 @@ export type SecurityActivity = { occurredAt: string; action: string; metadata: R
 export const listCustomerBookings = async (userId: string): Promise<CustomerBooking[]> => {
   const { data, error } = await getSupabaseAdmin().from('bookings').select('id,starts_at,ends_at,status,practitioners(name,slug)').eq('customer_user_id', userId).order('starts_at', { ascending: false });
   fail(error);
-  return ((data || []) as Row[]).map((row) => { const practitioner = (Array.isArray(row.practitioners) ? row.practitioners[0] : row.practitioners || {}) as Row; return { id: String(row.id), practitionerName: String(practitioner.name || 'Professional'), practitionerSlug: String(practitioner.slug || ''), startsAt: String(row.starts_at), endsAt: String(row.ends_at), status: String(row.status) }; });
+  const rows = (data || []) as Row[];
+  if (!rows.length) return [];
+  const bookingIds = rows.map((row) => String(row.id));
+  const { data: eventRows, error: eventError } = await getSupabaseAdmin()
+    .from('booking_status_events')
+    .select('booking_id,from_status,to_status,occurred_at')
+    .in('booking_id', bookingIds)
+    .eq('customer_visible', true)
+    .order('occurred_at', { ascending: true })
+    .order('id', { ascending: true });
+  fail(eventError);
+  const history = new Map<string, CustomerBookingStatusEvent[]>();
+  ((eventRows || []) as Row[]).forEach((event) => {
+    const bookingId = String(event.booking_id);
+    history.set(bookingId, [...(history.get(bookingId) || []), {
+      fromStatus: event.from_status ? String(event.from_status) : null,
+      status: String(event.to_status),
+      occurredAt: String(event.occurred_at),
+    }]);
+  });
+  return rows.map((row) => {
+    const practitioner = (Array.isArray(row.practitioners) ? row.practitioners[0] : row.practitioners || {}) as Row;
+    return { id: String(row.id), practitionerName: String(practitioner.name || 'Professional'), practitionerSlug: String(practitioner.slug || ''), startsAt: String(row.starts_at), endsAt: String(row.ends_at), status: String(row.status), statusHistory: history.get(String(row.id)) || [] };
+  });
+};
+export const countUnreadCustomerBookingNotifications = async (userId: string): Promise<number> => {
+  const { count, error } = await getSupabaseAdmin()
+    .from('customer_notifications')
+    .select('id', { count: 'exact', head: true })
+    .eq('customer_user_id', userId)
+    .is('read_at', null);
+  fail(error);
+  return count || 0;
+};
+export const listCustomerBookingNotifications = async (userId: string): Promise<CustomerBookingNotification[]> => {
+  const client = getSupabaseAdmin();
+  const { data: notificationRows, error } = await client
+    .from('customer_notifications')
+    .select('id,booking_id,status_event_id,created_at,read_at')
+    .eq('customer_user_id', userId)
+    .order('created_at', { ascending: false })
+    .order('id', { ascending: false });
+  fail(error);
+  const notifications = (notificationRows || []) as Row[];
+  if (!notifications.length) return [];
+
+  const eventIds = notifications.map((row) => Number(row.status_event_id));
+  const bookingIds = [...new Set(notifications.map((row) => String(row.booking_id)))];
+  const [{ data: eventRows, error: eventError }, { data: bookingRows, error: bookingError }] = await Promise.all([
+    client.from('booking_status_events').select('id,to_status').in('id', eventIds).eq('customer_visible', true),
+    client.from('bookings').select('id,starts_at,practitioners(name)').in('id', bookingIds).eq('customer_user_id', userId),
+  ]);
+  fail(eventError);
+  fail(bookingError);
+
+  const events = new Map(((eventRows || []) as Row[]).map((row) => [String(row.id), String(row.to_status)]));
+  const bookings = new Map(((bookingRows || []) as Row[]).map((row) => {
+    const practitioner = (Array.isArray(row.practitioners) ? row.practitioners[0] : row.practitioners || {}) as Row;
+    return [String(row.id), { startsAt: String(row.starts_at), practitionerName: String(practitioner.name || 'Je professional') }];
+  }));
+  return notifications.flatMap((row) => {
+    const booking = bookings.get(String(row.booking_id));
+    const status = events.get(String(row.status_event_id));
+    if (!booking || !status) return [];
+    return [{
+      id: String(row.id),
+      bookingId: String(row.booking_id),
+      createdAt: String(row.created_at),
+      readAt: row.read_at ? String(row.read_at) : null,
+      status,
+      practitionerName: booking.practitionerName,
+      startsAt: booking.startsAt,
+    }];
+  });
+};
+export const markCustomerBookingNotificationRead = async (notificationId: string, userId: string): Promise<string> => {
+  const client = getSupabaseAdmin();
+  const { data, error } = await client
+    .from('customer_notifications')
+    .select('booking_id')
+    .eq('id', notificationId)
+    .eq('customer_user_id', userId)
+    .maybeSingle();
+  fail(error);
+  if (!data?.booking_id) throw new Error('not_found');
+  const { error: updateError } = await client
+    .from('customer_notifications')
+    .update({ read_at: new Date().toISOString() })
+    .eq('id', notificationId)
+    .eq('customer_user_id', userId)
+    .is('read_at', null);
+  fail(updateError);
+  return String(data.booking_id);
 };
 export const listCustomerTransactions = async (userId: string): Promise<CustomerTransaction[]> => {
   const { data, error } = await getSupabaseAdmin().from('orders').select('id,created_at,status,total_cents,currency,provider,order_items(product_slug)').eq('customer_user_id', userId).order('created_at', { ascending: false });
@@ -24,8 +118,13 @@ export const listCustomerEntitlements = async (userId: string): Promise<Customer
   fail(error);
   return ((data || []) as Row[]).map((row) => ({ id: String(row.id), productTitle: String(row.product_title), productSlug: String(row.product_slug), productType: String(row.product_type), status: String(row.status), grantedAt: String(row.granted_at) }));
 };
-export const cancelCustomerBooking = async (bookingId: string, customerId: string) => {
-  const { error } = await getSupabaseAdmin().rpc('cancel_customer_booking', { p_booking_id: bookingId, p_customer_id: customerId });
+export const cancelCustomerBooking = async (bookingId: string, customerId: string, requestId?: string, requestPath?: string) => {
+  const { error } = await getSupabaseAdmin().rpc('cancel_customer_booking', {
+    p_booking_id: bookingId,
+    p_customer_id: customerId,
+    p_request_id: requestId || null,
+    p_request_path: requestPath || null,
+  });
   if (!error) return;
   if (error.code === 'P0001') throw new Error('too_late');
   throw new Error('not_found');

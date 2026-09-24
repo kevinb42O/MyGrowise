@@ -1,7 +1,8 @@
 ---
+import { isCustomerAccount } from '../../lib/adminAuth';
 interface Props { activeNav?: string }
 const { activeNav = '' } = Astro.props;
-const customerSignedIn = Astro.locals.currentUser?.roles.includes('customer') ?? false;
+const customerSignedIn = isCustomerAccount(Astro.locals.currentUser);
 const nav = [
   { href: '/profielen', label: 'Zelf aan de slag', id: 'zelf' },
   { href: '/begeleiding', label: 'Begeleiding', id: 'begeleiding' },

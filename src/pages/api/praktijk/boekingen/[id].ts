@@ -9,11 +9,11 @@ export const POST: APIRoute = async ({ request, locals, params }) => {
   const form = await request.formData();
   const status = String(form.get('status') || '') as BookingStatus;
   try {
-    await updateBookingStatus(params.id || '', user.practitionerId!, user.sub, status);
+    await updateBookingStatus(params.id || '', user.practitionerId!, user.sub, status, locals.requestId, `/api/praktijk/boekingen/${params.id || ''}`);
     return new Response(null, { status: 303, headers: { location: '/praktijk/boekingen?updated=1' } });
   } catch (error) {
-    const code = error instanceof Error && error.message === 'not_found' ? 404 : 409;
-    return new Response(code === 404 ? 'Boeking niet gevonden.' : 'Deze statuswijziging is niet toegestaan.', { status: code });
+    const code = error instanceof Error && error.message === 'not_found' ? 404 : error instanceof Error && error.message === 'not_allowed' ? 403 : 409;
+    return new Response(code === 404 ? 'Boeking niet gevonden.' : code === 403 ? 'Geen toegang tot deze boeking.' : 'Deze statuswijziging is niet toegestaan.', { status: code });
   }
 };
 export const ALL: APIRoute = () => new Response('Methode niet toegestaan.', { status: 405 });

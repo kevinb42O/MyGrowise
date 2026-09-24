@@ -2,6 +2,7 @@
 import AdminIcon from '../components/admin/AdminIcon.astro';
 import NotificationBell from '../components/admin/NotificationBell.astro';
 import '../styles/admin.css';
+import { hasPermission } from '../lib/adminAuth';
 
 interface Props { title: string; description?: string }
 const { title, description = 'Mijn praktijk bij MyGrowise' } = Astro.props;
@@ -12,6 +13,7 @@ const nav = [
   { label: 'Vandaag', href: '/praktijk', icon: 'overview', exact: true },
   { label: 'Mijn agenda', href: '/praktijk/agenda', icon: 'calendar' },
   { label: 'Boekingsaanvragen', href: '/praktijk/boekingen', icon: 'messages' },
+  ...(hasPermission(user, 'client_records.read') ? [{ label: 'Cliëntendossiers', href: '/admin/clienten', icon: 'customers' }] : []),
   { label: 'Berichten', href: '/praktijk/berichten', icon: 'messages' },
   { label: 'Beschikbaarheid', href: '/praktijk/beschikbaarheid', icon: 'clock' },
   { label: 'Mijn profiel', href: '/praktijk/profiel', icon: 'professionals' },

@@ -1,10 +1,10 @@
 import { getSupabaseAdmin } from './supabase/server';
-import { writeSecurityAudit, type AuditActor } from './securityAudit';
+import type { AuditActor } from './securityAudit';
 
 type RecordRow = Record<string, any>;
 export type AdminOrder = { id: string; status: string; totalCents: number; currency: string; createdAt: string; customerId: string };
 export type AdminOrderDetail = { id: string; status: string; totalCents: number; currency: string; createdAt: string; customerId: string; customerName: string; provider: string; reference: string; paymentClaimedAt: string | null; paymentVerifiedAt: string | null; productTitles: string[] };
-export type AdminBooking = { id: string; practitionerId: string; practitionerName: string; clientName: string; clientEmail: string; startsAt: string; endsAt: string; status: string; createdAt: string };
+export type AdminBooking = { id: string; practitionerId: string; practitionerName: string; patientId: string | null; clientName: string; clientEmail: string; startsAt: string; endsAt: string; status: string; createdAt: string };
 export type AdminTask = { id: string; title: string; category: string; priority: number; status: string; dueAt: string | null; createdAt: string };
 export type IntegrationCheck = { key: string; label: string; state: 'healthy' | 'degraded' | 'not_configured' | 'failed'; detail: string | null; lastCheckedAt: string | null };
 
@@ -44,9 +44,9 @@ export const listAdminOrderDetails = async (): Promise<AdminOrderDetail[]> => {
 };
 
 export const listAdminBookings = async (limit = 100): Promise<AdminBooking[]> => {
-  const { data, error } = await getSupabaseAdmin().from('bookings').select('id,practitioner_id,client_name,client_email,starts_at,ends_at,status,created_at,practitioners(name)').order('starts_at', { ascending: true }).limit(limit);
+  const { data, error } = await getSupabaseAdmin().from('bookings').select('id,practitioner_id,patient_id,client_name,client_email,starts_at,ends_at,status,created_at,practitioners(name)').order('starts_at', { ascending: true }).limit(limit);
   fail(error);
-  return ((data || []) as RecordRow[]).map((row) => ({ id: String(row.id), practitionerId: String(row.practitioner_id), practitionerName: String(row.practitioners?.name || 'Onbekend'), clientName: String(row.client_name), clientEmail: String(row.client_email), startsAt: String(row.starts_at), endsAt: String(row.ends_at), status: String(row.status), createdAt: String(row.created_at) }));
+  return ((data || []) as RecordRow[]).map((row) => ({ id: String(row.id), practitionerId: String(row.practitioner_id), practitionerName: String(row.practitioners?.name || 'Onbekend'), patientId: row.patient_id ? String(row.patient_id) : null, clientName: String(row.client_name), clientEmail: String(row.client_email), startsAt: String(row.starts_at), endsAt: String(row.ends_at), status: String(row.status), createdAt: String(row.created_at) }));
 };
 
 const bookingTransitions: Record<string, string[]> = {
@@ -57,15 +57,18 @@ const bookingTransitions: Record<string, string[]> = {
 
 export const updateAdminBookingStatus = async (id: string, nextStatus: string, actor: AuditActor) => {
   if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id) || !Object.hasOwn(bookingTransitions, nextStatus)) throw new Error('invalid_input');
-  const client = getSupabaseAdmin();
-  const { data: before, error: beforeError } = await client.from('bookings').select('id,status,practitioner_id,starts_at,ends_at').eq('id', id).maybeSingle();
-  fail(beforeError); if (!before) throw new Error('not_found');
-  if (!bookingTransitions[String(before.status)]?.includes(nextStatus)) throw new Error('invalid_transition');
-  const { data, error } = await client.from('bookings').update({ status: nextStatus, calendar_booked_at: nextStatus === 'confirmed' ? new Date().toISOString() : null }).eq('id', id).select('id,status').single();
+  const { data, error } = await getSupabaseAdmin().rpc('transition_booking_status', {
+    p_booking_id: id,
+    p_actor_user_id: actor.userId,
+    p_next_status: nextStatus,
+    p_request_id: actor.requestId || null,
+    p_request_path: actor.requestPath || null,
+  });
+  if (error?.code === 'P0002') throw new Error('not_found');
+  if (error?.code === '42501') throw new Error('not_allowed');
+  if (error?.code === '22023') throw new Error('invalid_transition');
   fail(error);
-  if (!data) throw new Error('database_error');
-  await writeSecurityAudit({ actor, action: 'booking.status_updated_by_admin', objectType: 'booking', objectId: id, before: { status: before.status, practitioner_id: before.practitioner_id, starts_at: before.starts_at, ends_at: before.ends_at }, after: { status: data.status } });
-  return String(data.status);
+  return String(data);
 };
 
 export const listAdminTasks = async (limit = 12): Promise<AdminTask[]> => {

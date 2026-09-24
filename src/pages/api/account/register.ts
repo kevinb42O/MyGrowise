@@ -6,9 +6,13 @@ const redirect303 = (url: URL) => new Response(null, { status: 303, headers: { l
 export const POST: APIRoute = async ({ request, cookies }) => {
   if (!isTrustedFormOrigin(request)) return new Response('Ongeldige aanvraag.', { status: 403 });
   const form = await request.formData(); const password = String(form.get('password') || '');
-  if (password !== String(form.get('confirm_password') || '')) return redirect303(new URL('/account/aanmaken?error=invalid', request.url));
+  const next = sanitizeAppRedirect(form.get('next'));
+  if (password !== String(form.get('confirm_password') || '')) {
+    const invalid = new URL('/account/aanmaken?error=invalid', request.url);
+    if (next) invalid.searchParams.set('next', next);
+    return redirect303(invalid);
+  }
   try {
-    const next = sanitizeAppRedirect(form.get('next'));
     const confirmation = new URL('/account/inloggen?confirmed=1', request.url);
     if (next) confirmation.searchParams.set('next', next);
     const confirmationUrl = confirmation.toString();
@@ -22,7 +26,9 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     return redirect303(new URL(next || '/account', request.url));
   } catch (error) {
     const code = error instanceof Error && ['email_taken', 'configuration', 'invalid'].includes(error.message) ? error.message : 'signup_unavailable';
-    return redirect303(new URL(`/account/aanmaken?error=${code}`, request.url));
+    const failure = new URL(`/account/aanmaken?error=${code}`, request.url);
+    if (next) failure.searchParams.set('next', next);
+    return redirect303(failure);
   }
 };
 export const ALL: APIRoute = () => new Response('Methode niet toegestaan.', { status: 405 });

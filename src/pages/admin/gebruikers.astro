@@ -29,7 +29,7 @@ const canManage = hasPermission(Astro.locals.adminUser, 'users.manage');
     <section class="team-role-guide" aria-label="Rolverdeling">
       <article><span><AdminIcon name="lock" size={17}/></span><div><strong>Superadmin</strong><p>Volledig organisatiebeheer en eindverantwoordelijkheid.</p></div></article>
       <article><span><AdminIcon name="settings" size={17}/></span><div><strong>Support</strong><p>Technische en operationele ondersteuning, zonder eigenaarschap.</p></div></article>
-      <article><span><AdminIcon name="professionals" size={17}/></span><div><strong>Medewerker</strong><p>Eigen praktijk, agenda, boekingen en interne teamcommunicatie.</p></div></article>
+      <article><span><AdminIcon name="professionals" size={17}/></span><div><strong>Medewerker</strong><p>Toegang tot toegewezen cliëntendossiers, verslagen en interne teamcommunicatie.</p></div></article>
     </section>
 
     {canManage && <section class="admin-panel admin-form-panel team-create-panel">

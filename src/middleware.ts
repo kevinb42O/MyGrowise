@@ -1,5 +1,5 @@
 import { defineMiddleware } from 'astro:middleware';
-import { SUPABASE_SESSION_COOKIE, hasPermission, hasRole, isSupabaseAuthConfigured, verifySupabaseSession } from './lib/adminAuth';
+import { SUPABASE_SESSION_COOKIE, hasPermission, hasRole, isCustomerAccount, isSupabaseAuthConfigured, sanitizeAppRedirect, verifySupabaseSession } from './lib/adminAuth';
 import { firstAccessibleAdminPath, requiredAdminPermission } from './lib/adminPermissions';
 import { hasInternalMessagingAccess } from './lib/adminPermissions';
 
@@ -14,11 +14,19 @@ export const onRequest = defineMiddleware(async (context, next) => {
   const isAccountApi = path.startsWith('/api/account');
   const isInternalApi = path.startsWith('/api/internal');
   const isCheckoutApi = path === '/api/checkout' || path.startsWith('/api/checkout/');
-  if (!isAdminPage && !isAdminApi && !isPracticePage && !isPracticeApi && !isAccountPage && !isAccountApi && !isInternalApi && !isCheckoutApi) return next();
+  const isBookingPage = /^\/begeleiding\/[a-z0-9]+(?:-[a-z0-9]+)*$/.test(path);
+  const isBookingApi = path === '/api/bookings';
+  const isOptionalSessionPath = isBookingPage || isBookingApi;
+  if (!isAdminPage && !isAdminApi && !isPracticePage && !isPracticeApi && !isAccountPage && !isAccountApi && !isInternalApi && !isCheckoutApi && !isOptionalSessionPath) return next();
 
   if (path === '/api/admin/login' || path === '/api/admin/logout' || path === '/api/account/login' || path === '/api/account/register' || path === '/api/account/logout' || path === '/api/account/password-reset' || path === '/api/account/verification-resend' || path === '/account/wachtwoord-vergeten' || path === '/account/wachtwoord-herstellen') return next();
 
   const session = isSupabaseAuthConfigured() ? await verifySupabaseSession(context.cookies.get(SUPABASE_SESSION_COOKIE)?.value) : null;
+  if (isOptionalSessionPath) {
+    if (session) context.locals.currentUser = session;
+    else if (context.cookies.has(SUPABASE_SESSION_COOKIE)) context.cookies.delete(SUPABASE_SESSION_COOKIE, { path: '/' });
+    return next();
+  }
   if (path === '/admin/login') {
     if (session) {
       const destination = firstAccessibleAdminPath(session.roles);
@@ -38,7 +46,10 @@ export const onRequest = defineMiddleware(async (context, next) => {
     return next();
   }
   if (path === '/account/inloggen' || path === '/account/aanmaken') {
-    if (session?.roles.includes('customer')) return context.redirect('/account', 303);
+    if (isCustomerAccount(session)) {
+      const nextPath = sanitizeAppRedirect(context.url.searchParams.get('next'));
+      return context.redirect(nextPath || '/account', 303);
+    }
     return next();
   }
 
@@ -58,6 +69,8 @@ export const onRequest = defineMiddleware(async (context, next) => {
   const adminPermission = (isAdminPage || isAdminApi) ? requiredAdminPermission(path, context.request.method) : null;
   if ((isAdminPage || isAdminApi) && (!adminPermission || !hasPermission(session, adminPermission))) {
     if (isAdminApi) return new Response(JSON.stringify({ error: 'Geen toegang.' }), { status: 403, headers: { 'content-type': 'application/json; charset=utf-8' } });
+    const accessiblePath = firstAccessibleAdminPath(session.roles);
+    if (accessiblePath && path !== '/admin/login') return context.redirect(accessiblePath, 303);
     return context.redirect('/admin/login?error=forbidden', 303);
   }
   if (isInternalApi && !hasInternalMessagingAccess(session.roles)) {
@@ -67,11 +80,11 @@ export const onRequest = defineMiddleware(async (context, next) => {
     if (isPracticeApi) return new Response(JSON.stringify({ error: 'Geen toegang.' }), { status: 403, headers: { 'content-type': 'application/json; charset=utf-8' } });
     return context.redirect('/praktijk/login?error=forbidden', 303);
   }
-  if ((isAccountPage || isAccountApi) && !hasRole(session, 'customer')) {
+  if ((isAccountPage || isAccountApi) && !isCustomerAccount(session)) {
     if (isAccountApi) return new Response(JSON.stringify({ error: 'Geen toegang.' }), { status: 403, headers: { 'content-type': 'application/json; charset=utf-8' } });
     return context.redirect('/account/inloggen', 303);
   }
-  if (isCheckoutApi && !hasRole(session, 'customer')) return new Response(JSON.stringify({ error: 'Geen toegang.' }), { status: 403, headers: { 'content-type': 'application/json; charset=utf-8' } });
+  if (isCheckoutApi && !isCustomerAccount(session)) return new Response(JSON.stringify({ error: 'Geen toegang.' }), { status: 403, headers: { 'content-type': 'application/json; charset=utf-8' } });
 
   context.locals.adminUser = session;
   context.locals.currentUser = session;

@@ -1,12 +1,114 @@
 ---
 import AccountLayout from '../../layouts/AccountLayout.astro';
 import { listCustomerBookings } from '../../lib/supabase/accounts';
-const user = Astro.locals.currentUser!; const all = await listCustomerBookings(user.sub); const now = Date.now();
-const future = all.filter((booking) => new Date(booking.startsAt).getTime() > now && ['pending', 'confirmed'].includes(booking.status)).sort((a,b) => a.startsAt.localeCompare(b.startsAt));
-const past = all.filter((booking) => !future.some((item) => item.id === booking.id));
-const status: Record<string, string> = { pending: 'Aanvraag in behandeling', confirmed: 'Bevestigd', declined: 'Niet bevestigd', cancelled: 'Geannuleerd', completed: 'Afgerond', no_show: 'Niet doorgegaan' };
-const date = (value: string) => new Intl.DateTimeFormat('nl-BE',{timeZone:'Europe/Brussels',weekday:'long',day:'numeric',month:'long',hour:'2-digit',minute:'2-digit'}).format(new Date(value));
-const cancelled = Astro.url.searchParams.get('cancelled') === '1'; const cancelError = Astro.url.searchParams.get('cancel_error');
+
+const user = Astro.locals.currentUser!;
+Astro.response.headers.set('Cache-Control', 'private, no-store');
+const all = await listCustomerBookings(user.sub);
+const now = Date.now();
+const active = all
+  .filter((booking) => booking.status === 'pending' || (booking.status === 'confirmed' && new Date(booking.startsAt).getTime() > now))
+  .sort((a, b) => a.startsAt.localeCompare(b.startsAt));
+const past = all.filter((booking) => !active.some((item) => item.id === booking.id)).sort((a, b) => b.startsAt.localeCompare(a.startsAt));
+const status: Record<string, string> = {
+  pending: 'Aanvraag in behandeling', confirmed: 'Bevestigd', declined: 'Niet bevestigd',
+  cancelled: 'Geannuleerd', completed: 'Afgerond', no_show: 'Niet doorgegaan',
+};
+const date = (value: string) => new Intl.DateTimeFormat('nl-BE', {
+  timeZone: 'Europe/Brussels', weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit',
+}).format(new Date(value));
+const shortDate = (value: string) => new Intl.DateTimeFormat('nl-BE', {
+  timeZone: 'Europe/Brussels', day: '2-digit', month: 'short',
+}).format(new Date(value));
+const eventDate = (value: string) => new Intl.DateTimeFormat('nl-BE', {
+  timeZone: 'Europe/Brussels', dateStyle: 'medium', timeStyle: 'short',
+}).format(new Date(value));
+const cancelled = Astro.url.searchParams.get('cancelled') === '1';
+const cancelError = Astro.url.searchParams.get('cancel_error');
+const requested = Astro.url.searchParams.get('requested') === '1';
+const rateLimited = Astro.url.searchParams.get('error') === 'rate_limited';
 ---
-<AccountLayout title="Mijn begeleiding"><section class="account-heading"><span class="eyebrow">Mijn begeleiding</span><h1>Praktisch, wanneer jij het nodig hebt.</h1><p>Bekijk je afspraken en regel alleen de praktische kant van je begeleiding.</p></section>{cancelled && <div class="account-message success">Je afspraak is geannuleerd.</div>}{cancelError && <div class="account-message">Deze afspraak kan niet meer online worden geannuleerd. Neem contact op met je professional.</div>}<section class="care-section"><div class="care-section__top"><div><span class="account-label">Komende afspraken</span><h2>{future.length ? 'Wat er gepland staat' : 'Nog niets gepland'}</h2></div><a class="button button-primary" href="/begeleiding">Plan een afspraak</a></div>{future.length ? <div class="appointments">{future.map((booking) => <article><div class="appointment-date"><strong>{new Intl.DateTimeFormat('nl-BE',{day:'2-digit'}).format(new Date(booking.startsAt))}</strong><span>{new Intl.DateTimeFormat('nl-BE',{month:'short'}).format(new Date(booking.startsAt))}</span></div><div><h3>{booking.practitionerName}</h3><p>{date(booking.startsAt)} · Online afspraak</p><span class:list={{ 'appointment-status': true, pending: booking.status === 'pending' }}>{status[booking.status]}</span></div><div class="appointment-actions"><a href={`/begeleiding/${booking.practitionerSlug}`}>Verplaatsen</a>{booking.status !== 'pending' && <form action={`/api/account/begeleiding/${booking.id}/annuleren`} method="post"><button type="submit">Annuleren</button></form>}</div></article>)}</div> : <div class="care-empty"><p>Wanneer je een afspraak aanvraagt of boekt, verschijnt die hier automatisch. We tonen geen inhoud uit gesprekken of sessies.</p></div>}</section>{past.length ? <section class="care-history"><span class="account-label">Eerdere afspraken</span><h2>Overzicht</h2>{past.map((booking) => <article><span>{new Intl.DateTimeFormat('nl-BE',{day:'numeric',month:'short',year:'numeric'}).format(new Date(booking.startsAt))}</span><strong>{booking.practitionerName}</strong><small>{status[booking.status]}</small></article>)}</section> : null}</AccountLayout>
-<style>.account-heading{margin-bottom:2.25rem}.account-heading h1{max-width:12ch;margin-bottom:.65rem;font-size:clamp(3rem,7vw,5.6rem)}.account-heading p{max-width:57ch;color:var(--muted);line-height:1.7}.account-label{display:block;margin-bottom:.7rem;color:var(--pink);font-size:.7rem;font-weight:800;letter-spacing:.12em;text-transform:uppercase}.account-message{margin-bottom:1rem;padding:.9rem 1rem;border-left:4px solid var(--pink);background:var(--pink-soft);font-size:.86rem}.account-message.success{border-color:var(--ink);background:#dcece7}.care-section{padding:clamp(1.3rem,4vw,2rem);border:1px solid var(--line);border-radius:var(--radius-lg);background:var(--white)}.care-section__top{display:flex;flex-wrap:wrap;align-items:end;justify-content:space-between;gap:1.3rem;margin-bottom:1.4rem}.care-section h2,.care-history h2{margin:0;font-size:2rem}.appointments{display:grid;gap:.7rem}.appointments article{display:grid;grid-template-columns:auto 1fr;gap:1rem;align-items:start;padding:1rem;border:1px solid var(--line);border-radius:var(--radius-sm)}.appointment-date{display:grid;width:3.3rem;height:3.3rem;place-content:center;border-radius:.7rem;background:var(--cream);text-align:center}.appointment-date strong{font-family:'DM Serif Display',Georgia,serif;font-size:1.45rem;line-height:1}.appointment-date span{font-size:.65rem;font-weight:800;text-transform:uppercase}.appointments h3{margin:0 0 .3rem;font-family:'DM Sans',sans-serif;font-size:.95rem;font-weight:800;letter-spacing:0}.appointments p{margin:.25rem 0 .6rem;color:var(--muted);font-size:.8rem;line-height:1.5}.appointment-status{display:inline-flex;padding:.28rem .48rem;border-radius:999px;background:#dcece7;color:var(--ink);font-size:.67rem;font-weight:800}.appointment-status.pending{background:var(--yellow-soft)}.appointment-actions{display:flex;gap:.8rem;grid-column:2;font-size:.75rem;font-weight:800}.appointment-actions a,.appointment-actions button{border:0;background:none;color:var(--ink);font:inherit;font-weight:800;text-decoration:underline;cursor:pointer}.care-empty{padding:1.4rem;border-radius:var(--radius-sm);background:var(--cream)}.care-empty p{max-width:60ch;margin:0;color:var(--muted);font-size:.88rem;line-height:1.7}.care-history{margin-top:2.5rem}.care-history>article{display:grid;grid-template-columns:1fr auto;gap:.4rem;padding:1rem 0;border-bottom:1px solid var(--line)}.care-history span,.care-history small{color:var(--muted);font-size:.78rem}.care-history small{grid-column:2}@media(min-width:700px){.appointments article{grid-template-columns:auto 1fr auto;align-items:center}.appointment-actions{grid-column:auto;justify-content:end}.care-history>article{grid-template-columns:10rem 1fr auto;align-items:center}.care-history small{grid-column:auto}}</style>
+
+<AccountLayout title="Mijn begeleiding">
+  <section class="account-heading">
+    <span class="eyebrow">Mijn begeleiding</span>
+    <h1>Praktisch, wanneer jij het nodig hebt.</h1>
+    <p>Volg hier je aanvragen en afspraken. Verslagen of inhoud uit gesprekken verschijnen niet in dit praktische overzicht.</p>
+  </section>
+
+  {requested && <div class="account-message success" role="status">Je aanvraag is verstuurd. Je vindt de actuele status hieronder.</div>}
+  {cancelled && <div class="account-message success" role="status">Je aanvraag of afspraak is geannuleerd.</div>}
+  {cancelError === 'late' && <div class="account-message" role="alert">Deze afspraak kan niet meer online worden geannuleerd omdat ze te dichtbij is. Neem contact op met je professional.</div>}
+  {cancelError && cancelError !== 'late' && <div class="account-message" role="alert">Deze aanvraag of afspraak kon niet worden geannuleerd. Herlaad de pagina en probeer opnieuw.</div>}
+  {rateLimited && <div class="account-message" role="alert">Er zijn te veel aanvragen kort na elkaar verstuurd. Wacht even en probeer opnieuw.</div>}
+
+  <section class="care-section" aria-labelledby="care-active-title">
+    <div class="care-section__top">
+      <div>
+        <span class="account-label">Aanvragen en komende afspraken</span>
+        <h2 id="care-active-title">{active.length ? 'Wat er gepland staat' : 'Nog niets gepland'}</h2>
+      </div>
+      <a class="button button-primary" href="/begeleiding">Plan een afspraak</a>
+    </div>
+
+    {active.length ? <div class="appointments">
+      {active.map((booking) => <article id={`booking-${booking.id}`} class="appointment-card">
+        <div class="appointment-date" aria-label={shortDate(booking.startsAt)}>
+          <strong>{new Intl.DateTimeFormat('nl-BE', { timeZone: 'Europe/Brussels', day: '2-digit' }).format(new Date(booking.startsAt))}</strong>
+          <span>{new Intl.DateTimeFormat('nl-BE', { timeZone: 'Europe/Brussels', month: 'short' }).format(new Date(booking.startsAt))}</span>
+        </div>
+        <div class="appointment-main">
+          <h3>{booking.practitionerName}</h3>
+          <p>{date(booking.startsAt)} · Online afspraak</p>
+          <span class:list={{ 'appointment-status': true, pending: booking.status === 'pending' }} role="status">{status[booking.status] || 'Status wordt bijgewerkt'}</span>
+          {booking.statusHistory.length > 0 && <ol class="appointment-history" aria-label="Statusgeschiedenis">
+            {booking.statusHistory.map((event) => <li>
+              <span>{event.fromStatus ? `Status bijgewerkt: ${status[event.status] || event.status}` : 'Aanvraag verzonden'}</span>
+              <time datetime={event.occurredAt}>{eventDate(event.occurredAt)}</time>
+            </li>)}
+          </ol>}
+        </div>
+        <div class="appointment-actions">
+          <a href={`/begeleiding/${booking.practitionerSlug}`}>Ander moment aanvragen</a>
+          <form action={`/api/account/begeleiding/${booking.id}/annuleren`} method="post" onsubmit="return confirm('Wil je deze aanvraag of afspraak annuleren?')">
+            <button type="submit">{booking.status === 'pending' ? 'Aanvraag intrekken' : 'Annuleren'}</button>
+          </form>
+        </div>
+      </article>)}
+    </div> : <div class="care-empty">
+      <p>Wanneer je een aanvraag verstuurt, verschijnt die hier automatisch. De therapeut moet je gekozen moment eerst bevestigen.</p>
+    </div>}
+  </section>
+
+  {past.length > 0 && <section class="care-history" aria-labelledby="care-history-title">
+    <span class="account-label">Eerder aangevraagd of afgesproken</span>
+    <h2 id="care-history-title">Overzicht</h2>
+    {past.map((booking) => <article id={`booking-${booking.id}`}>
+      <span>{new Intl.DateTimeFormat('nl-BE', { timeZone: 'Europe/Brussels', day: 'numeric', month: 'short', year: 'numeric' }).format(new Date(booking.startsAt))}</span>
+      <strong>{booking.practitionerName}</strong>
+      <small>{status[booking.status] || 'Status bijgewerkt'}</small>
+      {booking.statusHistory.length > 0 && <ol class="care-history__events" aria-label="Statusgeschiedenis">
+        {booking.statusHistory.map((event) => <li>
+          <span>{event.fromStatus ? `Status bijgewerkt: ${status[event.status] || event.status}` : event.status === 'pending' ? 'Aanvraag verzonden' : `Status: ${status[event.status] || event.status}`}</span>
+          <time datetime={event.occurredAt}>{eventDate(event.occurredAt)}</time>
+        </li>)}
+      </ol>}
+    </article>)}
+  </section>}
+</AccountLayout>
+
+<style>
+  .account-heading{margin-bottom:2.25rem}.account-heading h1{max-width:12ch;margin-bottom:.65rem;font-size:clamp(3rem,7vw,5.6rem)}.account-heading p{max-width:57ch;color:var(--muted);line-height:1.7}
+  .account-label{display:block;margin-bottom:.7rem;color:var(--pink);font-size:.7rem;font-weight:800;letter-spacing:.12em;text-transform:uppercase}
+  .account-message{margin-bottom:1rem;padding:.9rem 1rem;border-left:4px solid var(--pink);background:var(--pink-soft);font-size:.86rem}.account-message.success{border-color:var(--ink);background:#dcece7}
+  .care-section{padding:clamp(1.3rem,4vw,2rem);border:1px solid var(--line);border-radius:var(--radius-lg);background:var(--white)}.care-section__top{display:flex;flex-wrap:wrap;align-items:end;justify-content:space-between;gap:1.3rem;margin-bottom:1.4rem}.care-section h2,.care-history h2{margin:0;font-size:2rem}
+  .appointments{display:grid;gap:.7rem}.appointment-card{display:grid;grid-template-columns:auto 1fr;gap:1rem;align-items:start;padding:1rem;border:1px solid var(--line);border-radius:var(--radius-sm);scroll-margin-top:6rem}
+  .appointment-date{display:grid;width:3.3rem;height:3.3rem;place-content:center;border-radius:.7rem;background:var(--cream);text-align:center}.appointment-date strong{font-family:'DM Serif Display',Georgia,serif;font-size:1.45rem;line-height:1}.appointment-date span{font-size:.65rem;font-weight:800;text-transform:uppercase}
+  .appointment-main h3{margin:0 0 .3rem;font-family:'DM Sans',sans-serif;font-size:.95rem;font-weight:800;letter-spacing:0}.appointment-main>p{margin:.25rem 0 .6rem;color:var(--muted);font-size:.8rem;line-height:1.5}
+  .appointment-status{display:inline-flex;padding:.28rem .48rem;border-radius:999px;background:#dcece7;color:var(--ink);font-size:.67rem;font-weight:800}.appointment-status.pending{background:var(--yellow-soft)}
+  .appointment-history{display:grid;gap:.4rem;margin:.8rem 0 0;padding:0;list-style:none}.appointment-history li{display:flex;flex-wrap:wrap;justify-content:space-between;gap:.3rem .8rem;color:var(--muted);font-size:.66rem}.appointment-history time{font-variant-numeric:tabular-nums}
+  .appointment-actions{display:flex;flex-wrap:wrap;gap:.8rem;grid-column:2;font-size:.75rem;font-weight:800}.appointment-actions a,.appointment-actions button{border:0;background:none;color:var(--ink);font:inherit;font-weight:800;text-decoration:underline;cursor:pointer}
+  .care-empty{padding:1.4rem;border-radius:var(--radius-sm);background:var(--cream)}.care-empty p{max-width:60ch;margin:0;color:var(--muted);font-size:.88rem;line-height:1.7}
+  .care-history{margin-top:2.5rem}.care-history>article{display:grid;grid-template-columns:1fr auto;gap:.4rem;padding:1rem 0;border-bottom:1px solid var(--line);scroll-margin-top:6rem}.care-history span,.care-history small{color:var(--muted);font-size:.78rem}.care-history small{grid-column:2}.care-history__events{display:grid;gap:.35rem;grid-column:1/-1;margin:.3rem 0 0;padding:0;list-style:none}.care-history__events li{display:flex;flex-wrap:wrap;justify-content:space-between;gap:.25rem .8rem;color:var(--muted);font-size:.66rem}.care-history__events time{font-variant-numeric:tabular-nums}
+  @media(min-width:700px){.appointment-card{grid-template-columns:auto 1fr auto;align-items:center}.appointment-actions{grid-column:auto;justify-content:end}.care-history>article{grid-template-columns:10rem 1fr auto;align-items:center}.care-history small{grid-column:auto}}
+</style>

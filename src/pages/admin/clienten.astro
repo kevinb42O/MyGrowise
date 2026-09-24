@@ -1,0 +1,171 @@
+---
+import AdminLayout from '../../layouts/AdminLayout.astro';
+import AdminIcon from '../../components/admin/AdminIcon.astro';
+import { hasPermission } from '../../lib/adminAuth';
+import { auditPatientDirectoryAccess, getBookingForPatientCreation, getPatientReference, getPatientStaff, listPatientRecords } from '../../lib/clientRecords';
+
+const user = Astro.locals.currentUser!;
+const canWrite = hasPermission(user, 'client_records.write');
+const canAssign = hasPermission(user, 'client_records.assign');
+const canArchive = hasPermission(user, 'client_records.archive');
+const requestedStatus = Astro.url.searchParams.get('status') || 'active';
+const status = ['active', 'archived', 'all'].includes(requestedStatus) ? requestedStatus as 'active' | 'archived' | 'all' : 'active';
+await auditPatientDirectoryAccess(user, Astro.locals.requestId);
+const clients = await listPatientRecords(user, '', status);
+const staff = canAssign ? await getPatientStaff() : [];
+const bookingId = Astro.url.searchParams.get('boeking') || '';
+const booking = bookingId ? await getBookingForPatientCreation(user, bookingId) : null;
+const linkedPatient = booking?.patientId ? await getPatientReference(user, booking.patientId, Astro.locals.requestId) : null;
+const bookingEmailMatches = booking && !booking.patientId && booking.clientEmail
+  ? (await listPatientRecords(user, booking.clientEmail, 'active')).filter((client) => client.email?.toLowerCase() === booking.clientEmail.toLowerCase())
+      .filter((client) => !client.customerUserId || client.customerUserId === booking.customerUserId)
+  : [];
+const showBookingError = Boolean(bookingId && !booking);
+const formError = Astro.url.searchParams.get('fout') || '';
+const errors: Record<string, string> = {
+  invalid_input: 'Controleer de naam en het e-mailadres.', invalid_patient: 'Controleer de naam en het e-mailadres.', not_found: 'De afspraak bestaat niet of je hebt er geen toegang toe.',
+  not_allowed: 'Je hebt geen toegang tot deze dossieractie.',
+  booking_not_ready: 'Deze afspraak is nog niet bevestigd of afgerond.',
+  booking_already_linked: 'Deze afspraak is al aan een dossier gekoppeld.',
+  booking_patient_mismatch: 'Deze afspraakgegevens komen niet overeen met het cliëntendossier.',
+  patient_archived: 'Herstel het gearchiveerde dossier eerst voordat je er een afspraak aan koppelt.',
+  dossier_niet_gevonden: 'De afspraak of het dossier is niet gevonden.',
+};
+const date = (value: string) => new Intl.DateTimeFormat('nl-BE', { timeZone: 'Europe/Brussels', dateStyle: 'medium' }).format(new Date(value));
+const dateTime = (value: string) => new Intl.DateTimeFormat('nl-BE', { timeZone: 'Europe/Brussels', dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value));
+---
+
+<AdminLayout title="Cliëntendossiers" description="Beveiligde dossiers en verslagen voor begeleiding">
+  <div class="admin-page client-records-page">
+    <section class="admin-page-heading">
+      <div><p class="admin-eyebrow">Begeleiding · vertrouwelijk</p><h1>Cliëntendossiers</h1><p>Bewaar verslagen per cliënt en volg afspraken en toewijzingen op één beveiligde plek.</p></div>
+      {canWrite && <a class="admin-button admin-button--primary" href="#client-record-create"><AdminIcon name="customers" size={16}/> Nieuw dossier</a>}
+    </section>
+
+    {formError && <div class="admin-login__alert admin-login__alert--error" role="alert"><AdminIcon name="warning" size={17}/><span>{errors[formError] || 'De actie kon niet worden opgeslagen. Controleer je toegang en probeer opnieuw.'}</span></div>}
+
+    {bookingId && <section class="client-source-card" aria-labelledby="client-source-title">
+      <span class="client-record-icon"><AdminIcon name="calendar" size={18}/></span>
+      <div class="client-source-card__copy">
+        <p class="admin-eyebrow">Dossier vanuit afspraak</p>
+        {showBookingError ? <><h2 id="client-source-title">Afspraak niet beschikbaar</h2><p>Alleen een bevestigde of afgeronde afspraak uit jouw praktijk kan aan een dossier worden gekoppeld.</p></>
+          : linkedPatient ? <><h2 id="client-source-title">Afspraak is al gekoppeld</h2><p>{booking?.clientName} · {dateTime(booking!.startsAt)}</p><a class="admin-row-action" href={`/admin/clienten/${linkedPatient.id}`}>Open dossier <AdminIcon name="arrow" size={13}/></a></>
+          : booking?.patientId ? <><h2 id="client-source-title">Afspraak is aan een dossier gekoppeld</h2><p>{booking.clientName} · {dateTime(booking.startsAt)}. Dit dossier valt buiten jouw huidige toewijzingen.</p></>
+          : booking ? <><h2 id="client-source-title">{booking.clientName}</h2><p>{booking.clientEmail} · {dateTime(booking.startsAt)} · {booking.practitionerName}</p><p>Een nieuw dossier wordt aan het klantaccount gekoppeld. Een bestaand dossier kan je alleen na controle van de cliënt en het e-mailadres verbinden. Een gastboeking vraagt altijd een expliciete keuze.</p>
+            {canWrite && bookingEmailMatches.length > 0 ? <><div class="client-source-matches"><strong>Mogelijk bestaand dossier</strong><p>Deze actieve dossiers gebruiken hetzelfde e-mailadres. Controleer de cliëntidentiteit voordat je een afspraak koppelt.</p>{bookingEmailMatches.map((match) => <form method="post" action={`/api/admin/clienten/${match.id}/afspraken`}><input type="hidden" name="booking_id" value={booking.id}/><span><b>{match.fullName}</b><small>{match.email}</small></span><button class="admin-button" type="submit">Koppel aan dit dossier</button></form>)}</div><details class="client-source-create"><summary>Dit is een andere cliënt</summary><p>Maak alleen een apart dossier als je hebt gecontroleerd dat dit niet om dezelfde cliënt gaat.</p><form method="post" action="/api/admin/clienten"><input type="hidden" name="operation" value="from_booking"/><input type="hidden" name="booking_id" value={booking.id}/><button class="admin-button admin-button--primary" type="submit">Toch nieuw dossier maken</button></form></details></>
+              : canWrite && <form method="post" action="/api/admin/clienten"><input type="hidden" name="operation" value="from_booking"/><input type="hidden" name="booking_id" value={booking.id}/><button class="admin-button admin-button--primary" type="submit">Dossier aanmaken en afspraak koppelen</button></form>}
+          </> : null}
+      </div>
+    </section>}
+
+    {canWrite && <section class="client-create-panel admin-panel" id="client-record-create">
+      <header class="admin-panel__header"><div><h2>Cliënt toevoegen</h2><p>Medewerkers worden automatisch aan hun eigen nieuwe cliënt toegewezen.</p></div><span class="practice-private-badge"><AdminIcon name="lock" size={13}/> Privé</span></header>
+      <form class="client-create-form" method="post" action="/api/admin/clienten">
+        <label><span>Naam cliënt</span><input name="full_name" required minlength="2" maxlength="120" autocomplete="off" placeholder="Voor- en achternaam"/></label>
+        <label><span>E-mailadres <small>optioneel</small></span><input name="email" type="email" maxlength="254" autocomplete="off" placeholder="naam@voorbeeld.be"/><small>Wordt alleen gebruikt om het dossier praktisch terug te vinden en om afspraken handmatig te herkennen.</small></label>
+        {canAssign && <label><span>Toegewezen aan <small>optioneel</small></span><select name="assignee_user_id"><option value="">Nog niet toegewezen</option>{staff.map((member) => <option value={member.id}>{member.name}{member.roles.includes('practitioner') ? ' · Professional' : member.roles.includes('super_admin') ? ' · Superadmin' : ' · Medewerker'}</option>)}</select></label>}
+        <button class="admin-button admin-button--primary" type="submit"><AdminIcon name="check" size={15}/> Cliënt aanmaken</button>
+      </form>
+    </section>}
+
+    <section class="client-directory-panel admin-panel">
+      <header class="admin-panel__header"><div><h2>Cliënten</h2><p><span data-client-result-count aria-live="polite">{clients.length} dossier{clients.length === 1 ? '' : 's'}</span> in deze weergave · zoek op naam of e-mailadres</p></div><span class="client-directory-lock"><AdminIcon name="lock" size={14}/> Inhoud alleen zichtbaar in het dossier</span></header>
+      <form class="client-directory-toolbar" method="get" action="/admin/clienten" data-client-search-form>
+        {bookingId && <input type="hidden" name="boeking" value={bookingId}/>}
+        <label class="client-search"><span class="sr-only">Zoek cliënt</span><AdminIcon name="search" size={16}/><input type="search" data-client-search-input maxlength="80" placeholder="Naam of e-mailadres" autocomplete="off"/></label>
+        <label><span class="sr-only">Dossierstatus</span><select name="status" data-client-status><option value="active" selected={status === 'active'}>Actieve dossiers</option><option value="archived" selected={status === 'archived'}>Gearchiveerd</option><option value="all" selected={status === 'all'}>Alles</option></select></label>
+        <button class="admin-button" type="submit">Zoeken</button>
+      </form>
+      <div class="client-record-list" data-client-results>
+        {clients.map((client) => <a class="client-record-row" data-client-row href={`/admin/clienten/${client.id}`}>
+          <span class="client-record-avatar" aria-hidden="true">{client.fullName.trim().charAt(0).toUpperCase()}</span>
+          <span class="client-record-row__main"><strong>{client.fullName}</strong><small>{client.email || 'Geen e-mailadres opgegeven'}</small></span>
+          <span class="client-record-row__meta"><small>Toegewezen aan</small><strong>{client.activeAssignments.length ? client.activeAssignments.join(', ') : 'Nog niet toegewezen'}</strong></span>
+          <span class="client-record-row__meta"><small>Laatste verslag</small><strong>{client.latestNoteAt ? date(client.latestNoteAt) : 'Nog geen verslagen'}</strong></span>
+          <span class="client-record-row__meta"><small>Volgende afspraak</small><strong>{client.nextAppointmentAt ? dateTime(client.nextAppointmentAt) : 'Geen afspraak gepland'}</strong></span>
+          <span class:list={['admin-product-status', client.status === 'active' ? 'admin-product-status--published' : 'admin-product-status--archived']}><i></i>{client.status === 'active' ? 'Actief' : 'Gearchiveerd'}</span>
+          <AdminIcon name="arrow" size={15}/>
+        </a>)}
+      </div>
+      <div class="admin-empty-row" data-client-empty hidden={clients.length > 0}><div><span><AdminIcon name="customers" size={17}/></span><strong data-client-empty-title>{status === 'archived' ? 'Geen gearchiveerde dossiers' : 'Nog geen cliëntendossiers'}</strong><p data-client-empty-copy>Maak een cliënt aan of open een bevestigde afspraak om het eerste dossier te starten.</p></div></div>
+    </section>
+    <p class="client-records-footnote"><AdminIcon name="lock" size={14}/> Verslaginhoud verschijnt uitsluitend na het openen van een dossier. Toegang en dossierwijzigingen worden vastgelegd voor beveiligingscontrole.</p>
+  </div>
+</AdminLayout>
+
+<script>
+  const form = document.querySelector<HTMLFormElement>('[data-client-search-form]');
+  const searchInput = document.querySelector<HTMLInputElement>('[data-client-search-input]');
+  const statusInput = document.querySelector<HTMLSelectElement>('[data-client-status]');
+  const results = document.querySelector<HTMLElement>('[data-client-results]');
+  const emptyState = document.querySelector<HTMLElement>('[data-client-empty]');
+  const emptyTitle = document.querySelector<HTMLElement>('[data-client-empty-title]');
+  const emptyCopy = document.querySelector<HTMLElement>('[data-client-empty-copy]');
+  const resultCount = document.querySelector<HTMLElement>('[data-client-result-count]');
+  let searchTimer: ReturnType<typeof setTimeout>;
+  let latestRequest = 0;
+  const formatDate = (value: string, includeTime = false) => new Intl.DateTimeFormat('nl-BE', { timeZone: 'Europe/Brussels', dateStyle: 'medium', ...(includeTime ? { timeStyle: 'short' as const } : {}) }).format(new Date(value));
+  const element = (tag: string, className: string, content: string) => {
+    const node = document.createElement(tag);
+    node.className = className;
+    node.textContent = content;
+    return node;
+  };
+  const renderClient = (client: { id: string; fullName: string; email: string | null; status: string; activeAssignments: string[]; latestNoteAt: string | null; nextAppointmentAt: string | null }) => {
+    const row = document.createElement('a');
+    row.className = 'client-record-row';
+    row.href = `/admin/clienten/${encodeURIComponent(client.id)}`;
+    const avatar = element('span', 'client-record-avatar', client.fullName.trim().charAt(0).toUpperCase());
+    avatar.setAttribute('aria-hidden', 'true');
+    row.append(avatar);
+    const person = document.createElement('span'); person.className = 'client-record-row__main';
+    person.append(element('strong', '', client.fullName), element('small', '', client.email || 'Geen e-mailadres opgegeven'));
+    row.append(person);
+    const assignment = document.createElement('span'); assignment.className = 'client-record-row__meta';
+    assignment.append(element('small', '', 'Toegewezen aan'), element('strong', '', client.activeAssignments.length ? client.activeAssignments.join(', ') : 'Nog niet toegewezen'));
+    row.append(assignment);
+    const latest = document.createElement('span'); latest.className = 'client-record-row__meta';
+    latest.append(element('small', '', 'Laatste verslag'), element('strong', '', client.latestNoteAt ? formatDate(client.latestNoteAt) : 'Nog geen verslagen'));
+    row.append(latest);
+    const appointment = document.createElement('span'); appointment.className = 'client-record-row__meta';
+    appointment.append(element('small', '', 'Volgende afspraak'), element('strong', '', client.nextAppointmentAt ? formatDate(client.nextAppointmentAt, true) : 'Geen afspraak gepland'));
+    row.append(appointment);
+    const badge = element('span', `admin-product-status ${client.status === 'active' ? 'admin-product-status--published' : 'admin-product-status--archived'}`, client.status === 'active' ? 'Actief' : 'Gearchiveerd');
+    badge.prepend(document.createElement('i')); row.append(badge);
+    const arrow = document.createElement('span'); arrow.className = 'client-record-arrow'; arrow.setAttribute('aria-hidden', 'true'); arrow.textContent = '→'; row.append(arrow);
+    return row;
+  };
+  const refresh = async () => {
+    if (!form || !results || !searchInput || !statusInput) return;
+    const requestNumber = ++latestRequest;
+    const body = new URLSearchParams({ search: searchInput.value, status: statusInput.value });
+    form.setAttribute('aria-busy', 'true');
+    try {
+      const response = await fetch('/api/admin/clienten/zoeken', { method: 'POST', credentials: 'same-origin', headers: { 'content-type': 'application/x-www-form-urlencoded;charset=UTF-8' }, body });
+      if (!response.ok) throw new Error('search_failed');
+      const payload = await response.json();
+      if (requestNumber !== latestRequest || !Array.isArray(payload.clients)) return;
+      results.replaceChildren(...payload.clients.map(renderClient));
+      if (resultCount) resultCount.textContent = `${payload.clients.length} dossier${payload.clients.length === 1 ? '' : 's'}`;
+      if (emptyState) emptyState.hidden = payload.clients.length > 0;
+      if (emptyTitle) emptyTitle.textContent = payload.clients.length ? '' : searchInput.value ? 'Geen resultaten gevonden' : statusInput.value === 'archived' ? 'Geen gearchiveerde dossiers' : 'Nog geen cliëntendossiers';
+      if (emptyCopy) emptyCopy.textContent = payload.clients.length ? '' : searchInput.value ? 'Pas de zoekterm aan of kies een andere dossierstatus.' : 'Maak een cliënt aan of open een bevestigde afspraak om het eerste dossier te starten.';
+    } catch {
+      if (requestNumber === latestRequest && emptyTitle && emptyCopy && emptyState) {
+        emptyTitle.textContent = 'Zoeken tijdelijk niet beschikbaar';
+        emptyCopy.textContent = 'Je bestaande resultaten blijven behouden. Probeer het straks opnieuw.';
+        emptyState.hidden = false;
+      }
+    } finally {
+      if (requestNumber === latestRequest) form.removeAttribute('aria-busy');
+    }
+  };
+  searchInput?.addEventListener('input', () => { clearTimeout(searchTimer); searchTimer = setTimeout(refresh, 220); });
+  statusInput?.addEventListener('change', () => {
+    const url = new URL(window.location.href);
+    if (statusInput.value === 'active') url.searchParams.delete('status'); else url.searchParams.set('status', statusInput.value);
+    window.history.replaceState(null, '', url);
+    if (searchInput?.value) refresh(); else form?.requestSubmit();
+  });
+  form?.addEventListener('submit', (event) => { event.preventDefault(); clearTimeout(searchTimer); refresh(); });
+</script>

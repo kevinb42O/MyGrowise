@@ -42,7 +42,7 @@ const next = requestedNext.startsWith('/admin') && !requestedNext.startsWith('//
           <div class="admin-login__mobile-mark"><img src="/images/logo-lelie.webp" alt="" width="382" height="289" /><strong>MyGrowise</strong></div>
           <p class="admin-eyebrow">Welkom terug</p>
           <h2 id="login-title">Aanmelden</h2>
-          <p class="admin-login__intro">Meld je aan voor het organisatiebeheer van MyGrowise.</p>
+          <p class="admin-login__intro">Meld je aan voor je beveiligde MyGrowise-werkruimte.</p>
 
           {errorMessages[error] && <div class="admin-login__alert admin-login__alert--error" role="alert"><AdminIcon name="warning" size={17} /><span>{errorMessages[error]}</span></div>}
           {signedOut && <div class="admin-login__alert admin-login__alert--success" role="status"><AdminIcon name="check" size={17} /><span>Je bent veilig afgemeld.</span></div>}

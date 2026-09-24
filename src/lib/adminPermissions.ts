@@ -7,7 +7,7 @@ export const APP_ROLES = [
 ] as const;
 
 export type UserRole = (typeof APP_ROLES)[number];
-export type AdminRole = Exclude<UserRole, 'employee' | 'practitioner' | 'customer'>;
+export type AdminRole = Exclude<UserRole, 'customer'>;
 
 export const ADMIN_PERMISSIONS = [
   'dashboard.read',
@@ -17,6 +17,10 @@ export const ADMIN_PERMISSIONS = [
   'orders.refund',
   'customers.read',
   'customers.export',
+  'client_records.read',
+  'client_records.write',
+  'client_records.assign',
+  'client_records.archive',
   'products.read',
   'products.write',
   'products.review',
@@ -57,6 +61,8 @@ const permissions = (values: AdminPermission[]) => new Set<AdminPermission>(valu
 const ROLE_PERMISSIONS: Record<AdminRole, ReadonlySet<AdminPermission>> = {
   super_admin: all,
   support: permissions(['dashboard.read', 'orders.read', 'customers.read', 'bookings.read', 'bookings.manage', 'support.read', 'support.write', 'privacy.read', 'privacy.manage', 'internal_messages.read', 'internal_messages.write']),
+  employee: permissions(['client_records.read', 'client_records.write', 'internal_messages.read', 'internal_messages.write']),
+  practitioner: permissions(['client_records.read', 'client_records.write', 'internal_messages.read', 'internal_messages.write']),
 };
 
 export const isUserRole = (value: string): value is UserRole => (APP_ROLES as readonly string[]).includes(value);
@@ -70,6 +76,7 @@ export const firstAccessibleAdminPath = (roles: readonly UserRole[]) => {
   if (hasAdminPermission(roles, 'analytics.read')) return '/admin/analytics';
   if (hasAdminPermission(roles, 'products.read')) return '/admin/producten';
   if (hasAdminPermission(roles, 'orders.read')) return '/admin/bestellingen';
+  if (hasAdminPermission(roles, 'client_records.read')) return '/admin/clienten';
   return null;
 };
 
@@ -79,6 +86,7 @@ export const requiredAdminPermission = (path: string, method = 'GET'): AdminPerm
   if (path === '/admin/analytics') return 'analytics.read';
   if (path === '/admin/bestellingen' || path === '/admin/betalingen') return 'orders.read';
   if (path === '/admin/klanten' || path.startsWith('/admin/klanten/')) return 'customers.read';
+  if (path === '/admin/clienten' || path.startsWith('/admin/clienten/')) return 'client_records.read';
   if (path === '/admin/boekingen') return 'bookings.read';
   if (path === '/admin/agenda') return 'agenda.read';
   if (path.startsWith('/admin/professionals')) return 'professionals.read';
@@ -96,6 +104,10 @@ export const requiredAdminPermission = (path: string, method = 'GET'): AdminPerm
   if (path.startsWith('/api/admin/support')) return method === 'GET' ? 'support.read' : 'support.write';
   if (path.startsWith('/api/admin/privacy')) return method === 'GET' ? 'privacy.read' : 'privacy.manage';
   if (path.startsWith('/api/admin/bookings')) return method === 'GET' ? 'bookings.read' : 'bookings.manage';
+  if (path === '/api/admin/clienten/zoeken') return 'client_records.read';
+  if (path.startsWith('/api/admin/clienten/') && path.endsWith('/toewijzingen')) return 'client_records.assign';
+  if (path.startsWith('/api/admin/clienten/') && path.endsWith('/archiveren')) return 'client_records.archive';
+  if (path.startsWith('/api/admin/clienten') || path.startsWith('/api/admin/notities')) return method === 'GET' ? 'client_records.read' : 'client_records.write';
   if (path.startsWith('/api/internal/messages')) return 'internal_messages.read';
   if (path === '/api/admin/users') return 'users.manage';
   if (path.startsWith('/api/admin/work-items')) return 'operations.manage';

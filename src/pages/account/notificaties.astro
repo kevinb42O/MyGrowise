@@ -1,0 +1,71 @@
+---
+import AccountLayout from '../../layouts/AccountLayout.astro';
+import { listCustomerBookingNotifications } from '../../lib/supabase/accounts';
+
+const user = Astro.locals.currentUser!;
+Astro.response.headers.set('Cache-Control', 'private, no-store');
+const notifications = await listCustomerBookingNotifications(user.sub);
+const unread = notifications.filter((notification) => !notification.readAt).length;
+const statusMessage: Record<string, string> = {
+  pending: 'Je aanvraag is opnieuw in behandeling',
+  confirmed: 'Je aanvraag is bevestigd',
+  declined: 'Je aanvraag is niet bevestigd',
+  cancelled: 'Je afspraak is geannuleerd',
+  completed: 'Je afspraak is afgerond',
+  no_show: 'Je afspraak is niet doorgegaan',
+};
+const notificationDate = (value: string) => new Intl.DateTimeFormat('nl-BE', {
+  timeZone: 'Europe/Brussels', dateStyle: 'medium', timeStyle: 'short',
+}).format(new Date(value));
+---
+
+<AccountLayout title="Notificaties">
+  <section class="notification-heading">
+    <span class="eyebrow">Notificaties</span>
+    <h1>Je updates, op één plek.</h1>
+    <p>Statuswijzigingen van je begeleiding verschijnen hier in je account. Je ontvangt hierover geen statusupdates per e-mail.</p>
+  </section>
+
+  {Astro.url.searchParams.get('error') === '1' && <div class="notification-message" role="alert">Deze melding kon niet worden bijgewerkt. Vernieuw de pagina en probeer opnieuw.</div>}
+
+  <section class="notification-list" aria-labelledby="notification-list-title">
+    <header class="notification-list__heading">
+      <div><span class="account-label">Jouw account</span><h2 id="notification-list-title">Alle meldingen</h2></div>
+      <span class="notification-count">{unread ? `${unread} ongelezen` : 'Alles gelezen'}</span>
+    </header>
+
+    {notifications.length ? <div class="notification-items">
+      {notifications.map((notification) => {
+        const href = `/account/begeleiding#booking-${notification.bookingId}`;
+        const title = statusMessage[notification.status] || 'De status van je aanvraag is bijgewerkt';
+        return <article class:list={{ 'notification-item': true, 'is-unread': !notification.readAt }}>
+          <span class="notification-item__marker" aria-hidden="true"></span>
+          <div class="notification-item__content">
+            <div class="notification-item__top"><strong>{title}</strong>{!notification.readAt && <span class="notification-item__new">Nieuw</span>}</div>
+            <p>{notification.practitionerName} · afspraak op {notificationDate(notification.startsAt)}</p>
+            <time datetime={notification.createdAt}>{notificationDate(notification.createdAt)}</time>
+          </div>
+          {!notification.readAt
+            ? <form action={`/api/account/notificaties/${notification.id}/lezen`} method="post"><button type="submit">Bekijk aanvraag <span aria-hidden="true">→</span></button></form>
+            : <a class="notification-item__link" href={href}>Bekijk afspraak <span aria-hidden="true">→</span></a>}
+        </article>;
+      })}
+    </div> : <div class="notification-empty">
+      <span aria-hidden="true">✳</span>
+      <h3>Nog geen statusupdates</h3>
+      <p>Als de therapeut je aanvraag bijwerkt, verschijnt de melding hier. Je aanvraag zelf kan je altijd volgen bij Mijn begeleiding.</p>
+      <a href="/account/begeleiding">Naar Mijn begeleiding →</a>
+    </div>}
+  </section>
+</AccountLayout>
+
+<style>
+  .notification-heading{margin-bottom:2.25rem}.notification-heading h1{max-width:13ch;margin-bottom:.65rem;font-size:clamp(3rem,7vw,5.6rem)}.notification-heading p{max-width:58ch;color:var(--muted);line-height:1.7}
+  .account-label{display:block;margin-bottom:.7rem;color:var(--pink);font-size:.7rem;font-weight:800;letter-spacing:.12em;text-transform:uppercase}
+  .notification-message{margin-bottom:1rem;padding:.9rem 1rem;border-left:4px solid var(--pink);background:var(--pink-soft);font-size:.86rem}
+  .notification-list{overflow:hidden;border:1px solid var(--line);border-radius:var(--radius-lg);background:var(--white)}.notification-list__heading{display:flex;flex-wrap:wrap;align-items:end;justify-content:space-between;gap:1rem;padding:clamp(1.2rem,3.5vw,1.8rem);border-bottom:1px solid var(--line)}.notification-list__heading .account-label{margin-bottom:.5rem}.notification-list__heading h2{margin:0;font-size:clamp(1.65rem,3vw,2.2rem)}.notification-count{padding:.42rem .65rem;border-radius:999px;background:var(--cream);color:var(--muted);font-size:.7rem;font-weight:800}
+  .notification-items{display:grid}.notification-item{display:grid;grid-template-columns:auto minmax(0,1fr);gap:.75rem 1rem;align-items:start;padding:1.2rem clamp(1.1rem,3.5vw,1.8rem);border-bottom:1px solid var(--line)}.notification-item:last-child{border-bottom:0}.notification-item.is-unread{background:linear-gradient(90deg,rgba(220,236,231,.55),transparent 65%)}.notification-item__marker{width:.62rem;height:.62rem;margin-top:.37rem;border-radius:50%;background:transparent}.notification-item.is-unread .notification-item__marker{background:#5cae91;box-shadow:0 0 0 4px #dcece7}.notification-item__content{min-width:0}.notification-item__top{display:flex;flex-wrap:wrap;align-items:center;gap:.55rem}.notification-item__top strong{font-size:.88rem}.notification-item__new{padding:.18rem .4rem;border-radius:999px;background:#dcece7;color:var(--ink);font-size:.58rem;font-weight:850;letter-spacing:.06em;text-transform:uppercase}.notification-item__content p{margin:.34rem 0;color:var(--muted);font-size:.76rem;line-height:1.5}.notification-item__content time{color:var(--muted);font-size:.67rem;font-variant-numeric:tabular-nums}.notification-item form,.notification-item__link{grid-column:2;justify-self:start;margin-top:.1rem}.notification-item button,.notification-item__link{display:inline-flex;align-items:center;gap:.4rem;padding:0;border:0;background:none;color:var(--ink);font:inherit;font-size:.72rem;font-weight:850;text-decoration:none;cursor:pointer}.notification-item button:hover,.notification-item__link:hover{text-decoration:underline}.notification-item button span,.notification-item__link span{transition:transform .2s ease}.notification-item button:hover span,.notification-item__link:hover span{transform:translateX(3px)}
+  .notification-empty{padding:clamp(2rem,6vw,4rem) 1.5rem;text-align:center}.notification-empty>span{display:grid;width:2.8rem;height:2.8rem;margin:0 auto 1rem;place-items:center;border-radius:50%;background:var(--pink-soft);color:var(--ink);font-size:1.3rem}.notification-empty h3{margin:0;font-family:'DM Sans',sans-serif;font-size:1rem;font-weight:850;letter-spacing:0}.notification-empty p{max-width:48ch;margin:.55rem auto 1rem;color:var(--muted);font-size:.8rem;line-height:1.65}.notification-empty a{color:var(--ink);font-size:.75rem;font-weight:850;text-decoration:none}.notification-empty a:hover{text-decoration:underline}
+  @media(min-width:680px){.notification-item{grid-template-columns:auto minmax(0,1fr) auto;align-items:center}.notification-item form,.notification-item__link{grid-column:auto;justify-self:end}}
+  @media(prefers-reduced-motion:reduce){.notification-item button span,.notification-item__link span{transition:none}}
+</style>

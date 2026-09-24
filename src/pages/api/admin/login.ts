@@ -19,9 +19,15 @@ export const POST: APIRoute = async ({ request, cookies, url, locals }) => {
   const adminDestination = authenticated ? firstAccessibleAdminPath(authenticated.user.roles) : null;
   if (!authenticated || (!adminDestination && !(authenticated.user.roles.includes('practitioner') && authenticated.user.practitionerId))) { const current = attempts.get(clientKey); attempts.set(clientKey, { count: (current?.count || 0) + 1, resetAt: current?.resetAt && current.resetAt > now ? current.resetAt : now + WINDOW_MS }); await new Promise((resolve) => setTimeout(resolve, 250)); return redirectToLogin(url, 'invalid', requestedNext || '/admin'); }
   attempts.delete(clientKey); cookies.set(SUPABASE_SESSION_COOKIE, authenticated.accessToken, supabaseSessionCookieOptions());
-  const requestedPermission = requestedNext ? requiredAdminPermission(requestedNext) : null;
-  const destination = requestedPermission && hasPermission(authenticated.user, requestedPermission) ? requestedNext : adminDestination || '/praktijk';
-  const canOpenRequested = (destination.startsWith('/admin') && Boolean(requiredAdminPermission(destination)) && hasPermission(authenticated.user, requiredAdminPermission(destination)!)) || (destination.startsWith('/praktijk') && authenticated.user.roles.includes('practitioner') && authenticated.user.practitionerId);
+  const requestedPath = requestedNext ? new URL(requestedNext, url.origin).pathname : '';
+  const requestedPermission = requestedPath ? requiredAdminPermission(requestedPath) : null;
+  const canOpenPracticeDestination = requestedNext.startsWith('/praktijk') && authenticated.user.roles.includes('practitioner') && Boolean(authenticated.user.practitionerId);
+  const destination = requestedPermission && hasPermission(authenticated.user, requestedPermission)
+    ? requestedNext
+    : canOpenPracticeDestination ? requestedNext : adminDestination || '/praktijk';
+  const destinationPath = new URL(destination, url.origin).pathname;
+  const destinationPermission = requiredAdminPermission(destinationPath);
+  const canOpenRequested = (destination.startsWith('/admin') && Boolean(destinationPermission) && hasPermission(authenticated.user, destinationPermission!)) || (destination.startsWith('/praktijk') && authenticated.user.roles.includes('practitioner') && authenticated.user.practitionerId);
   return canOpenRequested ? new Response(null, { status: 303, headers: { location: destination } }) : redirectToLogin(url, 'forbidden', destination);
 };
 export const ALL: APIRoute = () => new Response('Methode niet toegestaan.', { status: 405 });

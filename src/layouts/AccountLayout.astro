@@ -2,15 +2,18 @@
 import '../styles/global.css';
 import '../styles/account.css';
 import AccountNavIcon from '../components/account/AccountNavIcon.astro';
+import { countUnreadCustomerBookingNotifications } from '../lib/supabase/accounts';
 
 interface Props { title: string }
 const { title } = Astro.props;
 const user = Astro.locals.currentUser!;
 const currentPath = Astro.url.pathname;
+const unreadNotifications = await countUnreadCustomerBookingNotifications(user.sub);
 const nav = [
   { href: '/account', label: 'Vandaag', icon: 'home' as const, exact: true },
   { href: '/account/bibliotheek', label: 'Mijn bibliotheek', icon: 'library' as const },
   { href: '/account/begeleiding', label: 'Mijn begeleiding', icon: 'care' as const },
+  { href: '/account/notificaties', label: 'Notificaties', icon: 'notifications' as const },
   { href: '/account/ondersteuning', label: 'Berichten', icon: 'messages' as const },
   { href: '/account/transacties', label: 'Transacties', icon: 'receipt' as const },
   { href: '/account/instellingen', label: 'Account', icon: 'settings' as const },
@@ -29,8 +32,34 @@ const initials = user.name.split(/\s+/).map((part) => part[0]).join('').slice(0,
     <a class="skip-link" href="#account-main">Ga naar de inhoud</a>
     <header class="account-header"><div class="account-header__inner"><a href="/account" class="account-brand"><img src="/images/logo-lelie.webp" alt="" width="382" height="289" /><span>MyGrowise</span></a><span class="account-header__context"><i></i>Mijn ruimte</span><div class="account-header__right"><span class="account-header__avatar" aria-label={`Aangemeld als ${user.name}`}>{initials}</span><form action="/api/account/logout" method="post"><button type="submit">Afmelden</button></form></div></div></header>
     <div class="account-shell">
-      <aside class="account-sidebar"><div class="account-person"><span>{initials}</span><div><strong>{user.name}</strong><small>Mijn MyGrowise</small></div></div><nav aria-label="Mijn MyGrowise"><ul>{nav.map((item) => <li><a href={item.href} class:list={{ 'is-active': active(item) }} aria-current={active(item) ? 'page' : undefined}><AccountNavIcon name={item.icon}/>{item.label}</a></li>)}</ul></nav><a href="/" class="account-back">← Naar MyGrowise</a></aside>
+      <aside class="account-sidebar"><div class="account-person"><span>{initials}</span><div><strong>{user.name}</strong><small>Mijn MyGrowise</small></div></div><nav aria-label="Mijn MyGrowise"><ul>{nav.map((item) => <li><a href={item.href} class:list={{ 'is-active': active(item) }} aria-current={active(item) ? 'page' : undefined}><AccountNavIcon name={item.icon}/>{item.label}{item.icon === 'notifications' && <span class="account-nav-badge" data-account-notification-badge aria-label={`${unreadNotifications} ongelezen ${unreadNotifications === 1 ? 'melding' : 'meldingen'}`} hidden={unreadNotifications === 0}>{unreadNotifications > 99 ? '99+' : unreadNotifications}</span>}</a></li>)}</ul></nav><a href="/" class="account-back">← Naar MyGrowise</a></aside>
       <main id="account-main" class="account-main"><slot /></main>
     </div>
+    <script>
+      const badge = document.querySelector<HTMLSpanElement>('[data-account-notification-badge]');
+      if (badge) {
+        const refreshUnreadCount = async () => {
+          if (document.visibilityState !== 'visible') return;
+          try {
+            const response = await fetch('/api/account/notificaties/ongelezen', { credentials: 'same-origin', cache: 'no-store', headers: { Accept: 'application/json' } });
+            if (!response.ok) return;
+            const result = await response.json() as { unread?: unknown };
+            if (typeof result.unread !== 'number' || !Number.isFinite(result.unread)) return;
+            const count = Math.max(0, Math.floor(result.unread));
+            badge.textContent = count > 99 ? '99+' : String(count);
+            badge.hidden = count === 0;
+            badge.setAttribute('aria-label', `${count} ongelezen ${count === 1 ? 'melding' : 'meldingen'}`);
+          } catch {
+            // Keep the server-rendered count visible if a background refresh fails.
+          }
+        };
+        const timer = window.setInterval(refreshUnreadCount, 60_000);
+        document.addEventListener('visibilitychange', refreshUnreadCount);
+        window.addEventListener('pagehide', () => {
+          window.clearInterval(timer);
+          document.removeEventListener('visibilitychange', refreshUnreadCount);
+        }, { once: true });
+      }
+    </script>
   </body>
 </html>

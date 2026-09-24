@@ -1,0 +1,131 @@
+---
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+import AdminIcon from '../../../components/admin/AdminIcon.astro';
+import { hasPermission } from '../../../lib/adminAuth';
+import { getPatientDetail, getPatientStaff, noteTypeLabels } from '../../../lib/clientRecords';
+
+const user = Astro.locals.currentUser!;
+const patientId = Astro.params.id || '';
+const historyNoteId = Astro.url.searchParams.get('geschiedenis') || '';
+const requestedNotePage = Number(Astro.url.searchParams.get('pagina') || '1');
+const patient = await getPatientDetail(user, patientId, historyNoteId, Astro.locals.requestId, requestedNotePage);
+if (!patient) return Astro.redirect('/admin/clienten?fout=dossier_niet_gevonden');
+const staff = patient.canManageAssignments ? await getPatientStaff() : [];
+const canWrite = hasPermission(user, 'client_records.write');
+const activeAssignments = patient.assignments.filter((item) => !item.endedAt);
+const assignedIds = new Set(activeAssignments.map((item) => item.userId));
+const correctionId = Astro.url.searchParams.get('correctie') || '';
+const correctionTarget = patient.notes.find((note) => note.id === correctionId && note.status === 'final') || null;
+const message = Astro.url.searchParams.get('melding') || '';
+const errorCode = Astro.url.searchParams.get('fout') || '';
+const messages: Record<string, string> = {
+  aangemaakt: 'Cliëntendossier aangemaakt.', afspraak: 'Cliëntendossier aangemaakt en afspraak gekoppeld.',
+  concept: 'Verslag als concept opgeslagen.', definitief: 'Verslag definitief opgeslagen.', toegewezen: 'Cliënt toegewezen.',
+  toewijzing_beeindigd: 'Toewijzing beëindigd.', afspraak_gekoppeld: 'Afspraak aan het dossier gekoppeld.', gearchiveerd: 'Dossier gearchiveerd.', hersteld: 'Dossier hersteld en weer actief.',
+};
+const errors: Record<string, string> = {
+  ongeldige_invoer: 'Controleer de datum, titel en inhoud van het verslag.', dossier_niet_gevonden: 'Dit dossier bestaat niet of is niet aan jouw account toegewezen.',
+  versieconflict: 'Dit concept is intussen gewijzigd. Herlaad het dossier en controleer de nieuwste versie voordat je opnieuw opslaat.',
+  dossier_gearchiveerd: 'Dit dossier is gearchiveerd. Herstel het dossier als superadmin om nieuwe verslagen te kunnen toevoegen.',
+  afspraak_niet_gekoppeld: 'Koppel de afspraak eerst aan dit dossier voordat je het verslag opslaat.',
+  correctie_niet_geldig: 'De gekozen correctie hoort niet bij dit dossier of is nog geen definitief verslag.',
+  concept_niet_bewerkbaar: 'Alleen de auteur van dit concept en superadmins kunnen het bewerken.',
+  verslag_niet_opgeslagen: 'Het verslag kon niet worden opgeslagen. Een definitief verslag kan alleen met een aanvullend verslag worden gecorrigeerd.',
+  toewijzing_mislukt: 'De toewijzing kon niet worden bijgewerkt.', afspraak_koppelen_mislukt: 'De afspraak kon niet worden gekoppeld.',
+  afspraak_al_gekoppeld: 'Deze afspraak is inmiddels aan een ander dossier gekoppeld.', archiveren_mislukt: 'Het dossier kon niet worden gearchiveerd.',
+  afspraak_klopt_niet: 'De naam, het e-mailadres of het klantaccount van deze afspraak komt niet overeen met dit dossier.',
+  klantaccount_al_gekoppeld: 'Dit klantaccount is al aan een ander cliëntendossier gekoppeld.',
+};
+const formatDate = (value: string) => new Intl.DateTimeFormat('nl-BE', { timeZone: 'Europe/Brussels', dateStyle: 'medium' }).format(new Date(value));
+const formatDateTime = (value: string) => new Intl.DateTimeFormat('nl-BE', { timeZone: 'Europe/Brussels', dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value));
+const formatLocalNow = () => {
+  const parts = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Brussels', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).formatToParts(new Date());
+  const part = (type: string) => parts.find((item) => item.type === type)?.value || '00';
+  return `${part('year')}-${part('month')}-${part('day')}T${part('hour')}:${part('minute')}`;
+};
+const noteLabel = (value: string) => noteTypeLabels[value as keyof typeof noteTypeLabels] || 'Verslag';
+const statusLabel: Record<string, string> = { pending: 'Aangevraagd', confirmed: 'Bevestigd', completed: 'Afgerond', no_show: 'Niet verschenen', cancelled: 'Geannuleerd', declined: 'Afgewezen' };
+const bookingId = Astro.url.searchParams.get('boeking') || '';
+const selectedBooking = patient.linkableBookings.find((item) => item.id === bookingId);
+---
+
+<AdminLayout title={patient.fullName} description="Beveiligd cliëntendossier">
+  <div class="admin-page client-records-page client-record-detail">
+    <a class="admin-back-link" href="/admin/clienten">← Terug naar cliëntendossiers</a>
+    <section class="admin-page-heading client-record-heading">
+      <div><p class="admin-eyebrow">Cliëntendossier · vertrouwelijk</p><h1>{patient.fullName}</h1><p>{patient.email || 'Geen e-mailadres opgegeven'} · Aangemaakt {formatDate(patient.createdAt)}</p></div>
+      <div class="client-record-heading__actions">
+        <span class:list={['admin-product-status', patient.status === 'active' ? 'admin-product-status--published' : 'admin-product-status--archived']}><i></i>{patient.status === 'active' ? 'Actief dossier' : 'Gearchiveerd'}</span>
+        {patient.linkedCustomer && <span class="client-account-badge"><AdminIcon name="customers" size={14}/> Account gekoppeld · {patient.linkedCustomer.fullName}</span>}
+        {patient.canArchive && patient.status === 'active' && <form method="post" action={`/api/admin/clienten/${patient.id}/archiveren`}><input type="hidden" name="operation" value="archive"/><button class="admin-button" type="submit">Dossier archiveren</button></form>}
+        {patient.canArchive && patient.status === 'archived' && <form method="post" action={`/api/admin/clienten/${patient.id}/archiveren`}><input type="hidden" name="operation" value="restore"/><button class="admin-button admin-button--primary" type="submit">Dossier herstellen</button></form>}
+      </div>
+    </section>
+
+    {message && messages[message] && <div class="admin-login__alert admin-login__alert--success" role="status"><AdminIcon name="check" size={17}/><span>{messages[message]}</span></div>}
+    {errorCode && <div class="admin-login__alert admin-login__alert--error" role="alert"><AdminIcon name="warning" size={17}/><span>{errors[errorCode] || 'De actie is niet uitgevoerd. Controleer je toegang en probeer opnieuw.'}</span></div>}
+
+    <div class="client-record-summary-grid" aria-label="Dossiersamenvatting">
+      <article><span>Verslagen</span><strong>{patient.noteCount}</strong><small>Chronologisch bijgehouden</small></article>
+      <article><span>Afspraken</span><strong>{patient.bookingCount}</strong><small>Gekoppeld aan dit dossier</small></article>
+      <article><span>Toegewezen aan</span><strong>{activeAssignments.length}</strong><small>{activeAssignments.length ? activeAssignments.map((item) => item.name).join(', ') : 'Alleen superadmins'}</small></article>
+      <article><span>Bijgewerkt</span><strong>{formatDate(patient.updatedAt)}</strong><small>Laatste dossierwijziging</small></article>
+    </div>
+
+    <div class="client-record-layout">
+      <main class="client-record-main">
+        <section class="admin-panel client-notes-panel" id="verslagen">
+          <header class="admin-panel__header"><div><h2>Verslagen</h2><p>Concepten zijn bewerkbaar door de auteur en superadmins. Definitieve verslagen blijven ongewijzigd.</p></div><span class="practice-private-badge"><AdminIcon name="lock" size={13}/> Privé</span></header>
+
+          {patient.notes.length ? <div class="client-note-timeline">{patient.notes.map((note) => {
+            const canEditDraft = patient.status === 'active' && note.status === 'draft' && (patient.canManageAssignments || note.createdBy === user.sub);
+            const linkedBooking = patient.bookings.find((item) => item.id === note.bookingId);
+            return <article class="client-note" id={`verslag-${note.id}`}>
+              <div class="client-note__timeline"><span><AdminIcon name={note.type === 'correction' ? 'warning' : 'content'} size={15}/></span><i></i></div>
+              <div class="client-note__body">
+                <header class="client-note__header"><div><p class="admin-eyebrow">{noteLabel(note.type)} · {formatDateTime(note.occurredAt)}</p><h3>{note.current.title}</h3>{note.bookingId && <small>{linkedBooking ? `Gekoppeld aan afspraak van ${formatDateTime(linkedBooking.startsAt)}` : 'Gekoppeld aan een afspraak'}</small>}{note.correctsNoteTitle && <small>Aanvulling bij: {note.correctsNoteTitle}</small>}</div><span class:list={['client-note-status', note.status === 'final' && 'is-final']}>{note.status === 'final' ? 'Definitief' : 'Concept'} · v{note.currentVersion}</span></header>
+                <div class="client-note__content">{note.current.body}</div>
+                <footer class="client-note__footer"><span>{note.status === 'final' && note.finalizedAt ? `Definitief gemaakt ${formatDateTime(note.finalizedAt)}` : `Laatst opgeslagen ${formatDateTime(note.updatedAt)}`}</span><div>
+                  {note.currentVersion > 1 && <a class="client-note-action" href={`/admin/clienten/${patient.id}?geschiedenis=${note.id}&pagina=${patient.notePage}#verslag-${note.id}`}>Versiegeschiedenis</a>}
+                  {note.status === 'final' && canWrite && patient.status === 'active' && <a class="client-note-action" href={`/admin/clienten/${patient.id}?correctie=${note.id}&pagina=${patient.notePage}#nieuw-verslag`}>Aanvulling/correctie</a>}
+                </div></footer>
+                {note.versions.length > 0 && <section class="client-note-history" aria-label="Eerdere versies"><h4>Eerdere versies</h4>{note.versions.filter((version) => version.versionNumber < note.currentVersion).map((version) => <details><summary>Versie {version.versionNumber} · {formatDateTime(version.createdAt)} · {version.title}</summary><div class="client-note__content">{version.body}</div></details>)}</section>}
+                {canEditDraft && <details class="client-note-edit"><summary>Concept bewerken</summary><form method="post" action={`/api/admin/notities/${note.id}?pagina=${patient.notePage}`}><input type="hidden" name="expected_version" value={note.currentVersion}/><label><span>Titel</span><input name="title" required minlength="2" maxlength="120" value={note.current.title}/></label><label><span>Verslag</span><textarea name="body" required maxlength="20000" rows="7">{note.current.body}</textarea></label><div class="client-note-edit__actions"><button class="admin-button" name="submit_status" value="draft" type="submit">Concept opslaan</button><button class="admin-button admin-button--primary" name="submit_status" value="final" type="submit">Definitief maken</button></div></form></details>}
+              </div>
+            </article>;
+          })}</div> : <div class="admin-empty-row"><div><span><AdminIcon name="content" size={17}/></span><strong>Nog geen verslagen</strong><p>Leg na een gesprek het eerste verslag vast. Kies zelf of je het als concept bewaart of definitief maakt.</p></div></div>}
+          {patient.noteCount > 0 && <nav class="client-note-pagination" aria-label="Paginering van verslagen">
+            <span>Pagina {patient.notePage} van {patient.notePageCount} · verslagen {((patient.notePage - 1) * 50) + 1}–{Math.min(patient.notePage * 50, patient.noteCount)} van {patient.noteCount}</span>
+            <div>{patient.notePage > 1 && <a class="admin-button" href={`/admin/clienten/${patient.id}?pagina=${patient.notePage - 1}#verslagen`}>Nieuwere verslagen</a>}{patient.notePage < patient.notePageCount && <a class="admin-button" href={`/admin/clienten/${patient.id}?pagina=${patient.notePage + 1}#verslagen`}>Oudere verslagen</a>}</div>
+          </nav>}
+        </section>
+
+        {canWrite && patient.status === 'active' && <section class="admin-panel client-note-create" id="nieuw-verslag">
+          <header class="admin-panel__header"><div><h2>{correctionTarget ? 'Aanvulling of correctie' : 'Nieuw verslag'}</h2><p>{correctionTarget ? `Wordt als afzonderlijk item gekoppeld aan “${correctionTarget.current.title}”.` : 'Bewaar de tekst als concept of maak het verslag definitief.'}</p></div></header>
+          <form method="post" action={`/api/admin/clienten/${patient.id}/notities`}>
+            {correctionTarget ? <><input type="hidden" name="note_type" value="correction"/><input type="hidden" name="corrects_note_id" value={correctionTarget.id}/></> : <label><span>Type verslag</span><select name="note_type">{Object.entries(noteTypeLabels).filter(([key]) => key !== 'correction').map(([key, label]) => <option value={key} selected={key === 'session'}>{label}</option>)}</select></label>}
+            <div class="client-note-create__grid"><label><span>Datum en tijd</span><input type="datetime-local" name="occurred_at" required value={formatLocalNow()}/></label>{patient.linkableBookings.length > 0 && <label><span>Koppel een afspraak <small>optioneel</small></span><select name="booking_id"><option value="">Geen afspraak koppelen</option>{patient.linkableBookings.map((item) => <option value={item.id} selected={item.id === bookingId}>{formatDateTime(item.startsAt)} · {item.practitionerName}</option>)}</select></label>}</div>
+            <label><span>Titel</span><input name="title" required minlength="2" maxlength="120" placeholder="Bijvoorbeeld: Sessie — thema en voortgang" value={correctionTarget ? `Aanvulling op: ${correctionTarget.current.title}` : undefined}/></label>
+            <label><span>Verslag</span><textarea name="body" required maxlength="20000" rows="9" placeholder="Leg relevante observaties, afspraken en opvolging zorgvuldig vast."></textarea><small>Maximaal 20.000 tekens. Verslaginhoud wordt niet opgenomen in auditregels of meldingen.</small></label>
+            <div class="client-note-create__actions"><button class="admin-button" name="submit_status" value="draft" type="submit">Opslaan als concept</button><button class="admin-button admin-button--primary" name="submit_status" value="final" type="submit"><AdminIcon name="check" size={15}/> Definitief opslaan</button></div>
+          </form>
+        </section>}
+      </main>
+
+      <aside class="client-record-side">
+        <section class="admin-panel"><header class="admin-panel__header"><div><h2>Toewijzingen</h2><p>Wie toegang heeft tot dit dossier</p></div></header><div class="client-assignment-list">
+          {patient.assignments.length ? patient.assignments.map((assignment) => <div class="client-assignment-row"><span class="client-record-avatar"><AdminIcon name="professionals" size={14}/></span><span><strong>{assignment.name}</strong><small>{assignment.endedAt ? `Toegang beëindigd ${formatDate(assignment.endedAt)}` : 'Actief toegewezen'}</small></span>{patient.canManageAssignments && !assignment.endedAt && <form method="post" action={`/api/admin/clienten/${patient.id}/toewijzingen`}><input type="hidden" name="user_id" value={assignment.userId}/><input type="hidden" name="operation" value="unassign"/><button class="admin-icon-button client-assignment-remove" type="submit" aria-label={`Toewijzing van ${assignment.name} beëindigen`} title="Toewijzing beëindigen"><AdminIcon name="close" size={14}/></button></form>}</div>) : <div class="client-inline-empty">Geen medewerker toegewezen. Superadmins behouden dossierbeheer.</div>}
+          {patient.canManageAssignments && <form class="client-assignment-add" method="post" action={`/api/admin/clienten/${patient.id}/toewijzingen`}><label><span>Medewerker toevoegen</span><select name="user_id" required><option value="" disabled selected>Kies teamlid</option>{staff.filter((member) => !assignedIds.has(member.id)).map((member) => <option value={member.id}>{member.name}</option>)}</select></label><input type="hidden" name="operation" value="assign"/><button class="admin-button" type="submit">Toewijzen</button></form>}
+        </div></section>
+
+        <section class="admin-panel"><header class="admin-panel__header"><div><h2>Afspraken</h2><p>{patient.bookingCount > patient.bookings.length ? `Nieuwste ${patient.bookings.length} van ${patient.bookingCount} gekoppelde afspraken` : `${patient.bookingCount} gekoppelde afspraak${patient.bookingCount === 1 ? '' : 'en'}`}</p></div></header>
+          {patient.bookings.length ? <div class="client-booking-list">{patient.bookings.map((booking) => <article><span class="client-record-icon"><AdminIcon name="calendar" size={15}/></span><div><strong>{formatDateTime(booking.startsAt)}</strong><small>{booking.practitionerName} · {statusLabel[booking.status] || booking.status}</small></div></article>)}</div> : <div class="client-inline-empty">Nog geen afspraken gekoppeld.</div>}
+          {selectedBooking && <form class="client-booking-link-form" method="post" action={`/api/admin/clienten/${patient.id}/afspraken`}><p>Afspraak geselecteerd: {formatDateTime(selectedBooking.startsAt)} · {selectedBooking.practitionerName}</p><input type="hidden" name="booking_id" value={selectedBooking.id}/><button class="admin-button admin-button--primary" type="submit">Afspraak koppelen</button></form>}
+          {patient.linkableBookings.length > 0 && !selectedBooking && <div class="client-booking-link-list"><p>Gevonden afspraken met hetzelfde e-mailadres, nog niet gekoppeld:</p>{patient.linkableBookings.map((booking) => <form method="post" action={`/api/admin/clienten/${patient.id}/afspraken`}><input type="hidden" name="booking_id" value={booking.id}/><span>{formatDateTime(booking.startsAt)} · {booking.practitionerName}</span><button class="admin-button" type="submit">Koppel</button></form>)}</div>}
+        </section>
+
+        <section class="client-security-note"><AdminIcon name="lock" size={16}/><div><strong>Vertrouwelijk dossier</strong><p>Toegang wordt beperkt tot toegewezen teamleden en superadmins. Dossierinzage en wijzigingen worden gelogd zonder verslaginhoud.</p></div></section>
+      </aside>
+    </div>
+  </div>
+</AdminLayout>
