@@ -465,9 +465,7 @@ html { background: var(--admin-canvas); }
 .team-create-form footer p { display:flex; align-items:center; gap:7px; margin:0; color:var(--admin-muted); font-size:11px; }
 .team-table-panel { margin-bottom:0; }
 
-/* Analytics uses the dashboard's green interaction system; the data line stays blue. */
-.website-refresh { border:1px solid var(--admin-green); background:var(--admin-green); box-shadow:0 6px 16px rgba(23,61,53,.14); }
-.website-refresh:hover { background:#0f302a; }
+/* The data line stays blue; the refresh control is styled after legacy analytics rules. */
 .website-traffic-chart { position:relative; }
 .website-traffic-chart__capture { fill:transparent; cursor:crosshair; outline:none; }
 .website-traffic-chart__hover-guide { stroke:#2949b8; stroke-width:1; stroke-dasharray:3 3; opacity:.55; pointer-events:none; }
@@ -1053,4 +1051,18 @@ html { background: var(--admin-canvas); }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; }
+}
+
+/* Must follow the legacy analytics rules above: the refresh control uses the
+   same soft olive treatment as the active dashboard navigation. */
+.website-refresh {
+  border-color: #c8ddd5;
+  background: var(--admin-green-soft);
+  color: var(--admin-green);
+  box-shadow: none;
+}
+.website-refresh:hover {
+  border-color: #b7d1c7;
+  background: #dce9e3;
+  color: var(--admin-green);
 }
