@@ -51,7 +51,8 @@ export const createStaffUser = async (input: { email: string; fullName: string; 
     if (error?.message.toLowerCase().includes('already')) throw new Error('email_taken');
     throw new Error('create_failed');
   }
-  await client.from('user_roles').delete().eq('user_id', data.user.id).eq('role', 'customer');
+  const { error: customerRoleError } = await client.from('user_roles').delete().eq('user_id', data.user.id).eq('role', 'customer');
+  if (customerRoleError) throw new Error('role_failed');
   const { error: roleError } = await client.from('user_roles').upsert({ user_id: data.user.id, role: input.role });
   if (roleError) throw new Error('role_failed');
   await writeSecurityAudit({ actor, action: 'staff.user_created', objectType: 'user', objectId: data.user.id, after: { email, full_name: fullName, role: input.role } });
@@ -78,6 +79,8 @@ export const changeStaffRole = async (input: { userId: string; role: StaffRole; 
   }
   const { error: insertError } = await client.from('user_roles').upsert({ user_id: input.userId, role: input.role });
   if (insertError) throw new Error('role_failed');
+  const { error: customerRoleError } = await client.from('user_roles').delete().eq('user_id', input.userId).eq('role', 'customer');
+  if (customerRoleError) throw new Error('role_failed');
   await writeSecurityAudit({ actor, action: 'staff.role_changed', objectType: 'user', objectId: input.userId, before: { role: oldStaffRole || null }, after: { role: input.role } });
 };
 
