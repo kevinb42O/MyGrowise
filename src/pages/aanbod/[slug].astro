@@ -31,7 +31,7 @@ const reported = Astro.url.searchParams.get('gemeld') === '1';
 const statusLabels: Record<string, string> = { pending_payment: 'Wacht op betaling', paid: 'Betaling bevestigd', fulfilled: 'Betaling bevestigd', cancelled: 'Geannuleerd' };
 ---
 
-<MainLayout activeNav="zelf" title={`${product.title} — bestellen bij MyGrowise`} description={`Bestel ${product.title} met handmatige betaling via Wise.`}>
+<MainLayout activeNav="zelf" title={`${product.title} — bestellen bij MyGrowise`} description={`Bestel ${product.title} met een SEPA-overschrijving naar de Wise-rekening van MyGrowise.`}>
   <section class="wise-checkout">
     <div class="container wise-checkout__grid">
       <div>
@@ -39,10 +39,10 @@ const statusLabels: Record<string, string> = { pending_payment: 'Wacht op betali
         <span class="eyebrow">{type}</span>
         <h1>{product.title}</h1>
         <p class="lead">{product.summary}</p>
-        <div class="wise-checkout__price"><span>Te betalen</span><strong>{money}</strong><small>Handmatige overschrijving via Wise</small></div>
-        <div class="wise-checkout__steps"><div><b>1</b><p>Maak een bestelling aan met je MyGrowise-account.</p></div><div><b>2</b><p>Maak het bedrag over via Wise en gebruik de unieke betalingsreferentie.</p></div><div><b>3</b><p>Na ontvangst en controle van je betaling activeren we je bestelling.</p></div></div>
+        <div class="wise-checkout__price"><span>Te betalen</span><strong>{money}</strong><small>SEPA-overschrijving</small></div>
+        <div class="wise-checkout__steps"><div><b>1</b><p>Maak een bestelling aan met je MyGrowise-account.</p></div><div><b>2</b><p>Betaal met de QR-code of neem de gegevens over in je bankapp. Gebruik de unieke betalingsreferentie.</p></div><div><b>3</b><p>Na ontvangst en controle van je betaling activeren we je bestelling.</p></div></div>
       </div>
-      <aside class="wise-checkout__card" aria-label="Bestellen en betalen via Wise">
+      <aside class="wise-checkout__card" aria-label="Bestellen en betalen via overschrijving">
         {order ? <>
           <span class="wise-checkout__provider">Bestelling {order.id.slice(-8).toUpperCase()}</span>
           <p class="order-status" role="status">{statusLabels[order.status] || order.status}</p>
@@ -61,7 +61,7 @@ const statusLabels: Record<string, string> = { pending_payment: 'Wacht op betali
           {canCheckout ? wiseDetails ? <form action="/api/checkout/wise-order" method="post"><input type="hidden" name="product" value={product.slug}/><button class="button button-primary" type="submit">Bestel en toon betaalinstructies</button></form> : <div class="notice" role="status">De Wise-rekeninggegevens worden ingesteld. Je kan alvast een account aanmaken; betalen wordt mogelijk zodra de gegevens klaarstaan.</div> : <div class="account-actions"><a class="button button-primary" href={registerHref}>Account aanmaken</a><a class="wise-checkout__fallback" href={loginHref}>Ik heb al een account — inloggen</a></div>}
           {created && <p class="notice" role="status">Je account is aangemaakt. De bestelling kan worden afgerond zodra de Wise-rekeninggegevens zijn ingesteld.</p>}
         </>}
-        {pageMessage === 'niet-beschikbaar' && <p class="notice" role="alert">Bestellen via Wise is op dit moment niet beschikbaar. Probeer het later opnieuw.</p>}
+        {pageMessage === 'niet-beschikbaar' && <p class="notice" role="alert">Bestellen is op dit moment niet beschikbaar. Probeer het later opnieuw.</p>}
       </aside>
     </div>
   </section>
