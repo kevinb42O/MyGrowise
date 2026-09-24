@@ -2,21 +2,47 @@
 import AdminIcon from './AdminIcon.astro';
 import { getInternalThread, listInternalThreads, listMessageContacts } from '../../lib/internalMessaging';
 
-interface Props { userId: string; surface: 'admin' | 'practice'; selectedThreadId?: string; }
-const { userId, surface, selectedThreadId = '' } = Astro.props;
-const [threads, contacts, selected] = await Promise.all([listInternalThreads(userId), listMessageContacts(userId), selectedThreadId ? getInternalThread(selectedThreadId, userId) : Promise.resolve(null)]);
-const basePath = surface === 'practice' ? '/praktijk/berichten' : '/admin/berichten';
+interface Props { userId: string; surface: 'admin' | 'practice'; selectedThreadId?: string; compose?: boolean; }
+const { userId, surface, selectedThreadId = '', compose = false } = Astro.props;
+const [threads, contacts, selected] = await Promise.all([
+  listInternalThreads(userId),
+  listMessageContacts(userId),
+  selectedThreadId ? getInternalThread(selectedThreadId, userId) : Promise.resolve(null),
+]);
+const basePath = surface === 'practice' ? '/praktijk/berichten' : '/admin/berichten?view=team';
+const threadHref = (threadId: string) => `${basePath}${basePath.includes('?') ? '&' : '?'}thread=${threadId}`;
+const composeHref = `${basePath}${basePath.includes('?') ? '&' : '?'}compose=1`;
 const formatDate = (value: string) => new Intl.DateTimeFormat('nl-BE', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }).format(new Date(value));
+const initials = (value: string) => value.split(/\s+/).filter(Boolean).map((part) => part[0]).join('').slice(0, 2).toUpperCase() || 'MG';
 ---
 
-<div class="internal-inbox">
+<section class="internal-inbox" aria-label="Interne communicatie">
   <aside class="internal-inbox__threads" aria-label="Gesprekken">
-    <a class="admin-button admin-button--primary" href="#nieuw-bericht"><AdminIcon name="plus" size={15}/> Nieuw bericht</a>
-    <div class="internal-thread-list">{threads.length ? threads.map((thread) => <a href={`${basePath}?thread=${thread.id}`} class:list={['internal-thread-link', { 'is-active': selected?.id === thread.id, 'is-unread': thread.unread }]}><span><strong>{thread.subject}</strong><small>{thread.participants.join(', ') || 'MyGrowise-team'}</small><small>{thread.lastMessagePreview}</small></span><time datetime={thread.lastMessageAt}>{formatDate(thread.lastMessageAt)}</time>{thread.unread && <i aria-label="Ongelezen"></i>}</a>) : <div class="admin-empty-row"><div><span><AdminIcon name="messages" size={17}/></span><strong>Nog geen berichten</strong><p>Start een gesprek met een collega.</p></div></div>}</div>
+    <header class="internal-inbox__threads-head"><div><span>Interne inbox</span><strong>Gesprekken</strong></div><a class="internal-new-message" href={composeHref} aria-label="Nieuw bericht"><AdminIcon name="plus" size={17}/></a></header>
+    <nav class="internal-thread-list" aria-label="Lijst met gesprekken">
+      {threads.length ? threads.map((thread) => <a href={threadHref(thread.id)} class:list={['internal-thread-link', { 'is-active': selected?.id === thread.id, 'is-unread': thread.unread }]}>
+        <span class="internal-thread-link__avatar" aria-hidden="true">{initials(thread.participants[0] || 'MyGrowise')}</span>
+        <span class="internal-thread-link__copy"><strong>{thread.subject}</strong><small>{thread.participants.join(', ') || 'MyGrowise-team'}</small><em>{thread.lastMessagePreview}</em></span>
+        <time datetime={thread.lastMessageAt}>{formatDate(thread.lastMessageAt)}</time>{thread.unread && <i aria-label="Ongelezen"></i>}
+      </a>) : <div class="internal-thread-empty"><span><AdminIcon name="messages" size={17}/></span><strong>Nog geen gesprekken</strong><p>Start hier je eerste interne afstemming.</p></div>}
+    </nav>
   </aside>
-  <section class="internal-inbox__conversation" aria-live="polite">
-    {selected ? <><header class="admin-panel__header"><div><p class="admin-eyebrow">Intern gesprek</p><h2>{selected.subject}</h2><p>{selected.participants.filter((participant) => participant.id !== userId).map((participant) => participant.name).join(', ') || 'Alleen jij'}</p></div></header><div class="internal-message-list">{selected.messages.map((message) => <article class:list={['internal-message', { 'is-own': message.senderId === userId }]}><header><strong>{message.senderName}</strong><time datetime={message.createdAt}>{formatDate(message.createdAt)}</time></header>{message.body.split(/\n{2,}/).map((paragraph) => <p>{paragraph}</p>)}</article>)}</div><form class="internal-reply-form" method="post" action={`/api/internal/messages/${selected.id}`}><input type="hidden" name="surface" value={surface}/><label><span class="sr-only">Antwoord</span><textarea name="body" required maxlength="4000" rows="4" placeholder="Schrijf een intern bericht…"></textarea></label><div><small>Gebruik deze inbox niet voor cliëntgegevens, intake, diagnoses of sessienotities.</small><button class="admin-button admin-button--primary" type="submit">Verstuur <AdminIcon name="arrow" size={14}/></button></div></form></> : <div class="internal-inbox__welcome"><span><AdminIcon name="messages" size={22}/></span><h2>Interne communicatie</h2><p>Kies een gesprek of start een nieuw bericht. Berichten blijven binnen het MyGrowise-team.</p></div>}
-  </section>
-</div>
 
-<section class="admin-panel internal-compose" id="nieuw-bericht"><header class="admin-panel__header"><div><h2>Nieuw intern bericht</h2><p>Selecteer één of meerdere teamleden. Alleen medewerkers met een MyGrowise-account verschijnen hier.</p></div></header>{contacts.length ? <form class="admin-product-form" action="/api/internal/messages" method="post"><input type="hidden" name="surface" value={surface}/><label><span>Onderwerp *</span><input name="subject" required minlength="2" maxlength="180"/></label><label><span>Aan *</span><select name="recipient_ids" multiple required size={Math.min(Math.max(contacts.length, 3), 8)}>{contacts.map((contact) => <option value={contact.id}>{contact.name} · {contact.email}</option>)}</select><small>Gebruik Ctrl/Cmd om meerdere ontvangers te kiezen.</small></label><label><span>Bericht *</span><textarea name="body" required maxlength="4000" rows="6"></textarea></label><div class="admin-form-actions"><button class="admin-button admin-button--primary" type="submit">Verstuur bericht <AdminIcon name="arrow" size={15}/></button></div></form> : <div class="admin-empty-row"><div><span><AdminIcon name="customers" size={17}/></span><strong>Geen collega’s beschikbaar</strong><p>Een collega moet eerst een actief MyGrowise-staf- of praktijkaccount hebben.</p></div></div>}</section>
+  <section class="internal-inbox__conversation" aria-live="polite">
+    {selected ? <>
+      <header class="internal-conversation-head"><div class="internal-conversation-head__avatar" aria-hidden="true">{initials(selected.participants.filter((participant) => participant.id !== userId).map((participant) => participant.name).join(' ') || 'MyGrowise')}</div><div><span>Intern gesprek</span><h2>{selected.subject}</h2><p>{selected.participants.filter((participant) => participant.id !== userId).map((participant) => participant.name).join(', ') || 'Alleen jij'}</p></div></header>
+      <div class="internal-message-list">{selected.messages.map((message) => <article class:list={['internal-message', { 'is-own': message.senderId === userId }]}><header><strong>{message.senderName}</strong><time datetime={message.createdAt}>{formatDate(message.createdAt)}</time></header>{message.body.split(/\n{2,}/).map((paragraph) => <p>{paragraph}</p>)}</article>)}</div>
+      <form class="internal-reply-form" method="post" action={`/api/internal/messages/${selected.id}`}><input type="hidden" name="surface" value={surface}/><label><span class="sr-only">Antwoord</span><textarea name="body" required maxlength="4000" rows="4" placeholder="Schrijf je antwoord…"></textarea></label><footer><small><AdminIcon name="lock" size={13}/> Deel hier geen cliëntgegevens, intake of sessienotities.</small><button class="admin-button admin-button--primary" type="submit">Verstuur <AdminIcon name="arrow" size={14}/></button></footer></form>
+    </> : compose && contacts.length ? <div class="internal-compose-view" id="nieuw-bericht">
+      <header><span>Nieuw gesprek</span><h2>Stuur een collega een bericht</h2><p>Kies één ontvanger, voeg een helder onderwerp toe en verstuur veilig binnen MyGrowise.</p></header>
+      <form class="internal-compose-form" action="/api/internal/messages" method="post"><input type="hidden" name="surface" value={surface}/>
+        <label class="internal-compose-form__recipient"><span>Ontvanger</span><select name="recipient_ids" required><option value="" selected disabled>Kies een collega…</option>{contacts.map((contact) => <option value={contact.id}>{contact.name} · {contact.email}</option>)}</select><small>Alleen teamleden met een actief MyGrowise-account staan in deze lijst.</small></label>
+        <label><span>Onderwerp</span><input name="subject" required minlength="2" maxlength="180" placeholder="Waarover wil je afstemmen?"/></label>
+        <label class="internal-compose-form__body"><span>Bericht</span><textarea name="body" required maxlength="4000" rows="8" placeholder="Schrijf je bericht…"></textarea></label>
+        <footer><p><AdminIcon name="lock" size={14}/> Interne communicatie, geen cliënt- of gezondheidsgegevens.</p><button class="admin-button admin-button--primary" type="submit">Verstuur bericht <AdminIcon name="arrow" size={15}/></button></footer>
+      </form>
+    </div> : <div class="internal-inbox__welcome">
+      <span><AdminIcon name="messages" size={22}/></span><p class="admin-eyebrow">Interne communicatie</p><h2>Een rustige plek voor je team.</h2><p>Houd praktische afstemming met collega’s samen, zonder cliëntinformatie in berichten te plaatsen.</p>{contacts.length ? <a class="admin-button admin-button--primary" href={composeHref}><AdminIcon name="plus" size={15}/> Nieuw bericht</a> : <small>Er zijn nog geen andere actieve teamaccounts beschikbaar.</small>}
+    </div>}
+  </section>
+</section>
