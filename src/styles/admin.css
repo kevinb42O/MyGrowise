@@ -229,9 +229,9 @@ html { background: var(--admin-canvas); }
   cursor: pointer;
 }
 .admin-button:hover { border-color: #a3a3a3; background: var(--admin-subtle); }
-.admin-body .admin-button--primary { border-color: var(--admin-green); background: var(--admin-green); color: white; }
-.admin-body .admin-button--primary:hover { border-color: var(--admin-green-hover); background: var(--admin-green-hover); color: white; }
-.admin-body .admin-button--primary:focus-visible { color: white; }
+.admin-body .admin-button--primary { border-color: var(--admin-green-soft); background: var(--admin-green-soft); color: var(--admin-green); }
+.admin-body .admin-button--primary:hover { border-color: var(--admin-border-strong); background: #dfeae6; color: var(--admin-green); }
+.admin-body .admin-button--primary:focus-visible { color: var(--admin-green); }
 .admin-table-actions { display: grid; gap: .45rem; min-width: 12rem; }
 .admin-table-actions form { display: flex; flex-wrap: wrap; gap: .4rem; align-items: center; }
 .admin-table-actions select { min-height: 2.1rem; max-width: 11rem; border: 1px solid var(--admin-border); border-radius: .45rem; background: white; padding: .25rem .45rem; color: var(--admin-text); font: inherit; font-size: .75rem; }
@@ -280,7 +280,7 @@ html { background: var(--admin-canvas); }
 .internal-compose select[multiple] { min-height: 7rem; }
 @media (max-width: 760px) { .internal-inbox { grid-template-columns: 1fr; } .internal-inbox__threads { border-right: 0; border-bottom: 1px solid var(--admin-border); } .internal-message { max-width: 94%; } .internal-reply-form > div { align-items: start; flex-direction: column; } }
 .admin-body .admin-button--primary:disabled,
-.admin-body .admin-button--primary[aria-disabled='true'] { border-color: #9aaca7; background: #9aaca7; color: white; cursor: not-allowed; opacity: .72; }
+.admin-body .admin-button--primary[aria-disabled='true'] { border-color: var(--admin-subtle); background: var(--admin-subtle); color: var(--admin-faint); cursor: not-allowed; opacity: 1; }
 
 .admin-preview-notice {
   display: flex;
@@ -559,8 +559,8 @@ html { background: var(--admin-canvas); }
 .content-editor__seo-fields .admin-field { padding-top: 14px; }
 .content-editor__seo-fields textarea { min-height: 82px; }
 .content-editor__actions { margin: 0 22px; }
-.content-editor .admin-button--primary { border-color: var(--admin-green); background: var(--admin-green); box-shadow: none; }
-.content-editor .admin-button--primary:hover { border-color: var(--admin-green-hover); background: var(--admin-green-hover); }
+.content-editor .admin-button--primary { border-color: var(--admin-green-soft); background: var(--admin-green-soft); box-shadow: none; }
+.content-editor .admin-button--primary:hover { border-color: var(--admin-border-strong); background: #dfeae6; }
 .admin-edit-grid { display: grid; grid-template-columns: minmax(0, 1fr) 280px; align-items: start; gap: 18px; }
 .admin-product-aside dl { margin: 0; padding: 8px 18px; }
 .admin-product-aside dl > div { padding: 11px 0; border-bottom: 1px solid var(--admin-border); }
@@ -635,8 +635,8 @@ html { background: var(--admin-canvas); }
 .admin-password-field input { padding-right: 48px; }
 .admin-password-field button { position: absolute; top: 6px; right: 6px; display: grid; width: 34px; height: 34px; place-items: center; padding: 0; border: 0; border-radius: 5px; background: transparent; color: var(--admin-muted); cursor: pointer; }
 .admin-password-field button:hover { background: var(--admin-subtle); color: var(--admin-text); }
-.admin-login__submit { display: flex; width: 100%; min-height: 46px; align-items: center; justify-content: center; gap: 9px; margin-top: 3px; border: 1px solid var(--admin-green); border-radius: 7px; background: var(--admin-green); color: white; font-size: 12px; font-weight: 600; cursor: pointer; transition: background 120ms ease, transform 120ms ease; }
-.admin-login__submit:hover { background: #0e2b25; }
+.admin-login__submit { display: flex; width: 100%; min-height: 46px; align-items: center; justify-content: center; gap: 9px; margin-top: 3px; border: 1px solid var(--admin-green-soft); border-radius: 7px; background: var(--admin-green-soft); color: var(--admin-green); font-size: 12px; font-weight: 600; cursor: pointer; transition: background 120ms ease, transform 120ms ease; }
+.admin-login__submit:hover { border-color: var(--admin-border-strong); background: #dfeae6; }
 .admin-login__submit:active { transform: translateY(1px); }
 .admin-login__help { margin: 26px 0 0; color: var(--admin-faint); font-size: 10px; text-align: center; }
 
@@ -1166,5 +1166,19 @@ html { background: var(--admin-canvas); }
 
 .admin-body .internal-new-message,
 .admin-body .internal-new-message .admin-icon {
-  color: #fff;
+  color: var(--admin-green);
 }
+
+.internal-new-message { background: var(--admin-green-soft); box-shadow: none; }
+.internal-new-message:hover { background: #dfeae6; }
+.unified-agenda__new, .unified-agenda__save { border-color: var(--admin-green-soft); background: var(--admin-green-soft); color: var(--admin-green); }
+.unified-agenda__new:hover, .unified-agenda__save:hover { border-color: var(--admin-border-strong); background: #dfeae6; }
+.unified-agenda .fc .fc-button-primary:not(:disabled).fc-button-active,
+.unified-agenda .fc .fc-button-primary:not(:disabled):active { border-color: var(--admin-green-soft); background: var(--admin-green-soft); color: var(--admin-green); text-shadow: none; }
+.unified-agenda .fc .fc-button-primary:not(:disabled).fc-button-active:hover,
+.unified-agenda .fc .fc-button-primary:not(:disabled):active:hover { border-color: var(--admin-border-strong); background: #dfeae6; color: var(--admin-green); }
+.agenda-day-heading.is-today strong, .agenda-month-cell.is-today > header strong { background: var(--admin-green-soft); color: var(--admin-green); }
+.support-inbox__queue > header > a { background: var(--admin-green-soft); color: var(--admin-green); }
+.content-editor .admin-button--primary, .content-editor .admin-button--primary:hover { color: var(--admin-green); }
+.practice-day__toggle input:checked + span { background: var(--admin-green-soft); }
+.practice-day__toggle input:checked + span::after { background: var(--admin-green); }
