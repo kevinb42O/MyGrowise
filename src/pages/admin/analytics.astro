@@ -4,7 +4,15 @@ import AdminIcon from '../../components/admin/AdminIcon.astro';
 import { getSuperadminOverview } from '../../lib/superAdmin';
 import { getAdminAnalytics } from '../../lib/adminAnalytics';
 
-const [overview, analytics] = await Promise.all([getSuperadminOverview(), getAdminAnalytics()]);
+const rangeParam = Astro.url.searchParams.get('periode') || '7d';
+const ranges = [{ key: '1d', label: '24 uur', days: 1 }, { key: '7d', label: '7 dagen', days: 7 }, { key: '30d', label: '30 dagen', days: 30 }, { key: '90d', label: '3 maanden', days: 90 }, { key: '365d', label: '12 maanden', days: 365 }];
+const selectedRange = ranges.find((range) => range.key === rangeParam) || ranges[1];
+const [overview, analytics] = await Promise.all([getSuperadminOverview(), getAdminAnalytics(selectedRange.days)]);
+const chartWidth = 1000; const chartHeight = 300; const chartLeft = 42; const chartRight = 18; const chartTop = 18; const chartBottom = 34; const maxValue = Math.max(4, ...analytics.trend.map((point) => point.value));
+const toPoint = (point: { value: number }, index: number) => { const x = chartLeft + (analytics.trend.length === 1 ? 0 : index / (analytics.trend.length - 1) * (chartWidth - chartLeft - chartRight)); const y = chartTop + (1 - point.value / maxValue) * (chartHeight - chartTop - chartBottom); return { x: Number(x.toFixed(2)), y: Number(y.toFixed(2)) }; };
+const points = analytics.trend.map(toPoint); const line = points.map((point) => `${point.x},${point.y}`).join(' '); const baseline = chartHeight - chartBottom; const area = points.length ? `${chartLeft},${baseline} ${line} ${points[points.length - 1].x},${baseline}` : '';
+const displayDate = (value: string) => new Intl.DateTimeFormat('nl-BE', { day: 'numeric', month: 'short' }).format(new Date(`${value}T12:00:00Z`));
+const rangeDescription = selectedRange.days === 1 ? 'Vandaag' : `Afgelopen ${selectedRange.label.toLowerCase()} · ${displayDate(analytics.trend[0].date)} – ${displayDate(analytics.trend[analytics.trend.length - 1].date)}`;
 
 const metrics = [
   { label: 'Consented sessies', value: String(analytics.sessions), detail: 'First-party, laatste 30 dagen', icon: 'customers' },
@@ -18,31 +26,12 @@ const commerceFunnel = [['Sessies', 100, String(analytics.self.sessions)], ['Rou
 const careFunnel = [['Sessies', 100, String(analytics.care.sessions)], ['Route “begeleiding”', width(analytics.care.route, analytics.care.sessions), String(analytics.care.route)], ['Professional bekeken', width(analytics.care.professional, analytics.care.sessions), String(analytics.care.professional)], ['Boeking geklikt', width(analytics.care.booking, analytics.care.sessions), String(analytics.care.booking)], ['Boeking bevestigd', 0, '—']];
 ---
 
-<AdminLayout title="Analytics" description="Privacyvriendelijke groei- en conversieanalytics voor MyGrowise">
+<AdminLayout title="Website-overzicht" description="Privacyvriendelijke websiteanalytics voor MyGrowise">
   <div class="admin-page">
-    <section class="admin-page-heading" aria-labelledby="analytics-title">
-      <div>
-        <p class="admin-eyebrow">Groei & conversie</p>
-        <h1 id="analytics-title">Analytics</h1>
-        <p>Volg acquisitie, gedrag en conversie over beide klantroutes—zonder antwoorden, scores of therapeutische informatie te verzamelen.</p>
-      </div>
-      <div class="admin-page-actions">
-        <a class="admin-button" href="/admin/instellingen"><AdminIcon name="content" size={16} /> Meetinstellingen</a>
-      </div>
-    </section>
+    <section class="website-overview-head" aria-labelledby="analytics-title"><div><p>Website</p><h1 id="analytics-title">Overzicht</h1><span>Zie in één oogopslag hoe MyGrowise wordt bezocht.</span></div><div class="website-overview-head__actions"><small><AdminIcon name="calendar" size={16}/> {analytics.lastEventAt ? `Bijgewerkt ${new Intl.DateTimeFormat('nl-BE', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }).format(new Date(analytics.lastEventAt))}` : 'Wacht op eerste bezoek'}</small><a class="website-refresh" href={`/admin/analytics?periode=${selectedRange.key}`}><AdminIcon name="arrow" size={16}/> Vernieuwen</a></div></section>
+    <section class="website-period" aria-labelledby="website-period-title"><strong id="website-period-title">Periode</strong><nav aria-label="Selecteer periode">{ranges.map((range) => <a href={`/admin/analytics?periode=${range.key}`} class:list={{ 'is-active': selectedRange.key === range.key }} aria-current={selectedRange.key === range.key ? 'page' : undefined}>{range.label}</a>)}<a href="/admin/analytics?periode=365d">Dit jaar</a></nav><p>{rangeDescription}</p></section>
 
-    <div class="admin-preview-notice" role="status"><AdminIcon name="check" size={18} /><div><strong>First-party eventlaag actief</strong>Alleen na expliciete toestemming worden route- en conversie-events verzameld. Geen inhoud van berichten, profielen of gezondheidsinformatie.</div></div>
-
-    <div class="analytics-toolbar">
-      <nav class="analytics-tabs" aria-label="Analyticsweergaven">
-        <a class="is-active" href="/admin/analytics" aria-current="page">Overzicht</a>
-        <a href="/admin/analytics#acquisitie">Acquisitie</a>
-        <a href="/admin/analytics#funnels">Funnels</a>
-        <a href="/admin/analytics#content">Content</a>
-        <a href="/admin/analytics#kwaliteit">Datakwaliteit</a>
-      </nav>
-      <label class="analytics-range">Periode <select><option>Laatste 30 dagen</option><option>Laatste 7 dagen</option><option>Laatste 90 dagen</option><option>Dit jaar</option></select></label>
-    </div>
+    <section class="website-traffic-card" aria-labelledby="traffic-title"><header><div><span><AdminIcon name="analytics" size={21}/></span><div><h2 id="traffic-title">Bezoeken doorheen de tijd</h2><p>Het aantal geconsenteerde websitebezoeken per dag.</p></div></div></header><div class="website-traffic-chart"><svg viewBox={`0 0 ${chartWidth} ${chartHeight}`} role="img" aria-label={`Dagelijkse bezoeken voor ${selectedRange.label}`} preserveAspectRatio="none"><defs><linearGradient id="website-traffic-fill" x1="0" x2="0" y1="0" y1="1"><stop offset="0%" stop-color="#2848b9" stop-opacity=".18"/><stop offset="100%" stop-color="#2848b9" stop-opacity="0"/></linearGradient></defs>{[0, .25, .5, .75, 1].map((tick) => { const y = chartTop + tick * (chartHeight - chartTop - chartBottom); const value = Math.round(maxValue * (1 - tick)); return <g><line x1={chartLeft} x2={chartWidth - chartRight} y1={y} y2={y}/><text x={chartLeft - 8} y={y + 4}>{value}</text></g>})}{area && <polygon points={area} class="website-traffic-chart__area"/>}<polyline points={line} class="website-traffic-chart__line"/>{points.map((point, index) => <circle cx={point.x} cy={point.y} r="3" class="website-traffic-chart__point"><title>{`${displayDate(analytics.trend[index].date)}: ${analytics.trend[index].value} bezoeken`}</title></circle>)}</svg><div class="website-traffic-chart__dates">{analytics.trend.filter((_, index) => analytics.trend.length <= 8 || index === 0 || index === analytics.trend.length - 1 || index % Math.ceil(analytics.trend.length / 6) === 0).map((point) => <span>{displayDate(point.date)}</span>)}</div></div><details><summary>Toon cijfers per dag</summary><div>{analytics.trend.map((point) => <p><span>{displayDate(point.date)}</span><strong>{point.value} bezoeken</strong></p>)}</div></details></section>
 
     <section class="admin-metrics" aria-label="Analytics kerncijfers">
       {metrics.map((metric) => (
@@ -51,13 +40,6 @@ const careFunnel = [['Sessies', 100, String(analytics.care.sessions)], ['Route �
           <strong>{metric.value}</strong><small class="status-waiting">{metric.detail}</small>
         </article>
       ))}
-    </section>
-
-    <section class="admin-panel" aria-labelledby="traffic-title">
-      <header class="admin-panel__header"><div><h2 id="traffic-title">Sessies & conversie</h2><p>Dagelijkse trend voor de geselecteerde periode</p></div><span class="admin-state">{analytics.events} events</span></header>
-      <div class="admin-chart">
-        {analytics.trend.length ? <div class="analytics-trend">{analytics.trend.map((point) => <div title={`${point.date}: ${point.value} sessies`}><i style={`height:${Math.max(8, Math.round(point.value / Math.max(...analytics.trend.map((item) => item.value)) * 100))}%`}></i><small>{point.date.slice(5)}</small></div>)}</div> : <div class="admin-chart__empty"><div><span><AdminIcon name="analytics" size={18} /></span><strong>Nog geen consented sessies</strong><p>De meetlaag is actief; de grafiek vult zodra een bezoeker toestemming geeft.</p></div></div>}
-      </div>
     </section>
 
     <div class="analytics-grid" id="funnels">
