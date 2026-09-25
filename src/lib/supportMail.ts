@@ -6,7 +6,7 @@ type Row = Record<string, any>;
 const digest = (value: string) => createHash('sha256').update(value).digest('hex');
 export const supportMailReady = () => Boolean(import.meta.env.SUPPORT_SMTP_VERIFIED === 'true' && import.meta.env.SUPPORT_SMTP_USER?.trim() && import.meta.env.SUPPORT_SMTP_PASSWORD?.trim() && import.meta.env.SUPPORT_FROM_EMAIL?.trim());
 export const supportTokenHash = digest;
-const siteOrigin = () => import.meta.env.PROD ? 'https://mygrowise.be' : (import.meta.env.PUBLIC_SITE_URL || 'http://localhost:4321').replace(/\/$/, '');
+const siteOrigin = () => (import.meta.env.PUBLIC_SITE_URL || (import.meta.env.PROD ? 'https://mygrowise.vercel.app' : 'http://localhost:4321')).replace(/\/$/, '');
 
 export const rateLimitSupport = async (kind: string, value: string, limit: number, seconds: number) => {
   const { data, error } = await getSupabaseAdmin().rpc('support_rate_limit', { p_key_hash: digest(`${kind}:${value}`), p_limit: limit, p_window_seconds: seconds });
