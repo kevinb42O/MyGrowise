@@ -1,7 +1,8 @@
 ---
 import MainLayout from '../layouts/MainLayout.astro';
-import { products, practitioners, homeFaqs, recognitionItems } from '../content/site';
-const featured = products[0];
+import { profilePresentation, practitioners, homeFaqs, recognitionItems } from '../content/site';
+import { formatPublicPrice, listPublishedProfiles, profileUrl } from '../lib/publicProducts';
+const featured = (await listPublishedProfiles()).find((product) => product.slug === 'stress-en-emotieprofiel');
 ---
 
 <MainLayout activeNav="home" title="MyGrowise — psychologisch inzicht en online begeleiding" description="Begrijp wat er bij jou gebeurt en kies ondersteuning die past: zelfstandig met een persoonlijk profiel of samen met een professional.">
@@ -81,7 +82,7 @@ const featured = products[0];
     </div>
   </section>
 
-  <section class="featured section">
+  {featured && <section class="featured section">
     <div class="container featured-grid">
       <div class="featured-visual" data-reveal data-parallax="0.035">
         <img src={featured.image} alt="Uitleg bij het stress- en emotieprofiel" loading="lazy" />
@@ -89,19 +90,19 @@ const featured = products[0];
       </div>
       <div class="featured-copy" data-reveal style="--reveal-delay: 120ms">
         <span class="eyebrow">Aanbevolen vertrekpunt</span>
-        <h2 class="heading-lg">Het stress- en emotieprofiel</h2>
+        <h2 class="heading-lg">{featured.title}</h2>
         <p class="lead">{featured.summary}</p>
         <div class="feature-list">
-          {featured.features.map((feature, index) => <div><span>{index + 1}</span><p>{feature}</p></div>)}
+          {(profilePresentation[0]?.features || []).map((feature, index) => <div><span>{index + 1}</span><p>{feature}</p></div>)}
         </div>
         <div class="price-row">
-          <div><small>Prijs</small><strong>€{featured.price}</strong></div>
-          <a class="button button-primary" href={`/profielen/${featured.slug}`}>Bekijk wat je ontvangt <span aria-hidden="true">→</span></a>
+          <div><small>Prijs</small><strong>{formatPublicPrice(featured)}</strong></div>
+          <a class="button button-primary" href={profileUrl(featured.slug)}>Bekijk wat je ontvangt <span aria-hidden="true">→</span></a>
         </div>
         <p class="disclaimer">Een persoonlijk profiel ondersteunt inzicht en oriëntatie. Het is geen diagnose en vervangt geen individueel klinisch onderzoek.</p>
       </div>
     </div>
-  </section>
+  </section>}
 
   <section class="journey section" id="werkwijze">
     <div class="container journey-layout">

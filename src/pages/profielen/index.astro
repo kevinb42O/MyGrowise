@@ -1,19 +1,21 @@
 ---
 import MainLayout from '../../layouts/MainLayout.astro';
-import { products } from '../../content/site';
+import { formatPublicPrice, listPublishedProfiles, profileUrl } from '../../lib/publicProducts';
+const products = await listPublishedProfiles();
 ---
 
 <MainLayout activeNav="zelf" title="Persoonlijke profielen — MyGrowise" description="Start met psychologisch inzicht op je eigen tempo. Ontdek de persoonlijke profielen van MyGrowise.">
   <section class="page-hero"><div class="container reveal"><span class="eyebrow">Zelf aan de slag</span><h1 class="heading-xl">Inzicht voor wie niet zomaar een label zoekt.</h1><p class="lead">Een persoonlijk profiel helpt je patronen herkennen en geeft woorden aan wat je misschien al langer voelt. Het is een vertrekpunt, geen eindbesluit.</p></div></section>
   <section class="section"><div class="container">
-    <div class="intro-grid"><div><span class="eyebrow">Kies je startpunt</span><h2 class="heading-lg">Waar wil je vandaag meer zicht op?</h2></div><p class="lead">We bouwen het aanbod zorgvuldig uit. Daarom is niet alles tegelijk beschikbaar en maken we duidelijk wat al gekocht kan worden.</p></div>
+    <div class="intro-grid"><div><span class="eyebrow">Kies je startpunt</span><h2 class="heading-lg">Waar wil je vandaag meer zicht op?</h2></div><p class="lead">Bekijk de persoonlijke profielen die je nu kan bestellen.</p></div>
     <div class="product-grid">
       {products.map((product, index) => (
-        <article class:list={['product-card', { unavailable: !product.available }]}>
-          <div class="product-image"><img src={product.image} alt="" loading="lazy" /><span>{String(index + 1).padStart(2, '0')}</span>{!product.available && <b>Binnenkort</b>}</div>
-          <div class="product-body"><span class="product-kind">{product.kind}</span><h3>{product.title}</h3><p>{product.summary}</p><ul>{product.features.map((f) => <li>{f}</li>)}</ul><div class="product-footer"><div>{product.price ? <><small>Prijs</small><strong>€{product.price}</strong></> : <strong class="soon">In voorbereiding</strong>}</div>{product.available ? <a class="button button-primary" href={`/profielen/${product.slug}`}>Bekijk profiel</a> : <a class="button button-light" href="mailto:info@mygrowise.be?subject=Interesse%20nieuw%20profiel">Hou me op de hoogte</a>}</div></div>
+        <article class="product-card">
+          <div class="product-image"><img src={product.image} alt="" loading="lazy" /><span>{String(index + 1).padStart(2, '0')}</span></div>
+          <div class="product-body"><span class="product-kind">Persoonlijk profiel</span><h3>{product.title}</h3><p>{product.summary}</p><ul>{product.features.map((f) => <li>{f}</li>)}</ul><div class="product-footer"><div><small>Prijs</small><strong>{formatPublicPrice(product)}</strong></div><a class="button button-primary" href={profileUrl(product.slug)}>{product.slug === 'stress-en-emotieprofiel' ? 'Bekijk profiel' : 'Bekijk en bestel'}</a></div></div>
         </article>
       ))}
+      {!products.length && <p class="lead">Er zijn momenteel geen profielen beschikbaar.</p>}
     </div>
   </div></section>
   <section class="how section-sm"><div class="container"><div class="how-head"><span class="eyebrow">Zo werkt het</span><h2 class="heading-lg">Van herkennen naar richting in drie rustige stappen.</h2></div><div class="steps"><article><span>01</span><h3>Kies je profiel</h3><p>Lees rustig voor wie het bedoeld is en wat je precies ontvangt.</p></article><article><span>02</span><h3>Vul online in</h3><p>Neem de tijd en beantwoord de vragen zo eerlijk mogelijk voor jezelf.</p></article><article><span>03</span><h3>Ga verder met inzicht</h3><p>Gebruik het resultaat zelfstandig of neem het mee naar begeleiding.</p></article></div><div class="notice">Een profiel is geen diagnose en vervangt geen persoonlijk diagnostisch of medisch onderzoek. Bij twijfel of ernstige klachten bespreek je jouw situatie met een bevoegde zorgprofessional.</div></div></section>

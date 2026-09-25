@@ -1,15 +1,9 @@
-export const products = [
+// Editorial details only. Publication status, title, summary and price live in Supabase.
+export const profilePresentation = [
   {
     slug: 'stress-en-emotieprofiel',
-    kind: 'Persoonlijk profiel',
-    title: 'Stress- en emotieprofiel',
     eyebrow: 'Een helder vertrekpunt',
-    summary:
-      'Krijg zicht op hoe je reageert onder druk, waar je draagkracht ligt en welke patronen je energie kosten.',
-    price: 275,
-    duration: 'Online in te vullen',
     image: '/images/editorial/mygrowise-46.jpg',
-    available: true,
     features: [
       'Persoonlijk en genuanceerd inzicht',
       'Overzicht van stress- en emotiepatronen',
@@ -18,15 +12,8 @@ export const products = [
   },
   {
     slug: 'hechting-en-relatieprofiel',
-    kind: 'Persoonlijk profiel',
-    title: 'Hechting- en relatieprofiel',
-    eyebrow: 'In voorbereiding',
-    summary:
-      'Verken hoe je verbinding maakt, wat je nodig hebt in relaties en welke automatische patronen terugkomen.',
-    price: null,
-    duration: 'Binnenkort beschikbaar',
+    eyebrow: 'Inzicht in verbinding',
     image: '/images/editorial/mygrowise-50.jpg',
-    available: false,
     features: [
       'Inzicht in relationele patronen',
       'Aandacht voor behoeften en grenzen',
