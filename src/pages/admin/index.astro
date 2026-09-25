@@ -1,115 +1,24 @@
 ---
 import AdminLayout from '../../layouts/AdminLayout.astro';
-import AdminIcon from '../../components/admin/AdminIcon.astro';
-import { getSuperadminOverview } from '../../lib/superAdmin';
+import DashboardIsland from '../../components/admin/DashboardIsland.astro';
 
-const overview = await getSuperadminOverview();
 const period = ['alles', '30d', '7d', 'jaar'].includes(Astro.url.searchParams.get('periode') || '') ? Astro.url.searchParams.get('periode')! : 'alles';
-const now = new Date();
-const euro = (cents: number) => new Intl.NumberFormat('nl-BE', { style: 'currency', currency: 'EUR' }).format(cents / 100);
-const number = (value: number) => new Intl.NumberFormat('nl-BE').format(value);
-const date = (value: string) => new Intl.DateTimeFormat('nl-BE', { day: 'numeric', month: 'short', timeZone: 'Europe/Brussels' }).format(new Date(value));
-const dateTime = (value: string) => new Intl.DateTimeFormat('nl-BE', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Brussels' }).format(new Date(value));
-const dateParts = (value: Date) => Object.fromEntries(new Intl.DateTimeFormat('en', { year: 'numeric', month: '2-digit', day: '2-digit', timeZone: 'Europe/Brussels' }).formatToParts(value).map((part) => [part.type, part.value]));
-const dayKey = (value: Date) => { const parts = dateParts(value); return `${parts.year}-${parts.month}-${parts.day}`; };
-const monthKey = (value: Date) => { const parts = dateParts(value); return `${parts.year}-${parts.month}`; };
-const today = new Date(`${dayKey(now)}T12:00:00Z`);
-const currentYear = Number(dayKey(now).slice(0, 4));
-const paid = overview.orders.filter((order) => (order.status === 'paid' || order.status === 'fulfilled') && order.currency === 'EUR');
-const paidAt = (order: (typeof paid)[number]) => new Date(order.paymentVerifiedAt || order.createdAt);
-const start = period === '7d' ? new Date(today.getTime() - 6 * 86400000) : period === '30d' ? new Date(today.getTime() - 29 * 86400000) : period === 'jaar' ? new Date(`${currentYear}-01-01T12:00:00Z`) : null;
-const startDay = start ? dayKey(start) : null;
-const selectedPaid = paid.filter((order) => !startDay || dayKey(paidAt(order)) >= startDay);
-const revenue = selectedPaid.reduce((sum, order) => sum + order.totalCents, 0);
-const monthIndex = (value: Date) => { const [year, month] = monthKey(value).split('-').map(Number); return year * 12 + month - 1; };
-const firstPaid = paid.length ? new Date(Math.min(...paid.map((order) => paidAt(order).getTime()))) : now;
-const firstPaidYear = Number(dayKey(firstPaid).slice(0, 4));
-const allTimeYears = monthIndex(now) - monthIndex(firstPaid) > 23;
-const buckets: { key: string; label: string; total: number; count: number }[] = [];
-if (period === '7d' || period === '30d') {
-  const days = period === '7d' ? 7 : 30;
-  for (let offset = days - 1; offset >= 0; offset--) {
-    const value = new Date(today.getTime() - offset * 86400000);
-    buckets.push({ key: dayKey(value), label: new Intl.DateTimeFormat('nl-BE', { day: 'numeric', month: 'short', timeZone: 'Europe/Brussels' }).format(value), total: 0, count: 0 });
-  }
-} else if (period === 'jaar' || !allTimeYears) {
-  const first = period === 'jaar' ? new Date(`${currentYear}-01-01T12:00:00Z`) : firstPaid;
-  for (let index = monthIndex(first); index <= monthIndex(now); index++) {
-    const value = new Date(Math.floor(index / 12), index % 12, 1);
-    buckets.push({ key: monthKey(value), label: new Intl.DateTimeFormat('nl-BE', { month: 'short', year: '2-digit' }).format(value), total: 0, count: 0 });
-  }
-} else {
-  for (let year = firstPaidYear; year <= currentYear; year++) buckets.push({ key: String(year), label: String(year), total: 0, count: 0 });
-}
-const bucketMap = new Map(buckets.map((bucket) => [bucket.key, bucket]));
-selectedPaid.forEach((order) => {
-  const value = paidAt(order);
-  const key = period === '7d' || period === '30d' ? dayKey(value) : period === 'jaar' || !allTimeYears ? monthKey(value) : dayKey(value).slice(0, 4);
-  const bucket = bucketMap.get(key);
-  if (bucket) { bucket.total += order.totalCents; bucket.count++; }
-});
-const maxRevenue = Math.max(1, ...buckets.map((bucket) => bucket.total));
-const claimedPayments = overview.orders.filter((order) => order.status === 'pending_payment' && order.paymentClaimedAt).length;
-const pendingBookings = overview.bookings.filter((booking) => booking.status === 'pending').length;
-const openTasks = overview.tasks.filter((task) => task.status === 'open' || task.status === 'in_progress' || task.status === 'blocked');
-const upcomingBookings = overview.bookings.filter((booking) => ['pending', 'confirmed'].includes(booking.status) && new Date(booking.startsAt) >= now).slice(0, 4);
-const recentOrders = overview.orders.slice(0, 4);
-const statusLabel: Record<string, string> = { paid: 'Betaald', fulfilled: 'Geleverd', pending_payment: 'Wacht op betaling', draft: 'Concept', cancelled: 'Geannuleerd', partially_refunded: 'Deels terugbetaald', refunded: 'Terugbetaald', disputed: 'Betwist' };
 const periodLabel: Record<string, string> = { alles: 'Alle tijd', '30d': 'Laatste 30 dagen', '7d': 'Laatste 7 dagen', jaar: 'Dit jaar' };
 ---
-
 <AdminLayout title="Dashboard" description="Operationeel overzicht voor MyGrowise">
-  <div class="admin-page dashboard-home">
-    <header class="admin-page-heading dashboard-home__heading">
-      <div><p class="admin-eyebrow">MyGrowise</p><h1>Dashboard</h1><p>Verkoop, afspraken en wat nu aandacht vraagt.</p></div>
-      <nav class="dashboard-home__period" aria-label="Periode omzet">
-        {Object.entries(periodLabel).map(([key, label]) => <a href={`/admin?periode=${key}`} class:list={{ 'is-active': period === key }} aria-current={period === key ? 'page' : undefined}>{label}</a>)}
-      </nav>
-    </header>
-
-    <section class="dashboard-home__stats" aria-label="Kerncijfers">
-      <article><span>Omzet · {periodLabel[period].toLowerCase()}</span><strong>{euro(revenue)}</strong><small>Betaalde bestellingen in euro</small></article>
-      <article><span>Betaalde bestellingen</span><strong>{number(selectedPaid.length)}</strong><small>In de gekozen periode</small></article>
-      <a href="/admin/boekingen"><span>Open boekingsaanvragen</span><strong>{number(pendingBookings)}</strong><small>Bekijk aanvragen <AdminIcon name="arrow" size={12}/></small></a>
-      <a href="/admin/analytics"><span>Paginaweergaven</span><strong>{number(overview.analyticsEvents)}</strong><small>Met toestemming · laatste 30 dagen <AdminIcon name="arrow" size={12}/></small></a>
-    </section>
-
-    <div class="dashboard-home__main">
-      <section class="admin-panel dashboard-home__revenue" aria-labelledby="revenue-title">
-        <header class="admin-panel__header"><div><h2 id="revenue-title">Omzetontwikkeling</h2><p>{periodLabel[period]} · betaalde en geleverde bestellingen</p></div><a class="admin-text-link" href="/admin/bestellingen">Bestellingen <AdminIcon name="arrow" size={13}/></a></header>
-        {paid.length ? <div class="dashboard-home__chart">
-          <div class="dashboard-home__chart-summary"><strong>{euro(revenue)}</strong><span>{selectedPaid.length} {selectedPaid.length === 1 ? 'bestelling' : 'bestellingen'} in deze periode</span></div>
-          {selectedPaid.length ? <>
-            <div class="dashboard-home__bars" role="img" aria-label={`Omzetgrafiek voor ${periodLabel[period].toLowerCase()}`}>
-              {buckets.map((bucket) => <div class="dashboard-home__bar-slot" title={`${bucket.label}: ${euro(bucket.total)} · ${bucket.count} bestellingen`}><span class="dashboard-home__bar" style={`height:${bucket.total ? Math.max(5, bucket.total / maxRevenue * 100) : 0}%`}></span></div>)}
-            </div>
-            <div class="dashboard-home__axis"><span>{buckets[0]?.label}</span><span>{buckets[Math.floor((buckets.length - 1) / 2)]?.label}</span><span>{buckets.at(-1)?.label}</span></div>
-            <details class="dashboard-home__chart-details"><summary>Bedragen per {period === '7d' || period === '30d' ? 'dag' : allTimeYears && period === 'alles' ? 'jaar' : 'maand'}</summary><div>{buckets.filter((bucket) => bucket.count).map((bucket) => <p><span>{bucket.label} · {bucket.count} {bucket.count === 1 ? 'bestelling' : 'bestellingen'}</span><strong>{euro(bucket.total)}</strong></p>)}</div></details>
-          </> : <div class="dashboard-home__period-empty">Geen betaalde bestellingen in deze periode. <a href="/admin?periode=alles">Bekijk alle omzet</a>.</div>}
-        </div> : <div class="dashboard-home__period-empty">Er zijn nog geen betaalde bestellingen geregistreerd.</div>}
-      </section>
-
-      <section class="admin-panel dashboard-home__attention" aria-labelledby="attention-title">
-        <header class="admin-panel__header"><div><h2 id="attention-title">Aandacht nodig</h2><p>Open acties uit verkoop en planning</p></div></header>
-        <div class="dashboard-home__attention-list">
-          {claimedPayments > 0 && <a href="/admin/bestellingen"><span class="dashboard-home__attention-count">{claimedPayments}</span><span><strong>Betalingen te controleren</strong><small>Klanten hebben een betaling gemeld</small></span><AdminIcon name="arrow" size={14}/></a>}
-          {pendingBookings > 0 && <a href="/admin/boekingen"><span class="dashboard-home__attention-count">{pendingBookings}</span><span><strong>Boekingsaanvragen</strong><small>Wachten op bevestiging</small></span><AdminIcon name="arrow" size={14}/></a>}
-          {openTasks.slice(0, 3).map((task) => <a href="/admin/instellingen#acties"><span class="dashboard-home__attention-dot"></span><span><strong>{task.title}</strong><small>{task.dueAt ? `Deadline ${date(task.dueAt)}` : task.category}</small></span><AdminIcon name="arrow" size={14}/></a>)}
-          {!claimedPayments && !pendingBookings && !openTasks.length && <p class="dashboard-home__calm">Alles bijgewerkt. Er staan geen directe acties open.</p>}
-        </div>
-      </section>
+  <DashboardIsland server:defer period={period}>
+    <div slot="fallback" class="admin-page dashboard-home" aria-busy="true">
+      <header class="admin-page-heading dashboard-home__heading">
+        <div><p class="admin-eyebrow">MyGrowise</p><h1>Dashboard</h1><p>Verkoop, afspraken en wat nu aandacht vraagt.</p></div>
+        <nav class="dashboard-home__period" aria-label="Periode omzet">{Object.entries(periodLabel).map(([key, label]) => <a href={`/admin?periode=${key}`} class:list={{ 'is-active': period === key }} aria-current={period === key ? 'page' : undefined}>{label}</a>)}</nav>
+      </header>
+      <p class="admin-loading-label" role="status">Dashboardgegevens laden…</p>
+      <section class="dashboard-home__stats" aria-label="Kerncijfers laden">{Array.from({ length: 4 }, () => <article class="admin-skeleton-card"><span class="admin-skeleton-line"></span><span class="admin-skeleton-number"></span><span class="admin-skeleton-line admin-skeleton-line--short"></span></article>)}</section>
+      <div class="dashboard-home__main">
+        <section class="admin-panel dashboard-home__revenue admin-skeleton-panel" aria-label="Omzetgrafiek laden"><span class="admin-skeleton-line"></span><div class="admin-skeleton-chart"></div></section>
+        <section class="admin-panel dashboard-home__attention admin-skeleton-panel" aria-label="Open acties laden"><span class="admin-skeleton-line"></span><span class="admin-skeleton-line"></span><span class="admin-skeleton-line admin-skeleton-line--short"></span></section>
+      </div>
+      <div class="dashboard-home__lower">{Array.from({ length: 2 }, () => <section class="admin-panel admin-skeleton-panel" aria-label="Overzicht laden"><span class="admin-skeleton-line"></span><span class="admin-skeleton-line"></span><span class="admin-skeleton-line admin-skeleton-line--short"></span></section>)}</div>
     </div>
-
-    <div class="dashboard-home__lower">
-      <section class="admin-panel" aria-labelledby="orders-title">
-        <header class="admin-panel__header"><div><h2 id="orders-title">Recente bestellingen</h2><p>Laatste transacties en hun status</p></div><a class="admin-text-link" href="/admin/bestellingen">Alle bestellingen <AdminIcon name="arrow" size={13}/></a></header>
-        {recentOrders.length ? <div class="dashboard-home__rows">{recentOrders.map((order) => <div class="dashboard-home__row"><span><strong>Bestelling #{order.id.slice(-8).toUpperCase()}</strong><small>{date(order.createdAt)} · {statusLabel[order.status] || order.status}</small></span><strong>{order.currency === 'EUR' ? euro(order.totalCents) : new Intl.NumberFormat('nl-BE', { style: 'currency', currency: order.currency }).format(order.totalCents / 100)}</strong></div>)}</div> : <p class="dashboard-home__calm">Nog geen bestellingen.</p>}
-      </section>
-      <section class="admin-panel" aria-labelledby="bookings-title">
-        <header class="admin-panel__header"><div><h2 id="bookings-title">Komende afspraken</h2><p>Bevestigde afspraken en aanvragen</p></div><a class="admin-text-link" href="/admin/boekingen">Alle boekingen <AdminIcon name="arrow" size={13}/></a></header>
-        {upcomingBookings.length ? <div class="dashboard-home__rows">{upcomingBookings.map((booking) => <div class="dashboard-home__row"><span><strong>{booking.clientName}</strong><small>{booking.practitionerName} · {dateTime(booking.startsAt)}</small></span><span class:list={['dashboard-home__booking-state', booking.status === 'pending' && 'is-pending']}>{booking.status === 'pending' ? 'Aanvraag' : 'Bevestigd'}</span></div>)}</div> : <p class="dashboard-home__calm">Geen komende afspraken gepland.</p>}
-      </section>
-    </div>
-    <footer class="dashboard-home__footer"><span><strong>{overview.publishedProducts}</strong> producten online</span><a href="/admin/producten">Aanbod beheren <AdminIcon name="arrow" size={12}/></a><span class="dashboard-home__footer-separator"></span><span><strong>{overview.openTaskCount}</strong> open werkpunten</span><a href="/admin/instellingen#acties">Werkpunten bekijken <AdminIcon name="arrow" size={12}/></a></footer>
-  </div>
+  </DashboardIsland>
 </AdminLayout>

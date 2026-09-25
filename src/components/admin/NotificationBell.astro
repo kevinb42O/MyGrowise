@@ -1,14 +1,12 @@
 ---
 import AdminIcon from './AdminIcon.astro';
-import { listUnreadNotifications } from '../../lib/internalMessaging';
 interface Props { userId: string; basePath: string; }
-const { userId, basePath } = Astro.props;
+const { basePath } = Astro.props;
 const supportPath = basePath.startsWith('/praktijk') ? '/praktijk/berichten' : '/admin/berichten';
-const notifications = await listUnreadNotifications(userId).catch(() => []);
 ---
 <div class="admin-notifications" data-notifications data-base-path={basePath} data-support-path={supportPath}>
-  <button class="admin-icon-button" type="button" aria-label="Notificaties" aria-expanded="false" data-notification-toggle><AdminIcon name="bell" size={17}/><small data-notification-count hidden={notifications.length === 0}>{notifications.length}</small></button>
-  <section class="admin-notification-panel" hidden data-notification-panel aria-label="Nieuwe notificaties"><header><strong>Notificaties</strong><button type="button" data-notification-read-all>Alles gelezen</button></header><div data-notification-list>{notifications.length ? notifications.map((notification) => <a href={notification.supportConversationId ? `${supportPath}?conversation=${notification.supportConversationId}` : notification.threadId ? `${basePath}?thread=${notification.threadId}` : basePath}><span>{notification.title}</span><time datetime={notification.createdAt}>{new Intl.DateTimeFormat('nl-BE', { hour: '2-digit', minute: '2-digit' }).format(new Date(notification.createdAt))}</time></a>) : <p>Geen nieuwe notificaties.</p>}</div></section>
+  <button class="admin-icon-button" type="button" aria-label="Notificaties" aria-expanded="false" data-notification-toggle><AdminIcon name="bell" size={17}/><small data-notification-count hidden>0</small></button>
+  <section class="admin-notification-panel" hidden data-notification-panel aria-label="Nieuwe notificaties"><header><strong>Notificaties</strong><button type="button" data-notification-read-all>Alles gelezen</button></header><div data-notification-list><p>Notificaties laden…</p></div></section>
 </div>
 <script is:inline>
   (() => {
@@ -20,6 +18,7 @@ const notifications = await listUnreadNotifications(userId).catch(() => []);
     toggle?.addEventListener('click', () => { const open = panel.hidden; panel.hidden = !open; toggle.setAttribute('aria-expanded', String(open)); if (open) refresh(); });
     root.querySelector('[data-notification-read-all]')?.addEventListener('click', async () => { try { await fetch('/api/internal/notifications', { method: 'POST', headers: { 'content-type': 'application/json' }, credentials: 'same-origin', body: '{}' }); await refresh(); } catch {} });
     list?.addEventListener('click', (event) => { const link = event.target.closest('a'); if (!link) return; fetch('/api/internal/notifications', { method: 'POST', headers: { 'content-type': 'application/json' }, credentials: 'same-origin', body: '{}' }).catch(() => {}); });
+    refresh();
     window.setInterval(refresh, 30000);
   })();
 </script>

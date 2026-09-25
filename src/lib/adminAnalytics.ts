@@ -14,7 +14,7 @@ const dayKey = (date: Date) => {
 const hourKey = (date: Date) => date.toISOString().slice(0, 13);
 const isPublicPath = (path: string) => path.startsWith('/') && !/^\/(admin|praktijk|account|api)(\/|$)/.test(path);
 
-export const getAdminAnalytics = async ({ days = 30, hourly = false, now = new Date() }: AnalyticsOptions = {}) => {
+const loadAdminAnalytics = async ({ days = 30, hourly = false, now = new Date() }: AnalyticsOptions = {}) => {
   const rangeDays = Math.min(Math.max(days, 1), 365);
   const hourStart = new Date(now);
   hourStart.setUTCHours(hourStart.getUTCHours() - 23, 0, 0, 0);
@@ -107,4 +107,21 @@ export const getAdminAnalytics = async ({ days = 30, hourly = false, now = new D
     countries,
     lastEventAt,
   };
+};
+
+const analyticsCache = new Map<string, { expiresAt: number; result: ReturnType<typeof loadAdminAnalytics> }>();
+
+export const getAdminAnalytics = (options: AnalyticsOptions = {}) => {
+  // Only real-time dashboard requests are cached. Explicit `now` values remain
+  // deterministic for callers that inspect a historical snapshot.
+  if (options.now) return loadAdminAnalytics(options);
+  const key = `${options.days ?? 30}:${options.hourly === true}`;
+  const cached = analyticsCache.get(key);
+  if (cached && cached.expiresAt > Date.now()) return cached.result;
+  const result = loadAdminAnalytics(options).catch((error) => {
+    analyticsCache.delete(key);
+    throw error;
+  });
+  analyticsCache.set(key, { expiresAt: Date.now() + 60_000, result });
+  return result;
 };

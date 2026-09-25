@@ -9,7 +9,6 @@ export type AdminTask = { id: string; title: string; category: string; priority:
 export type IntegrationCheck = { key: string; label: string; state: 'healthy' | 'degraded' | 'not_configured' | 'failed'; detail: string | null; lastCheckedAt: string | null };
 
 const fail = (error: { message?: string } | null) => { if (error) throw new Error(error.message || 'Supabase query failed.'); };
-const money = (cents: number) => new Intl.NumberFormat('nl-BE', { style: 'currency', currency: 'EUR' }).format(cents / 100);
 
 export const listAdminOrders = async (limit = 100): Promise<AdminOrder[]> => {
   const { data, error } = await getSupabaseAdmin().from('orders').select('id,status,total_cents,currency,created_at,customer_user_id').order('created_at', { ascending: false }).limit(limit);
@@ -135,22 +134,17 @@ export const listIntegrationChecks = async (): Promise<IntegrationCheck[]> => {
 };
 
 export const getSuperadminOverview = async () => {
-  const [orders, bookings, integrations, tasks, productsResult, auditResult, analyticsResult, taskCountResult] = await Promise.all([
-    listDashboardOrders(), listDashboardBookings(), listIntegrationChecks(), listAdminTasks(),
-    getSupabaseAdmin().from('products').select('id,status', { count: 'exact' }),
-    getSupabaseAdmin().from('security_audit_log').select('occurred_at,action,object_type,object_id').order('occurred_at', { ascending: false }).limit(8),
+  const [orders, bookings, tasks, productsResult, analyticsResult, taskCountResult] = await Promise.all([
+    listDashboardOrders(), listDashboardBookings(), listAdminTasks(),
+    getSupabaseAdmin().from('products').select('id', { count: 'exact', head: true }).eq('status', 'published'),
     getSupabaseAdmin().from('analytics_events').select('id', { count: 'exact', head: true }).eq('consented', true).eq('environment', 'production').eq('event_name', 'page_view').not('path', 'like', '/account%').not('path', 'like', '/admin%').not('path', 'like', '/praktijk%').not('path', 'like', '/api%').gte('occurred_at', new Date(Date.now() - 30 * 86400000).toISOString()),
     getSupabaseAdmin().from('admin_work_items').select('id', { count: 'exact', head: true }).in('status', ['open', 'in_progress', 'blocked']),
   ]);
-  fail(productsResult.error); fail(auditResult.error); fail(analyticsResult.error); fail(taskCountResult.error);
-  const paid = orders.filter((order) => order.status === 'paid' || order.status === 'fulfilled');
-  const netRevenueCents = paid.reduce((total, order) => total + order.totalCents, 0);
+  fail(productsResult.error); fail(analyticsResult.error); fail(taskCountResult.error);
   return {
-    orders, bookings, integrations, tasks, paidOrders: paid.length, netRevenueCents, netRevenue: money(netRevenueCents),
-    publishedProducts: ((productsResult.data || []) as RecordRow[]).filter((product) => product.status === 'published').length,
-    productCount: productsResult.count || 0, analyticsEvents: analyticsResult.count || 0, openTaskCount: taskCountResult.count || 0,
-    pendingBookings: bookings.filter((booking) => booking.status === 'pending').length,
-    activity: ((auditResult.data || []) as RecordRow[]).map((row) => ({ occurredAt: String(row.occurred_at), action: String(row.action), objectType: String(row.object_type), objectId: String(row.object_id) })),
+    orders, bookings, tasks,
+    publishedProducts: productsResult.count || 0,
+    analyticsEvents: analyticsResult.count || 0, openTaskCount: taskCountResult.count || 0,
   };
 };
 

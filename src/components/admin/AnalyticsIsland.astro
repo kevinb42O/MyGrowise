@@ -1,0 +1,13 @@
+---
+import AnalyticsContent from './AnalyticsContent.astro';
+import { SUPABASE_SESSION_COOKIE, hasPermission, verifySupabaseSession } from '../../lib/adminAuth';
+
+interface Props { period: string; metric: string }
+const { period, metric } = Astro.props;
+const sessionResult = await verifySupabaseSession(Astro.cookies.get(SUPABASE_SESSION_COOKIE)?.value)
+  .then((session) => ({ session, unavailable: false }))
+  .catch(() => ({ session: null, unavailable: true }));
+const allowed = hasPermission(sessionResult.session, 'analytics.read');
+Astro.response.headers.set('Cache-Control', 'private, no-store');
+---
+{sessionResult.unavailable ? <p class="admin-load-error" role="alert">De beveiligde verbinding is tijdelijk niet beschikbaar. <a href="/admin/analytics">Probeer opnieuw</a>.</p> : allowed ? <AnalyticsContent period={period} metric={metric} /> : <p class="admin-load-error" role="alert">Je sessie is verlopen. <a href="/admin/login">Meld je opnieuw aan</a>.</p>}

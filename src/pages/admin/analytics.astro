@@ -1,194 +1,118 @@
 ---
 import AdminLayout from '../../layouts/AdminLayout.astro';
-import { getAdminAnalytics } from '../../lib/adminAnalytics';
+import AnalyticsIsland from '../../components/admin/AnalyticsIsland.astro';
 
 const ranges = [
-  { key: '1d', label: '24 uur', days: 1, hourly: true },
-  { key: '7d', label: '7 dagen', days: 7, hourly: false },
-  { key: '30d', label: '30 dagen', days: 30, hourly: false },
-  { key: '90d', label: '90 dagen', days: 90, hourly: false },
-  { key: '365d', label: '12 maanden', days: 365, hourly: false },
+  { key: '1d', label: '24 uur' },
+  { key: '7d', label: '7 dagen' },
+  { key: '30d', label: '30 dagen' },
+  { key: '90d', label: '90 dagen' },
+  { key: '365d', label: '12 maanden' },
 ];
-const selectedRange = ranges.find((range) => range.key === Astro.url.searchParams.get('periode')) || ranges[1];
+const period = ranges.find((range) => range.key === Astro.url.searchParams.get('periode'))?.key || '7d';
 const metric = Astro.url.searchParams.get('grafiek') === 'pageviews' ? 'pageviews' : 'visitors';
-const metricLabel = metric === 'pageviews' ? 'Paginaweergaven' : 'Unieke bezoekers';
-const analytics = await getAdminAnalytics({ days: selectedRange.days, hourly: selectedRange.hourly });
-const formatNumber = (value: number) => new Intl.NumberFormat('nl-BE').format(value);
-const countryNames = new Intl.DisplayNames(['nl-BE'], { type: 'region' });
-const countryLabel = (code: string | null) => code === null ? 'Onbekend' : code === 'OTHER' ? 'Overige landen' : countryNames.of(code) || code;
-const countryColors = ['#669b7d', '#8ab7a1', '#8daebb', '#a5b8a1', '#a3a8bf', '#b4c7b8'];
-const flagCodes = new Set('AD AT BE BG HR CY CZ DK EE FI FR DE GR HU IE IT LV LT LU MT NL PL PT RO SK SI ES SE GB CH NO IS LI MC SM VA UA'.split(' '));
-let countryOffset = 0;
-const countrySegments = analytics.countries.map((country, index) => {
-  const share = analytics.visitors ? country.visitors / analytics.visitors * 100 : 0;
-  const segment = { ...country, share, offset: countryOffset, color: country.code === null ? '#cbd4ce' : countryColors[index % countryColors.length], flag: country.code && flagCodes.has(country.code) ? `/flags/${country.code.toLowerCase()}.svg` : null };
-  countryOffset += share;
-  return segment;
-});
-const comparison = (current: number, previous: number) => {
-  if (!analytics.comparisonAvailable) return 'Geen volledige vorige periode beschikbaar';
-  if (previous < 20) return `Vorige periode: ${formatNumber(previous)} · te weinig data voor een percentage`;
-  const change = Math.round((current - previous) / previous * 100);
-  return `${change > 0 ? '+' : ''}${change}% t.o.v. de vorige periode · toen ${formatNumber(previous)}`;
-};
-const dateFormat = new Intl.DateTimeFormat('nl-BE', { timeZone: 'Europe/Brussels', day: 'numeric', month: 'short' });
-const hourFormat = new Intl.DateTimeFormat('nl-BE', { timeZone: 'Europe/Brussels', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', timeZoneName: 'short' });
-const formatPoint = (timestamp: string) => (selectedRange.hourly ? hourFormat : dateFormat).format(new Date(timestamp));
-const chartWidth = 960;
-const chartHeight = 260;
-const left = 43;
-const right = 13;
-const top = 13;
-const bottom = 31;
-const baseline = chartHeight - bottom;
-const values = analytics.trend.map((point) => point[metric]);
-const maxValue = Math.max(1, ...values);
-const chartPoints = analytics.trend.map((point, index) => {
-  const x = left + (analytics.trend.length === 1 ? 0 : index / (analytics.trend.length - 1) * (chartWidth - left - right));
-  const y = top + (1 - point[metric] / maxValue) * (baseline - top);
-  return { x: Number(x.toFixed(2)), y: Number(y.toFixed(2)), label: formatPoint(point.timestamp), value: point[metric] };
-});
-const line = chartPoints.map((point) => `${point.x},${point.y}`).join(' ');
-const area = chartPoints.length ? `${left},${baseline} ${line} ${chartPoints[chartPoints.length - 1].x},${baseline}` : '';
-const chartData = JSON.stringify(chartPoints);
-const tickStep = Math.max(1, Math.ceil(analytics.trend.length / 6));
-const ticks = analytics.trend.filter((_, index) => index === 0 || index === analytics.trend.length - 1 || index % tickStep === 0);
-const periodUrl = (range: string) => `/admin/analytics?periode=${range}&grafiek=${metric}`;
-const metricUrl = (next: string) => `/admin/analytics?periode=${selectedRange.key}&grafiek=${next}`;
 ---
-
 <AdminLayout title="Websiteanalytics" description="Bezoekers, paginaweergaven en landen van MyGrowise">
-  <div class="admin-page analytics-studio">
-    <header class="analytics-studio__heading">
-      <h1>Website in cijfers</h1>
-      <small>{analytics.lastEventAt ? `Laatste bezoek ${hourFormat.format(new Date(analytics.lastEventAt))}` : 'Nog geen bezoeken in deze periode'}</small>
-    </header>
-
-    <div class="analytics-studio__toolbar"><span>Periode</span><nav aria-label="Periode">{ranges.map((range) => <a href={periodUrl(range.key)} class:list={{ 'is-active': range.key === selectedRange.key }} aria-current={range.key === selectedRange.key ? 'page' : undefined}>{range.label}</a>)}</nav></div>
-
-    <section class="analytics-studio__stats" aria-label="Kerncijfers">
-      <article class="analytics-studio__stat analytics-studio__stat--visitors"><div><span class="analytics-studio__stat-kicker"><i></i>Bereik</span><h2>Unieke bezoekers</h2><strong>{formatNumber(analytics.visitors)}</strong></div><p>{comparison(analytics.visitors, analytics.previous.visitors)}</p><small>Verschillende anonieme browsers in deze periode</small></article>
-      <article class="analytics-studio__stat analytics-studio__stat--pageviews"><div><span class="analytics-studio__stat-kicker"><i></i>Activiteit</span><h2>Paginaweergaven</h2><strong>{formatNumber(analytics.pageviews)}</strong></div><p>{comparison(analytics.pageviews, analytics.previous.pageviews)}</p><small>Elke geladen publieke pagina met toestemming</small></article>
-    </section>
-
-    <section class="analytics-studio__panel analytics-studio__trend" aria-labelledby="analytics-chart-title">
-      <div class="analytics-studio__panel-head"><div><span class="analytics-studio__section-label">Verloop</span><h2 id="analytics-chart-title">{metricLabel} doorheen de tijd</h2><p>Per {selectedRange.hourly ? 'uur' : 'dag'} · tijdzone Brussel</p></div><nav class="analytics-studio__switch" aria-label="Grafiekcijfer"><a href={metricUrl('visitors')} class:list={{ 'is-active': metric === 'visitors' }} aria-current={metric === 'visitors' ? 'page' : undefined}>Bezoekers</a><a href={metricUrl('pageviews')} class:list={{ 'is-active': metric === 'pageviews' }} aria-current={metric === 'pageviews' ? 'page' : undefined}>Paginaweergaven</a></nav></div>
-      {analytics.pageviews ? <>
-        <div class="analytics-studio__chart" data-analytics-chart data-points={chartData} data-unit={metric === 'pageviews' ? 'paginaweergaven' : 'bezoekers'}>
-          <div class="analytics-studio__plot"><svg viewBox={`0 0 ${chartWidth} ${chartHeight}`} role="img" aria-label={`${metricLabel} per ${selectedRange.hourly ? 'uur' : 'dag'}`} preserveAspectRatio="none">
-            {[0, .5, 1].map((ratio) => { const y = top + ratio * (baseline - top); return <g><line class="analytics-studio__grid" x1={left} x2={chartWidth - right} y1={y} y2={y}/><text x={left - 9} y={y + 4}>{formatNumber(Math.round(maxValue * (1 - ratio)))}</text></g>; })}
-            <polygon points={area} class="analytics-studio__area"/><polyline points={line} class="analytics-studio__line"/>
-            <line class="analytics-studio__guide" data-chart-guide x1="0" x2="0" y1={top} y2={baseline} style="display:none"/><circle class="analytics-studio__dot" data-chart-dot cx="0" cy="0" r="5" style="display:none"/>
-          </svg><button class="analytics-studio__capture" type="button" data-chart-capture aria-label={`${metricLabel} grafiek. Gebruik links en rechts om tijdvakken te bekijken.`}></button><div class="analytics-studio__tooltip" data-chart-tooltip hidden aria-hidden="true"><span data-tooltip-label></span><strong data-tooltip-value></strong></div></div>
-          <span class="sr-only" data-chart-status aria-live="off"></span>
-          <div class="analytics-studio__ticks">{ticks.map((point) => <span>{formatPoint(point.timestamp)}</span>)}</div>
-        </div>
-        {metric === 'visitors' && <p class="analytics-studio__note">Een bezoeker kan op meerdere dagen voorkomen. Het totaal bovenaan telt die browser één keer binnen de hele periode.</p>}
-        <details class="analytics-studio__details"><summary>Bekijk cijfers per {selectedRange.hourly ? 'uur' : 'dag'}</summary><div>{analytics.trend.map((point) => <p><span>{formatPoint(point.timestamp)}</span><strong>{formatNumber(point[metric])} {metric === 'pageviews' ? 'paginaweergaven' : 'bezoekers'}</strong></p>)}</div></details>
-      </> : <div class="analytics-studio__empty"><strong>Nog geen bezoekgegevens</strong><p>De grafiek verschijnt zodra een bezoeker toestemming geeft en een publieke pagina bekijkt.</p></div>}
-    </section>
-
-    <div class="analytics-studio__lower">
-      <section class="analytics-studio__panel analytics-studio__rank" aria-labelledby="top-pages-title"><div class="analytics-studio__panel-head"><div><span class="analytics-studio__section-label">Interesse</span><h2 id="top-pages-title">Meest bekeken pagina’s</h2><p>Paginaweergaven in deze periode</p></div></div>{analytics.topPages.length ? <ol>{analytics.topPages.map((page, index) => <li><span class="analytics-studio__rank-num">{String(index + 1).padStart(2, '0')}</span><span class="analytics-studio__rank-name">{page.path}</span><strong>{formatNumber(page.views)}</strong></li>)}</ol> : <div class="analytics-studio__list-empty">Nog geen pagina’s om te tonen.</div>}</section>
-      <section class="analytics-studio__panel analytics-studio__rank analytics-studio__countries" aria-labelledby="countries-title" data-country-chart>
-        <div class="analytics-studio__panel-head"><div><span class="analytics-studio__section-label">Herkomst</span><h2 id="countries-title">Bezoekers per land</h2><p>Schatting op basis van het netwerk</p></div></div>
-        {countrySegments.length ? <div class="analytics-studio__country-content">
-          <div class="analytics-studio__country-donut" aria-hidden="true">
-            <svg viewBox="0 0 200 200" focusable="false">
-              <circle class="analytics-studio__country-track" cx="100" cy="100" r="72" pathLength="100" />
-              {countrySegments.map((segment, index) => <circle class="analytics-studio__country-slice" cx="100" cy="100" r="72" pathLength="100" style={`--arc:${segment.share};--offset:${-segment.offset};--delay:${index * 90}ms;stroke:${segment.color}`} />)}
-            </svg>
-            <div class="analytics-studio__country-total"><strong>{formatNumber(analytics.visitors)}</strong><span>{analytics.visitors === 1 ? 'bezoeker' : 'bezoekers'}</span></div>
-          </div>
-          <ol class="analytics-studio__country-legend">{countrySegments.map((segment) => <li><i style={`background:${segment.color}`} aria-hidden="true"></i><span class="analytics-studio__country-flag" aria-hidden="true">{segment.flag ? <img src={segment.flag} alt="" width="22" height="17" loading="lazy" /> : <svg viewBox="0 0 24 24" fill="none" focusable="false"><circle cx="12" cy="12" r="8"/><path d="M4 12h16M12 4c-2.3 2.1-3.5 4.8-3.5 8s1.2 5.9 3.5 8m0-16c2.3 2.1 3.5 4.8 3.5 8s-1.2 5.9-3.5 8"/></svg>}</span><span>{countryLabel(segment.code)}</span><strong>{formatNumber(segment.visitors)}</strong><small>{Math.round(segment.share)}%</small></li>)}</ol>
-        </div> : <div class="analytics-studio__list-empty">Nog geen bezoekers om te tonen.</div>}
-        <p class="analytics-studio__country-note">Eerste bekende land per browser in deze periode. Oudere bezoeken zonder landcode blijven onbekend; VPN’s kunnen afwijken.</p>
-      </section>
+  <AnalyticsIsland server:defer period={period} metric={metric}>
+    <div slot="fallback" class="admin-page analytics-studio" aria-busy="true">
+      <header class="analytics-studio__heading"><h1>Website in cijfers</h1><small>Gegevens laden…</small></header>
+      <div class="analytics-studio__toolbar"><span>Periode</span><nav aria-label="Periode">{ranges.map((range) => <a href={`/admin/analytics?periode=${range.key}&grafiek=${metric}`} class:list={{ 'is-active': range.key === period }} aria-current={range.key === period ? 'page' : undefined}>{range.label}</a>)}</nav></div>
+      <p class="admin-loading-label" role="status">Analytics laden…</p>
+      <section class="analytics-studio__stats" aria-label="Kerncijfers laden">{Array.from({ length: 2 }, () => <article class="analytics-studio__stat admin-skeleton-card"><span class="admin-skeleton-line"></span><span class="admin-skeleton-number"></span><span class="admin-skeleton-line admin-skeleton-line--short"></span></article>)}</section>
+      <section class="analytics-studio__panel analytics-studio__trend admin-skeleton-panel" aria-label="Verloopgrafiek laden"><span class="admin-skeleton-line"></span><div class="admin-skeleton-chart"></div></section>
+      <div class="analytics-studio__lower">{Array.from({ length: 2 }, () => <section class="analytics-studio__panel admin-skeleton-panel" aria-label="Analyticsgegevens laden"><span class="admin-skeleton-line"></span><span class="admin-skeleton-line"></span><span class="admin-skeleton-line admin-skeleton-line--short"></span></section>)}</div>
     </div>
-    <p class="analytics-studio__footnote">Alle cijfers zijn gebaseerd op bezoekers die analytics hebben toegestaan. De lopende periode bevat vandaag nog niet alle uren.</p>
-  </div>
+  </AnalyticsIsland>
+  <script is:inline>
+    const initAnalyticsCharts = () => {
+    document.querySelectorAll('[data-country-chart]').forEach((chart) => {
+      if (chart.dataset.chartInitialized) return;
+      chart.dataset.chartInitialized = 'true';
+      if (!chart.querySelector('.analytics-studio__country-slice')) return;
+      if (window.matchMedia('(prefers-reduced-motion: reduce)').matches || !('IntersectionObserver' in window)) return;
+      const observer = new IntersectionObserver((entries) => {
+        if (!entries[0].isIntersecting) return;
+        chart.classList.add('is-visible');
+        observer.disconnect();
+      }, { threshold: 0.3 });
+      observer.observe(chart);
+    });
+    document.querySelectorAll('[data-analytics-chart]').forEach((chart) => {
+      if (chart.dataset.chartInitialized) return;
+      chart.dataset.chartInitialized = 'true';
+      const points = JSON.parse(chart.dataset.points || '[]');
+      const capture = chart.querySelector('[data-chart-capture]');
+      const plot = chart.querySelector('.analytics-studio__plot');
+      const tooltip = chart.querySelector('[data-chart-tooltip]');
+      const label = chart.querySelector('[data-tooltip-label]');
+      const value = chart.querySelector('[data-tooltip-value]');
+      const status = chart.querySelector('[data-chart-status]');
+      const guide = chart.querySelector('[data-chart-guide]');
+      const dot = chart.querySelector('[data-chart-dot]');
+      if (!points.length || !capture || !plot || !tooltip || !label || !value || !status || !guide || !dot) return;
+      let activeIndex = -1;
+      let keyboardMode = false;
+      let pointerFocusing = false;
+      const show = (index, clientX, clientY) => {
+        activeIndex = Math.max(0, Math.min(points.length - 1, index));
+        const point = points[activeIndex];
+        guide.setAttribute('x1', point.x);
+        guide.setAttribute('x2', point.x);
+        dot.setAttribute('cx', point.x);
+        dot.setAttribute('cy', point.y);
+        guide.style.display = '';
+        dot.style.display = '';
+        label.textContent = point.label;
+        value.textContent = `${new Intl.NumberFormat('nl-BE').format(point.value)} ${chart.dataset.unit}`;
+        status.textContent = `${point.label}: ${value.textContent}`;
+        tooltip.hidden = false;
+        const rect = plot.getBoundingClientRect();
+        const x = clientX === undefined ? point.x / 960 * rect.width : clientX - rect.left;
+        const y = clientY === undefined ? point.y / 260 * rect.height : clientY - rect.top;
+        const width = tooltip.offsetWidth;
+        const height = tooltip.offsetHeight;
+        tooltip.style.left = `${Math.max(8, Math.min(rect.width - width - 8, x + 14))}px`;
+        tooltip.style.top = `${y - height - 14 < 8 ? Math.min(rect.height - height - 8, y + 18) : y - height - 14}px`;
+      };
+      const hide = () => {
+        if (keyboardMode) return;
+        activeIndex = -1;
+        guide.style.display = 'none';
+        dot.style.display = 'none';
+        tooltip.hidden = true;
+      };
+      const showAtPointer = (event) => {
+        const rect = capture.getBoundingClientRect();
+        const position = Math.max(0, Math.min(1, (event.clientX - rect.left) / rect.width));
+        show(Math.round(position * (points.length - 1)), event.clientX, event.clientY);
+      };
+      capture.addEventListener('pointermove', (event) => { keyboardMode = false; showAtPointer(event); });
+      capture.addEventListener('pointerdown', (event) => { pointerFocusing = true; keyboardMode = event.pointerType !== 'mouse'; showAtPointer(event); });
+      capture.addEventListener('pointerleave', hide);
+      capture.addEventListener('focus', () => {
+        if (pointerFocusing) { pointerFocusing = false; return; }
+        keyboardMode = true;
+        status.setAttribute('aria-live', 'polite');
+        show(activeIndex < 0 ? points.length - 1 : activeIndex);
+      });
+      capture.addEventListener('blur', () => {
+        keyboardMode = false;
+        status.setAttribute('aria-live', 'off');
+        hide();
+      });
+      capture.addEventListener('keydown', (event) => {
+        if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+        event.preventDefault();
+        keyboardMode = true;
+        status.setAttribute('aria-live', 'polite');
+        if (event.key === 'Home') show(0);
+        else if (event.key === 'End') show(points.length - 1);
+        else show((activeIndex < 0 ? points.length - 1 : activeIndex) + (event.key === 'ArrowRight' ? 1 : -1));
+      });
+    });
+    };
+    initAnalyticsCharts();
+    const analyticsRoot = document.querySelector('.admin-main');
+    if (analyticsRoot) new MutationObserver(initAnalyticsCharts).observe(analyticsRoot, { childList: true, subtree: true });
+  </script>
 </AdminLayout>
-
-<script is:inline>
-  document.querySelectorAll('[data-country-chart]').forEach((chart) => {
-    if (!chart.querySelector('.analytics-studio__country-slice')) return;
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches || !('IntersectionObserver' in window)) return;
-    const observer = new IntersectionObserver((entries) => {
-      if (!entries[0].isIntersecting) return;
-      chart.classList.add('is-visible');
-      observer.disconnect();
-    }, { threshold: 0.3 });
-    observer.observe(chart);
-  });
-  document.querySelectorAll('[data-analytics-chart]').forEach((chart) => {
-    const points = JSON.parse(chart.dataset.points || '[]');
-    const capture = chart.querySelector('[data-chart-capture]');
-    const plot = chart.querySelector('.analytics-studio__plot');
-    const tooltip = chart.querySelector('[data-chart-tooltip]');
-    const label = chart.querySelector('[data-tooltip-label]');
-    const value = chart.querySelector('[data-tooltip-value]');
-    const status = chart.querySelector('[data-chart-status]');
-    const guide = chart.querySelector('[data-chart-guide]');
-    const dot = chart.querySelector('[data-chart-dot]');
-    if (!points.length || !capture || !plot || !tooltip || !label || !value || !status || !guide || !dot) return;
-    let activeIndex = -1;
-    let keyboardMode = false;
-    let pointerFocusing = false;
-    const show = (index, clientX, clientY) => {
-      activeIndex = Math.max(0, Math.min(points.length - 1, index));
-      const point = points[activeIndex];
-      guide.setAttribute('x1', point.x);
-      guide.setAttribute('x2', point.x);
-      dot.setAttribute('cx', point.x);
-      dot.setAttribute('cy', point.y);
-      guide.style.display = '';
-      dot.style.display = '';
-      label.textContent = point.label;
-      value.textContent = `${new Intl.NumberFormat('nl-BE').format(point.value)} ${chart.dataset.unit}`;
-      status.textContent = `${point.label}: ${value.textContent}`;
-      tooltip.hidden = false;
-      const rect = plot.getBoundingClientRect();
-      const x = clientX === undefined ? point.x / 960 * rect.width : clientX - rect.left;
-      const y = clientY === undefined ? point.y / 260 * rect.height : clientY - rect.top;
-      const width = tooltip.offsetWidth;
-      const height = tooltip.offsetHeight;
-      tooltip.style.left = `${Math.max(8, Math.min(rect.width - width - 8, x + 14))}px`;
-      tooltip.style.top = `${y - height - 14 < 8 ? Math.min(rect.height - height - 8, y + 18) : y - height - 14}px`;
-    };
-    const hide = () => {
-      if (keyboardMode) return;
-      activeIndex = -1;
-      guide.style.display = 'none';
-      dot.style.display = 'none';
-      tooltip.hidden = true;
-    };
-    const showAtPointer = (event) => {
-      const rect = capture.getBoundingClientRect();
-      const position = Math.max(0, Math.min(1, (event.clientX - rect.left) / rect.width));
-      show(Math.round(position * (points.length - 1)), event.clientX, event.clientY);
-    };
-    capture.addEventListener('pointermove', (event) => { keyboardMode = false; showAtPointer(event); });
-    capture.addEventListener('pointerdown', (event) => { pointerFocusing = true; keyboardMode = event.pointerType !== 'mouse'; showAtPointer(event); });
-    capture.addEventListener('pointerleave', hide);
-    capture.addEventListener('focus', () => {
-      if (pointerFocusing) { pointerFocusing = false; return; }
-      keyboardMode = true;
-      status.setAttribute('aria-live', 'polite');
-      show(activeIndex < 0 ? points.length - 1 : activeIndex);
-    });
-    capture.addEventListener('blur', () => {
-      keyboardMode = false;
-      status.setAttribute('aria-live', 'off');
-      hide();
-    });
-    capture.addEventListener('keydown', (event) => {
-      if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
-      event.preventDefault();
-      keyboardMode = true;
-      status.setAttribute('aria-live', 'polite');
-      if (event.key === 'Home') show(0);
-      else if (event.key === 'End') show(points.length - 1);
-      else show((activeIndex < 0 ? points.length - 1 : activeIndex) + (event.key === 'ArrowRight' ? 1 : -1));
-    });
-  });
-</script>
