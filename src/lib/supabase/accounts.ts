@@ -4,7 +4,7 @@ type Row = Record<string, unknown>;
 const fail = (error: { message?: string } | null) => { if (error) throw new Error(error.message || 'Supabase query failed.'); };
 
 export type CustomerBookingStatusEvent = { fromStatus: string | null; status: string; occurredAt: string };
-export type CustomerBooking = { id: string; practitionerName: string; practitionerSlug: string; startsAt: string; endsAt: string; status: string; statusHistory: CustomerBookingStatusEvent[] };
+export type CustomerBooking = { id: string; practitionerName: string; practitionerSlug: string; startsAt: string; endsAt: string; status: string; origin: string; statusHistory: CustomerBookingStatusEvent[] };
 export type CustomerBookingNotification = { id: string; bookingId: string; createdAt: string; readAt: string | null; status: string; practitionerName: string; startsAt: string };
 export type CustomerTransaction = { id: string; createdAt: string; status: string; totalCents: number; currency: string; provider: string | null; productSlug: string | null };
 export type CustomerEntitlement = { id: string; productTitle: string; productSlug: string; productType: string; status: string; grantedAt: string };
@@ -12,7 +12,7 @@ export type NotificationPreferences = { bookingEmailEnabled: boolean; bookingRem
 export type SecurityActivity = { occurredAt: string; action: string; metadata: Record<string, unknown> };
 
 export const listCustomerBookings = async (userId: string): Promise<CustomerBooking[]> => {
-  const { data, error } = await getSupabaseAdmin().from('bookings').select('id,starts_at,ends_at,status,practitioners(name,slug)').eq('customer_user_id', userId).order('starts_at', { ascending: false });
+  const { data, error } = await getSupabaseAdmin().from('bookings').select('id,starts_at,ends_at,status,origin,practitioners(name,slug)').eq('customer_user_id', userId).order('starts_at', { ascending: false });
   fail(error);
   const rows = (data || []) as Row[];
   if (!rows.length) return [];
@@ -36,7 +36,7 @@ export const listCustomerBookings = async (userId: string): Promise<CustomerBook
   });
   return rows.map((row) => {
     const practitioner = (Array.isArray(row.practitioners) ? row.practitioners[0] : row.practitioners || {}) as Row;
-    return { id: String(row.id), practitionerName: String(practitioner.name || 'Professional'), practitionerSlug: String(practitioner.slug || ''), startsAt: String(row.starts_at), endsAt: String(row.ends_at), status: String(row.status), statusHistory: history.get(String(row.id)) || [] };
+    return { id: String(row.id), practitionerName: String(practitioner.name || 'Professional'), practitionerSlug: String(practitioner.slug || ''), startsAt: String(row.starts_at), endsAt: String(row.ends_at), status: String(row.status), origin: String(row.origin || 'customer_request'), statusHistory: history.get(String(row.id)) || [] };
   });
 };
 export const countUnreadCustomerBookingNotifications = async (userId: string): Promise<number> => {
@@ -52,7 +52,7 @@ export const listCustomerBookingNotifications = async (userId: string): Promise<
   const client = getSupabaseAdmin();
   const { data: notificationRows, error } = await client
     .from('customer_notifications')
-    .select('id,booking_id,status_event_id,created_at,read_at')
+    .select('id,booking_id,status_event_id,schedule_event_id,created_at,read_at')
     .eq('customer_user_id', userId)
     .order('created_at', { ascending: false })
     .order('id', { ascending: false });
@@ -60,23 +60,28 @@ export const listCustomerBookingNotifications = async (userId: string): Promise<
   const notifications = (notificationRows || []) as Row[];
   if (!notifications.length) return [];
 
-  const eventIds = notifications.map((row) => Number(row.status_event_id));
+  const eventIds = notifications.filter((row) => row.status_event_id != null).map((row) => Number(row.status_event_id));
+  const scheduleIds = notifications.filter((row) => row.schedule_event_id != null).map((row) => Number(row.schedule_event_id));
   const bookingIds = [...new Set(notifications.map((row) => String(row.booking_id)))];
-  const [{ data: eventRows, error: eventError }, { data: bookingRows, error: bookingError }] = await Promise.all([
-    client.from('booking_status_events').select('id,to_status').in('id', eventIds).eq('customer_visible', true),
-    client.from('bookings').select('id,starts_at,practitioners(name)').in('id', bookingIds).eq('customer_user_id', userId),
+  const [{ data: eventRows, error: eventError }, { data: bookingRows, error: bookingError }, { data: scheduleRows, error: scheduleError }] = await Promise.all([
+    eventIds.length ? client.from('booking_status_events').select('id,to_status,from_status').in('id', eventIds).eq('customer_visible', true) : Promise.resolve({ data: [], error: null }),
+    client.from('bookings').select('id,starts_at,origin,practitioners(name)').in('id', bookingIds).eq('customer_user_id', userId),
+    scheduleIds.length ? client.from('booking_schedule_events').select('id,new_starts_at').in('id', scheduleIds) : Promise.resolve({ data: [], error: null }),
   ]);
   fail(eventError);
   fail(bookingError);
+  fail(scheduleError);
 
-  const events = new Map(((eventRows || []) as Row[]).map((row) => [String(row.id), String(row.to_status)]));
+  const events = new Map(((eventRows || []) as Row[]).map((row) => [String(row.id), { status: String(row.to_status), initial: row.from_status == null }]));
+  const scheduleTimes = new Map(((scheduleRows || []) as Row[]).map((row) => [String(row.id), String(row.new_starts_at)]));
   const bookings = new Map(((bookingRows || []) as Row[]).map((row) => {
     const practitioner = (Array.isArray(row.practitioners) ? row.practitioners[0] : row.practitioners || {}) as Row;
-    return [String(row.id), { startsAt: String(row.starts_at), practitionerName: String(practitioner.name || 'Je professional') }];
+    return [String(row.id), { startsAt: String(row.starts_at), practitionerName: String(practitioner.name || 'Je professional'), origin: String(row.origin || 'customer_request') }];
   }));
   return notifications.flatMap((row) => {
     const booking = bookings.get(String(row.booking_id));
-    const status = events.get(String(row.status_event_id));
+    const event = events.get(String(row.status_event_id));
+    const status = row.schedule_event_id != null ? 'rescheduled' : event?.initial && booking?.origin === 'staff' ? 'scheduled' : event?.status;
     if (!booking || !status) return [];
     return [{
       id: String(row.id),
@@ -85,7 +90,7 @@ export const listCustomerBookingNotifications = async (userId: string): Promise<
       readAt: row.read_at ? String(row.read_at) : null,
       status,
       practitionerName: booking.practitionerName,
-      startsAt: booking.startsAt,
+      startsAt: row.schedule_event_id != null ? scheduleTimes.get(String(row.schedule_event_id)) || booking.startsAt : booking.startsAt,
     }];
   });
 };

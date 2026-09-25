@@ -13,6 +13,8 @@ const statusMessage: Record<string, string> = {
   cancelled: 'Je afspraak is geannuleerd',
   completed: 'Je afspraak is afgerond',
   no_show: 'Je afspraak is niet doorgegaan',
+  rescheduled: 'Je afspraak is verplaatst',
+  scheduled: 'Er is een afspraak voor je ingepland',
 };
 const notificationDate = (value: string) => new Intl.DateTimeFormat('nl-BE', {
   timeZone: 'Europe/Brussels', dateStyle: 'medium', timeStyle: 'short',
