@@ -5,13 +5,13 @@ import { createPatientNote, type PatientNote } from '../../../../../lib/clientRe
 
 export const prerender = false;
 const noteTypes = ['intake', 'session', 'follow_up', 'other', 'correction'] as const;
-const destinationFor = (patientId: string, code: string) => `/admin/clienten/${encodeURIComponent(patientId)}?${new URLSearchParams({ melding: code })}`;
+const destinationFor = (patientId: string, code: string, error = false) => `/admin/clienten/${encodeURIComponent(patientId)}?${new URLSearchParams({ [error ? 'fout' : 'melding']: code })}#${error ? 'nieuw-verslag' : 'verslagen'}`;
 
 export const POST: APIRoute = async ({ request, params, locals, redirect }) => {
   if (!isTrustedFormOrigin(request)) return new Response('Ongeldige aanvraag.', { status: 403 });
   const user = locals.currentUser!; const form = await request.formData(); const patientId = params.id || '';
   const requestedType = String(form.get('note_type') || 'session');
-  if (!noteTypes.includes(requestedType as typeof noteTypes[number])) return redirect(destinationFor(patientId, 'ongeldige_invoer'), 303);
+  if (!noteTypes.includes(requestedType as typeof noteTypes[number])) return redirect(destinationFor(patientId, 'ongeldige_invoer', true), 303);
   const finalize = String(form.get('submit_status') || 'draft') === 'final';
   try {
     await createPatientNote({
@@ -27,7 +27,7 @@ export const POST: APIRoute = async ({ request, params, locals, redirect }) => {
   } catch (error) {
     const code = error instanceof Error ? error.message : '';
     const message = code.includes('not_found') ? 'dossier_niet_gevonden' : code.includes('patient_archived') ? 'dossier_gearchiveerd' : code.includes('booking_not_linked') ? 'afspraak_niet_gekoppeld' : code.includes('invalid_correction') ? 'correctie_niet_geldig' : 'ongeldige_invoer';
-    return redirect(destinationFor(patientId, message), 303);
+    return redirect(destinationFor(patientId, message, true), 303);
   }
 };
 
