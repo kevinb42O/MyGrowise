@@ -17,10 +17,11 @@ const formatNumber = (value: number) => new Intl.NumberFormat('nl-BE').format(va
 const countryNames = new Intl.DisplayNames(['nl-BE'], { type: 'region' });
 const countryLabel = (code: string | null) => code === null ? 'Onbekend' : code === 'OTHER' ? 'Overige landen' : countryNames.of(code) || code;
 const countryColors = ['#669b7d', '#8ab7a1', '#8daebb', '#a5b8a1', '#a3a8bf', '#b4c7b8'];
+const flagCodes = new Set('AD AT BE BG HR CY CZ DK EE FI FR DE GR HU IE IT LV LT LU MT NL PL PT RO SK SI ES SE GB CH NO IS LI MC SM VA UA'.split(' '));
 let countryOffset = 0;
 const countrySegments = analytics.countries.map((country, index) => {
   const share = analytics.visitors ? country.visitors / analytics.visitors * 100 : 0;
-  const segment = { ...country, share, offset: countryOffset, color: country.code === null ? '#cbd4ce' : countryColors[index % countryColors.length] };
+  const segment = { ...country, share, offset: countryOffset, color: country.code === null ? '#cbd4ce' : countryColors[index % countryColors.length], flag: country.code && flagCodes.has(country.code) ? `/flags/${country.code.toLowerCase()}.svg` : null };
   countryOffset += share;
   return segment;
 });
@@ -99,7 +100,7 @@ const metricUrl = (next: string) => `/admin/analytics?periode=${selectedRange.ke
             </svg>
             <div class="analytics-studio__country-total"><strong>{formatNumber(analytics.visitors)}</strong><span>{analytics.visitors === 1 ? 'bezoeker' : 'bezoekers'}</span></div>
           </div>
-          <ol class="analytics-studio__country-legend">{countrySegments.map((segment) => <li><i style={`background:${segment.color}`} aria-hidden="true"></i><span>{countryLabel(segment.code)}</span><strong>{formatNumber(segment.visitors)}</strong><small>{Math.round(segment.share)}%</small></li>)}</ol>
+          <ol class="analytics-studio__country-legend">{countrySegments.map((segment) => <li><i style={`background:${segment.color}`} aria-hidden="true"></i><span class="analytics-studio__country-flag" aria-hidden="true">{segment.flag ? <img src={segment.flag} alt="" width="22" height="17" loading="lazy" /> : <svg viewBox="0 0 24 24" fill="none" focusable="false"><circle cx="12" cy="12" r="8"/><path d="M4 12h16M12 4c-2.3 2.1-3.5 4.8-3.5 8s1.2 5.9 3.5 8m0-16c2.3 2.1 3.5 4.8 3.5 8s-1.2 5.9-3.5 8"/></svg>}</span><span>{countryLabel(segment.code)}</span><strong>{formatNumber(segment.visitors)}</strong><small>{Math.round(segment.share)}%</small></li>)}</ol>
         </div> : <div class="analytics-studio__list-empty">Nog geen bezoekers om te tonen.</div>}
         <p class="analytics-studio__country-note">Eerste bekende land per browser in deze periode. Oudere bezoeken zonder landcode blijven onbekend; VPN’s kunnen afwijken.</p>
       </section>
