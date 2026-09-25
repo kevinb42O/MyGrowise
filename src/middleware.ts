@@ -7,10 +7,8 @@ export const onRequest = defineMiddleware(async (context, next) => {
   const request = context.request;
   const isSafeMethod = ['GET', 'HEAD', 'OPTIONS'].includes(request.method.toUpperCase());
   const hasOrigin = request.headers.has('origin');
-  // Some native same-origin form posts behind Vercel arrive without Origin.
-  // Route handlers still validate any Origin that is present, and the admin
-  // session cookie is SameSite=Strict, so a missing header must not reject a
-  // legitimate authenticated form submission here.
+  // Native same-origin form posts may arrive with no Origin or Origin: null.
+  // isTrustedFormOrigin uses browser Fetch Metadata for the latter case.
   if (!isSafeMethod && hasOrigin && !isTrustedFormOrigin(request)) {
     return new Response(`Cross-site ${request.method} form submissions are forbidden`, { status: 403 });
   }

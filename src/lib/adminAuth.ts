@@ -22,6 +22,10 @@ const trustedAppOrigins = new Set(['https://mygrowise.be', 'https://www.mygrowis
 export const isTrustedFormOrigin = (request: Request) => {
   const originHeader = request.headers.get('origin');
   if (!originHeader) return true;
+  // Chrome may send Origin: null for a native form navigation even when its
+  // browser-controlled Fetch Metadata identifies the request as same-origin.
+  // Cross-site and sandboxed requests remain rejected.
+  if (originHeader === 'null') return request.headers.get('sec-fetch-site') === 'same-origin';
 
   let origin: URL;
   try {
