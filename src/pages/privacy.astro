@@ -1,4 +1,27 @@
 ---
 import MainLayout from '../layouts/MainLayout.astro';
 ---
-<MainLayout noindex title="Privacy — MyGrowise" description="Privacy-informatie van MyGrowise."><section class="page-hero"><div class="container"><span class="eyebrow">Juridisch</span><h1 class="heading-xl">Privacy</h1><p class="lead">De definitieve privacyverklaring wordt vóór publieke lancering ingevuld en juridisch gecontroleerd.</p></div></section><section class="section"><div class="container legal"><div class="notice"><strong>Nog niet klaar voor publicatie.</strong> Deze pagina is bewust niet indexeerbaar. Ze mag pas live nadat verantwoordelijke, doeleinden, rechtsgronden, verwerkers, bewaartermijnen, rechten en contactprocedure volledig zijn bevestigd.</div><p class="body-copy">Voor een praktische privacyvraag kan je voorlopig contact opnemen via <a href="mailto:info@mygrowise.be">info@mygrowise.be</a>. Deel via gewone e-mail geen medische of andere gevoelige informatie.</p></div></section></MainLayout><style>.legal{max-width:780px}.legal p{margin-top:2rem}</style>
+<MainLayout noindex title="Privacy — MyGrowise" description="Privacy-informatie van MyGrowise.">
+  <section class="page-hero"><div class="container"><span class="eyebrow">Juridisch</span><h1 class="heading-xl">Privacy</h1><p class="lead">Zo gebruiken we toestemming voor websiteanalytics.</p></div></section>
+  <section class="section"><div class="container legal">
+    <div class="notice"><strong>Volledige verklaring in voorbereiding.</strong> De overige onderdelen van de privacyverklaring worden vóór publieke lancering aangevuld en juridisch gecontroleerd.</div>
+    <h2>Websiteanalytics</h2>
+    <p class="body-copy">Als je “Akkoord” kiest, gebruikt MyGrowise een eigen analytics-cookie met een willekeurige browser-ID. We registreren bezochte publieke paden, enkele website-interacties, het tijdstip en een geschatte landcode op basis van het netwerk. Zo zien we welke pagina’s worden bekeken en uit welke landen bezoek komt. Het land kan afwijken wanneer je een VPN of bedrijfsnetwerk gebruikt.</p>
+    <p class="body-copy">De landcode wordt op de server bepaald. We bewaren geen IP-adres, stad, exacte locatie, inhoud van berichten, vragenlijstantwoorden of gezondheidsgegevens in analytics. De toestemmingscookie en browser-ID verlopen na 180 dagen. Analytics-events worden na 13 maanden automatisch verwijderd.</p>
+    <p class="body-copy">Je kunt je toestemming hieronder intrekken. Daarna stopt toekomstige analytics-meting en wordt de browser-ID op dit apparaat verwijderd. Heb je een vraag over bestaande gegevens, mail dan <a href="mailto:info@mygrowise.be">info@mygrowise.be</a>. Deel via gewone e-mail geen medische of andere gevoelige informatie.</p>
+    <button class="privacy-withdraw" type="button" data-analytics-withdraw>Analytics-toestemming intrekken</button><p class="privacy-withdraw-status" data-analytics-withdraw-status role="status"></p>
+  </div></section>
+</MainLayout>
+<script is:inline>
+  document.querySelector('[data-analytics-withdraw]')?.addEventListener('click', async () => {
+    const status = document.querySelector('[data-analytics-withdraw-status]');
+    try {
+      const response = await fetch('/api/analytics', { method: 'DELETE', credentials: 'same-origin' });
+      if (!response.ok) throw new Error('withdraw_failed');
+      if (status) status.textContent = 'Je toestemming is ingetrokken. We meten geen nieuwe bezoeken op dit apparaat.';
+    } catch {
+      if (status) status.textContent = 'Intrekken lukte niet. Probeer het opnieuw.';
+    }
+  });
+</script>
+<style>.legal{max-width:780px}.legal h2{margin:2.3rem 0 0;font-size:1.5rem}.legal .body-copy{margin-top:1rem}.privacy-withdraw{margin-top:1rem;padding:.7rem 1rem;border:1px solid #173d35;border-radius:999px;background:#173d35;color:white;font:inherit;font-size:.85rem;font-weight:700;cursor:pointer}.privacy-withdraw:hover{background:#245b4c}.privacy-withdraw-status{min-height:1.5rem;margin-top:.65rem;font-size:.8rem}</style>

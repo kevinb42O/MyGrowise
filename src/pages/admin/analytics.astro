@@ -1,83 +1,89 @@
 ---
 import AdminLayout from '../../layouts/AdminLayout.astro';
-import AdminIcon from '../../components/admin/AdminIcon.astro';
-import { getSuperadminOverview } from '../../lib/superAdmin';
 import { getAdminAnalytics } from '../../lib/adminAnalytics';
 
-const rangeParam = Astro.url.searchParams.get('periode') || '7d';
 const ranges = [
   { key: '1d', label: '24 uur', days: 1, hourly: true },
   { key: '7d', label: '7 dagen', days: 7, hourly: false },
   { key: '30d', label: '30 dagen', days: 30, hourly: false },
-  { key: '90d', label: '3 maanden', days: 90, hourly: false },
+  { key: '90d', label: '90 dagen', days: 90, hourly: false },
   { key: '365d', label: '12 maanden', days: 365, hourly: false },
 ];
-const selectedRange = ranges.find((range) => range.key === rangeParam) || ranges[1];
-const [overview, analytics] = await Promise.all([getSuperadminOverview(), getAdminAnalytics({ days: selectedRange.days, hourly: selectedRange.hourly })]);
-const isHourly = selectedRange.hourly;
-const chartWidth = 1000; const chartHeight = 300; const chartLeft = 42; const chartRight = 18; const chartTop = 18; const chartBottom = 34;
-const maxValue = Math.max(4, ...analytics.trend.map((point) => point.value));
-const toPoint = (point: { value: number }, index: number) => {
-  const x = chartLeft + (analytics.trend.length === 1 ? 0 : index / (analytics.trend.length - 1) * (chartWidth - chartLeft - chartRight));
-  const y = chartTop + (1 - point.value / maxValue) * (chartHeight - chartTop - chartBottom);
-  return { x: Number(x.toFixed(2)), y: Number(y.toFixed(2)) };
+const selectedRange = ranges.find((range) => range.key === Astro.url.searchParams.get('periode')) || ranges[1];
+const metric = Astro.url.searchParams.get('grafiek') === 'pageviews' ? 'pageviews' : 'visitors';
+const metricLabel = metric === 'pageviews' ? 'Paginaweergaven' : 'Unieke bezoekers';
+const analytics = await getAdminAnalytics({ days: selectedRange.days, hourly: selectedRange.hourly });
+const formatNumber = (value: number) => new Intl.NumberFormat('nl-BE').format(value);
+const countryNames = new Intl.DisplayNames(['nl-BE'], { type: 'region' });
+const countryLabel = (code: string | null) => code === null ? 'Onbekend' : code === 'OTHER' ? 'Overige landen' : countryNames.of(code) || code;
+const comparison = (current: number, previous: number) => {
+  if (!analytics.comparisonAvailable) return 'Geen volledige vorige periode beschikbaar';
+  if (previous < 20) return `Vorige periode: ${formatNumber(previous)} · te weinig data voor een percentage`;
+  const change = Math.round((current - previous) / previous * 100);
+  return `${change > 0 ? '+' : ''}${change}% t.o.v. de vorige periode · toen ${formatNumber(previous)}`;
 };
-const points = analytics.trend.map(toPoint);
-const line = points.map((point) => `${point.x},${point.y}`).join(' ');
-const baseline = chartHeight - chartBottom;
-const area = points.length ? `${chartLeft},${baseline} ${line} ${points[points.length - 1].x},${baseline}` : '';
-const formatDate = (value: string) => new Intl.DateTimeFormat('nl-BE', { day: 'numeric', month: 'short' }).format(new Date(value));
-const formatHour = (value: string) => new Intl.DateTimeFormat('nl-BE', { hour: '2-digit', minute: '2-digit', day: 'numeric', month: 'short' }).format(new Date(value));
-const formatPoint = (value: string) => isHourly ? formatHour(value) : formatDate(value);
-const rangeDescription = isHourly
-  ? `Afgelopen 24 uur · ${formatHour(analytics.trend[0].timestamp)} – ${formatHour(analytics.trend[analytics.trend.length - 1].timestamp)}`
-  : `Afgelopen ${selectedRange.label.toLowerCase()} · ${formatDate(analytics.trend[0].timestamp)} – ${formatDate(analytics.trend[analytics.trend.length - 1].timestamp)}`;
-const chartData = JSON.stringify(analytics.trend.map((point, index) => ({ x: points[index].x, y: points[index].y, label: formatPoint(point.timestamp), value: point.value })));
-const metrics = [
-  { label: 'Consented sessies', value: String(analytics.sessions), detail: `First-party, ${selectedRange.label.toLowerCase()}`, icon: 'customers' },
-  { label: 'Producten gepubliceerd', value: String(overview.publishedProducts), detail: 'Catalogus in Supabase', icon: 'products' },
-  { label: 'Checkout gestart', value: String(analytics.checkoutStarted), detail: 'Nog geen betaalstatus afgeleid', icon: 'cart' },
-  { label: 'Boeking geklikt', value: String(analytics.bookingClicks), detail: 'First-party event', icon: 'trend' },
-];
-const width = (value: number, base: number) => base ? Math.max(4, Math.round(value / base * 100)) : 0;
-const commerceFunnel = [['Sessies', 100, String(analytics.self.sessions)], ['Route “zelf aan de slag”', width(analytics.self.route, analytics.self.sessions), String(analytics.self.route)], ['Product bekeken', width(analytics.self.product, analytics.self.sessions), String(analytics.self.product)], ['Checkout gestart', width(analytics.self.checkout, analytics.self.sessions), String(analytics.self.checkout)], ['Betaling geslaagd', 0, '—']];
-const careFunnel = [['Sessies', 100, String(analytics.care.sessions)], ['Route “begeleiding”', width(analytics.care.route, analytics.care.sessions), String(analytics.care.route)], ['Professional bekeken', width(analytics.care.professional, analytics.care.sessions), String(analytics.care.professional)], ['Boeking geklikt', width(analytics.care.booking, analytics.care.sessions), String(analytics.care.booking)], ['Boeking bevestigd', 0, '—']];
+const dateFormat = new Intl.DateTimeFormat('nl-BE', { timeZone: 'Europe/Brussels', day: 'numeric', month: 'short' });
+const hourFormat = new Intl.DateTimeFormat('nl-BE', { timeZone: 'Europe/Brussels', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', timeZoneName: 'short' });
+const formatPoint = (timestamp: string) => (selectedRange.hourly ? hourFormat : dateFormat).format(new Date(timestamp));
+const chartWidth = 960;
+const chartHeight = 260;
+const left = 43;
+const right = 13;
+const top = 13;
+const bottom = 31;
+const baseline = chartHeight - bottom;
+const values = analytics.trend.map((point) => point[metric]);
+const maxValue = Math.max(1, ...values);
+const chartPoints = analytics.trend.map((point, index) => {
+  const x = left + (analytics.trend.length === 1 ? 0 : index / (analytics.trend.length - 1) * (chartWidth - left - right));
+  const y = top + (1 - point[metric] / maxValue) * (baseline - top);
+  return { x: Number(x.toFixed(2)), y: Number(y.toFixed(2)), label: formatPoint(point.timestamp), value: point[metric] };
+});
+const line = chartPoints.map((point) => `${point.x},${point.y}`).join(' ');
+const area = chartPoints.length ? `${left},${baseline} ${line} ${chartPoints[chartPoints.length - 1].x},${baseline}` : '';
+const chartData = JSON.stringify(chartPoints);
+const tickStep = Math.max(1, Math.ceil(analytics.trend.length / 6));
+const ticks = analytics.trend.filter((_, index) => index === 0 || index === analytics.trend.length - 1 || index % tickStep === 0);
+const periodUrl = (range: string) => `/admin/analytics?periode=${range}&grafiek=${metric}`;
+const metricUrl = (next: string) => `/admin/analytics?periode=${selectedRange.key}&grafiek=${next}`;
 ---
 
-<AdminLayout title="Website-overzicht" description="Privacyvriendelijke websiteanalytics voor MyGrowise">
-  <div class="admin-page">
-    <section class="website-overview-head" aria-labelledby="analytics-title">
-      <div><p>Website</p><h1 id="analytics-title">Overzicht</h1><span>Zie in één oogopslag hoe MyGrowise wordt bezocht.</span></div>
-      <div class="website-overview-head__actions"><small><AdminIcon name="calendar" size={16}/> {analytics.lastEventAt ? `Bijgewerkt ${new Intl.DateTimeFormat('nl-BE', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }).format(new Date(analytics.lastEventAt))}` : 'Wacht op eerste bezoek'}</small><a class="website-refresh" href={`/admin/analytics?periode=${selectedRange.key}`}><AdminIcon name="arrow" size={16}/> Vernieuwen</a></div>
+<AdminLayout title="Websiteanalytics" description="Bezoekers, paginaweergaven en landen van MyGrowise">
+  <div class:list={['admin-page', 'analytics-studio', { 'is-pageviews': metric === 'pageviews' }]}>
+    <header class="analytics-studio__hero">
+      <div class="analytics-studio__hero-copy"><span class="analytics-studio__eyebrow">MyGrowise · website-inzicht</span><h1>Een helder beeld van je bezoek.</h1><p>Wat bekeken wordt, waar bezoekers vandaan komen en hoe het bezoek verandert.</p></div>
+      <div class="analytics-studio__hero-meta"><span class="analytics-studio__live-dot"></span><span>{analytics.lastEventAt ? `Laatste bezoek ${hourFormat.format(new Date(analytics.lastEventAt))}` : 'Wacht op eerste bezoek'}</span></div>
+    </header>
+
+    <div class="analytics-studio__toolbar"><span>Periode</span><nav aria-label="Periode">{ranges.map((range) => <a href={periodUrl(range.key)} class:list={{ 'is-active': range.key === selectedRange.key }} aria-current={range.key === selectedRange.key ? 'page' : undefined}>{range.label}</a>)}</nav></div>
+
+    <section class="analytics-studio__stats" aria-label="Kerncijfers">
+      <article class="analytics-studio__stat analytics-studio__stat--visitors"><div><span class="analytics-studio__stat-kicker"><i></i>Bereik</span><h2>Unieke bezoekers</h2><strong>{formatNumber(analytics.visitors)}</strong></div><p>{comparison(analytics.visitors, analytics.previous.visitors)}</p><small>Verschillende anonieme browsers in deze periode</small></article>
+      <article class="analytics-studio__stat analytics-studio__stat--pageviews"><div><span class="analytics-studio__stat-kicker"><i></i>Activiteit</span><h2>Paginaweergaven</h2><strong>{formatNumber(analytics.pageviews)}</strong></div><p>{comparison(analytics.pageviews, analytics.previous.pageviews)}</p><small>Elke geladen publieke pagina met toestemming</small></article>
     </section>
 
-    <section class="website-period" aria-labelledby="website-period-title"><strong id="website-period-title">Periode</strong><nav aria-label="Selecteer periode">{ranges.map((range) => <a href={`/admin/analytics?periode=${range.key}`} class:list={{ 'is-active': selectedRange.key === range.key }} aria-current={selectedRange.key === range.key ? 'page' : undefined}>{range.label}</a>)}<a href="/admin/analytics?periode=365d">Dit jaar</a></nav><p>{rangeDescription}</p></section>
-
-    <section class="website-traffic-card" aria-labelledby="traffic-title">
-      <header><div><span><AdminIcon name="analytics" size={21}/></span><div><h2 id="traffic-title">Bezoeken doorheen de tijd</h2><p>Het aantal geconsenteerde websitebezoeken {isHourly ? 'per uur' : 'per dag'}.</p></div></div></header>
-      <div class="website-traffic-chart" data-analytics-chart data-points={chartData}>
-        <div class="website-chart-tooltip" data-chart-tooltip role="status" hidden></div>
-        <svg viewBox={`0 0 ${chartWidth} ${chartHeight}`} role="img" aria-label={`${isHourly ? 'Uurlijkse' : 'Dagelijkse'} bezoeken voor ${selectedRange.label}`} preserveAspectRatio="none">
-          <defs><linearGradient id="website-traffic-fill" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stop-color="var(--admin-green)" stop-opacity=".18"/><stop offset="100%" stop-color="var(--admin-green)" stop-opacity="0"/></linearGradient></defs>
-          {[0, .25, .5, .75, 1].map((tick) => { const y = chartTop + tick * (chartHeight - chartTop - chartBottom); const value = Math.round(maxValue * (1 - tick)); return <g><line x1={chartLeft} x2={chartWidth - chartRight} y1={y} y2={y}/><text x={chartLeft - 8} y={y + 4}>{value}</text></g> })}
-          {area && <polygon points={area} class="website-traffic-chart__area"/>}<polyline points={line} class="website-traffic-chart__line"/>
-          <line class="website-traffic-chart__hover-guide" data-chart-guide x1="0" x2="0" y1={chartTop} y2={baseline} hidden/><circle class="website-traffic-chart__hover-dot" data-chart-dot cx="0" cy="0" r="4" hidden/>
-          <rect class="website-traffic-chart__capture" data-chart-capture x={chartLeft} y={chartTop} width={chartWidth - chartLeft - chartRight} height={baseline - chartTop} tabindex="0" aria-label={`Beweeg over de grafiek voor cijfers per ${isHourly ? 'uur' : 'dag'}`}/>
-        </svg>
-        <div class="website-traffic-chart__dates">{analytics.trend.filter((_, index) => analytics.trend.length <= 8 || index === 0 || index === analytics.trend.length - 1 || index % Math.ceil(analytics.trend.length / 6) === 0).map((point) => <span>{isHourly ? new Intl.DateTimeFormat('nl-BE', { hour: '2-digit' }).format(new Date(point.timestamp)) : formatDate(point.timestamp)}</span>)}</div>
-      </div>
-      <details><summary>Toon cijfers per {isHourly ? 'uur' : 'dag'}</summary><div>{analytics.trend.map((point) => <p><span>{formatPoint(point.timestamp)}</span><strong>{point.value} bezoeken</strong></p>)}</div></details>
+    <section class="analytics-studio__panel analytics-studio__trend" aria-labelledby="analytics-chart-title">
+      <div class="analytics-studio__panel-head"><div><span class="analytics-studio__section-label">Verloop</span><h2 id="analytics-chart-title">{metricLabel} doorheen de tijd</h2><p>Per {selectedRange.hourly ? 'uur' : 'dag'} · tijdzone Brussel</p></div><nav class="analytics-studio__switch" aria-label="Grafiekcijfer"><a href={metricUrl('visitors')} class:list={{ 'is-active': metric === 'visitors' }} aria-current={metric === 'visitors' ? 'page' : undefined}>Bezoekers</a><a href={metricUrl('pageviews')} class:list={{ 'is-active': metric === 'pageviews' }} aria-current={metric === 'pageviews' ? 'page' : undefined}>Paginaweergaven</a></nav></div>
+      {analytics.pageviews ? <>
+        <div class="analytics-studio__chart" data-analytics-chart data-points={chartData} data-unit={metric === 'pageviews' ? 'paginaweergaven' : 'bezoekers'}>
+          <div class="analytics-studio__readout" data-chart-readout aria-live="off">Beweeg over de grafiek of gebruik de pijltjestoetsen voor een tijdvak.</div>
+          <div class="analytics-studio__plot"><svg viewBox={`0 0 ${chartWidth} ${chartHeight}`} role="img" aria-label={`${metricLabel} per ${selectedRange.hourly ? 'uur' : 'dag'}`} preserveAspectRatio="none">
+            {[0, .5, 1].map((ratio) => { const y = top + ratio * (baseline - top); return <g><line class="analytics-studio__grid" x1={left} x2={chartWidth - right} y1={y} y2={y}/><text x={left - 9} y={y + 4}>{formatNumber(Math.round(maxValue * (1 - ratio)))}</text></g>; })}
+            <polygon points={area} class="analytics-studio__area"/><polyline points={line} class="analytics-studio__line"/>
+            <line class="analytics-studio__guide" data-chart-guide x1="0" x2="0" y1={top} y2={baseline} style="display:none"/><circle class="analytics-studio__dot" data-chart-dot cx="0" cy="0" r="5" style="display:none"/>
+          </svg><button class="analytics-studio__capture" type="button" data-chart-capture aria-label={`${metricLabel} grafiek. Gebruik links en rechts om tijdvakken te bekijken.`}></button></div>
+          <div class="analytics-studio__ticks">{ticks.map((point) => <span>{formatPoint(point.timestamp)}</span>)}</div>
+        </div>
+        {metric === 'visitors' && <p class="analytics-studio__note">Een bezoeker kan op meerdere dagen voorkomen. Het totaal bovenaan telt die browser één keer binnen de hele periode.</p>}
+        <details class="analytics-studio__details"><summary>Bekijk cijfers per {selectedRange.hourly ? 'uur' : 'dag'}</summary><div>{analytics.trend.map((point) => <p><span>{formatPoint(point.timestamp)}</span><strong>{formatNumber(point[metric])} {metric === 'pageviews' ? 'paginaweergaven' : 'bezoekers'}</strong></p>)}</div></details>
+      </> : <div class="analytics-studio__empty"><strong>Nog geen bezoekgegevens</strong><p>De grafiek verschijnt zodra een bezoeker toestemming geeft en een publieke pagina bekijkt.</p></div>}
     </section>
 
-    <section class="admin-metrics" aria-label="Analytics kerncijfers">{metrics.map((metric) => <article class="admin-metric"><div class="admin-metric__head"><span class="admin-metric__label">{metric.label}</span><span class="admin-metric__icon"><AdminIcon name={metric.icon} size={15}/></span></div><strong>{metric.value}</strong><small class="status-waiting">{metric.detail}</small></article>)}</section>
-
-    <div class="analytics-grid" id="funnels">
-      <section class="admin-panel" aria-labelledby="self-funnel-title"><header class="admin-panel__header"><div><h2 id="self-funnel-title">Funnel · Zelf aan de slag</h2><p>Van eerste bezoek tot veilige digitale levering</p></div></header><div class="analytics-funnel">{commerceFunnel.map(([label, itemWidth, value]) => <div class="analytics-funnel__row"><span class="analytics-funnel__label">{label}</span><span class="analytics-funnel__bar"><i style={`width:${itemWidth}%`}></i></span><span class="analytics-funnel__value">{value}</span></div>)}</div></section>
-      <section class="admin-panel" aria-labelledby="care-funnel-title"><header class="admin-panel__header"><div><h2 id="care-funnel-title">Funnel · Begeleiding</h2><p>Van oriëntatie tot boekingsaanvraag</p></div></header><div class="analytics-funnel">{careFunnel.map(([label, itemWidth, value]) => <div class="analytics-funnel__row"><span class="analytics-funnel__label">{label}</span><span class="analytics-funnel__bar"><i style={`width:${itemWidth}%`}></i></span><span class="analytics-funnel__value">{value}</span></div>)}</div></section>
-      <section class="admin-panel" aria-labelledby="privacy-title"><header class="admin-panel__header"><div><h2 id="privacy-title">Privacygrens</h2><p>Wat analytics expliciet nooit registreert</p></div></header><div class="analytics-privacy"><span><AdminIcon name="heart" size={17}/></span><div><h3>Commerciële events, geen gezondheidsdossier</h3><p>Geen antwoorden, vragenlijstscores, vermoedelijke diagnoses, intakegegevens, berichtinhoud of sessienotities. Producten krijgen neutrale interne ID’s; rapportages zijn geaggregeerd.</p></div></div></section>
-      <section class="admin-panel" id="kwaliteit" aria-labelledby="quality-title"><header class="admin-panel__header"><div><h2 id="quality-title">Datakwaliteit</h2><p>Voorwaarden voordat cijfers beslissingen mogen sturen</p></div></header><div class="analytics-quality"><div class="analytics-quality__row"><span>Consent & cookiestatus</span><span class="admin-state">Actief</span></div><div class="analytics-quality__row"><span>First-party route-events</span><span class="admin-state">Actief</span></div><div class="analytics-quality__row"><span>Checkout-events gevalideerd</span><span class="admin-state admin-state--blocked">Volgende stap</span></div><div class="analytics-quality__row"><span>Laatste event ontvangen</span><small>{analytics.lastEventAt ? new Intl.DateTimeFormat('nl-BE', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(analytics.lastEventAt)) : 'Nog geen'}</small></div></div></section>
+    <div class="analytics-studio__lower">
+      <section class="analytics-studio__panel analytics-studio__rank" aria-labelledby="top-pages-title"><div class="analytics-studio__panel-head"><div><span class="analytics-studio__section-label">Interesse</span><h2 id="top-pages-title">Meest bekeken pagina’s</h2><p>Paginaweergaven in deze periode</p></div></div>{analytics.topPages.length ? <ol>{analytics.topPages.map((page, index) => <li><span class="analytics-studio__rank-num">{String(index + 1).padStart(2, '0')}</span><span class="analytics-studio__rank-name">{page.path}</span><strong>{formatNumber(page.views)}</strong></li>)}</ol> : <div class="analytics-studio__list-empty">Nog geen pagina’s om te tonen.</div>}</section>
+      <section class="analytics-studio__panel analytics-studio__rank analytics-studio__countries" aria-labelledby="countries-title"><div class="analytics-studio__panel-head"><div><span class="analytics-studio__section-label">Herkomst</span><h2 id="countries-title">Bezoekers per land</h2><p>Schatting op basis van het netwerk</p></div></div>{analytics.countries.length ? <ol>{analytics.countries.map((country) => <li><span class="analytics-studio__country-name">{countryLabel(country.code)}</span><span class="analytics-studio__country-bar" aria-hidden="true"><i style={`width:${Math.max(3, Math.round(country.visitors / analytics.visitors * 100))}%`}></i></span><strong>{formatNumber(country.visitors)}</strong></li>)}</ol> : <div class="analytics-studio__list-empty">Nog geen landen bekend. Eerdere bezoeken verschijnen als onbekend.</div>}<p class="analytics-studio__country-note">Eerste bekende landcode per browser in deze periode. VPN’s en bedrijfsnetwerken kunnen afwijken.</p></section>
     </div>
-    <div class="admin-lock-note">Boekingen tellen pas als bevestigd wanneer de agenda de afspraak terugkoppelt. Tot die tijd tonen we het aantal boekingsklikken.</div>
+    <p class="analytics-studio__footnote">Alle cijfers zijn gebaseerd op bezoekers die analytics hebben toegestaan. De lopende periode bevat vandaag nog niet alle uren.</p>
   </div>
 </AdminLayout>
 
@@ -85,27 +91,45 @@ const careFunnel = [['Sessies', 100, String(analytics.care.sessions)], ['Route �
   document.querySelectorAll('[data-analytics-chart]').forEach((chart) => {
     const points = JSON.parse(chart.dataset.points || '[]');
     const capture = chart.querySelector('[data-chart-capture]');
-    const tooltip = chart.querySelector('[data-chart-tooltip]');
+    const readout = chart.querySelector('[data-chart-readout]');
     const guide = chart.querySelector('[data-chart-guide]');
     const dot = chart.querySelector('[data-chart-dot]');
-    const svg = chart.querySelector('svg');
-    if (!capture || !tooltip || !guide || !dot || !svg || !points.length) return;
-    const show = (event) => {
-      const rect = svg.getBoundingClientRect();
-      const captureRect = capture.getBoundingClientRect();
-      const localX = Math.max(0, Math.min(captureRect.width, event.clientX - captureRect.left));
-      const index = Math.round((localX / captureRect.width) * (points.length - 1));
-      const point = points[Math.max(0, Math.min(points.length - 1, index))];
-      guide.setAttribute('x1', point.x); guide.setAttribute('x2', point.x); guide.hidden = false;
-      dot.setAttribute('cx', point.x); dot.setAttribute('cy', point.y); dot.hidden = false;
-      tooltip.textContent = `${point.label} · ${point.value} ${point.value === 1 ? 'bezoek' : 'bezoeken'}`;
-      tooltip.hidden = false;
-      tooltip.style.left = `${Math.max(76, Math.min(rect.width - 76, event.clientX - rect.left))}px`;
+    if (!points.length || !capture || !readout || !guide || !dot) return;
+    let activeIndex = -1;
+    const show = (index) => {
+      activeIndex = Math.max(0, Math.min(points.length - 1, index));
+      const point = points[activeIndex];
+      guide.setAttribute('x1', point.x);
+      guide.setAttribute('x2', point.x);
+      dot.setAttribute('cx', point.x);
+      dot.setAttribute('cy', point.y);
+      guide.style.display = '';
+      dot.style.display = '';
+      readout.textContent = `${point.label} · ${new Intl.NumberFormat('nl-BE').format(point.value)} ${chart.dataset.unit}`;
     };
-    const hide = () => { tooltip.hidden = true; guide.hidden = true; dot.hidden = true; };
-    capture.addEventListener('pointermove', show);
+    const hide = () => {
+      if (document.activeElement === capture) return;
+      activeIndex = -1;
+      guide.style.display = 'none';
+      dot.style.display = 'none';
+      readout.textContent = 'Beweeg over de grafiek of gebruik de pijltjestoetsen voor een tijdvak.';
+    };
+    const showAtPointer = (event) => {
+      const rect = capture.getBoundingClientRect();
+      const position = Math.max(0, Math.min(1, (event.clientX - rect.left) / rect.width));
+      show(Math.round(position * (points.length - 1)));
+    };
+    capture.addEventListener('pointermove', showAtPointer);
+    capture.addEventListener('pointerdown', showAtPointer);
     capture.addEventListener('pointerleave', hide);
-    capture.addEventListener('focus', () => { const bounds = capture.getBoundingClientRect(); show({ clientX: bounds.left + bounds.width / 2 }); });
-    capture.addEventListener('blur', hide);
+    capture.addEventListener('focus', () => { readout.setAttribute('aria-live', 'polite'); show(activeIndex < 0 ? points.length - 1 : activeIndex); });
+    capture.addEventListener('blur', () => { readout.setAttribute('aria-live', 'off'); hide(); });
+    capture.addEventListener('keydown', (event) => {
+      if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+      event.preventDefault();
+      if (event.key === 'Home') show(0);
+      else if (event.key === 'End') show(points.length - 1);
+      else show((activeIndex < 0 ? points.length - 1 : activeIndex) + (event.key === 'ArrowRight' ? 1 : -1));
+    });
   });
 </script>
