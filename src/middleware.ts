@@ -9,7 +9,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
   const contentType = request.headers.get('content-type')?.toLowerCase() || '';
   const isFormLikeRequest = !request.headers.has('content-type') || ['application/x-www-form-urlencoded', 'multipart/form-data', 'text/plain'].some((type) => contentType.includes(type));
   const hasOrigin = request.headers.has('origin');
-  if (!isSafeMethod && (isFormLikeRequest || hasOrigin) && (!hasOrigin || !isTrustedFormOrigin(request, context.url.origin))) {
+  if (!isSafeMethod && (isFormLikeRequest || hasOrigin) && (!hasOrigin || !isTrustedFormOrigin(request))) {
     return new Response(`Cross-site ${request.method} form submissions are forbidden`, { status: 403 });
   }
 

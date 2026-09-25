@@ -19,7 +19,7 @@ export const hasPermission = (session: UserSession | null | undefined, permissio
   Boolean(session && hasAdminPermission(session.roles, permission));
 export const supabaseSessionCookieOptions = () => ({ httpOnly: true, secure: import.meta.env.PROD, sameSite: 'strict' as const, path: '/', maxAge: SESSION_TTL_SECONDS });
 const trustedAppOrigins = new Set(['https://mygrowise.be', 'https://www.mygrowise.be', 'https://mygrowise.vercel.app']);
-export const isTrustedFormOrigin = (request: Request, expectedOrigin?: string) => {
+export const isTrustedFormOrigin = (request: Request) => {
   const originHeader = request.headers.get('origin');
   if (!originHeader) return true;
 
@@ -30,7 +30,6 @@ export const isTrustedFormOrigin = (request: Request, expectedOrigin?: string) =
     return false;
   }
   if (originHeader !== origin.origin) return false;
-  if (expectedOrigin && trustedAppOrigins.has(expectedOrigin)) return origin.origin === expectedOrigin;
   if (trustedAppOrigins.has(origin.origin)) return true;
   return import.meta.env.DEV && origin.origin === new URL(request.url).origin;
 };
