@@ -49,7 +49,7 @@ const metricUrl = (next: string) => `/admin/analytics?periode=${selectedRange.ke
 ---
 
 <AdminLayout title="Websiteanalytics" description="Bezoekers, paginaweergaven en landen van MyGrowise">
-  <div class:list={['admin-page', 'analytics-studio', { 'is-pageviews': metric === 'pageviews' }]}>
+  <div class="admin-page analytics-studio">
     <header class="analytics-studio__heading">
       <h1>Website in cijfers</h1>
       <small>{analytics.lastEventAt ? `Laatste bezoek ${hourFormat.format(new Date(analytics.lastEventAt))}` : 'Nog geen bezoeken in deze periode'}</small>
