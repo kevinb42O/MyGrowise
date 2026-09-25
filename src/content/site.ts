@@ -27,7 +27,7 @@ export const practitioners = [
     slug: 'virginie',
     name: 'Virginie',
     role: 'Oprichter van MyGrowise',
-    focus: 'Stress, emotionele belasting en traumagerichte begeleiding',
+    focus: 'Stress, emotionele belasting en EMDR-therapie bij trauma',
     image: '/images/practitioners/virginie-real.jpg',
   },
   {
@@ -41,7 +41,7 @@ export const practitioners = [
     slug: 'amy',
     name: 'Amy',
     role: 'Seksuoloog',
-    focus: 'Intimiteit, relaties, lichaamsbeleving en seksueel welzijn',
+    focus: 'Intimiteit, lichaamsbeleving en seksueel welzijn',
     image: '/images/practitioners/amy-real.jpg',
   },
 ];
