@@ -97,18 +97,14 @@ export const getSuperadminOverview = async () => {
     listAdminOrders(500), listAdminBookings(200), listIntegrationChecks(), listAdminTasks(),
     getSupabaseAdmin().from('products').select('id,status', { count: 'exact' }),
     getSupabaseAdmin().from('security_audit_log').select('occurred_at,action,object_type,object_id').order('occurred_at', { ascending: false }).limit(8),
-    getSupabaseAdmin().from('analytics_events').select('id,event_name,anonymous_id,occurred_at', { count: 'exact' }).eq('consented', true).gte('occurred_at', new Date(Date.now() - 30 * 86400000).toISOString()),
+    getSupabaseAdmin().from('analytics_events').select('id', { count: 'exact', head: true }).eq('consented', true).eq('environment', 'production').eq('event_name', 'page_view').not('path', 'like', '/account%').not('path', 'like', '/admin%').not('path', 'like', '/praktijk%').not('path', 'like', '/api%').gte('occurred_at', new Date(Date.now() - 30 * 86400000).toISOString()),
   ]);
   fail(productsResult.error); fail(auditResult.error); fail(analyticsResult.error);
   const paid = orders.filter((order) => order.status === 'paid' || order.status === 'fulfilled');
   const netRevenueCents = paid.reduce((total, order) => total + order.totalCents, 0);
-  const events = (analyticsResult.data || []) as RecordRow[];
-  const sessions = new Set(events.filter((event) => event.event_name === 'page_view').map((event) => event.anonymous_id).filter(Boolean)).size;
-  const purchases = events.filter((event) => event.event_name === 'payment_succeeded').length;
-  const bookingClicks = events.filter((event) => event.event_name === 'booking_clicked').length;
   return {
     orders, bookings, integrations, tasks, paidOrders: paid.length, netRevenueCents, netRevenue: money(netRevenueCents),
-    conversion: sessions ? purchases / sessions : null, bookingClicks, publishedProducts: ((productsResult.data || []) as RecordRow[]).filter((product) => product.status === 'published').length,
+    publishedProducts: ((productsResult.data || []) as RecordRow[]).filter((product) => product.status === 'published').length,
     productCount: productsResult.count || 0, analyticsEvents: analyticsResult.count || 0,
     pendingBookings: bookings.filter((booking) => booking.status === 'pending').length,
     activity: ((auditResult.data || []) as RecordRow[]).map((row) => ({ occurredAt: String(row.occurred_at), action: String(row.action), objectType: String(row.object_type), objectId: String(row.object_id) })),

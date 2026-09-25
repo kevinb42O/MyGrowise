@@ -8,7 +8,7 @@ const overview = await getSuperadminOverview();
 const metrics = [
   { label: 'Netto-omzet', value: overview.netRevenue, detail: 'Betaald en geleverd, exclusief refunds', icon: 'euro' },
   { label: 'Betaalde bestellingen', value: String(overview.paidOrders), detail: 'Geregistreerde betalingen', icon: 'cart' },
-  { label: 'Aankoopconversie', value: overview.conversion === null ? '—' : new Intl.NumberFormat('nl-BE', { style: 'percent', maximumFractionDigits: 1 }).format(overview.conversion), detail: overview.conversion === null ? 'Nog geen meetgegevens' : 'Aankopen per bezoek met toestemming', icon: 'trend' },
+  { label: 'Producten online', value: String(overview.publishedProducts), detail: 'Gepubliceerd aanbod', icon: 'products' },
   { label: 'Boekingsaanvragen', value: String(overview.pendingBookings), detail: 'Openstaande aanvragen om op te volgen', icon: 'heart' },
 ];
 
@@ -17,7 +17,7 @@ const setup = [
   { title: 'Productbeheer', detail: `${overview.productCount} producten · ${overview.publishedProducts} gepubliceerd`, state: 'Actief', tone: 'ready' },
   { title: 'Betaling & levering', detail: overview.integrations.find((item) => item.key === 'payments')?.detail || 'Controle vereist', state: overview.integrations.find((item) => item.key === 'payments')?.state === 'healthy' ? 'Actief' : 'Actie nodig', tone: overview.integrations.find((item) => item.key === 'payments')?.state === 'healthy' ? 'ready' : 'blocked' },
   { title: 'E-mail & uitnodigingen', detail: overview.integrations.find((item) => item.key === 'email')?.detail || 'Controle vereist', state: overview.integrations.find((item) => item.key === 'email')?.state === 'healthy' ? 'Actief' : 'Actie nodig', tone: overview.integrations.find((item) => item.key === 'email')?.state === 'healthy' ? 'ready' : 'blocked' },
-  { title: 'Privacyvriendelijke analytics', detail: `${overview.analyticsEvents} consented events in de laatste 30 dagen`, state: overview.analyticsEvents ? 'Ontvangt data' : 'Klaar om te koppelen', tone: 'ready' },
+  { title: 'Privacyvriendelijke analytics', detail: `${overview.analyticsEvents} paginaweergaven met toestemming in de laatste 30 dagen`, state: overview.analyticsEvents ? 'Ontvangt data' : 'Wacht op bezoek', tone: 'ready' },
 ];
 ---
 

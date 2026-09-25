@@ -1,71 +1,110 @@
 import { getSupabaseAdmin } from './supabase/server';
 
-type Row = Record<string, any>;
-type AnalyticsOptions = { days?: number; hourly?: boolean };
-export type AnalyticsTrendPoint = { timestamp: string; value: number };
+type AnalyticsOptions = { days?: number; hourly?: boolean; now?: Date };
+type PageView = { id: string; anonymous_id: string | null; occurred_at: string; path: string | null; country_code: string | null };
+export type AnalyticsTrendPoint = { key: string; timestamp: string; visitors: number; pageviews: number };
+export type CountryCount = { code: string | null; visitors: number };
 
-const fail = (error: { message?: string } | null) => {
-  if (error) throw new Error(error.message || 'analytics_unavailable');
+const timeZone = 'Europe/Brussels';
+const parts = new Intl.DateTimeFormat('en-CA', { timeZone, year: 'numeric', month: '2-digit', day: '2-digit' });
+const dayKey = (date: Date) => {
+  const value = Object.fromEntries(parts.formatToParts(date).map((part) => [part.type, part.value]));
+  return `${value.year}-${value.month}-${value.day}`;
 };
+const hourKey = (date: Date) => date.toISOString().slice(0, 13);
+const isPublicPath = (path: string) => path.startsWith('/') && !/^\/(admin|praktijk|account|api)(\/|$)/.test(path);
 
-/**
- * Daily points start at midnight. The 24-hour view uses 24 actual hourly
- * buckets; it never renders one daily total as if it were a time series.
- */
-export const getAdminAnalytics = async ({ days = 30, hourly = false }: AnalyticsOptions = {}) => {
+export const getAdminAnalytics = async ({ days = 30, hourly = false, now = new Date() }: AnalyticsOptions = {}) => {
   const rangeDays = Math.min(Math.max(days, 1), 365);
-  const now = new Date();
-  const rangeStart = new Date(now);
-  if (hourly) rangeStart.setUTCHours(rangeStart.getUTCHours() - 23, 0, 0, 0);
-  else {
-    rangeStart.setUTCHours(0, 0, 0, 0);
-    rangeStart.setUTCDate(rangeStart.getUTCDate() - (rangeDays - 1));
+  const hourStart = new Date(now);
+  hourStart.setUTCHours(hourStart.getUTCHours() - 23, 0, 0, 0);
+  const previousHourStart = new Date(hourStart.getTime() - 24 * 3600000);
+  const today = dayKey(now);
+  const [year, month, day] = today.split('-').map(Number);
+  const firstDay = new Date(Date.UTC(year, month - 1, day - (rangeDays - 1)));
+  const previousFirstDay = new Date(firstDay.getTime() - rangeDays * 86400000);
+  const firstDayKey = firstDay.toISOString().slice(0, 10);
+  const previousFirstDayKey = previousFirstDay.toISOString().slice(0, 10);
+  // Read before the first local day to include Brussels midnight in either UTC offset.
+  const comparisonAvailable = hourly || rangeDays < 365;
+  const queryStart = hourly ? previousHourStart : new Date((comparisonAvailable ? previousFirstDay : firstDay).getTime() - 86400000);
+
+  const bucketStarts = hourly
+    ? Array.from({ length: 24 }, (_, index) => new Date(hourStart.getTime() + index * 3600000))
+    : Array.from({ length: rangeDays }, (_, index) => new Date(firstDay.getTime() + index * 86400000));
+  const trend: AnalyticsTrendPoint[] = bucketStarts.map((start) => ({
+    key: hourly ? hourKey(start) : start.toISOString().slice(0, 10),
+    timestamp: start.toISOString(), visitors: 0, pageviews: 0,
+  }));
+  const bucketIndex = new Map(trend.map((point, index) => [point.key, index]));
+  const visitorsByBucket = trend.map(() => new Set<string>());
+  const visitors = new Set<string>();
+  const previousVisitors = new Set<string>();
+  const visitorCountry = new Map<string, string | null>();
+  const pages = new Map<string, number>();
+  let pageviews = 0;
+  let previousPageviews = 0;
+  let lastEventAt: string | null = null;
+
+  // Explicit pagination avoids silently truncating reports at Supabase's row limit.
+  const pageSize = 1000;
+  for (let offset = 0; ; offset += pageSize) {
+    const { data, error } = await getSupabaseAdmin().from('analytics_events')
+      .select('id,anonymous_id,occurred_at,path,country_code')
+      .eq('consented', true).eq('environment', 'production').eq('event_name', 'page_view')
+      .gte('occurred_at', queryStart.toISOString()).lte('occurred_at', now.toISOString())
+      .order('occurred_at', { ascending: true }).order('id', { ascending: true })
+      .range(offset, offset + pageSize - 1);
+    if (error) throw new Error(error.message || 'analytics_unavailable');
+    const rows = (data || []) as PageView[];
+    for (const row of rows) {
+      const path = row.path || '';
+      if (!isPublicPath(path)) continue;
+      const occurred = new Date(row.occurred_at);
+      const key = hourly ? hourKey(occurred) : dayKey(occurred);
+      const isPrevious = comparisonAvailable && (hourly
+        ? occurred >= previousHourStart && occurred < hourStart
+        : key >= previousFirstDayKey && key < firstDayKey);
+      if (isPrevious) {
+        previousPageviews += 1;
+        if (row.anonymous_id) previousVisitors.add(row.anonymous_id);
+        continue;
+      }
+      const index = bucketIndex.get(key);
+      if (index === undefined) continue;
+      trend[index].pageviews += 1;
+      pageviews += 1;
+      lastEventAt = row.occurred_at;
+      if (row.anonymous_id) {
+        visitors.add(row.anonymous_id);
+        visitorsByBucket[index].add(row.anonymous_id);
+        // One country per browser in the period. Prefer the first known code.
+        const country = /^[A-Z]{2}$/.test(row.country_code || '') ? row.country_code : null;
+        if (!visitorCountry.has(row.anonymous_id) || (!visitorCountry.get(row.anonymous_id) && country)) {
+          visitorCountry.set(row.anonymous_id, country);
+        }
+      }
+      pages.set(path, (pages.get(path) || 0) + 1);
+    }
+    if (rows.length < pageSize) break;
   }
-
-  const { data, error } = await getSupabaseAdmin()
-    .from('analytics_events')
-    .select('event_name,anonymous_id,occurred_at,route_key,path')
-    .eq('consented', true)
-    .gte('occurred_at', rangeStart.toISOString())
-    .order('occurred_at');
-  fail(error);
-
-  const rows = (data || []) as Row[];
-  const count = (event: string, route?: string) => rows.filter((row) => row.event_name === event && (!route || row.route_key === route)).length;
-  const sessions = new Set(rows.filter((row) => row.event_name === 'page_view').map((row) => row.anonymous_id).filter(Boolean)).size;
-  const bucketKey = (value: string) => {
-    const point = new Date(value);
-    if (hourly) point.setUTCMinutes(0, 0, 0);
-    else point.setUTCHours(0, 0, 0, 0);
-    return point.toISOString();
-  };
-  const visits = new Map<string, number>();
-  rows.filter((row) => row.event_name === 'page_view').forEach((row) => {
-    const key = bucketKey(String(row.occurred_at));
-    visits.set(key, (visits.get(key) || 0) + 1);
-  });
-  const countPoints = hourly ? 24 : rangeDays;
-  const increment = hourly ? 3600000 : 86400000;
-  const trend: AnalyticsTrendPoint[] = Array.from({ length: countPoints }, (_, index) => {
-    const bucket = new Date(rangeStart.getTime() + index * increment);
-    const timestamp = bucket.toISOString();
-    return { timestamp, value: visits.get(timestamp) || 0 };
-  });
+  trend.forEach((point, index) => { point.visitors = visitorsByBucket[index].size; });
+  const countryCounts = new Map<string | null, number>();
+  for (const country of visitorCountry.values()) countryCounts.set(country, (countryCounts.get(country) || 0) + 1);
+  const known = [...countryCounts].filter(([code]) => code !== null).sort((a, b) => b[1] - a[1] || String(a[0]).localeCompare(String(b[0])));
+  const countries: CountryCount[] = known.slice(0, 5).map(([code, count]) => ({ code, visitors: count }));
+  const other = known.slice(5).reduce((sum, [, count]) => sum + count, 0);
+  if (other) countries.push({ code: 'OTHER', visitors: other });
+  if (countryCounts.get(null)) countries.push({ code: null, visitors: countryCounts.get(null)! });
 
   return {
-    sessions,
-    events: rows.length,
-    checkoutStarted: count('checkout_started'),
-    bookingClicks: count('booking_clicked'),
-    self: {
-      sessions: new Set(rows.filter((row) => row.event_name === 'page_view' && row.route_key === 'self').map((row) => row.anonymous_id).filter(Boolean)).size,
-      route: count('route_selected', 'self'), product: count('product_viewed', 'self'), checkout: count('checkout_started', 'self'),
-    },
-    care: {
-      sessions: new Set(rows.filter((row) => row.event_name === 'page_view' && row.route_key === 'care').map((row) => row.anonymous_id).filter(Boolean)).size,
-      route: count('route_selected', 'care'), professional: count('professional_viewed', 'care'), booking: count('booking_clicked', 'care'),
-    },
+    visitors: visitors.size,
+    pageviews,
+    previous: { visitors: previousVisitors.size, pageviews: previousPageviews },
+    comparisonAvailable,
     trend,
-    lastEventAt: rows.length ? String(rows[rows.length - 1].occurred_at) : null,
+    topPages: [...pages].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).slice(0, 5).map(([path, views]) => ({ path, views })),
+    countries,
+    lastEventAt,
   };
 };
