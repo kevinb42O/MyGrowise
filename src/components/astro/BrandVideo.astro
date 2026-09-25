@@ -1,0 +1,63 @@
+---
+interface Props {
+  heading?: string;
+  description?: string;
+}
+
+const {
+  heading = 'Maak kennis met MyGrowise.',
+  description = 'Ontdek het verhaal en de mensen achter een plek voor inzicht, groei en persoonlijke begeleiding.',
+} = Astro.props;
+---
+
+<section class="brand-video section" aria-labelledby="brand-video-heading">
+  <div class="container brand-video-grid">
+    <div class="brand-video-copy">
+      <span class="eyebrow">Het verhaal achter MyGrowise</span>
+      <h2 class="heading-lg" id="brand-video-heading">{heading}</h2>
+      <p class="lead">{description}</p>
+      <p class="brand-video-hint">Bekijk de brandingvideo</p>
+    </div>
+    <div class="brand-video-frame" data-brand-video>
+      <button class="brand-video-play" type="button" aria-label="Speel de brandingvideo van MyGrowise af">
+        <img src="/images/video/mygrowise-branding.jpg" alt="Virginie in beeld tijdens de MyGrowise-brandingvideo" width="1280" height="720" loading="lazy" />
+        <span class="brand-video-play-icon" aria-hidden="true">▶</span>
+      </button>
+      <noscript><a href="https://www.youtube.com/watch?v=UAvdvZ4gBFs">Bekijk de brandingvideo op YouTube</a></noscript>
+    </div>
+  </div>
+</section>
+
+<style>
+  .brand-video { border-block: 1px solid var(--line); background: var(--cream); }
+  .brand-video-grid { display: grid; gap: clamp(2rem, 5vw, 4.5rem); align-items: center; }
+  .brand-video-copy .heading-lg { max-width: 12ch; }
+  .brand-video-copy .lead { max-width: 42ch; margin-bottom: 1.4rem; }
+  .brand-video-hint { display: flex; align-items: center; gap: .7rem; margin: 0; color: var(--ink); font-size: .82rem; font-weight: 700; }
+  .brand-video-hint::before { content: ''; width: 1.7rem; height: 1px; background: var(--pink); }
+  .brand-video-frame { position: relative; aspect-ratio: 16 / 9; overflow: hidden; border-radius: var(--radius-lg); background: var(--ink-deep); box-shadow: var(--shadow); }
+  .brand-video-play { position: absolute; inset: 0; display: block; width: 100%; height: 100%; padding: 0; overflow: hidden; border: 0; background: var(--ink-deep); cursor: pointer; }
+  .brand-video-play::after { position: absolute; inset: 0; background: linear-gradient(90deg, rgba(14,43,37,.13), transparent); content: ''; }
+  .brand-video-play img { width: 100%; height: 100%; object-fit: cover; transition: transform 400ms ease; }
+  .brand-video-play-icon { position: absolute; z-index: 1; top: 50%; left: 50%; display: grid; width: 5rem; height: 5rem; place-items: center; padding-left: .25rem; border-radius: 50%; background: var(--pink); color: white; box-shadow: 0 12px 35px rgba(14,43,37,.28); font-size: 1.4rem; transform: translate(-50%, -50%); transition: transform 250ms ease, background 250ms ease; }
+  .brand-video-play:focus-visible { outline: 4px solid var(--yellow); outline-offset: -4px; }
+  .brand-video-frame :global(iframe) { display: block; width: 100%; height: 100%; border: 0; }
+  .brand-video-frame noscript a { position: absolute; bottom: 1rem; left: 1rem; z-index: 2; padding: .6rem .8rem; border-radius: .5rem; background: var(--white); }
+  @media (hover: hover) and (pointer: fine) { .brand-video-play:hover img { transform: scale(1.04); } .brand-video-play:hover .brand-video-play-icon { background: var(--ink); transform: translate(-50%, -50%) scale(1.08); } }
+  @media (min-width: 900px) { .brand-video-grid { grid-template-columns: .75fr 1.25fr; } }
+  @media (prefers-reduced-motion: reduce) { .brand-video-play img, .brand-video-play-icon { transition: none; } }
+</style>
+
+<script>
+  document.querySelectorAll<HTMLElement>('[data-brand-video]').forEach((frame) => {
+    frame.querySelector('button')?.addEventListener('click', () => {
+      const player = document.createElement('iframe');
+      player.src = 'https://www.youtube-nocookie.com/embed/UAvdvZ4gBFs?autoplay=1&rel=0';
+      player.title = 'Brandingvideo MyGrowise door Varamedia';
+      player.allow = 'accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture; web-share';
+      player.referrerPolicy = 'strict-origin-when-cross-origin';
+      player.allowFullscreen = true;
+      frame.replaceChildren(player);
+    });
+  });
+</script>
