@@ -46,6 +46,7 @@ export const sanitizeAppRedirect = (value: unknown) => {
   if (path === '/account/inloggen' || path === '/account/aanmaken') return '';
   if (path === '/admin' || path.startsWith('/admin/') || path === '/praktijk' || path.startsWith('/praktijk/')) return `${path}${target.search}`;
   if (path === '/account' || path.startsWith('/account/')) return `${path}${target.search}`;
+  if (path === '/berichten/gesprek') return path;
   if (/^\/aanbod\/[a-z0-9]+(?:-[a-z0-9]+)*$/.test(path)) return `${path}${target.search}`;
   if (/^\/begeleiding\/[a-z0-9]+(?:-[a-z0-9]+)*$/.test(path)) return path;
   return '';

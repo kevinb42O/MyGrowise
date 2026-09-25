@@ -16,11 +16,13 @@ export type AgendaEvent = {
   location: string;
   color: string;
   editable: boolean;
+  practitionerId?: string | null;
 };
 
 export type CreatePracticeAgendaEvent = Pick<AgendaEvent, 'title' | 'startsAt' | 'endsAt' | 'location'> & {
   kind: AgendaEvent['kind'];
   color: string;
+  practitionerId: string | null;
 };
 export type UpdatePracticeAgendaEvent = CreatePracticeAgendaEvent;
 
@@ -35,14 +37,14 @@ export const listAgendaEvents = async (from: string, to: string): Promise<Agenda
   const [bookingsResult, practiceResult] = await Promise.all([
     client
       .from('bookings')
-      .select('id,client_name,client_email,starts_at,ends_at,status,practitioners(name)')
+      .select('id,practitioner_id,client_name,client_email,starts_at,ends_at,status,practitioners(name)')
       .in('status', ['pending', 'confirmed'])
       .lt('starts_at', to)
       .gt('ends_at', from)
       .order('starts_at'),
     client
       .from('practice_calendar_events')
-      .select('id,title,starts_at,ends_at,status,event_kind,location,color')
+      .select('id,title,starts_at,ends_at,status,event_kind,location,color,practitioner_id')
       .eq('status', 'confirmed')
       .lt('starts_at', to)
       .gt('ends_at', from)
@@ -56,31 +58,39 @@ export const listAgendaEvents = async (from: string, to: string): Promise<Agenda
     title: String(row.client_name),
     subtitle: `${String(row.practitioners?.name || 'Begeleiding')} · ${String(row.client_email)}`,
     startsAt: String(row.starts_at), endsAt: String(row.ends_at), status: String(row.status),
-    kind: 'appointment' as const, location: '', color: '#1f7060', editable: false,
+    kind: 'appointment' as const, location: '', color: row.status === 'pending' ? '#b7791f' : '#1f7060', editable: false,
+    practitionerId: String(row.practitioner_id),
   }));
   const practice = ((practiceResult.data || []) as RecordRow[]).map((row) => ({
     id: String(row.id), source: 'itransform' as const,
     title: String(row.title), subtitle: String(row.location || 'Praktijk Itransform'),
     startsAt: String(row.starts_at), endsAt: String(row.ends_at), status: String(row.status),
     kind: row.event_kind as AgendaEvent['kind'], location: String(row.location || ''), color: String(row.color || '#d26479'), editable: true,
+    practitionerId: row.practitioner_id ? String(row.practitioner_id) : null,
   }));
   return [...bookings, ...practice].sort((left, right) => left.startsAt.localeCompare(right.startsAt));
+};
+
+export const listAgendaPractitioners = async () => {
+  const { data, error } = await getSupabaseAdmin().from('practitioners').select('id,name').eq('active', true).order('name');
+  fail(error);
+  return (data || []).map((row) => ({ id: String(row.id), name: String(row.name) }));
 };
 
 export const createPracticeAgendaEvent = async (input: CreatePracticeAgendaEvent, actor: AuditActor) => {
   const title = input.title.trim();
   const location = input.location.trim(); const color = input.color.trim();
-  if (title.length < 2 || title.length > 100 || location.length > 120 || !/^#[0-9a-f]{6}$/i.test(color) || !['appointment', 'personal', 'block'].includes(input.kind) || !validDate(input.startsAt) || !validDate(input.endsAt) || new Date(input.endsAt) <= new Date(input.startsAt)) {
+  if (title.length < 2 || title.length > 100 || location.length > 120 || !/^#[0-9a-f]{6}$/i.test(color) || !['appointment', 'personal', 'block'].includes(input.kind) || !validDate(input.startsAt) || !validDate(input.endsAt) || new Date(input.endsAt) <= new Date(input.startsAt) || (input.practitionerId && !/^[0-9a-f-]{36}$/i.test(input.practitionerId))) {
     throw new Error('invalid_event');
   }
   const { data, error } = await getSupabaseAdmin()
     .from('practice_calendar_events')
-    .insert({ title, starts_at: input.startsAt, ends_at: input.endsAt, event_kind: input.kind, location, color })
+    .insert({ title, starts_at: input.startsAt, ends_at: input.endsAt, event_kind: input.kind, location, color, practitioner_id: input.practitionerId, created_by: actor.userId || null })
     .select('id,title,starts_at,ends_at,status,event_kind,location,color')
     .single();
   fail(error);
   if (!data) throw new Error('Agenda event could not be created.');
-  await writeSecurityAudit({ actor, action: 'practice_calendar_event.created', objectType: 'practice_calendar_event', objectId: String(data.id), after: { title, event_kind: input.kind, starts_at: input.startsAt, ends_at: input.endsAt } });
+  await writeSecurityAudit({ actor, action: 'practice_calendar_event.created', objectType: 'practice_calendar_event', objectId: String(data.id), after: { title, event_kind: input.kind, starts_at: input.startsAt, ends_at: input.endsAt, practitioner_id: input.practitionerId } });
   return data;
 };
 
@@ -94,13 +104,13 @@ export const deletePracticeAgendaEvent = async (id: string, actor: AuditActor) =
 export const updatePracticeAgendaEvent = async (id: string, input: UpdatePracticeAgendaEvent, actor: AuditActor) => {
   const title = input.title.trim();
   const location = input.location.trim(); const color = input.color.trim();
-  if (!title || title.length > 100 || location.length > 120 || !/^#[0-9a-f]{6}$/i.test(color) || !['appointment', 'personal', 'block'].includes(input.kind) || !validDate(input.startsAt) || !validDate(input.endsAt) || new Date(input.endsAt) <= new Date(input.startsAt)) throw new Error('invalid_event');
+  if (!title || title.length > 100 || location.length > 120 || !/^#[0-9a-f]{6}$/i.test(color) || !['appointment', 'personal', 'block'].includes(input.kind) || !validDate(input.startsAt) || !validDate(input.endsAt) || new Date(input.endsAt) <= new Date(input.startsAt) || (input.practitionerId && !/^[0-9a-f-]{36}$/i.test(input.practitionerId))) throw new Error('invalid_event');
   const client = getSupabaseAdmin();
-  const { data: before, error: beforeError } = await client.from('practice_calendar_events').select('id,title,starts_at,ends_at,event_kind,location,color').eq('id', id).maybeSingle();
+  const { data: before, error: beforeError } = await client.from('practice_calendar_events').select('id,title,starts_at,ends_at,event_kind,location,color,practitioner_id').eq('id', id).maybeSingle();
   fail(beforeError);
   if (!before) throw new Error('not_found');
   const { data, error } = await client.from('practice_calendar_events')
-    .update({ title, starts_at: input.startsAt, ends_at: input.endsAt, event_kind: input.kind, location, color })
+    .update({ title, starts_at: input.startsAt, ends_at: input.endsAt, event_kind: input.kind, location, color, practitioner_id: input.practitionerId })
     .eq('id', id)
     .select('id,title,starts_at,ends_at,status,event_kind,location,color')
     .maybeSingle();

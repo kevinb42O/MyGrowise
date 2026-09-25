@@ -59,11 +59,11 @@ const rateLimited = Astro.url.searchParams.get('error') === 'rate_limited';
         </div>
         <div class="appointment-main">
           <h3>{booking.practitionerName}</h3>
-          <p>{date(booking.startsAt)} · Online afspraak</p>
+          <p>{date(booking.startsAt)} · {booking.origin === 'staff' ? 'Afspraak' : 'Online afspraak'}</p>
           <span class:list={{ 'appointment-status': true, pending: booking.status === 'pending' }} role="status">{status[booking.status] || 'Status wordt bijgewerkt'}</span>
           {booking.statusHistory.length > 0 && <ol class="appointment-history" aria-label="Statusgeschiedenis">
             {booking.statusHistory.map((event) => <li>
-              <span>{event.fromStatus ? `Status bijgewerkt: ${status[event.status] || event.status}` : 'Aanvraag verzonden'}</span>
+              <span>{event.fromStatus ? `Status bijgewerkt: ${status[event.status] || event.status}` : booking.origin === 'staff' ? 'Afspraak ingepland' : 'Aanvraag verzonden'}</span>
               <time datetime={event.occurredAt}>{eventDate(event.occurredAt)}</time>
             </li>)}
           </ol>}
@@ -89,7 +89,7 @@ const rateLimited = Astro.url.searchParams.get('error') === 'rate_limited';
       <small>{status[booking.status] || 'Status bijgewerkt'}</small>
       {booking.statusHistory.length > 0 && <ol class="care-history__events" aria-label="Statusgeschiedenis">
         {booking.statusHistory.map((event) => <li>
-          <span>{event.fromStatus ? `Status bijgewerkt: ${status[event.status] || event.status}` : event.status === 'pending' ? 'Aanvraag verzonden' : `Status: ${status[event.status] || event.status}`}</span>
+          <span>{event.fromStatus ? `Status bijgewerkt: ${status[event.status] || event.status}` : booking.origin === 'staff' ? 'Afspraak ingepland' : event.status === 'pending' ? 'Aanvraag verzonden' : `Status: ${status[event.status] || event.status}`}</span>
           <time datetime={event.occurredAt}>{eventDate(event.occurredAt)}</time>
         </li>)}
       </ol>}

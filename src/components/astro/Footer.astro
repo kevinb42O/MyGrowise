@@ -37,6 +37,7 @@ const year = new Date().getFullYear();
   <div class="container footer-bottom">
     <a class="footer-wordmark" href="/" aria-label="MyGrowise home"><img class="footer-mark" src="/images/logo-lelie.webp" alt="" width="45" height="34" /><span>MyGrowise</span></a>
     <p>© {year} MyGrowise. Geen crisisdienst — bij acuut gevaar bel 112.</p>
+    <p class="footer-credit">Powered by <a href="https://www.webaanzee.be/">Webaanzee</a></p>
   </div>
 </footer>
 
@@ -58,6 +59,8 @@ const year = new Date().getFullYear();
   .footer-wordmark { display: inline-flex; align-items: center; gap: .7rem; font-family: 'DM Serif Display', Georgia, serif; font-size: 1.6rem; text-decoration: none; }
   .footer-mark { display: block; width: 2.8rem; max-width: 2.8rem; height: auto; flex: 0 0 2.8rem; object-fit: contain; }
   .footer-bottom p { margin: 0; color: rgba(255,255,255,.55); font-size: 0.72rem; line-height: 1.5; }
+  .footer-credit a { color: inherit; text-decoration: underline; text-decoration-color: rgba(255,255,255,.35); text-underline-offset: 3px; }
+  .footer-credit a:hover, .footer-credit a:focus-visible { color: white; text-decoration-color: currentColor; }
   @media (min-width: 700px) { .footer-nav { grid-template-columns: repeat(3, 1fr); } .footer-bottom { flex-direction: row; align-items: center; } }
   @media (min-width: 960px) { .footer-main { grid-template-columns: 1.35fr .9fr; align-items: end; } }
 </style>

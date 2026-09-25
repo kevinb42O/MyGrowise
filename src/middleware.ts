@@ -25,7 +25,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
   const isCheckoutApi = path === '/api/checkout' || path.startsWith('/api/checkout/');
   const isBookingPage = /^\/begeleiding\/[a-z0-9]+(?:-[a-z0-9]+)*$/.test(path);
   const isBookingApi = path === '/api/bookings';
-  const isOptionalSessionPath = isBookingPage || isBookingApi;
+  const isOptionalSessionPath = isBookingPage || isBookingApi || path === '/contact' || path === '/api/contact' || path === '/berichten/gesprek';
   if (!isAdminPage && !isAdminApi && !isPracticePage && !isPracticeApi && !isAccountPage && !isAccountApi && !isInternalApi && !isCheckoutApi && !isOptionalSessionPath) return next();
 
   if (path === '/api/admin/login' || path === '/api/admin/logout' || path === '/api/account/login' || path === '/api/account/register' || path === '/api/account/logout' || path === '/api/account/password-reset' || path === '/api/account/verification-resend' || path === '/account/wachtwoord-vergeten' || path === '/account/wachtwoord-herstellen') return next();

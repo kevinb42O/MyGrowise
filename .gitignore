@@ -14,3 +14,5 @@ data/admin/audit-log.jsonl
 data/admin/*.sqlite
 data/admin/*.sqlite-shm
 data/admin/*.sqlite-wal
+.vercel
+.env*

@@ -4,100 +4,112 @@ import AdminIcon from '../../components/admin/AdminIcon.astro';
 import { getSuperadminOverview } from '../../lib/superAdmin';
 
 const overview = await getSuperadminOverview();
-
-const metrics = [
-  { label: 'Netto-omzet', value: overview.netRevenue, detail: 'Betaald en geleverd, exclusief refunds', icon: 'euro' },
-  { label: 'Betaalde bestellingen', value: String(overview.paidOrders), detail: 'Geregistreerde betalingen', icon: 'cart' },
-  { label: 'Aankoopconversie', value: overview.conversion === null ? '—' : new Intl.NumberFormat('nl-BE', { style: 'percent', maximumFractionDigits: 1 }).format(overview.conversion), detail: overview.conversion === null ? 'Nog geen meetgegevens' : 'Aankopen per bezoek met toestemming', icon: 'trend' },
-  { label: 'Boekingsaanvragen', value: String(overview.pendingBookings), detail: 'Openstaande aanvragen om op te volgen', icon: 'heart' },
-];
-
-const setup = [
-  { title: 'Beveiliging & toegangsbeheer', detail: 'Gebruikersrollen en gegevensbescherming', state: 'Actief', tone: 'ready' },
-  { title: 'Productbeheer', detail: `${overview.productCount} producten · ${overview.publishedProducts} gepubliceerd`, state: 'Actief', tone: 'ready' },
-  { title: 'Betaling & levering', detail: overview.integrations.find((item) => item.key === 'payments')?.detail || 'Controle vereist', state: overview.integrations.find((item) => item.key === 'payments')?.state === 'healthy' ? 'Actief' : 'Actie nodig', tone: overview.integrations.find((item) => item.key === 'payments')?.state === 'healthy' ? 'ready' : 'blocked' },
-  { title: 'E-mail & uitnodigingen', detail: overview.integrations.find((item) => item.key === 'email')?.detail || 'Controle vereist', state: overview.integrations.find((item) => item.key === 'email')?.state === 'healthy' ? 'Actief' : 'Actie nodig', tone: overview.integrations.find((item) => item.key === 'email')?.state === 'healthy' ? 'ready' : 'blocked' },
-  { title: 'Privacyvriendelijke analytics', detail: `${overview.analyticsEvents} consented events in de laatste 30 dagen`, state: overview.analyticsEvents ? 'Ontvangt data' : 'Klaar om te koppelen', tone: 'ready' },
-];
+const period = ['alles', '30d', '7d', 'jaar'].includes(Astro.url.searchParams.get('periode') || '') ? Astro.url.searchParams.get('periode')! : 'alles';
+const now = new Date();
+const euro = (cents: number) => new Intl.NumberFormat('nl-BE', { style: 'currency', currency: 'EUR' }).format(cents / 100);
+const number = (value: number) => new Intl.NumberFormat('nl-BE').format(value);
+const date = (value: string) => new Intl.DateTimeFormat('nl-BE', { day: 'numeric', month: 'short', timeZone: 'Europe/Brussels' }).format(new Date(value));
+const dateTime = (value: string) => new Intl.DateTimeFormat('nl-BE', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Brussels' }).format(new Date(value));
+const dateParts = (value: Date) => Object.fromEntries(new Intl.DateTimeFormat('en', { year: 'numeric', month: '2-digit', day: '2-digit', timeZone: 'Europe/Brussels' }).formatToParts(value).map((part) => [part.type, part.value]));
+const dayKey = (value: Date) => { const parts = dateParts(value); return `${parts.year}-${parts.month}-${parts.day}`; };
+const monthKey = (value: Date) => { const parts = dateParts(value); return `${parts.year}-${parts.month}`; };
+const today = new Date(`${dayKey(now)}T12:00:00Z`);
+const currentYear = Number(dayKey(now).slice(0, 4));
+const paid = overview.orders.filter((order) => (order.status === 'paid' || order.status === 'fulfilled') && order.currency === 'EUR');
+const paidAt = (order: (typeof paid)[number]) => new Date(order.paymentVerifiedAt || order.createdAt);
+const start = period === '7d' ? new Date(today.getTime() - 6 * 86400000) : period === '30d' ? new Date(today.getTime() - 29 * 86400000) : period === 'jaar' ? new Date(`${currentYear}-01-01T12:00:00Z`) : null;
+const startDay = start ? dayKey(start) : null;
+const selectedPaid = paid.filter((order) => !startDay || dayKey(paidAt(order)) >= startDay);
+const revenue = selectedPaid.reduce((sum, order) => sum + order.totalCents, 0);
+const monthIndex = (value: Date) => { const [year, month] = monthKey(value).split('-').map(Number); return year * 12 + month - 1; };
+const firstPaid = paid.length ? new Date(Math.min(...paid.map((order) => paidAt(order).getTime()))) : now;
+const firstPaidYear = Number(dayKey(firstPaid).slice(0, 4));
+const allTimeYears = monthIndex(now) - monthIndex(firstPaid) > 23;
+const buckets: { key: string; label: string; total: number; count: number }[] = [];
+if (period === '7d' || period === '30d') {
+  const days = period === '7d' ? 7 : 30;
+  for (let offset = days - 1; offset >= 0; offset--) {
+    const value = new Date(today.getTime() - offset * 86400000);
+    buckets.push({ key: dayKey(value), label: new Intl.DateTimeFormat('nl-BE', { day: 'numeric', month: 'short', timeZone: 'Europe/Brussels' }).format(value), total: 0, count: 0 });
+  }
+} else if (period === 'jaar' || !allTimeYears) {
+  const first = period === 'jaar' ? new Date(`${currentYear}-01-01T12:00:00Z`) : firstPaid;
+  for (let index = monthIndex(first); index <= monthIndex(now); index++) {
+    const value = new Date(Math.floor(index / 12), index % 12, 1);
+    buckets.push({ key: monthKey(value), label: new Intl.DateTimeFormat('nl-BE', { month: 'short', year: '2-digit' }).format(value), total: 0, count: 0 });
+  }
+} else {
+  for (let year = firstPaidYear; year <= currentYear; year++) buckets.push({ key: String(year), label: String(year), total: 0, count: 0 });
+}
+const bucketMap = new Map(buckets.map((bucket) => [bucket.key, bucket]));
+selectedPaid.forEach((order) => {
+  const value = paidAt(order);
+  const key = period === '7d' || period === '30d' ? dayKey(value) : period === 'jaar' || !allTimeYears ? monthKey(value) : dayKey(value).slice(0, 4);
+  const bucket = bucketMap.get(key);
+  if (bucket) { bucket.total += order.totalCents; bucket.count++; }
+});
+const maxRevenue = Math.max(1, ...buckets.map((bucket) => bucket.total));
+const claimedPayments = overview.orders.filter((order) => order.status === 'pending_payment' && order.paymentClaimedAt).length;
+const pendingBookings = overview.bookings.filter((booking) => booking.status === 'pending').length;
+const openTasks = overview.tasks.filter((task) => task.status === 'open' || task.status === 'in_progress' || task.status === 'blocked');
+const upcomingBookings = overview.bookings.filter((booking) => ['pending', 'confirmed'].includes(booking.status) && new Date(booking.startsAt) >= now).slice(0, 4);
+const recentOrders = overview.orders.slice(0, 4);
+const statusLabel: Record<string, string> = { paid: 'Betaald', fulfilled: 'Geleverd', pending_payment: 'Wacht op betaling', draft: 'Concept', cancelled: 'Geannuleerd', partially_refunded: 'Deels terugbetaald', refunded: 'Terugbetaald', disputed: 'Betwist' };
+const periodLabel: Record<string, string> = { alles: 'Alle tijd', '30d': 'Laatste 30 dagen', '7d': 'Laatste 7 dagen', jaar: 'Dit jaar' };
 ---
 
 <AdminLayout title="Dashboard" description="Operationeel overzicht voor MyGrowise">
-  <div class="admin-page">
-    <section class="admin-page-heading" aria-labelledby="admin-title">
-      <div>
-        <p class="admin-eyebrow">Operationeel overzicht</p>
-        <h1 id="admin-title">Goedemiddag, Virginie.</h1>
-        <p>Hier zie je straks wat verkoopt, waar klanten afhaken en welke acties vandaag aandacht nodig hebben.</p>
-      </div>
-      <div class="admin-page-actions">
-        <a class="admin-button" href="/" target="_blank" rel="noreferrer"><AdminIcon name="external" size={16} /> Website bekijken</a>
-        <a class="admin-button admin-button--primary" href="/admin/producten/nieuw"><AdminIcon name="plus" size={16} /> Nieuw product</a>
-      </div>
+  <div class="admin-page dashboard-home">
+    <header class="admin-page-heading dashboard-home__heading">
+      <div><p class="admin-eyebrow">MyGrowise</p><h1>Dashboard</h1><p>Verkoop, afspraken en wat nu aandacht vraagt.</p></div>
+      <nav class="dashboard-home__period" aria-label="Periode omzet">
+        {Object.entries(periodLabel).map(([key, label]) => <a href={`/admin?periode=${key}`} class:list={{ 'is-active': period === key }} aria-current={period === key ? 'page' : undefined}>{label}</a>)}
+      </nav>
+    </header>
+
+    <section class="dashboard-home__stats" aria-label="Kerncijfers">
+      <article><span>Omzet · {periodLabel[period].toLowerCase()}</span><strong>{euro(revenue)}</strong><small>Betaalde bestellingen in euro</small></article>
+      <article><span>Betaalde bestellingen</span><strong>{number(selectedPaid.length)}</strong><small>In de gekozen periode</small></article>
+      <a href="/admin/boekingen"><span>Open boekingsaanvragen</span><strong>{number(pendingBookings)}</strong><small>Bekijk aanvragen <AdminIcon name="arrow" size={12}/></small></a>
+      <a href="/admin/analytics"><span>Paginaweergaven</span><strong>{number(overview.analyticsEvents)}</strong><small>Met toestemming · laatste 30 dagen <AdminIcon name="arrow" size={12}/></small></a>
     </section>
 
-    <section class="admin-metrics" aria-label="Kerncijfers">
-      {metrics.map((metric) => (
-        <article class="admin-metric">
-          <div class="admin-metric__head">
-            <span class="admin-metric__label">{metric.label}</span>
-            <span class="admin-metric__icon"><AdminIcon name={metric.icon} size={15} /></span>
-          </div>
-          <strong>{metric.value}</strong>
-          <small class="status-waiting">{metric.detail}</small>
-        </article>
-      ))}
-    </section>
-
-    <div class="admin-dashboard-grid">
-      <section class="admin-panel" aria-labelledby="revenue-title">
-        <header class="admin-panel__header">
-          <div><h2 id="revenue-title">Omzetontwikkeling</h2><p>Betaalde bestellingen, exclusief terugbetalingen</p></div>
-          <div class="admin-panel__header-actions">
-            <select class="admin-select" aria-label="Periode"><option>Laatste 30 dagen</option><option>Laatste 7 dagen</option><option>Dit jaar</option></select>
-            <a class="admin-text-link" href="/admin/analytics">Details <AdminIcon name="arrow" size={13} /></a>
-          </div>
-        </header>
-        <div class="admin-chart">
-          <div class="admin-chart__summary"><strong>{overview.netRevenue}</strong><span>Betaalde en geleverde orders</span></div>
-          <div class="admin-chart__empty">
-            <div><span><AdminIcon name="analytics" size={18} /></span><strong>Nog geen omzetdata</strong><p>De omzetgrafiek verschijnt zodra er bestellingen zijn betaald.</p></div>
-          </div>
-        </div>
+    <div class="dashboard-home__main">
+      <section class="admin-panel dashboard-home__revenue" aria-labelledby="revenue-title">
+        <header class="admin-panel__header"><div><h2 id="revenue-title">Omzetontwikkeling</h2><p>{periodLabel[period]} · betaalde en geleverde bestellingen</p></div><a class="admin-text-link" href="/admin/bestellingen">Bestellingen <AdminIcon name="arrow" size={13}/></a></header>
+        {paid.length ? <div class="dashboard-home__chart">
+          <div class="dashboard-home__chart-summary"><strong>{euro(revenue)}</strong><span>{selectedPaid.length} {selectedPaid.length === 1 ? 'bestelling' : 'bestellingen'} in deze periode</span></div>
+          {selectedPaid.length ? <>
+            <div class="dashboard-home__bars" role="img" aria-label={`Omzetgrafiek voor ${periodLabel[period].toLowerCase()}`}>
+              {buckets.map((bucket) => <div class="dashboard-home__bar-slot" title={`${bucket.label}: ${euro(bucket.total)} · ${bucket.count} bestellingen`}><span class="dashboard-home__bar" style={`height:${bucket.total ? Math.max(5, bucket.total / maxRevenue * 100) : 0}%`}></span></div>)}
+            </div>
+            <div class="dashboard-home__axis"><span>{buckets[0]?.label}</span><span>{buckets[Math.floor((buckets.length - 1) / 2)]?.label}</span><span>{buckets.at(-1)?.label}</span></div>
+            <details class="dashboard-home__chart-details"><summary>Bedragen per {period === '7d' || period === '30d' ? 'dag' : allTimeYears && period === 'alles' ? 'jaar' : 'maand'}</summary><div>{buckets.filter((bucket) => bucket.count).map((bucket) => <p><span>{bucket.label} · {bucket.count} {bucket.count === 1 ? 'bestelling' : 'bestellingen'}</span><strong>{euro(bucket.total)}</strong></p>)}</div></details>
+          </> : <div class="dashboard-home__period-empty">Geen betaalde bestellingen in deze periode. <a href="/admin?periode=alles">Bekijk alle omzet</a>.</div>}
+        </div> : <div class="dashboard-home__period-empty">Er zijn nog geen betaalde bestellingen geregistreerd.</div>}
       </section>
 
-      <section class="admin-panel" aria-labelledby="setup-title">
-        <header class="admin-panel__header"><div><h2 id="setup-title">Lancering gereedmaken</h2><p>5 essentiële bouwblokken</p></div></header>
-        <ol class="admin-setup-list">
-          {setup.map((item, index) => (
-            <li>
-              <span class="admin-setup-list__number">{index + 1}</span>
-              <span><strong>{item.title}</strong><small>{item.detail}</small></span>
-              <span class:list={['admin-state', item.tone && `admin-state--${item.tone}`]}>{item.state}</span>
-            </li>
-          ))}
-        </ol>
+      <section class="admin-panel dashboard-home__attention" aria-labelledby="attention-title">
+        <header class="admin-panel__header"><div><h2 id="attention-title">Aandacht nodig</h2><p>Open acties uit verkoop en planning</p></div></header>
+        <div class="dashboard-home__attention-list">
+          {claimedPayments > 0 && <a href="/admin/bestellingen"><span class="dashboard-home__attention-count">{claimedPayments}</span><span><strong>Betalingen te controleren</strong><small>Klanten hebben een betaling gemeld</small></span><AdminIcon name="arrow" size={14}/></a>}
+          {pendingBookings > 0 && <a href="/admin/boekingen"><span class="dashboard-home__attention-count">{pendingBookings}</span><span><strong>Boekingsaanvragen</strong><small>Wachten op bevestiging</small></span><AdminIcon name="arrow" size={14}/></a>}
+          {openTasks.slice(0, 3).map((task) => <a href="/admin/instellingen#acties"><span class="dashboard-home__attention-dot"></span><span><strong>{task.title}</strong><small>{task.dueAt ? `Deadline ${date(task.dueAt)}` : task.category}</small></span><AdminIcon name="arrow" size={14}/></a>)}
+          {!claimedPayments && !pendingBookings && !openTasks.length && <p class="dashboard-home__calm">Alles bijgewerkt. Er staan geen directe acties open.</p>}
+        </div>
       </section>
     </div>
 
-    <section class="admin-panel admin-activity" aria-labelledby="activity-title">
-      <header class="admin-panel__header">
-        <div><h2 id="activity-title">Recente activiteit</h2><p>Bestellingen, boekingen, berichten en contentwijzigingen</p></div>
-        <a class="admin-text-link" href="/admin/producten">Producten bekijken <AdminIcon name="arrow" size={13} /></a>
-      </header>
-      {overview.activity.length ? (
-        <div class="admin-activity-list">
-          {overview.activity.map((event) => (
-            <a href={event.objectType === 'product' ? `/admin/producten/${event.objectId}` : '/admin'} class="admin-activity-row">
-              <span class="admin-activity-row__icon"><AdminIcon name="products" size={16} /></span>
-              <span class="admin-activity-row__main"><strong>{event.action}</strong><small>{event.objectType} · {event.objectId}</small></span>
-              <span class="admin-activity-row__meta"><strong>Superadmin</strong><time datetime={event.occurredAt}>{new Intl.DateTimeFormat('nl-BE', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }).format(new Date(event.occurredAt))}</time></span>
-              <AdminIcon name="arrow" size={14} />
-            </a>
-          ))}
-        </div>
-      ) : (
-        <div class="admin-empty-row"><div><span><AdminIcon name="clock" size={17} /></span><strong>Nog geen activiteit</strong><p>Nieuwe gebeurtenissen verschijnen hier chronologisch en met verantwoordelijke gebruiker.</p></div></div>
-      )}
-    </section>
+    <div class="dashboard-home__lower">
+      <section class="admin-panel" aria-labelledby="orders-title">
+        <header class="admin-panel__header"><div><h2 id="orders-title">Recente bestellingen</h2><p>Laatste transacties en hun status</p></div><a class="admin-text-link" href="/admin/bestellingen">Alle bestellingen <AdminIcon name="arrow" size={13}/></a></header>
+        {recentOrders.length ? <div class="dashboard-home__rows">{recentOrders.map((order) => <div class="dashboard-home__row"><span><strong>Bestelling #{order.id.slice(-8).toUpperCase()}</strong><small>{date(order.createdAt)} · {statusLabel[order.status] || order.status}</small></span><strong>{order.currency === 'EUR' ? euro(order.totalCents) : new Intl.NumberFormat('nl-BE', { style: 'currency', currency: order.currency }).format(order.totalCents / 100)}</strong></div>)}</div> : <p class="dashboard-home__calm">Nog geen bestellingen.</p>}
+      </section>
+      <section class="admin-panel" aria-labelledby="bookings-title">
+        <header class="admin-panel__header"><div><h2 id="bookings-title">Komende afspraken</h2><p>Bevestigde afspraken en aanvragen</p></div><a class="admin-text-link" href="/admin/boekingen">Alle boekingen <AdminIcon name="arrow" size={13}/></a></header>
+        {upcomingBookings.length ? <div class="dashboard-home__rows">{upcomingBookings.map((booking) => <div class="dashboard-home__row"><span><strong>{booking.clientName}</strong><small>{booking.practitionerName} · {dateTime(booking.startsAt)}</small></span><span class:list={['dashboard-home__booking-state', booking.status === 'pending' && 'is-pending']}>{booking.status === 'pending' ? 'Aanvraag' : 'Bevestigd'}</span></div>)}</div> : <p class="dashboard-home__calm">Geen komende afspraken gepland.</p>}
+      </section>
+    </div>
+    <footer class="dashboard-home__footer"><span><strong>{overview.publishedProducts}</strong> producten online</span><a href="/admin/producten">Aanbod beheren <AdminIcon name="arrow" size={12}/></a><span class="dashboard-home__footer-separator"></span><span><strong>{overview.openTaskCount}</strong> open werkpunten</span><a href="/admin/instellingen#acties">Werkpunten bekijken <AdminIcon name="arrow" size={12}/></a></footer>
   </div>
 </AdminLayout>

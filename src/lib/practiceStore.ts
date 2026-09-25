@@ -1,8 +1,9 @@
 import { getSupabaseAdmin } from './supabase/server';
+import { fromBrusselsLocalInput } from './brusselsTime';
 
 export type AvailabilityRule = { weekday: number; startTime: string; endTime: string };
 export type BookingStatus = 'pending' | 'confirmed' | 'declined' | 'cancelled' | 'completed' | 'no_show';
-export type PracticeBooking = { id: string; practitionerId: string; patientId: string | null; clientName: string; clientEmail: string; startsAt: string; endsAt: string; status: BookingStatus; calendarBookedAt: string | null; createdAt: string; updatedAt: string };
+export type PracticeBooking = { id: string; practitionerId: string; patientId: string | null; clientName: string; clientEmail: string; startsAt: string; endsAt: string; status: BookingStatus; origin: 'customer_request' | 'staff'; calendarBookedAt: string | null; createdAt: string; updatedAt: string };
 export type BookableSlot = { practitionerId: string; practitionerSlug: string; startsAt: string; endsAt: string; dateLabel: string; timeLabel: string };
 export type AvailabilityException = { id: string; practitionerId: string; startsAt: string; endsAt: string; kind: 'available' | 'unavailable'; privateReason: string | null; createdAt: string };
 export type PractitionerProfile = {
@@ -36,7 +37,7 @@ const profileFromRow = (row: Row): PractitionerProfile => {
 };
 const bookingFromRow = (row: Row): PracticeBooking => ({
   id: String(row.id), practitionerId: String(row.practitioner_id), patientId: row.patient_id ? String(row.patient_id) : null, clientName: String(row.client_name), clientEmail: String(row.client_email),
-  startsAt: String(row.starts_at), endsAt: String(row.ends_at), status: String(row.status) as BookingStatus,
+  startsAt: String(row.starts_at), endsAt: String(row.ends_at), status: String(row.status) as BookingStatus, origin: String(row.origin || 'customer_request') as PracticeBooking['origin'],
   calendarBookedAt: row.calendar_booked_at ? String(row.calendar_booked_at) : null, createdAt: String(row.created_at), updatedAt: String(row.updated_at),
 });
 
@@ -99,7 +100,8 @@ export const listAvailabilityExceptions = async (idOrSlug: string): Promise<Avai
 
 export const createAvailabilityException = async (idOrSlug: string, actorUserId: string, startsAt: string, endsAt: string, privateReason: string) => {
   const practitioner = await resolvePractitioner(idOrSlug);
-  const start = new Date(startsAt); const end = new Date(endsAt);
+  const start = new Date(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(startsAt) ? fromBrusselsLocalInput(startsAt) : startsAt);
+  const end = new Date(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(endsAt) ? fromBrusselsLocalInput(endsAt) : endsAt);
   if (!practitioner) throw new Error('not_found');
   if (!Number.isFinite(start.getTime()) || !Number.isFinite(end.getTime()) || end <= start || end.getTime() - start.getTime() > 366 * 86400000) throw new Error('invalid_exception');
   const { data, error } = await getSupabaseAdmin().from('availability_exceptions').insert({ practitioner_id: practitioner.id, starts_at: start.toISOString(), ends_at: end.toISOString(), kind: 'unavailable', private_reason: privateReason.trim().slice(0, 80) || null }).select('id,practitioner_id,starts_at,ends_at,kind,private_reason,created_at').single();
@@ -121,7 +123,7 @@ export const deleteAvailabilityException = async (id: string, idOrSlug: string, 
 export const listBookings = async (idOrSlug: string, status?: BookingStatus): Promise<PracticeBooking[]> => {
   const practitioner = await resolvePractitioner(idOrSlug);
   if (!practitioner) return [];
-  let query = getSupabaseAdmin().from('bookings').select('id,practitioner_id,patient_id,client_name,client_email,starts_at,ends_at,status,calendar_booked_at,created_at,updated_at').eq('practitioner_id', practitioner.id).order('starts_at');
+  let query = getSupabaseAdmin().from('bookings').select('id,practitioner_id,patient_id,client_name,client_email,starts_at,ends_at,status,origin,calendar_booked_at,created_at,updated_at').eq('practitioner_id', practitioner.id).order('starts_at');
   if (status) query = query.eq('status', status);
   const { data, error } = await query;
   fail(error);
@@ -141,6 +143,29 @@ export const updateBookingStatus = async (bookingId: string, idOrSlug: string, a
   if (error?.code === 'P0002') throw new Error('not_found');
   if (error?.code === '42501') throw new Error('not_allowed');
   if (error?.code === '22023') throw new Error('invalid_transition');
+  fail(error);
+};
+
+export const createStaffBooking = async (practitionerId: string, actorUserId: string, patientId: string, startsAt: string, endsAt: string, requestId?: string) => {
+  const { data, error } = await getSupabaseAdmin().rpc('create_staff_booking', {
+    p_practitioner_id: practitionerId, p_actor_user_id: actorUserId, p_patient_id: patientId,
+    p_starts_at: startsAt, p_ends_at: endsAt, p_request_id: requestId || null,
+  });
+  if (error?.code === '42501') throw new Error('not_allowed');
+  if (error?.code === '23P01') throw new Error('slot_unavailable');
+  if (error?.code === '22023') throw new Error('invalid_input');
+  fail(error);
+  return String(data);
+};
+
+export const rescheduleStaffBooking = async (bookingId: string, actorUserId: string, startsAt: string, endsAt: string, requestId?: string) => {
+  const { error } = await getSupabaseAdmin().rpc('reschedule_staff_booking', {
+    p_booking_id: bookingId, p_actor_user_id: actorUserId,
+    p_starts_at: startsAt, p_ends_at: endsAt, p_request_id: requestId || null,
+  });
+  if (error?.code === '42501' || error?.code === 'P0002') throw new Error('not_allowed');
+  if (error?.code === '23P01') throw new Error('slot_unavailable');
+  if (error?.code === '22023') throw new Error('invalid_input');
   fail(error);
 };
 

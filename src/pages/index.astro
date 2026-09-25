@@ -1,35 +1,28 @@
 ---
 import MainLayout from '../layouts/MainLayout.astro';
+import BrandVideo from '../components/astro/BrandVideo.astro';
 import { products, practitioners, homeFaqs, recognitionItems } from '../content/site';
 const featured = products[0];
 ---
 
 <MainLayout activeNav="home" title="MyGrowise — psychologisch inzicht en online begeleiding" description="Begrijp wat er bij jou gebeurt en kies ondersteuning die past: zelfstandig met een persoonlijk profiel of samen met een professional.">
   <section class="hero" data-parallax-section>
-    <div class="hero-glow hero-glow--one" aria-hidden="true"></div>
-    <div class="hero-glow hero-glow--two" aria-hidden="true"></div>
-    <div class="hero-orbit hero-orbit--one" aria-hidden="true"></div>
-    <div class="hero-orbit hero-orbit--two" aria-hidden="true"></div>
     <div class="container hero-grid">
       <div class="hero-copy motion-hero">
-        <span class="eyebrow">Psychologisch platform voor inzicht & groei</span>
-        <h1><strong>Eerst begrijpen.</strong><br /><em><strong>Dan kiezen wat bij je past.</strong></em></h1>
-        <p class="lead">Wanneer je hoofd blijft doorgaan en je draagkracht kleiner wordt, helpt helder inzicht je om niet zomaar iets te proberen. Start zelfstandig of kies persoonlijke begeleiding.</p>
+        <span class="eyebrow">Psychologisch inzicht en online begeleiding</span>
+        <h1>Begrijp wat er speelt.<br /><em>Vind een stap die bij je past.</em></h1>
+        <p class="lead">MyGrowise helpt je patronen rond stress en emoties te begrijpen. Start op je eigen tempo met een persoonlijk profiel of ga in gesprek met een professional.</p>
         <div class="hero-actions">
           <a class="button button-primary" href="/startpunt">Vind je startpunt <span aria-hidden="true">→</span></a>
-          <a class="button button-light" href="/begeleiding">Persoonlijke begeleiding</a>
+          <a class="button button-light" href="/begeleiding">Bekijk begeleiding</a>
         </div>
-        <ul class="hero-proof" aria-label="Belangrijkste kenmerken">
-          <li>Online en op eigen tempo</li>
-          <li>Professionele begeleiding</li>
-          <li>Helder zonder snelle labels</li>
-        </ul>
+        <p class="hero-principle">Eerst begrijpen. Dan kiezen wat bij je past.</p>
       </div>
 
       <div class="hero-visual motion-hero">
-        <div class="hero-image" data-parallax="-0.08"><img src="/images/editorial/mygrowise-74.jpg" alt="Virginie werkt online vanuit haar praktijk" width="1920" height="1529" fetchpriority="high" /></div>
-        <div class="hero-note"><span>01</span><p>Je hoeft nog niet precies te weten wat je nodig hebt om te kunnen beginnen.</p></div>
-        <div class="hero-stamp" aria-hidden="true">rust · inzicht · richting ·</div>
+        <div class="hero-image"><img src="/images/editorial/mygrowise-74.jpg" alt="Virginie werkt online vanuit haar praktijk" width="1920" height="1529" fetchpriority="high" /></div>
+        <div class="hero-note"><span>Jouw vertrekpunt</span><p>Je hoeft nog niet precies te weten wat je nodig hebt.</p></div>
+        <div class="hero-stamp" aria-hidden="true">rust · inzicht · richting</div>
       </div>
     </div>
   </section>
@@ -80,6 +73,8 @@ const featured = products[0];
       </div>
     </div>
   </section>
+
+  <BrandVideo />
 
   <section class="featured section">
     <div class="container featured-grid">
@@ -165,28 +160,23 @@ const featured = products[0];
 </MainLayout>
 
 <style>
-  .hero { position: relative; isolation: isolate; overflow: hidden; padding: clamp(2.5rem, 6vw, 6rem) 0 clamp(4rem, 8vw, 7rem); background: var(--cream); }
-  .hero::before { content: ''; position: absolute; inset: auto auto -9rem -7rem; width: 24rem; height: 24rem; border: 1px solid rgba(23,61,53,.2); border-radius: 50%; }
-  .hero::after { position:absolute; z-index:-1; inset:0; opacity:.45; background-image:linear-gradient(rgba(23,61,53,.045) 1px,transparent 1px),linear-gradient(90deg,rgba(23,61,53,.045) 1px,transparent 1px); background-size:4.8rem 4.8rem; mask-image:linear-gradient(90deg,transparent 0%,black 44%,transparent 100%); content:''; }
-  .hero-glow { position:absolute; z-index:-1; border-radius:50%; filter:blur(2px); pointer-events:none; }
-  .hero-glow--one { top:-10rem; right:-8rem; width:31rem; height:31rem; background:radial-gradient(circle,rgba(242,111,129,.26),rgba(242,111,129,0) 67%); }
-  .hero-glow--two { bottom:-14rem; left:27%; width:38rem; height:38rem; background:radial-gradient(circle,rgba(233,185,47,.2),rgba(233,185,47,0) 68%); }
-  .hero-orbit { position:absolute; z-index:-1; border:1px solid rgba(23,61,53,.13); border-radius:50%; pointer-events:none; }
-  .hero-orbit--one { top:12%; left:45%; width:21rem; height:21rem; }
-  .hero-orbit--two { right:5%; bottom:-20rem; width:37rem; height:37rem; }
-  .hero-grid { position:relative; display: grid; gap: 3.5rem; align-items: center; }
-  .hero-copy h1 { max-width: 10ch; margin-bottom: 1.5rem; color: var(--ink-deep); font-size: clamp(3.5rem, 8.5vw, 7.8rem); line-height: .9; }
+  .hero { position: relative; isolation: isolate; overflow: hidden; padding: clamp(2.5rem, 5vw, 4.5rem) 0 clamp(3.5rem, 6vw, 5rem); background: var(--cream); }
+  .hero::before { position: absolute; z-index: -1; inset: 0; opacity: .36; background-image: linear-gradient(rgba(23,61,53,.045) 1px, transparent 1px), linear-gradient(90deg, rgba(23,61,53,.045) 1px, transparent 1px); background-size: 5rem 5rem; mask-image: linear-gradient(90deg, transparent 25%, black 100%); content: ''; pointer-events: none; }
+  .hero::after { position: absolute; z-index: -1; top: -12rem; right: -10rem; width: 38rem; height: 38rem; border-radius: 50%; background: radial-gradient(circle, rgba(242,111,129,.18), rgba(242,111,129,0) 70%); content: ''; pointer-events: none; }
+  .hero-grid { position: relative; display: grid; gap: clamp(2rem, 4vw, 4rem); align-items: center; }
+  .hero-copy h1 { max-width: 14ch; margin-bottom: 1.3rem; color: var(--ink-deep); font-size: clamp(3.2rem, 5.1vw, 5.25rem); line-height: .99; }
   .hero-copy h1 em { color: var(--pink); font-weight: 400; }
-  .hero-actions { display: flex; flex-wrap: wrap; gap: .8rem; margin: 2rem 0; }
-  .hero-proof { display: flex; flex-wrap: wrap; gap: .55rem 1.4rem; margin: 0; padding: 1.35rem 0 0; border-top: 1px solid var(--line); color: var(--muted); font-size: .75rem; list-style: none; }
-  .hero-proof li::before { content: '•'; margin-right: .5rem; color: var(--pink); }
-  .hero-visual { position: relative; min-height: 34rem; }
-  .hero-image { position: absolute; inset: 0 0 2.8rem 2rem; overflow: hidden; border-radius: 12rem 12rem var(--radius-lg) var(--radius-lg); background: var(--pink-soft); box-shadow: var(--shadow); }
-  .hero-image img { width: 100%; height: 100%; object-fit: cover; object-position: 63% center; transform:scale(1.035); }
-  .hero-note { position: absolute; bottom: 0; left: 0; display: grid; width: min(19rem, 80%); grid-template-columns: auto 1fr; gap: .8rem; padding: 1.15rem; border: 1px solid var(--ink); border-radius: var(--radius-sm); background: var(--yellow); box-shadow: 0 12px 30px rgba(14,43,37,.16); }
-  .hero-note span { font-size: .7rem; font-weight: 700; }
-  .hero-note p { margin: 0; font-family: 'DM Serif Display', Georgia, serif; font-size: 1rem; line-height: 1.25; }
-  .hero-stamp { position: absolute; top: 2rem; right: -1.4rem; display: grid; width: 7.3rem; height: 7.3rem; place-content: center; border-radius: 50%; background: var(--pink); color: white; font-size: .65rem; font-weight: 700; letter-spacing: .15em; text-align: center; text-transform: uppercase; transform: rotate(12deg); }
+  .hero-copy .lead { max-width: 50ch; margin-bottom: 0; }
+  .hero-actions { display: flex; flex-wrap: wrap; gap: .8rem; margin: 1.6rem 0 0; }
+  .hero-principle { margin: 1.5rem 0 0; padding-left: .85rem; border-left: 2px solid var(--pink); color: var(--muted); font-size: .8rem; font-weight: 600; line-height: 1.5; }
+  .hero-visual { position: relative; min-height: clamp(21rem, 65vw, 34rem); }
+  .hero-visual::before { position: absolute; inset: -2rem -2rem 2rem 3rem; border: 1px solid rgba(23,61,53,.2); border-radius: 48% 52% 35% 65%; content: ''; transform: rotate(9deg); pointer-events: none; }
+  .hero-image { position: absolute; inset: 0; overflow: hidden; border-radius: 10rem 10rem var(--radius-lg) var(--radius-lg); background: var(--pink-soft); box-shadow: var(--shadow); }
+  .hero-image img { width: 100%; height: 100%; object-fit: cover; object-position: 62% center; }
+  .hero-note { position: absolute; bottom: -1.2rem; left: -1.2rem; display: grid; gap: .35rem; width: min(17rem, 72%); padding: 1rem 1.15rem; border: 1px solid rgba(23,61,53,.3); border-radius: var(--radius-sm); background: var(--yellow); box-shadow: 0 12px 28px rgba(14,43,37,.14); }
+  .hero-note span { color: var(--ink-deep); font-size: .62rem; font-weight: 700; letter-spacing: .11em; text-transform: uppercase; }
+  .hero-note p { margin: 0; color: var(--ink-deep); font-family: 'DM Serif Display', Georgia, serif; font-size: 1rem; line-height: 1.2; }
+  .hero-stamp { position: absolute; top: 1.4rem; right: -1rem; display: grid; width: 5.8rem; height: 5.8rem; place-content: center; padding: .8rem; border: 1px solid rgba(255,255,255,.55); border-radius: 50%; background: var(--pink); color: white; box-shadow: 0 8px 22px rgba(14,43,37,.14); font-size: .57rem; font-weight: 700; letter-spacing: .1em; line-height: 1.5; text-align: center; text-transform: uppercase; transform: rotate(8deg); }
   .recognition { border-block: 1px solid var(--line); background: var(--white); }
   .recognition-grid { display: grid; gap: 2.5rem; }
   .recognition ol { margin: 0; padding: 0; list-style: none; }
@@ -291,20 +281,15 @@ const featured = products[0];
   @media (prefers-reduced-motion:no-preference) {
     .motion-hero > * { opacity:0; animation:hero-enter 1s cubic-bezier(.16,1,.3,1) both; }
     .hero-copy > :nth-child(1) { animation-delay:80ms; }.hero-copy > :nth-child(2) { animation-delay:150ms; }.hero-copy > :nth-child(3) { animation-delay:230ms; }.hero-copy > :nth-child(4) { animation-delay:310ms; }.hero-copy > :nth-child(5) { animation-delay:390ms; }
-    .hero-visual > :nth-child(1) { animation-delay:190ms; }.hero-visual > :nth-child(2) { animation-delay:420ms; }.hero-visual > :nth-child(3) { animation-delay:520ms; }
-    .hero-stamp { animation:hero-enter 1s cubic-bezier(.16,1,.3,1) 520ms both,stamp-drift 8s ease-in-out 1.6s infinite; }
-    .hero-orbit--one { animation:orbit-drift 16s ease-in-out infinite; }.hero-orbit--two { animation:orbit-drift 19s ease-in-out -5s infinite reverse; }
+    .hero-visual > :nth-child(1) { animation-delay:190ms; }.hero-visual > :nth-child(2) { animation-delay:330ms; }.hero-visual > :nth-child(3) { animation-delay:430ms; }
     html.motion-enabled [data-reveal] { opacity:0; transform:translate3d(var(--tilt-x,0),calc(3rem + var(--parallax-y,0px)),0) rotateX(var(--tilt-rx,0deg)) rotateY(var(--tilt-ry,0deg)); transition:opacity 800ms cubic-bezier(.16,1,.3,1) var(--reveal-delay,0ms),transform 950ms cubic-bezier(.16,1,.3,1) var(--reveal-delay,0ms); will-change:transform,opacity; }
     html.motion-enabled [data-reveal].is-visible { opacity:1; transform:translate3d(var(--tilt-x,0),var(--parallax-y,0px),0) rotateX(var(--tilt-rx,0deg)) rotateY(var(--tilt-ry,0deg)); }
     [data-parallax] { transform:translate3d(0,var(--parallax-y,0px),0); will-change:transform; }
-    .hero-image { transition:transform .8s cubic-bezier(.16,1,.3,1); }
   }
   @keyframes hero-enter { from { opacity:0; transform:translateY(2.2rem) scale(.985); } to { opacity:1; transform:translateY(0) scale(1); } }
-  @keyframes stamp-drift { 0%,100% { transform:rotate(12deg) translate3d(0,0,0); } 50% { transform:rotate(2deg) translate3d(-.45rem,.5rem,0); } }
-  @keyframes orbit-drift { 0%,100% { transform:translate3d(0,0,0) rotate(0deg); } 50% { transform:translate3d(1.5rem,-1rem,0) rotate(10deg); } }
-  @media (max-width: 680px) { .journey-content { display: block; } .journey-head { position: static; margin-bottom: 2.75rem; } }
+  @media (max-width: 680px) { .hero-visual::before { inset: -1rem -1rem 1.5rem 2rem; } .hero-stamp { right: -.5rem; width: 5.2rem; height: 5.2rem; font-size: .52rem; } .hero-note { left: -.35rem; width: min(16rem, 78%); } .journey-content { display: block; } .journey-head { position: static; margin-bottom: 2.75rem; } }
   @media (min-width: 720px) { .team-grid { grid-template-columns: repeat(3, 1fr); } .route-grid { grid-template-columns: 1fr 1fr; } }
-  @media (min-width: 900px) { .hero-grid { grid-template-columns: 1.05fr .95fr; } .hero-visual { min-height: 42rem; } .recognition-grid { grid-template-columns: .9fr 1.1fr; align-items: start; } .section-head { grid-template-columns: 1.2fr .8fr; } .featured-grid { grid-template-columns: .9fr 1.1fr; } .featured-visual { min-height: 45rem; } .founder-grid { grid-template-columns: 1.1fr .9fr; } .faq-grid { grid-template-columns: .85fr 1.15fr; } }
+  @media (min-width: 900px) { .hero-grid { grid-template-columns: 1.1fr .9fr; } .recognition-grid { grid-template-columns: .9fr 1.1fr; align-items: start; } .section-head { grid-template-columns: 1.2fr .8fr; } .featured-grid { grid-template-columns: .9fr 1.1fr; } .featured-visual { min-height: 45rem; } .founder-grid { grid-template-columns: 1.1fr .9fr; } .faq-grid { grid-template-columns: .85fr 1.15fr; } }
 </style>
 
 <script>
