@@ -1,5 +1,5 @@
 import type { APIRoute } from 'astro';
-import { createOwnedAgendaEvent, deleteOwnedAgendaEvent, listPracticeAgenda, updateOwnedAgendaEvent, type OwnedAgendaInput } from '../../../lib/practiceAgenda';
+import { createOwnedAgendaEvent, deleteOwnedAgendaEvent, getPracticeAgendaAccess, listPracticeAgenda, updateOwnedAgendaEvent, type OwnedAgendaInput } from '../../../lib/practiceAgenda';
 import { isTrustedFormOrigin } from '../../../lib/adminAuth';
 import { createAvailabilityException, createStaffBooking, deleteAvailabilityException, rescheduleStaffBooking, updateBookingStatus, type BookingStatus } from '../../../lib/practiceStore';
 import { auditPatientDirectoryAccess, listPatientRecords } from '../../../lib/clientRecords';
@@ -25,7 +25,11 @@ export const GET: APIRoute = async ({ url, locals }) => {
   }
   const from = url.searchParams.get('from'); const to = url.searchParams.get('to');
   if (!validRange(from, to)) return json({ error: 'Ongeldig datumbereik.' }, 400);
-  try { return json({ events: await listPracticeAgenda(locals.currentUser!.practitionerId!, from!, to!) }); }
+  try {
+    const user = locals.currentUser!;
+    const { canUseItransform } = await getPracticeAgendaAccess(user.practitionerId!, user.sub);
+    return json({ events: await listPracticeAgenda(user.practitionerId!, from!, to!, canUseItransform), canUseItransform });
+  }
   catch { return json({ error: 'Agenda kon niet worden geladen.' }, 502); }
 };
 
@@ -57,21 +61,23 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
     if (['external_create', 'external_update', 'external_delete'].includes(String(body.action))) {
       const actor = auditActor(user, locals.requestId, '/api/praktijk/agenda');
+      const { canUseItransform } = await getPracticeAgendaAccess(user.practitionerId!, user.sub);
       const id = String(body.id || '');
       if (body.action !== 'external_create' && !/^[0-9a-f-]{36}$/i.test(id)) return json({ error: 'Ongeldig moment.' }, 400);
       if (body.action === 'external_delete') {
-        await deleteOwnedAgendaEvent(user.practitionerId!, id, actor);
+        await deleteOwnedAgendaEvent(user.practitionerId!, id, actor, canUseItransform);
         return json({ ok: true });
       }
       const input: OwnedAgendaInput = {
         title: String(body.title || ''), startsAt: String(body.startsAt || ''), endsAt: String(body.endsAt || ''),
         kind: body.kind as OwnedAgendaInput['kind'], location: String(body.location || ''), color: String(body.color || ''),
+        calendarScope: String(body.calendarScope || 'mygrowise') as OwnedAgendaInput['calendarScope'],
       };
       if (body.action === 'external_create') {
-        const createdId = await createOwnedAgendaEvent(user.practitionerId!, input, actor);
+        const createdId = await createOwnedAgendaEvent(user.practitionerId!, input, actor, canUseItransform);
         return json({ ok: true, id: createdId }, 201);
       }
-      await updateOwnedAgendaEvent(user.practitionerId!, id, input, actor);
+      await updateOwnedAgendaEvent(user.practitionerId!, id, input, actor, canUseItransform);
       return json({ ok: true });
     }
     if (body.action === 'unblock') {

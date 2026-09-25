@@ -23,7 +23,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   if (!isTrustedFormOrigin(request)) return json({ error: 'Ongeldige aanvraag.' }, 403);
   try {
     const body = await request.json();
-    const event = await createPracticeAgendaEvent({ title: String(body.title || ''), startsAt: String(body.startsAt || ''), endsAt: String(body.endsAt || ''), kind: body.kind, location: String(body.location || ''), color: String(body.color || '#d26479'), practitionerId: body.practitionerId ? String(body.practitionerId) : null }, auditActor(locals.adminUser, locals.requestId, '/api/admin/agenda'));
+    const event = await createPracticeAgendaEvent({ title: String(body.title || ''), startsAt: String(body.startsAt || ''), endsAt: String(body.endsAt || ''), kind: body.kind, location: String(body.location || ''), color: String(body.color || '#d26479'), practitionerId: body.practitionerId ? String(body.practitionerId) : null, calendarScope: String(body.calendarScope || 'itransform') as 'mygrowise' | 'itransform' }, auditActor(locals.adminUser, locals.requestId, '/api/admin/agenda'));
     return json({ event }, 201);
   } catch (error) { return json({ error: error instanceof Error && error.message === 'invalid_event' ? 'Controleer titel, type en tijdstip.' : 'Opslaan is niet gelukt.' }, 400); }
 };
@@ -42,7 +42,7 @@ export const PATCH: APIRoute = async ({ request, locals, url }) => {
   if (!/^[0-9a-f-]{36}$/i.test(id)) return json({ error: 'Ongeldige afspraak.' }, 400);
   try {
     const body = await request.json();
-    const event = await updatePracticeAgendaEvent(id, { title: String(body.title || ''), startsAt: String(body.startsAt || ''), endsAt: String(body.endsAt || ''), kind: body.kind, location: String(body.location || ''), color: String(body.color || '#d26479'), practitionerId: body.practitionerId ? String(body.practitionerId) : null }, auditActor(locals.adminUser, locals.requestId, '/api/admin/agenda'));
+    const event = await updatePracticeAgendaEvent(id, { title: String(body.title || ''), startsAt: String(body.startsAt || ''), endsAt: String(body.endsAt || ''), kind: body.kind, location: String(body.location || ''), color: String(body.color || '#d26479'), practitionerId: body.practitionerId ? String(body.practitionerId) : null, calendarScope: String(body.calendarScope || 'itransform') as 'mygrowise' | 'itransform' }, auditActor(locals.adminUser, locals.requestId, '/api/admin/agenda'));
     return json({ event });
   } catch (error) { return json({ error: error instanceof Error && error.message === 'invalid_event' ? 'Controleer titel, type en tijdstip.' : 'Opslaan is niet gelukt.' }, 400); }
 };

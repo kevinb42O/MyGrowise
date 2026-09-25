@@ -25,7 +25,7 @@ const price = priceValue ?? (product?.priceCents === null || product?.priceCents
     </label>
     <label class="admin-field admin-field--wide">
       <span>URL-slug <i>*</i></span>
-      <div class="admin-slug-field"><em>mygrowise.be/aanbod/</em><input name="slug" value={product?.slug || ''} required maxlength="80" pattern="[a-z0-9]+(?:-[a-z0-9]+)*" data-slug /></div>
+      <div class="admin-slug-field"><em>/aanbod/</em><input name="slug" value={product?.slug || ''} required maxlength="80" pattern="[a-z0-9]+(?:-[a-z0-9]+)*" data-slug /></div>
       <small>Kleine letters, cijfers en koppeltekens. Wijzigen na publicatie vereist later een redirect.</small>
     </label>
     <label class="admin-field">

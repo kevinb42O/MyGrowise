@@ -14,6 +14,23 @@ const metric = Astro.url.searchParams.get('grafiek') === 'pageviews' ? 'pageview
 const metricLabel = metric === 'pageviews' ? 'Paginaweergaven' : 'Unieke bezoekers';
 const analytics = await getAdminAnalytics({ days: selectedRange.days, hourly: selectedRange.hourly });
 const formatNumber = (value: number) => new Intl.NumberFormat('nl-BE').format(value);
+const countryNames = new Intl.DisplayNames(['nl-BE'], { type: 'region' });
+const countryLabel = (code: string | null) => code === null ? 'Onbekend' : code === 'OTHER' ? 'Overige landen' : countryNames.of(code) || code;
+const countryColors = ['#669b7d', '#8ab7a1', '#8daebb', '#a5b8a1', '#a3a8bf', '#b4c7b8'];
+const flagCodes = new Set('AD AT BE BG HR CY CZ DK EE FI FR DE GR HU IE IT LV LT LU MT NL PL PT RO SK SI ES SE GB CH NO IS LI MC SM VA UA'.split(' '));
+let countryOffset = 0;
+const countrySegments = analytics.countries.map((country, index) => {
+  const share = analytics.visitors ? country.visitors / analytics.visitors * 100 : 0;
+  const segment = { ...country, share, offset: countryOffset, color: country.code === null ? '#cbd4ce' : countryColors[index % countryColors.length], flag: country.code && flagCodes.has(country.code) ? `/flags/${country.code.toLowerCase()}.svg` : null };
+  countryOffset += share;
+  return segment;
+});
+const comparison = (current: number, previous: number) => {
+  if (!analytics.comparisonAvailable) return 'Geen volledige vorige periode beschikbaar';
+  if (previous < 20) return `Vorige periode: ${formatNumber(previous)} · te weinig data voor een percentage`;
+  const change = Math.round((current - previous) / previous * 100);
+  return `${change > 0 ? '+' : ''}${change}% t.o.v. de vorige periode · toen ${formatNumber(previous)}`;
+};
 const dateFormat = new Intl.DateTimeFormat('nl-BE', { timeZone: 'Europe/Brussels', day: 'numeric', month: 'short' });
 const hourFormat = new Intl.DateTimeFormat('nl-BE', { timeZone: 'Europe/Brussels', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', timeZoneName: 'short' });
 const formatPoint = (timestamp: string) => (selectedRange.hourly ? hourFormat : dateFormat).format(new Date(timestamp));
@@ -40,64 +57,84 @@ const periodUrl = (range: string) => `/admin/analytics?periode=${range}&grafiek=
 const metricUrl = (next: string) => `/admin/analytics?periode=${selectedRange.key}&grafiek=${next}`;
 ---
 
-<AdminLayout title="Websiteanalytics" description="Bezoekers en paginaweergaven van MyGrowise">
-  <div class="admin-page analytics-simple">
-    <header class="analytics-simple__head">
-      <div><p class="admin-eyebrow">Website</p><h1>Analytics</h1><p>Bezoek aan de publieke website, met toestemming gemeten.</p></div>
-      <div class="analytics-simple__updated">{analytics.lastEventAt ? `Laatste paginaweergave ${hourFormat.format(new Date(analytics.lastEventAt))}` : 'Nog geen paginaweergaven in deze periode'}</div>
+<AdminLayout title="Websiteanalytics" description="Bezoekers, paginaweergaven en landen van MyGrowise">
+  <div class="admin-page analytics-studio">
+    <header class="analytics-studio__heading">
+      <h1>Website in cijfers</h1>
+      <small>{analytics.lastEventAt ? `Laatste bezoek ${hourFormat.format(new Date(analytics.lastEventAt))}` : 'Nog geen bezoeken in deze periode'}</small>
     </header>
 
-    <nav class="analytics-simple__period" aria-label="Periode">
-      {ranges.map((range) => <a href={periodUrl(range.key)} class:list={{ 'is-active': range.key === selectedRange.key }} aria-current={range.key === selectedRange.key ? 'page' : undefined}>{range.label}</a>)}
-    </nav>
+    <div class="analytics-studio__toolbar"><span>Periode</span><nav aria-label="Periode">{ranges.map((range) => <a href={periodUrl(range.key)} class:list={{ 'is-active': range.key === selectedRange.key }} aria-current={range.key === selectedRange.key ? 'page' : undefined}>{range.label}</a>)}</nav></div>
 
-    <section class="analytics-simple__stats" aria-label="Kerncijfers">
-      <article><span>Unieke bezoekers</span><strong>{formatNumber(analytics.visitors)}</strong><small>Verschillende anonieme browsers in deze periode</small></article>
-      <article><span>Paginaweergaven</span><strong>{formatNumber(analytics.pageviews)}</strong><small>Elke geladen publieke pagina met toestemming</small></article>
+    <section class="analytics-studio__stats" aria-label="Kerncijfers">
+      <article class="analytics-studio__stat analytics-studio__stat--visitors"><div><span class="analytics-studio__stat-kicker"><i></i>Bereik</span><h2>Unieke bezoekers</h2><strong>{formatNumber(analytics.visitors)}</strong></div><p>{comparison(analytics.visitors, analytics.previous.visitors)}</p><small>Verschillende anonieme browsers in deze periode</small></article>
+      <article class="analytics-studio__stat analytics-studio__stat--pageviews"><div><span class="analytics-studio__stat-kicker"><i></i>Activiteit</span><h2>Paginaweergaven</h2><strong>{formatNumber(analytics.pageviews)}</strong></div><p>{comparison(analytics.pageviews, analytics.previous.pageviews)}</p><small>Elke geladen publieke pagina met toestemming</small></article>
     </section>
 
-    <section class="analytics-simple__panel" aria-labelledby="analytics-chart-title">
-      <div class="analytics-simple__panel-head">
-        <div><h2 id="analytics-chart-title">{metricLabel} doorheen de tijd</h2><p>Per {selectedRange.hourly ? 'uur' : 'dag'} · tijdzone Brussel</p></div>
-        <nav class="analytics-simple__switch" aria-label="Grafiekcijfer">
-          <a href={metricUrl('visitors')} class:list={{ 'is-active': metric === 'visitors' }} aria-current={metric === 'visitors' ? 'page' : undefined}>Bezoekers</a>
-          <a href={metricUrl('pageviews')} class:list={{ 'is-active': metric === 'pageviews' }} aria-current={metric === 'pageviews' ? 'page' : undefined}>Paginaweergaven</a>
-        </nav>
-      </div>
+    <section class="analytics-studio__panel analytics-studio__trend" aria-labelledby="analytics-chart-title">
+      <div class="analytics-studio__panel-head"><div><span class="analytics-studio__section-label">Verloop</span><h2 id="analytics-chart-title">{metricLabel} doorheen de tijd</h2><p>Per {selectedRange.hourly ? 'uur' : 'dag'} · tijdzone Brussel</p></div><nav class="analytics-studio__switch" aria-label="Grafiekcijfer"><a href={metricUrl('visitors')} class:list={{ 'is-active': metric === 'visitors' }} aria-current={metric === 'visitors' ? 'page' : undefined}>Bezoekers</a><a href={metricUrl('pageviews')} class:list={{ 'is-active': metric === 'pageviews' }} aria-current={metric === 'pageviews' ? 'page' : undefined}>Paginaweergaven</a></nav></div>
       {analytics.pageviews ? <>
-        <div class="analytics-simple__chart" data-analytics-chart data-points={chartData} data-unit={metric === 'pageviews' ? 'paginaweergaven' : 'bezoekers'}>
-          <div class="analytics-simple__readout" data-chart-readout aria-live="off">Beweeg over de grafiek of gebruik de pijltjestoetsen voor een tijdvak.</div>
-          <svg viewBox={`0 0 ${chartWidth} ${chartHeight}`} role="img" aria-label={`${metricLabel} per ${selectedRange.hourly ? 'uur' : 'dag'}`} preserveAspectRatio="none">
-            {[0, .5, 1].map((ratio) => { const y = top + ratio * (baseline - top); return <g><line class="analytics-simple__grid" x1={left} x2={chartWidth - right} y1={y} y2={y}/><text x={left - 9} y={y + 4}>{formatNumber(Math.round(maxValue * (1 - ratio)))}</text></g>; })}
-            <polygon points={area} class="analytics-simple__area"/><polyline points={line} class="analytics-simple__line"/>
-            <line class="analytics-simple__guide" data-chart-guide x1="0" x2="0" y1={top} y2={baseline} style="display:none"/>
-            <circle class="analytics-simple__dot" data-chart-dot cx="0" cy="0" r="5" style="display:none"/>
-            <rect class="analytics-simple__capture" data-chart-capture x={left} y={top} width={chartWidth - left - right} height={baseline - top} tabindex="0" aria-label={`${metricLabel} grafiek. Gebruik links en rechts om tijdvakken te bekijken.`}/>
-          </svg>
-          <div class="analytics-simple__ticks">{ticks.map((point) => <span>{formatPoint(point.timestamp)}</span>)}</div>
+        <div class="analytics-studio__chart" data-analytics-chart data-points={chartData} data-unit={metric === 'pageviews' ? 'paginaweergaven' : 'bezoekers'}>
+          <div class="analytics-studio__plot"><svg viewBox={`0 0 ${chartWidth} ${chartHeight}`} role="img" aria-label={`${metricLabel} per ${selectedRange.hourly ? 'uur' : 'dag'}`} preserveAspectRatio="none">
+            {[0, .5, 1].map((ratio) => { const y = top + ratio * (baseline - top); return <g><line class="analytics-studio__grid" x1={left} x2={chartWidth - right} y1={y} y2={y}/><text x={left - 9} y={y + 4}>{formatNumber(Math.round(maxValue * (1 - ratio)))}</text></g>; })}
+            <polygon points={area} class="analytics-studio__area"/><polyline points={line} class="analytics-studio__line"/>
+            <line class="analytics-studio__guide" data-chart-guide x1="0" x2="0" y1={top} y2={baseline} style="display:none"/><circle class="analytics-studio__dot" data-chart-dot cx="0" cy="0" r="5" style="display:none"/>
+          </svg><button class="analytics-studio__capture" type="button" data-chart-capture aria-label={`${metricLabel} grafiek. Gebruik links en rechts om tijdvakken te bekijken.`}></button><div class="analytics-studio__tooltip" data-chart-tooltip hidden aria-hidden="true"><span data-tooltip-label></span><strong data-tooltip-value></strong></div></div>
+          <span class="sr-only" data-chart-status aria-live="off"></span>
+          <div class="analytics-studio__ticks">{ticks.map((point) => <span>{formatPoint(point.timestamp)}</span>)}</div>
         </div>
-        {metric === 'visitors' && <p class="analytics-simple__note">Dezelfde bezoeker kan op meerdere dagen voorkomen. Het totaal hierboven telt die bezoeker één keer binnen de hele periode.</p>}
-        <details class="analytics-simple__details"><summary>Bekijk cijfers per {selectedRange.hourly ? 'uur' : 'dag'}</summary><div>{analytics.trend.map((point) => <p><span>{formatPoint(point.timestamp)}</span><strong>{formatNumber(point[metric])} {metric === 'pageviews' ? 'paginaweergaven' : 'bezoekers'}</strong></p>)}</div></details>
-      </> : <div class="analytics-simple__empty"><strong>Nog geen bezoekgegevens</strong><p>De grafiek verschijnt zodra een bezoeker toestemming geeft en een publieke pagina bekijkt.</p></div>}
+        {metric === 'visitors' && <p class="analytics-studio__note">Een bezoeker kan op meerdere dagen voorkomen. Het totaal bovenaan telt die browser één keer binnen de hele periode.</p>}
+        <details class="analytics-studio__details"><summary>Bekijk cijfers per {selectedRange.hourly ? 'uur' : 'dag'}</summary><div>{analytics.trend.map((point) => <p><span>{formatPoint(point.timestamp)}</span><strong>{formatNumber(point[metric])} {metric === 'pageviews' ? 'paginaweergaven' : 'bezoekers'}</strong></p>)}</div></details>
+      </> : <div class="analytics-studio__empty"><strong>Nog geen bezoekgegevens</strong><p>De grafiek verschijnt zodra een bezoeker toestemming geeft en een publieke pagina bekijkt.</p></div>}
     </section>
 
-    {analytics.topPages.length > 0 && <section class="analytics-simple__panel analytics-simple__pages" aria-labelledby="top-pages-title">
-      <div class="analytics-simple__panel-head"><div><h2 id="top-pages-title">Meest bekeken pagina’s</h2><p>Paginaweergaven binnen de gekozen periode</p></div></div>
-      <ol>{analytics.topPages.map((page) => <li><span>{page.path}</span><strong>{formatNumber(page.views)}</strong></li>)}</ol>
-    </section>}
+    <div class="analytics-studio__lower">
+      <section class="analytics-studio__panel analytics-studio__rank" aria-labelledby="top-pages-title"><div class="analytics-studio__panel-head"><div><span class="analytics-studio__section-label">Interesse</span><h2 id="top-pages-title">Meest bekeken pagina’s</h2><p>Paginaweergaven in deze periode</p></div></div>{analytics.topPages.length ? <ol>{analytics.topPages.map((page, index) => <li><span class="analytics-studio__rank-num">{String(index + 1).padStart(2, '0')}</span><span class="analytics-studio__rank-name">{page.path}</span><strong>{formatNumber(page.views)}</strong></li>)}</ol> : <div class="analytics-studio__list-empty">Nog geen pagina’s om te tonen.</div>}</section>
+      <section class="analytics-studio__panel analytics-studio__rank analytics-studio__countries" aria-labelledby="countries-title" data-country-chart>
+        <div class="analytics-studio__panel-head"><div><span class="analytics-studio__section-label">Herkomst</span><h2 id="countries-title">Bezoekers per land</h2><p>Schatting op basis van het netwerk</p></div></div>
+        {countrySegments.length ? <div class="analytics-studio__country-content">
+          <div class="analytics-studio__country-donut" aria-hidden="true">
+            <svg viewBox="0 0 200 200" focusable="false">
+              <circle class="analytics-studio__country-track" cx="100" cy="100" r="72" pathLength="100" />
+              {countrySegments.map((segment, index) => <circle class="analytics-studio__country-slice" cx="100" cy="100" r="72" pathLength="100" style={`--arc:${segment.share};--offset:${-segment.offset};--delay:${index * 90}ms;stroke:${segment.color}`} />)}
+            </svg>
+            <div class="analytics-studio__country-total"><strong>{formatNumber(analytics.visitors)}</strong><span>{analytics.visitors === 1 ? 'bezoeker' : 'bezoekers'}</span></div>
+          </div>
+          <ol class="analytics-studio__country-legend">{countrySegments.map((segment) => <li><i style={`background:${segment.color}`} aria-hidden="true"></i><span class="analytics-studio__country-flag" aria-hidden="true">{segment.flag ? <img src={segment.flag} alt="" width="22" height="17" loading="lazy" /> : <svg viewBox="0 0 24 24" fill="none" focusable="false"><circle cx="12" cy="12" r="8"/><path d="M4 12h16M12 4c-2.3 2.1-3.5 4.8-3.5 8s1.2 5.9 3.5 8m0-16c2.3 2.1 3.5 4.8 3.5 8s-1.2 5.9-3.5 8"/></svg>}</span><span>{countryLabel(segment.code)}</span><strong>{formatNumber(segment.visitors)}</strong><small>{Math.round(segment.share)}%</small></li>)}</ol>
+        </div> : <div class="analytics-studio__list-empty">Nog geen bezoekers om te tonen.</div>}
+        <p class="analytics-studio__country-note">Eerste bekende land per browser in deze periode. Oudere bezoeken zonder landcode blijven onbekend; VPN’s kunnen afwijken.</p>
+      </section>
+    </div>
+    <p class="analytics-studio__footnote">Alle cijfers zijn gebaseerd op bezoekers die analytics hebben toegestaan. De lopende periode bevat vandaag nog niet alle uren.</p>
   </div>
 </AdminLayout>
 
 <script is:inline>
+  document.querySelectorAll('[data-country-chart]').forEach((chart) => {
+    if (!chart.querySelector('.analytics-studio__country-slice')) return;
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches || !('IntersectionObserver' in window)) return;
+    const observer = new IntersectionObserver((entries) => {
+      if (!entries[0].isIntersecting) return;
+      chart.classList.add('is-visible');
+      observer.disconnect();
+    }, { threshold: 0.3 });
+    observer.observe(chart);
+  });
   document.querySelectorAll('[data-analytics-chart]').forEach((chart) => {
     const points = JSON.parse(chart.dataset.points || '[]');
     const capture = chart.querySelector('[data-chart-capture]');
-    const readout = chart.querySelector('[data-chart-readout]');
+    const plot = chart.querySelector('.analytics-studio__plot');
+    const tooltip = chart.querySelector('[data-chart-tooltip]');
+    const label = chart.querySelector('[data-tooltip-label]');
+    const value = chart.querySelector('[data-tooltip-value]');
+    const status = chart.querySelector('[data-chart-status]');
     const guide = chart.querySelector('[data-chart-guide]');
     const dot = chart.querySelector('[data-chart-dot]');
-    if (!points.length || !capture || !readout || !guide || !dot) return;
+    if (!points.length || !capture || !plot || !tooltip || !label || !value || !status || !guide || !dot) return;
     let activeIndex = -1;
-    const show = (index) => {
+    let keyboardMode = false;
+    let pointerFocusing = false;
+    const show = (index, clientX, clientY) => {
       activeIndex = Math.max(0, Math.min(points.length - 1, index));
       const point = points[activeIndex];
       guide.setAttribute('x1', point.x);
@@ -106,28 +143,49 @@ const metricUrl = (next: string) => `/admin/analytics?periode=${selectedRange.ke
       dot.setAttribute('cy', point.y);
       guide.style.display = '';
       dot.style.display = '';
-      readout.textContent = `${point.label} · ${new Intl.NumberFormat('nl-BE').format(point.value)} ${chart.dataset.unit}`;
+      label.textContent = point.label;
+      value.textContent = `${new Intl.NumberFormat('nl-BE').format(point.value)} ${chart.dataset.unit}`;
+      status.textContent = `${point.label}: ${value.textContent}`;
+      tooltip.hidden = false;
+      const rect = plot.getBoundingClientRect();
+      const x = clientX === undefined ? point.x / 960 * rect.width : clientX - rect.left;
+      const y = clientY === undefined ? point.y / 260 * rect.height : clientY - rect.top;
+      const width = tooltip.offsetWidth;
+      const height = tooltip.offsetHeight;
+      tooltip.style.left = `${Math.max(8, Math.min(rect.width - width - 8, x + 14))}px`;
+      tooltip.style.top = `${y - height - 14 < 8 ? Math.min(rect.height - height - 8, y + 18) : y - height - 14}px`;
     };
     const hide = () => {
-      if (document.activeElement === capture) return;
+      if (keyboardMode) return;
       activeIndex = -1;
       guide.style.display = 'none';
       dot.style.display = 'none';
-      readout.textContent = 'Beweeg over de grafiek of gebruik de pijltjestoetsen voor een tijdvak.';
+      tooltip.hidden = true;
     };
     const showAtPointer = (event) => {
       const rect = capture.getBoundingClientRect();
       const position = Math.max(0, Math.min(1, (event.clientX - rect.left) / rect.width));
-      show(Math.round(position * (points.length - 1)));
+      show(Math.round(position * (points.length - 1)), event.clientX, event.clientY);
     };
-    capture.addEventListener('pointermove', showAtPointer);
-    capture.addEventListener('pointerdown', showAtPointer);
+    capture.addEventListener('pointermove', (event) => { keyboardMode = false; showAtPointer(event); });
+    capture.addEventListener('pointerdown', (event) => { pointerFocusing = true; keyboardMode = event.pointerType !== 'mouse'; showAtPointer(event); });
     capture.addEventListener('pointerleave', hide);
-    capture.addEventListener('focus', () => { readout.setAttribute('aria-live', 'polite'); show(activeIndex < 0 ? points.length - 1 : activeIndex); });
-    capture.addEventListener('blur', () => { readout.setAttribute('aria-live', 'off'); hide(); });
+    capture.addEventListener('focus', () => {
+      if (pointerFocusing) { pointerFocusing = false; return; }
+      keyboardMode = true;
+      status.setAttribute('aria-live', 'polite');
+      show(activeIndex < 0 ? points.length - 1 : activeIndex);
+    });
+    capture.addEventListener('blur', () => {
+      keyboardMode = false;
+      status.setAttribute('aria-live', 'off');
+      hide();
+    });
     capture.addEventListener('keydown', (event) => {
       if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
       event.preventDefault();
+      keyboardMode = true;
+      status.setAttribute('aria-live', 'polite');
       if (event.key === 'Home') show(0);
       else if (event.key === 'End') show(points.length - 1);
       else show((activeIndex < 0 ? points.length - 1 : activeIndex) + (event.key === 'ArrowRight' ? 1 : -1));

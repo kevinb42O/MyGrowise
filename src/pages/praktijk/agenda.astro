@@ -1,6 +1,9 @@
 ---
 import PracticeLayout from '../../layouts/PracticeLayout.astro';
 import UnifiedAgenda from '../../components/admin/UnifiedAgenda';
+import { getPractitionerProfile } from '../../lib/practiceStore';
+const profile = await getPractitionerProfile(Astro.locals.currentUser!.practitionerId!);
+const canUseItransform = profile?.slug === 'virginie';
 ---
 
 <PracticeLayout title="Mijn agenda" description="Beheer je afspraken, aanvragen en beschikbaarheid in één agenda.">
@@ -9,16 +12,16 @@ import UnifiedAgenda from '../../components/admin/UnifiedAgenda';
       <div>
         <p class="admin-eyebrow">Mijn praktijk</p>
         <h1 id="practice-agenda-title">Mijn agenda</h1>
-        <p>Aanvragen, afspraken, blokkades en boekbare momenten op één plek.</p>
+        <p>{canUseItransform ? 'MyGrowise en Praktijk Itransform samen, met een duidelijke keuze bij elk eigen moment.' : 'Je MyGrowise-afspraken, privémomenten, blokkades en boekbare tijden op één plek.'}</p>
       </div>
     </section>
     <div class="practice-agenda-legend" aria-label="Agendakleuren">
       <span><i class="is-pending"></i> Aanvraag</span>
       <span><i class="is-confirmed"></i> Bevestigd</span>
       <span><i class="is-blocked"></i> Niet beschikbaar</span>
-      <span><i class="is-external"></i> Itransform</span>
+      {canUseItransform && <span><i class="is-external"></i> Itransform</span>}
       <span><i class="is-available"></i> Boekbaar</span>
     </div>
-    <UnifiedAgenda mode="practice" client:only="react" />
+    <UnifiedAgenda mode="practice" allowItransform={canUseItransform} client:only="react" />
   </div>
 </PracticeLayout>

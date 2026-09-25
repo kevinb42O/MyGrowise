@@ -11,7 +11,7 @@ import { fromBrusselsLocalInput, toBrusselsLocalInput } from '../../lib/brussels
 
 type Source = 'mygrowise' | 'itransform' | 'block' | 'availability';
 type Item = { id: string; source: Source; title: string; subtitle: string; startsAt: string; endsAt: string; status: string; kind: 'appointment' | 'personal' | 'block' | 'availability'; location: string; color: string; editable: boolean; patientId?: string | null; practitionerId?: string | null };
-type FormValue = { id?: string; title: string; startsAt: string; endsAt: string; kind: Item['kind']; location: string; color: string; practitionerId: string | null };
+type FormValue = { id?: string; title: string; startsAt: string; endsAt: string; kind: Item['kind']; location: string; color: string; practitionerId: string | null; calendarScope: 'mygrowise' | 'itransform' };
 type BlockValue = { startsAt: string; endsAt: string; reason: string };
 type ManualValue = { id?: string; patientId: string; startsAt: string; endsAt: string };
 type ClientChoice = { id: string; name: string; email: string };
@@ -32,11 +32,12 @@ const oneHourLater = (value: Date | string) => {
 };
 const fromEvent = (event: EventApi): Item | null => event.extendedProps.item || null;
 
-export default function UnifiedAgenda({ mode = 'admin' }: { mode?: 'admin' | 'practice' }) {
+export default function UnifiedAgenda({ mode = 'admin', allowItransform = false }: { mode?: 'admin' | 'practice'; allowItransform?: boolean }) {
   const calendarRef = useRef<FullCalendar>(null);
   const [source, setSource] = useState<'all' | Source>('all');
+  const [canUseItransform, setCanUseItransform] = useState(allowItransform);
   const [practitionerFilter, setPractitionerFilter] = useState('all');
-  const [practitioners, setPractitioners] = useState<{ id: string; name: string }[]>([]);
+  const [practitioners, setPractitioners] = useState<{ id: string; name: string; slug: string }[]>([]);
   const [search, setSearch] = useState('');
   const [form, setForm] = useState<FormValue | null>(null);
   const [notice, setNotice] = useState('');
@@ -63,22 +64,36 @@ export default function UnifiedAgenda({ mode = 'admin' }: { mode?: 'admin' | 'pr
       const payload = await response.json();
       if (!response.ok) throw new Error(payload.error || 'Agenda kon niet laden.');
       if (mode === 'admin') setPractitioners(payload.practitioners || []);
+      else setCanUseItransform(payload.canUseItransform === true);
       const needle = search.trim().toLowerCase();
-      success((payload.events as Item[]).filter((item) => (mode === 'practice' || source === 'all' || item.source === source) && (mode === 'practice' || practitionerFilter === 'all' || item.practitionerId === practitionerFilter) && (item.source === 'availability' || !needle || `${item.title} ${item.subtitle} ${item.location}`.toLowerCase().includes(needle))).map(mapEvent));
+      success((payload.events as Item[]).filter((item) => (source === 'all' || item.source === source || (mode === 'practice' && source === 'mygrowise' && (item.source === 'block' || item.source === 'availability'))) && (mode === 'practice' || practitionerFilter === 'all' || item.practitionerId === practitionerFilter) && (item.source === 'availability' || !needle || `${item.title} ${item.subtitle} ${item.location}`.toLowerCase().includes(needle))).map(mapEvent));
     } catch (error) {
       const failureError = error instanceof Error ? error : new Error('Agenda kon niet laden.');
       setNotice(failureError.message);
       failure(failureError);
     }
   }, [mapEvent, mode, practitionerFilter, search, source]);
-  const openNew = (start: Date | string, end?: Date | string) => { setNotice(''); setForm({ title: '', startsAt: toLocalInput(start), endsAt: toLocalInput(end || oneHourLater(start)), kind: mode === 'practice' ? 'personal' : 'appointment', location: mode === 'practice' ? '' : 'Praktijk Itransform', color: '#d26479', practitionerId: mode === 'practice' || practitionerFilter === 'all' ? null : practitionerFilter }); };
-  const openEdit = (item: Item) => { setNotice(''); setForm({ id: item.id, title: item.title, startsAt: toLocalInput(item.startsAt), endsAt: toLocalInput(item.endsAt), kind: item.kind, location: item.location, color: item.color, practitionerId: item.practitionerId || null }); };
+  const openNew = (start: Date | string, end?: Date | string) => {
+    const selectedPractitioner = practitioners.find((person) => person.id === practitionerFilter);
+    const adminUsesMyGrowise = source === 'mygrowise'
+      || (practitionerFilter !== 'all' && !(source === 'itransform' && selectedPractitioner?.slug === 'virginie'));
+    const calendarScope = mode === 'practice'
+      ? canUseItransform && source === 'itransform' ? 'itransform' : 'mygrowise'
+      : adminUsesMyGrowise ? 'mygrowise' : 'itransform';
+    setNotice('');
+    setForm({ title: '', startsAt: toLocalInput(start), endsAt: toLocalInput(end || oneHourLater(start)),
+      kind: mode === 'practice' ? 'personal' : 'appointment', location: mode === 'practice' ? '' : calendarScope === 'itransform' ? 'Praktijk Itransform' : '',
+      color: calendarScope === 'mygrowise' ? '#1f7060' : '#d26479',
+      practitionerId: mode === 'practice' || practitionerFilter === 'all' ? null : practitionerFilter, calendarScope });
+  };
+  const openEdit = (item: Item) => { setNotice(''); setForm({ id: item.id, title: item.title, startsAt: toLocalInput(item.startsAt), endsAt: toLocalInput(item.endsAt), kind: item.kind, location: item.location, color: item.color, practitionerId: item.practitionerId || null, calendarScope: item.source === 'itransform' ? 'itransform' : 'mygrowise' }); };
   const save = async () => {
     if (!form || busy) return;
     let startsAt: string; let endsAt: string;
     try { startsAt = toUtcIso(form.startsAt); endsAt = toUtcIso(form.endsAt); }
     catch (error) { setNotice(error instanceof Error ? error.message : 'Controleer het tijdstip.'); return; }
     if (new Date(endsAt) <= new Date(startsAt)) { setNotice('Het einduur moet na het beginuur vallen.'); return; }
+    if (mode === 'admin' && form.calendarScope === 'mygrowise' && !form.practitionerId) { setNotice('Kies een professional voor dit MyGrowise-moment.'); return; }
     setBusy(true);
     try {
       const response = await fetch(mode === 'practice' ? '/api/praktijk/agenda' : form.id ? `/api/admin/agenda?id=${encodeURIComponent(form.id)}` : '/api/admin/agenda', { method: mode === 'practice' ? 'POST' : form.id ? 'PATCH' : 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ ...form, startsAt, endsAt, ...(mode === 'practice' ? { action: form.id ? 'external_update' : 'external_create' } : {}) }) });
@@ -95,7 +110,7 @@ export default function UnifiedAgenda({ mode = 'admin' }: { mode?: 'admin' | 'pr
     try { startsAt = calendarToUtcIso(change.event.startStr); endsAt = calendarToUtcIso(change.event.endStr); }
     catch (error) { change.revert(); setNotice(error instanceof Error ? error.message : 'Ongeldig tijdstip.'); return; }
     try {
-      const response = await fetch(`/api/admin/agenda?id=${encodeURIComponent(item.id)}`, { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ title: item.title, kind: item.kind, location: item.location, color: item.color, practitionerId: item.practitionerId || null, startsAt, endsAt }) });
+      const response = await fetch(`/api/admin/agenda?id=${encodeURIComponent(item.id)}`, { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ title: item.title, kind: item.kind, location: item.location, color: item.color, practitionerId: item.practitionerId || null, calendarScope: item.source, startsAt, endsAt }) });
       if (!response.ok) throw new Error('Verplaatsen is niet gelukt.');
       setNotice('Tijdstip aangepast.'); refresh();
     } catch (error) { change.revert(); setNotice(error instanceof Error ? error.message : 'Verplaatsen is niet gelukt.'); }
@@ -103,7 +118,7 @@ export default function UnifiedAgenda({ mode = 'admin' }: { mode?: 'admin' | 'pr
   const onEventClick = (click: EventClickArg) => {
     const item = fromEvent(click.event);
     if (!item) return;
-    if (mode === 'practice') { setNotice(''); item.source === 'itransform' ? openEdit(item) : setDetail(item); return; }
+    if (mode === 'practice') { setNotice(''); item.editable ? openEdit(item) : setDetail(item); return; }
     if (item.editable) openEdit(item);
     else window.location.assign('/admin/boekingen');
   };
@@ -170,14 +185,14 @@ export default function UnifiedAgenda({ mode = 'admin' }: { mode?: 'admin' | 'pr
 
   return <div className="unified-agenda">
     <div className="unified-agenda__controls">
-      {mode === 'admin' && <div className="unified-agenda__source" role="group" aria-label="Agenda filter">
+      {(mode === 'admin' || canUseItransform) && <div className="unified-agenda__source" role="group" aria-label="Agenda filter">
         {([['all', 'Alles'], ['mygrowise', 'MyGrowise'], ['itransform', 'Praktijk Itransform']] as const).map(([value, label]) => <button key={value} type="button" className={source === value ? 'is-active' : ''} onClick={() => chooseSource(value)}><i className={`source-dot source-dot--${value}`} />{label}</button>)}
       </div>}
       {mode === 'admin' && <label className="unified-agenda__search"><span>Professional</span><select value={practitionerFilter} onChange={(event) => { setPractitionerFilter(event.target.value); setTimeout(refresh, 0); }}><option value="all">Iedereen</option>{practitioners.map((person) => <option key={person.id} value={person.id}>{person.name}</option>)}</select></label>}
       <label className="unified-agenda__search"><span>Zoeken</span><input value={search} onChange={(event) => { setSearch(event.target.value); setTimeout(refresh, 150); }} placeholder="Naam, locatie of titel" /></label>
       <button type="button" className="unified-agenda__new" onClick={() => mode === 'practice' ? openBlock(new Date()) : openNew(new Date())}>{mode === 'practice' ? '+ Tijd blokkeren' : '+ Nieuw moment'}</button>
-      {mode === 'practice' && <button type="button" className="unified-agenda__new" onClick={() => openManual(nextQuarter())}>+ Afspraak</button>}
-      {mode === 'practice' && <button type="button" className="unified-agenda__new" onClick={() => openNew(nextQuarter())}>+ Privémoment</button>}
+      {mode === 'practice' && <button type="button" className="unified-agenda__new" onClick={() => openManual(nextQuarter())}>+ Cliëntafspraak</button>}
+      {mode === 'practice' && <button type="button" className="unified-agenda__new" onClick={() => openNew(nextQuarter())}>+ Moment</button>}
       {mode === 'practice' && <a className="unified-agenda__new" href="/praktijk/beschikbaarheid">Weekschema</a>}
     </div>
     {notice && <div className="unified-agenda__notice" role="status">{notice}<button type="button" onClick={() => setNotice('')} aria-label="Melding sluiten">×</button></div>}
@@ -189,11 +204,11 @@ export default function UnifiedAgenda({ mode = 'admin' }: { mode?: 'admin' | 'pr
       allDaySlot={false} slotMinTime="07:00:00" slotMaxTime="21:00:00" slotDuration="00:30:00" snapDuration="00:15:00" height="auto" expandRows
       events={loadEvents} dateClick={(arg) => mode === 'practice' ? chooseSlot(arg.dateStr) : openNew(arg.dateStr)} select={(arg: DateSelectArg) => { mode === 'practice' ? chooseSlot(arg.startStr, arg.endStr) : openNew(arg.startStr, arg.endStr); calendarRef.current?.getApi().unselect(); }}
       eventClick={onEventClick} eventDrop={updatePosition} eventResize={updatePosition}
-      eventContent={(arg) => <div className="unified-agenda__event"><b>{arg.timeText}</b><span>{arg.event.extendedProps.item?.status === 'pending' ? 'Aanvraag · ' : ''}{arg.event.title}</span></div>}
+      eventContent={(arg) => arg.event.extendedProps.item?.source === 'availability' ? null : <div className="unified-agenda__event"><b>{arg.timeText}</b><span>{arg.event.extendedProps.item?.status === 'pending' ? 'Aanvraag · ' : mode === 'practice' && canUseItransform && arg.event.extendedProps.item?.source === 'itransform' ? 'Itransform · ' : ''}{arg.event.title}</span></div>}
     />
     {slotChoice && mode === 'practice' && <div className="unified-agenda__backdrop" role="presentation" onMouseDown={() => setSlotChoice(null)}><section className="unified-agenda__editor" role="dialog" aria-modal="true" aria-labelledby="practice-agenda-choice" onMouseDown={(event) => event.stopPropagation()}>
       <header><div><p>Gekozen tijdvak</p><h2 id="practice-agenda-choice">Wat wil je plannen?</h2></div><button type="button" onClick={() => setSlotChoice(null)} aria-label="Sluiten">×</button></header>
-      <div className="practice-agenda-choice"><button type="button" onClick={() => openManual(slotChoice.startsAt, slotChoice.endsAt)}><strong>Afspraak met cliënt</strong><span>Koppel aan een toegewezen cliënt en reserveer dit moment.</span></button><button type="button" onClick={() => openBlock(slotChoice.startsAt, slotChoice.endsAt)}><strong>Tijd blokkeren</strong><span>Maak dit moment niet meer publiek boekbaar.</span></button></div>
+      <div className="practice-agenda-choice"><button type="button" onClick={() => openManual(slotChoice.startsAt, slotChoice.endsAt)}><strong>MyGrowise-cliëntafspraak</strong><span>Koppel aan een toegewezen cliënt.</span></button><button type="button" onClick={() => { setSlotChoice(null); openNew(slotChoice.startsAt, slotChoice.endsAt); }}><strong>Eigen moment of privétijd</strong><span>Kies een titel, type en {canUseItransform ? 'organisatie' : 'kleur'}.</span></button><button type="button" onClick={() => openBlock(slotChoice.startsAt, slotChoice.endsAt)}><strong>MyGrowise-tijd blokkeren</strong><span>Maak dit moment niet meer publiek boekbaar.</span></button></div>
     </section></div>}
     {detail && mode === 'practice' && <div className="unified-agenda__backdrop" role="presentation" onMouseDown={() => setDetail(null)}><section className="unified-agenda__editor" role="dialog" aria-modal="true" aria-labelledby="practice-agenda-detail" onMouseDown={(event) => event.stopPropagation()}>
       <header><div><p>{detail.source === 'mygrowise' ? detail.status === 'pending' ? 'Nieuwe aanvraag' : 'Bevestigde afspraak' : detail.source === 'itransform' ? 'Praktijk Itransform' : 'Niet beschikbaar'}</p><h2 id="practice-agenda-detail">{detail.title}</h2></div><button type="button" onClick={() => setDetail(null)} aria-label="Sluiten">×</button></header>
@@ -219,16 +234,17 @@ export default function UnifiedAgenda({ mode = 'admin' }: { mode?: 'admin' | 'pr
       <footer><span /><button type="button" onClick={() => setBlock(null)}>Annuleren</button><button className="unified-agenda__save" type="button" disabled={busy} onClick={saveBlock}>Blokkeren</button></footer>
     </section></div>}
     {manual && mode === 'practice' && <div className="unified-agenda__backdrop" role="presentation" onMouseDown={() => setManual(null)}><section className="unified-agenda__editor" role="dialog" aria-modal="true" aria-labelledby="practice-agenda-manual" onMouseDown={(event) => event.stopPropagation()}>
-      <header><div><p>Mijn praktijk</p><h2 id="practice-agenda-manual">{manual.id ? 'Afspraak verplaatsen' : 'Afspraak inplannen'}</h2></div><button type="button" onClick={() => setManual(null)} aria-label="Sluiten">×</button></header>
+      <header><div><p>MyGrowise</p><h2 id="practice-agenda-manual">{manual.id ? 'Afspraak verplaatsen' : 'Afspraak inplannen'}</h2></div><button type="button" onClick={() => setManual(null)} aria-label="Sluiten">×</button></header>
       <div className="unified-agenda__fields">{!manual.id && <label className="is-wide"><span>Cliënt</span><select value={manual.patientId} onChange={(event) => setManual({ ...manual, patientId: event.target.value })}><option value="">Kies een cliënt met e-mailadres</option>{clients.map((client) => <option key={client.id} value={client.id}>{client.name} · {client.email}</option>)}</select>{clientsLoading ? <small>Cliënten laden…</small> : !clients.length && <small>Geen toegewezen cliënten met e-mailadres gevonden. <a href="/admin/clienten">Open cliëntendossiers →</a></small>}</label>}<label><span>Van</span><input type="datetime-local" value={manual.startsAt} onChange={(event) => setManual({ ...manual, startsAt: event.target.value })} /></label><label><span>Tot</span><input type="datetime-local" value={manual.endsAt} onChange={(event) => setManual({ ...manual, endsAt: event.target.value })} /></label>{notice && <p className="practice-agenda-form-error" role="alert">{notice}</p>}</div>
       <footer><span /><button type="button" onClick={() => setManual(null)}>Annuleren</button><button className="unified-agenda__save" type="button" disabled={busy} onClick={saveManual}>{manual.id ? 'Verplaatsen' : 'Inplannen'}</button></footer>
     </section></div>}
     {form && <div className="unified-agenda__backdrop" role="presentation" onMouseDown={() => setForm(null)}><section className="unified-agenda__editor" role="dialog" aria-modal="true" aria-labelledby="agenda-editor-title" onMouseDown={(event) => event.stopPropagation()}>
-      <header><div><p>{mode === 'practice' ? 'Mijn praktijk' : 'Praktijk Itransform'}</p><h2 id="agenda-editor-title">{form.id ? 'Moment aanpassen' : 'Nieuw moment'}</h2></div><button type="button" onClick={() => setForm(null)} aria-label="Sluiten">×</button></header>
+      <header><div><p>{form.calendarScope === 'itransform' ? 'Praktijk Itransform' : 'MyGrowise'}</p><h2 id="agenda-editor-title">{form.id ? 'Moment aanpassen' : 'Nieuw moment'}</h2></div><button type="button" onClick={() => setForm(null)} aria-label="Sluiten">×</button></header>
       <div className="unified-agenda__fields">
+        {(mode === 'admin' || canUseItransform) && <label className="is-wide"><span>Agenda</span><select value={form.calendarScope} onChange={(event) => setForm({ ...form, calendarScope: event.target.value as FormValue['calendarScope'] })}><option value="mygrowise">MyGrowise</option><option value="itransform" disabled={mode === 'admin' && Boolean(form.practitionerId) && practitioners.find((person) => person.id === form.practitionerId)?.slug !== 'virginie'}>Praktijk Itransform</option></select></label>}
         <label><span>Titel</span><input autoFocus value={form.title} onChange={(event) => setForm({ ...form, title: event.target.value })} placeholder="Bijv. cliëntafspraak" /></label>
         <label><span>Type</span><select value={form.kind} onChange={(event) => setForm({ ...form, kind: event.target.value as Item['kind'] })}><option value="appointment">Afspraak</option><option value="block">Niet beschikbaar</option><option value="personal">Persoonlijk</option></select></label>
-        {mode === 'admin' && <label><span>Professional</span><select value={form.practitionerId || ''} onChange={(event) => setForm({ ...form, practitionerId: event.target.value || null })}><option value="">Niet toegewezen</option>{practitioners.map((person) => <option key={person.id} value={person.id}>{person.name}</option>)}</select></label>}
+        {mode === 'admin' && <label><span>Professional</span><select value={form.practitionerId || ''} onChange={(event) => { const practitionerId = event.target.value || null; const person = practitioners.find((entry) => entry.id === practitionerId); setForm({ ...form, practitionerId, calendarScope: practitionerId && person?.slug !== 'virginie' ? 'mygrowise' : !practitionerId ? 'itransform' : form.calendarScope }); }}><option value="">Niet toegewezen</option>{practitioners.map((person) => <option key={person.id} value={person.id}>{person.name}</option>)}</select></label>}
         <label><span>Van</span><input type="datetime-local" value={form.startsAt} onChange={(event) => setForm({ ...form, startsAt: event.target.value })} /></label>
         <label><span>Tot</span><input type="datetime-local" value={form.endsAt} onChange={(event) => setForm({ ...form, endsAt: event.target.value })} /></label>
         <label className="is-wide"><span>Locatie</span><input value={form.location} onChange={(event) => setForm({ ...form, location: event.target.value })} placeholder="Praktijkruimte of online" /></label>
