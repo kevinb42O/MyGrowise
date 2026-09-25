@@ -2,7 +2,7 @@ import { getSupabaseAdmin } from './supabase/server';
 import type { AuditActor } from './securityAudit';
 
 type RecordRow = Record<string, any>;
-export type AdminOrder = { id: string; status: string; totalCents: number; currency: string; createdAt: string; customerId: string };
+export type AdminOrder = { id: string; status: string; totalCents: number; currency: string; createdAt: string; customerId: string; paymentVerifiedAt?: string | null; paymentClaimedAt?: string | null; provider?: string };
 export type AdminOrderDetail = { id: string; status: string; totalCents: number; currency: string; createdAt: string; customerId: string; customerName: string; provider: string; reference: string; paymentClaimedAt: string | null; paymentVerifiedAt: string | null; productTitles: string[] };
 export type AdminBooking = { id: string; practitionerId: string; practitionerName: string; patientId: string | null; clientName: string; clientEmail: string; startsAt: string; endsAt: string; status: string; createdAt: string };
 export type AdminTask = { id: string; title: string; category: string; priority: number; status: string; dueAt: string | null; createdAt: string; assignedToName: string | null };
@@ -15,6 +15,27 @@ export const listAdminOrders = async (limit = 100): Promise<AdminOrder[]> => {
   const { data, error } = await getSupabaseAdmin().from('orders').select('id,status,total_cents,currency,created_at,customer_user_id').order('created_at', { ascending: false }).limit(limit);
   fail(error);
   return ((data || []) as RecordRow[]).map((row) => ({ id: String(row.id), status: String(row.status), totalCents: Number(row.total_cents), currency: String(row.currency), createdAt: String(row.created_at), customerId: String(row.customer_user_id) }));
+};
+
+const listDashboardOrders = async (): Promise<AdminOrder[]> => {
+  const client = getSupabaseAdmin();
+  const orders: AdminOrder[] = [];
+  for (let offset = 0; ; offset += 500) {
+    const { data, error } = await client.from('orders')
+      .select('id,status,total_cents,currency,created_at,customer_user_id,payment_verified_at,payment_claimed_at,provider')
+      .order('created_at', { ascending: false }).order('id', { ascending: false }).range(offset, offset + 499);
+    fail(error);
+    const page = (data || []) as RecordRow[];
+    orders.push(...page.map((row) => ({
+      id: String(row.id), status: String(row.status), totalCents: Number(row.total_cents), currency: String(row.currency),
+      createdAt: String(row.created_at), customerId: String(row.customer_user_id),
+      paymentVerifiedAt: row.payment_verified_at ? String(row.payment_verified_at) : null,
+      paymentClaimedAt: row.payment_claimed_at ? String(row.payment_claimed_at) : null,
+      provider: String(row.provider || ''),
+    })));
+    if (page.length < 500) break;
+  }
+  return orders;
 };
 
 export const listAdminOrderDetails = async (): Promise<AdminOrderDetail[]> => {
@@ -47,6 +68,27 @@ export const listAdminBookings = async (limit = 100): Promise<AdminBooking[]> =>
   const { data, error } = await getSupabaseAdmin().from('bookings').select('id,practitioner_id,patient_id,client_name,client_email,starts_at,ends_at,status,created_at,practitioners(name)').order('starts_at', { ascending: true }).limit(limit);
   fail(error);
   return ((data || []) as RecordRow[]).map((row) => ({ id: String(row.id), practitionerId: String(row.practitioner_id), practitionerName: String(row.practitioners?.name || 'Onbekend'), patientId: row.patient_id ? String(row.patient_id) : null, clientName: String(row.client_name), clientEmail: String(row.client_email), startsAt: String(row.starts_at), endsAt: String(row.ends_at), status: String(row.status), createdAt: String(row.created_at) }));
+};
+
+const listDashboardBookings = async (): Promise<AdminBooking[]> => {
+  const client = getSupabaseAdmin();
+  const bookings: AdminBooking[] = [];
+  const after = new Date().toISOString();
+  for (let offset = 0; ; offset += 500) {
+    const { data, error } = await client.from('bookings')
+      .select('id,practitioner_id,patient_id,client_name,client_email,starts_at,ends_at,status,created_at,practitioners(name)')
+      .in('status', ['pending', 'confirmed']).or(`status.eq.pending,starts_at.gte.${after}`)
+      .order('starts_at', { ascending: true }).order('id', { ascending: true }).range(offset, offset + 499);
+    fail(error);
+    const page = (data || []) as RecordRow[];
+    bookings.push(...page.map((row) => ({
+      id: String(row.id), practitionerId: String(row.practitioner_id), practitionerName: String(row.practitioners?.name || 'Onbekend'),
+      patientId: row.patient_id ? String(row.patient_id) : null, clientName: String(row.client_name), clientEmail: String(row.client_email),
+      startsAt: String(row.starts_at), endsAt: String(row.ends_at), status: String(row.status), createdAt: String(row.created_at),
+    })));
+    if (page.length < 500) break;
+  }
+  return bookings;
 };
 
 const bookingTransitions: Record<string, string[]> = {
@@ -93,19 +135,20 @@ export const listIntegrationChecks = async (): Promise<IntegrationCheck[]> => {
 };
 
 export const getSuperadminOverview = async () => {
-  const [orders, bookings, integrations, tasks, productsResult, auditResult, analyticsResult] = await Promise.all([
-    listAdminOrders(500), listAdminBookings(200), listIntegrationChecks(), listAdminTasks(),
+  const [orders, bookings, integrations, tasks, productsResult, auditResult, analyticsResult, taskCountResult] = await Promise.all([
+    listDashboardOrders(), listDashboardBookings(), listIntegrationChecks(), listAdminTasks(),
     getSupabaseAdmin().from('products').select('id,status', { count: 'exact' }),
     getSupabaseAdmin().from('security_audit_log').select('occurred_at,action,object_type,object_id').order('occurred_at', { ascending: false }).limit(8),
     getSupabaseAdmin().from('analytics_events').select('id', { count: 'exact', head: true }).eq('consented', true).eq('environment', 'production').eq('event_name', 'page_view').not('path', 'like', '/account%').not('path', 'like', '/admin%').not('path', 'like', '/praktijk%').not('path', 'like', '/api%').gte('occurred_at', new Date(Date.now() - 30 * 86400000).toISOString()),
+    getSupabaseAdmin().from('admin_work_items').select('id', { count: 'exact', head: true }).in('status', ['open', 'in_progress', 'blocked']),
   ]);
-  fail(productsResult.error); fail(auditResult.error); fail(analyticsResult.error);
+  fail(productsResult.error); fail(auditResult.error); fail(analyticsResult.error); fail(taskCountResult.error);
   const paid = orders.filter((order) => order.status === 'paid' || order.status === 'fulfilled');
   const netRevenueCents = paid.reduce((total, order) => total + order.totalCents, 0);
   return {
     orders, bookings, integrations, tasks, paidOrders: paid.length, netRevenueCents, netRevenue: money(netRevenueCents),
     publishedProducts: ((productsResult.data || []) as RecordRow[]).filter((product) => product.status === 'published').length,
-    productCount: productsResult.count || 0, analyticsEvents: analyticsResult.count || 0,
+    productCount: productsResult.count || 0, analyticsEvents: analyticsResult.count || 0, openTaskCount: taskCountResult.count || 0,
     pendingBookings: bookings.filter((booking) => booking.status === 'pending').length,
     activity: ((auditResult.data || []) as RecordRow[]).map((row) => ({ occurredAt: String(row.occurred_at), action: String(row.action), objectType: String(row.object_type), objectId: String(row.object_id) })),
   };
