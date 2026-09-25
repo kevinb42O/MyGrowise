@@ -30,7 +30,16 @@ export const onRequest = defineMiddleware(async (context, next) => {
 
   if (path === '/api/admin/login' || path === '/api/admin/logout' || path === '/api/account/login' || path === '/api/account/register' || path === '/api/account/logout' || path === '/api/account/password-reset' || path === '/api/account/verification-resend' || path === '/account/wachtwoord-vergeten' || path === '/account/wachtwoord-herstellen') return next();
 
-  const session = isSupabaseAuthConfigured() ? await verifySupabaseSession(context.cookies.get(SUPABASE_SESSION_COOKIE)?.value) : null;
+  let session;
+  try {
+    session = isSupabaseAuthConfigured() ? await verifySupabaseSession(context.cookies.get(SUPABASE_SESSION_COOKIE)?.value) : null;
+  } catch (error) {
+    console.error('[auth] Session verification unavailable', { requestId: context.locals.requestId, path, error: error instanceof Error ? error.name : 'unknown' });
+    return new Response('De beveiligde omgeving is tijdelijk niet bereikbaar. Probeer het over enkele seconden opnieuw.', {
+      status: 503,
+      headers: { 'content-type': 'text/plain; charset=utf-8', 'cache-control': 'no-store', 'retry-after': '5' },
+    });
+  }
   if (isOptionalSessionPath) {
     if (session) context.locals.currentUser = session;
     else if (context.cookies.has(SUPABASE_SESSION_COOKIE)) context.cookies.delete(SUPABASE_SESSION_COOKIE, { path: '/' });

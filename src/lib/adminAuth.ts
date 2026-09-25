@@ -1,5 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
-import { getSupabaseAdmin } from './supabase/server';
+import { getSupabaseAdmin, supabaseFetch } from './supabase/server';
 import { hasAdminPermission, isUserRole, type AdminPermission, type UserRole } from './adminPermissions';
 
 export const SUPABASE_SESSION_COOKIE = 'mg_session';
@@ -68,7 +68,7 @@ const toSession = async (user: { id: string; email?: string | null; email_confir
 const publicAuthClient = () => {
   const url = import.meta.env.PUBLIC_SUPABASE_URL?.trim(); const publishableKey = import.meta.env.PUBLIC_SUPABASE_PUBLISHABLE_KEY?.trim();
   if (!url || !publishableKey) throw new Error('Supabase authentication is not configured.');
-  return createClient(url, publishableKey, { auth: { autoRefreshToken: false, persistSession: false } });
+  return createClient(url, publishableKey, { auth: { autoRefreshToken: false, persistSession: false }, global: { fetch: supabaseFetch } });
 };
 
 export const authenticateSupabaseUser = async (email: string, password: string, recordAudit = true, requestId?: string) => {
@@ -106,8 +106,21 @@ export const resendSupabaseCustomerConfirmation = async (email: string, emailRed
 
 export const verifySupabaseSession = async (token?: string): Promise<UserSession | null> => {
   if (!token || !configured()) return null;
+  // Access tokens are JWTs. An expired token cannot be accepted, so avoid an
+  // unnecessary network round trip on every request with a stale cookie.
+  try {
+    const payload = JSON.parse(Buffer.from(token.split('.')[1], 'base64url').toString('utf8'));
+    if (typeof payload.exp !== 'number' || payload.exp <= Math.floor(Date.now() / 1000)) return null;
+  } catch {
+    return null;
+  }
   const { data, error } = await getSupabaseAdmin().auth.getUser(token);
-  if (error || !data.user) return null;
+  if (error) {
+    // A network failure must not erase a valid cookie and masquerade as logout.
+    if (!error.status || error.status >= 500) throw error;
+    return null;
+  }
+  if (!data.user) return null;
   return toSession(data.user);
 };
 
