@@ -106,6 +106,7 @@ export const requiredAdminPermission = (path: string, method = 'GET'): AdminPerm
   if (path.startsWith('/api/admin/bookings')) return method === 'GET' ? 'bookings.read' : 'bookings.manage';
   if (path.startsWith('/api/admin/recurring-costs')) return 'integrations.manage';
   if (path === '/api/admin/clienten/zoeken') return 'client_records.read';
+  if (path.startsWith('/api/admin/clienten/') && path.endsWith('/account')) return 'client_records.assign';
   if (path.startsWith('/api/admin/clienten/') && path.endsWith('/toewijzingen')) return 'client_records.assign';
   if (path.startsWith('/api/admin/clienten/') && path.endsWith('/archiveren')) return 'client_records.archive';
   if (path.startsWith('/api/admin/clienten') || path.startsWith('/api/admin/notities')) return method === 'GET' ? 'client_records.read' : 'client_records.write';

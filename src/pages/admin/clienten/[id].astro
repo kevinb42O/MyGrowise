@@ -2,7 +2,7 @@
 import AdminLayout from '../../../layouts/AdminLayout.astro';
 import AdminIcon from '../../../components/admin/AdminIcon.astro';
 import { hasPermission } from '../../../lib/adminAuth';
-import { getPatientDetail, getPatientStaff, noteTypeLabels } from '../../../lib/clientRecords';
+import { getPatientDetail, getPatientStaff, listUnlinkedCustomerAccounts, noteTypeLabels } from '../../../lib/clientRecords';
 
 const user = Astro.locals.currentUser!;
 const patientId = Astro.params.id || '';
@@ -11,6 +11,9 @@ const requestedNotePage = Number(Astro.url.searchParams.get('pagina') || '1');
 const patient = await getPatientDetail(user, patientId, historyNoteId, Astro.locals.requestId, requestedNotePage);
 if (!patient) return Astro.redirect('/admin/clienten?fout=dossier_niet_gevonden');
 const staff = patient.canManageAssignments ? await getPatientStaff() : [];
+const matchingCustomerAccounts = patient.canManageAssignments && !patient.customerUserId && patient.email
+  ? (await listUnlinkedCustomerAccounts(user, patient.email)).filter((account) => account.email?.toLowerCase() === patient.email?.toLowerCase())
+  : [];
 const canWrite = hasPermission(user, 'client_records.write');
 const activeAssignments = patient.assignments.filter((item) => !item.endedAt);
 const assignedIds = new Set(activeAssignments.map((item) => item.userId));
@@ -19,7 +22,7 @@ const correctionTarget = patient.notes.find((note) => note.id === correctionId &
 const message = Astro.url.searchParams.get('melding') || '';
 const errorCode = Astro.url.searchParams.get('fout') || '';
 const messages: Record<string, string> = {
-  aangemaakt: 'Cliëntendossier aangemaakt.', afspraak: 'Cliëntendossier aangemaakt en afspraak gekoppeld.',
+  aangemaakt: 'Cliëntendossier aangemaakt.', afspraak: 'Cliëntendossier aangemaakt en afspraak gekoppeld.', account_gekoppeld: 'Klantaccount aan dit dossier gekoppeld.',
   concept: 'Verslag als concept opgeslagen.', definitief: 'Verslag definitief opgeslagen.', toegewezen: 'Cliënt toegewezen.',
   toewijzing_beeindigd: 'Toewijzing beëindigd.', afspraak_gekoppeld: 'Afspraak aan het dossier gekoppeld.', gearchiveerd: 'Dossier gearchiveerd.', hersteld: 'Dossier hersteld en weer actief.',
 };
@@ -35,6 +38,8 @@ const errors: Record<string, string> = {
   afspraak_al_gekoppeld: 'Deze afspraak is inmiddels aan een ander dossier gekoppeld.', archiveren_mislukt: 'Het dossier kon niet worden gearchiveerd.',
   afspraak_klopt_niet: 'De naam, het e-mailadres of het klantaccount van deze afspraak komt niet overeen met dit dossier.',
   klantaccount_al_gekoppeld: 'Dit klantaccount is al aan een ander cliëntendossier gekoppeld.',
+  account_komt_niet_overeen: 'Het e-mailadres van het klantaccount komt niet overeen met dit dossier.',
+  account_koppelen_mislukt: 'Het klantaccount kon niet worden gekoppeld.',
 };
 const formatDate = (value: string) => new Intl.DateTimeFormat('nl-BE', { timeZone: 'Europe/Brussels', dateStyle: 'medium' }).format(new Date(value));
 const formatDateTime = (value: string) => new Intl.DateTimeFormat('nl-BE', { timeZone: 'Europe/Brussels', dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value));
@@ -113,6 +118,7 @@ const selectedBooking = patient.linkableBookings.find((item) => item.id === book
       </main>
 
       <aside class="client-record-side">
+        {patient.canManageAssignments && !patient.customerUserId && patient.status === 'active' && matchingCustomerAccounts.length > 0 && <section class="admin-panel client-account-link-panel"><header class="admin-panel__header"><div><h2>Klantaccount koppelen</h2><p>Het e-mailadres komt exact overeen. Controleer de identiteit voordat je koppelt.</p></div></header><div class="client-account-link-list">{matchingCustomerAccounts.map((account) => <form method="post" action={`/api/admin/clienten/${patient.id}/account`}><input type="hidden" name="customer_user_id" value={account.id}/><span><strong>{account.fullName}</strong><small>{account.email}</small></span><button class="admin-button" type="submit">Koppel account</button></form>)}</div></section>}
         <section class="admin-panel"><header class="admin-panel__header"><div><h2>Toewijzingen</h2><p>Wie toegang heeft tot dit dossier</p></div></header><div class="client-assignment-list">
           {patient.assignments.length ? patient.assignments.map((assignment) => <div class="client-assignment-row"><span class="client-record-avatar"><AdminIcon name="professionals" size={14}/></span><span><strong>{assignment.name}</strong><small>{assignment.endedAt ? `Toegang beëindigd ${formatDate(assignment.endedAt)}` : 'Actief toegewezen'}</small></span>{patient.canManageAssignments && !assignment.endedAt && <form method="post" action={`/api/admin/clienten/${patient.id}/toewijzingen`}><input type="hidden" name="user_id" value={assignment.userId}/><input type="hidden" name="operation" value="unassign"/><button class="admin-icon-button client-assignment-remove" type="submit" aria-label={`Toewijzing van ${assignment.name} beëindigen`} title="Toewijzing beëindigen"><AdminIcon name="close" size={14}/></button></form>}</div>) : <div class="client-inline-empty">Geen medewerker toegewezen. Superadmins behouden dossierbeheer.</div>}
           {patient.canManageAssignments && <form class="client-assignment-add" method="post" action={`/api/admin/clienten/${patient.id}/toewijzingen`}><label><span>Medewerker toevoegen</span><select name="user_id" required><option value="" disabled selected>Kies teamlid</option>{staff.filter((member) => !assignedIds.has(member.id)).map((member) => <option value={member.id}>{member.name}</option>)}</select></label><input type="hidden" name="operation" value="assign"/><button class="admin-button" type="submit">Toewijzen</button></form>}

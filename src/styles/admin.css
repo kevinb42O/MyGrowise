@@ -1112,6 +1112,18 @@ html { background: var(--admin-canvas); }
 .client-source-create form { margin-top: 8px; }
 .client-record-icon { display: grid; width: 38px; height: 38px; flex: 0 0 auto; place-items: center; border-radius: 11px; background: var(--admin-green-soft); color: var(--admin-green); }
 .client-create-panel { margin-bottom: 20px; }
+.client-account-search { display: flex; flex-wrap: wrap; align-items: center; gap: 9px; padding: 15px 18px 0; }
+.client-account-search label { flex: 1 1 240px; }
+.client-account-search input { width: 100%; min-height: 39px; padding: 9px 11px; border: 1px solid var(--admin-border-strong); border-radius: 7px; background: #fff; color: var(--admin-text); font: inherit; font-size: 12px; }
+.client-account-search .admin-button { min-height: 39px; }
+.client-account-create-form { grid-template-columns: minmax(220px, 1.5fr) minmax(180px, 1fr) auto; }
+.client-account-empty { margin: 0; padding: 16px 18px 19px; color: var(--admin-muted); font-size: 12px; }
+.client-account-link-list { display: grid; gap: 8px; padding: 14px; }
+.client-account-link-list form { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 9px; }
+.client-account-link-list form + form { padding-top: 9px; border-top: 1px solid var(--admin-border); }
+.client-account-link-list span { display: grid; gap: 3px; min-width: 0; }
+.client-account-link-list strong { color: var(--admin-text); font-size: 11px; }
+.client-account-link-list small { color: var(--admin-muted); font-size: 10px; }
 .client-create-form { display: grid; grid-template-columns: minmax(190px,1fr) minmax(220px,1.2fr) minmax(190px,1fr) auto; align-items: end; gap: 13px; padding: 17px 18px; }
 .client-create-form label, .client-note-create form > label, .client-note-create__grid label, .client-note-edit label, .client-assignment-add label { display: grid; min-width: 0; gap: 6px; color: var(--admin-text); font-size: 11px; font-weight: 600; }
 .client-create-form label > span, .client-note-create label > span, .client-note-edit label > span, .client-assignment-add label > span { display: flex; align-items: baseline; gap: 6px; }
@@ -1228,6 +1240,8 @@ html { background: var(--admin-canvas); }
   .client-record-heading__actions { justify-content: flex-start; }
   .client-source-card { padding: 15px; }
   .client-create-form { grid-template-columns: 1fr; padding: 14px; }
+  .client-account-search { padding: 14px 14px 0; }
+  .client-account-search .admin-button { flex: 1 1 auto; justify-content: center; }
   .client-create-form > button { width: 100%; justify-content: center; }
   .client-directory-panel > .admin-panel__header { display: grid; }
   .client-directory-lock { white-space: normal; }

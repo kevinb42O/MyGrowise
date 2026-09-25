@@ -1,7 +1,7 @@
 import type { APIRoute } from 'astro';
 import { isTrustedFormOrigin } from '../../../../lib/adminAuth';
 import { auditActor } from '../../../../lib/securityAudit';
-import { createPatient, createPatientFromBooking } from '../../../../lib/clientRecords';
+import { createPatient, createPatientFromBooking, createPatientFromCustomerAccount } from '../../../../lib/clientRecords';
 
 export const prerender = false;
 
@@ -15,6 +15,9 @@ const friendlyError = (error: unknown) => {
   if (code.includes('not_found')) return 'not_found';
   if (code.includes('not_allowed')) return 'not_allowed';
   if (code.includes('invalid_patient')) return 'invalid_patient';
+  if (code.includes('potential_patient_match')) return 'potential_patient_match';
+  if (code.includes('customer_not_found')) return 'customer_not_found';
+  if (code.includes('invalid_assignee')) return 'invalid_assignee';
   return 'invalid_input';
 };
 
@@ -23,11 +26,13 @@ export const POST: APIRoute = async ({ request, locals, redirect }) => {
   const user = locals.currentUser!; const form = await request.formData();
   const actor = auditActor(user, locals.requestId, '/api/admin/clienten');
   try {
-    const fromBooking = String(form.get('operation') || '') === 'from_booking';
-    const patientId = fromBooking
+    const operation = String(form.get('operation') || '');
+    const patientId = operation === 'from_booking'
       ? await createPatientFromBooking(String(form.get('booking_id') || ''), user, actor)
-      : await createPatient({ fullName: form.get('full_name'), email: form.get('email'), assigneeUserId: form.get('assignee_user_id') }, user, actor);
-    const destination = new URLSearchParams({ melding: fromBooking ? 'afspraak' : 'aangemaakt' });
+      : operation === 'from_customer'
+        ? await createPatientFromCustomerAccount(String(form.get('customer_user_id') || ''), String(form.get('assignee_user_id') || '') || null, user, actor)
+        : await createPatient({ fullName: form.get('full_name'), email: form.get('email'), assigneeUserId: form.get('assignee_user_id') }, user, actor);
+    const destination = new URLSearchParams({ melding: operation === 'from_booking' ? 'afspraak' : operation === 'from_customer' ? 'account_gekoppeld' : 'aangemaakt' });
     return redirect(`/admin/clienten/${encodeURIComponent(patientId)}?${destination}`, 303);
   } catch (error) {
     const destination = new URLSearchParams({ fout: friendlyError(error) });

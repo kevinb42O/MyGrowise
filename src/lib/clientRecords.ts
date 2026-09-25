@@ -114,6 +114,7 @@ export type PatientDetail = {
 export type PatientStaffMember = { id: string; name: string; roles: string[] };
 export type PatientSourceBooking = { id: string; patientId: string | null; customerUserId: string | null; clientName: string; clientEmail: string; startsAt: string; status: string; practitionerName: string };
 export type PatientReference = { id: string; fullName: string; status: PatientStatus };
+export type CustomerAccountCandidate = { id: string; fullName: string; email: string | null };
 
 const assertRecordRole = (user: UserSession) => {
   if (!canUseRecords(user)) throw new Error('not_allowed');
@@ -140,6 +141,31 @@ export const getPatientReference = async (user: UserSession, patientId: string, 
   if (!data) return null;
   await audit({ userId: user.sub, email: user.email, requestId, requestPath: '/admin/clienten' }, 'patient.reference_viewed', 'patient', patientId, { status: String(data.status) });
   return { id: String(data.id), fullName: String(data.full_name), status: String(data.status) as PatientStatus };
+};
+
+export const getPatientForCustomerAccount = async (user: UserSession, customerUserId: string): Promise<PatientReference | null> => {
+  if (!isOwner(user) || !uuidPattern.test(customerUserId)) return null;
+  const { data, error } = await getSupabaseAdmin().from('patients').select('id,full_name,status').eq('customer_user_id', customerUserId).maybeSingle();
+  fail(error);
+  return data ? { id: String(data.id), fullName: String(data.full_name), status: String(data.status) as PatientStatus } : null;
+};
+
+export const listUnlinkedCustomerAccounts = async (user: UserSession, search = ''): Promise<CustomerAccountCandidate[]> => {
+  if (!isOwner(user)) return [];
+  const term = search.trim().slice(0, 80);
+  const collect = async (field?: 'full_name' | 'email') => {
+    let query = getSupabaseAdmin().from('patient_customer_candidates').select('id,full_name,email').order('full_name').limit(100);
+    if (term && field) query = query.ilike(field, `%${term}%`);
+    const { data, error } = await query;
+    fail(error);
+    return (data || []) as Row[];
+  };
+  const rows = term
+    ? [...new Map((await Promise.all([collect('full_name'), collect('email')])).flat().map((row) => [String(row.id), row])).values()]
+    : await collect();
+  return rows.sort((a, b) => String(a.full_name).localeCompare(String(b.full_name), 'nl')).map((row) => ({
+    id: String(row.id), fullName: String(row.full_name || 'Naam ontbreekt'), email: row.email ? String(row.email) : null,
+  }));
 };
 
 const assertPatientAccess = async (user: UserSession, patientId: string) => {
@@ -336,6 +362,23 @@ export const createPatientFromBooking = async (bookingId: string, user: UserSess
   const { data, error } = await getSupabaseAdmin().rpc('create_patient_from_booking', { p_actor_user_id: user.sub, p_booking_id: bookingId, p_request_id: actor.requestId || null });
   fail(error); const id = String(data);
   return id;
+};
+
+export const createPatientFromCustomerAccount = async (customerUserId: string, assigneeUserId: string | null, user: UserSession, actor: AuditActor) => {
+  if (!isOwner(user) || !uuidPattern.test(customerUserId) || (assigneeUserId && !uuidPattern.test(assigneeUserId))) throw new Error('not_allowed');
+  const { data, error } = await getSupabaseAdmin().rpc('create_patient_from_customer', {
+    p_actor_user_id: user.sub, p_customer_user_id: customerUserId, p_assignee_user_id: assigneeUserId, p_request_id: actor.requestId || null,
+  });
+  fail(error);
+  return String(data);
+};
+
+export const linkPatientCustomerAccount = async (patientId: string, customerUserId: string, user: UserSession, actor: AuditActor) => {
+  if (!isOwner(user) || !uuidPattern.test(patientId) || !uuidPattern.test(customerUserId)) throw new Error('not_allowed');
+  const { error } = await getSupabaseAdmin().rpc('link_patient_customer_account', {
+    p_actor_user_id: user.sub, p_patient_id: patientId, p_customer_user_id: customerUserId, p_request_id: actor.requestId || null,
+  });
+  fail(error);
 };
 
 export const createPatientNote = async (input: { patientId: string; bookingId: string | null; type: NoteType; occurredAt: string; title: unknown; body: unknown; status: NoteStatus; correctsNoteId: string | null }, user: UserSession, actor: AuditActor) => {

@@ -2,7 +2,7 @@
 import AdminLayout from '../../layouts/AdminLayout.astro';
 import AdminIcon from '../../components/admin/AdminIcon.astro';
 import { hasPermission } from '../../lib/adminAuth';
-import { auditPatientDirectoryAccess, getBookingForPatientCreation, getPatientReference, getPatientStaff, listPatientRecords } from '../../lib/clientRecords';
+import { auditPatientDirectoryAccess, getBookingForPatientCreation, getPatientReference, getPatientStaff, listPatientRecords, listUnlinkedCustomerAccounts } from '../../lib/clientRecords';
 
 const user = Astro.locals.currentUser!;
 const canWrite = hasPermission(user, 'client_records.write');
@@ -13,6 +13,8 @@ const status = ['active', 'archived', 'all'].includes(requestedStatus) ? request
 await auditPatientDirectoryAccess(user, Astro.locals.requestId);
 const clients = await listPatientRecords(user, '', status);
 const staff = canAssign ? await getPatientStaff() : [];
+const customerSearch = (Astro.url.searchParams.get('klantzoek') || '').trim().slice(0, 80);
+const customerAccounts = canAssign ? await listUnlinkedCustomerAccounts(user, customerSearch) : [];
 const bookingId = Astro.url.searchParams.get('boeking') || '';
 const booking = bookingId ? await getBookingForPatientCreation(user, bookingId) : null;
 const linkedPatient = booking?.patientId ? await getPatientReference(user, booking.patientId, Astro.locals.requestId) : null;
@@ -30,6 +32,9 @@ const errors: Record<string, string> = {
   booking_patient_mismatch: 'Deze afspraakgegevens komen niet overeen met het cliëntendossier.',
   patient_archived: 'Herstel het gearchiveerde dossier eerst voordat je er een afspraak aan koppelt.',
   dossier_niet_gevonden: 'De afspraak of het dossier is niet gevonden.',
+  customer_not_found: 'Dit klantaccount is niet beschikbaar of heeft al een dossier.',
+  potential_patient_match: 'Er bestaat al een los dossier met hetzelfde e-mailadres. Open dat dossier en koppel daar het klantaccount om dubbele dossiers te vermijden.',
+  invalid_assignee: 'Kies een medewerker met toegang tot cliëntendossiers.',
 };
 const date = (value: string) => new Intl.DateTimeFormat('nl-BE', { timeZone: 'Europe/Brussels', dateStyle: 'medium' }).format(new Date(value));
 const dateTime = (value: string) => new Intl.DateTimeFormat('nl-BE', { timeZone: 'Europe/Brussels', dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value));
@@ -56,6 +61,21 @@ const dateTime = (value: string) => new Intl.DateTimeFormat('nl-BE', { timeZone:
               : canWrite && <form method="post" action="/api/admin/clienten"><input type="hidden" name="operation" value="from_booking"/><input type="hidden" name="booking_id" value={booking.id}/><button class="admin-button admin-button--primary" type="submit">Dossier aanmaken en afspraak koppelen</button></form>}
           </> : null}
       </div>
+    </section>}
+
+    {canAssign && <section class="client-create-panel admin-panel" id="client-account-create">
+      <header class="admin-panel__header"><div><h2>Bestaande klant kiezen</h2><p>Koppel een bestaand klantaccount aan een privé dossier. Verslagen verschijnen alleen voor bevoegde medewerkers.</p></div><span class="practice-private-badge"><AdminIcon name="lock" size={13}/> Privé</span></header>
+      <form class="client-account-search" method="get" action="/admin/clienten#client-account-create">
+        <label><span class="sr-only">Zoek klantaccount</span><input type="search" name="klantzoek" maxlength="80" value={customerSearch} placeholder="Zoek op naam of e-mailadres"/></label>
+        <button class="admin-button" type="submit"><AdminIcon name="search" size={15}/> Zoek klant</button>
+        {customerSearch && <a class="admin-button" href="/admin/clienten#client-account-create">Wis zoekterm</a>}
+      </form>
+      {customerAccounts.length ? <form class="client-create-form client-account-create-form" method="post" action="/api/admin/clienten">
+        <input type="hidden" name="operation" value="from_customer"/>
+        <label><span>Bestaand klantaccount</span><select name="customer_user_id" required><option value="" disabled selected>Kies een klant</option>{customerAccounts.map((account) => <option value={account.id}>{account.fullName} · {account.email || 'Geen e-mailadres'}</option>)}</select></label>
+        <label><span>Toegewezen aan <small>optioneel</small></span><select name="assignee_user_id"><option value="">Alleen superadmins</option>{staff.map((member) => <option value={member.id}>{member.name}</option>)}</select></label>
+        <button class="admin-button admin-button--primary" type="submit">Open dossier</button>
+      </form> : <p class="client-account-empty">{customerSearch ? 'Geen klantaccount gevonden zonder dossier. Pas de zoekterm aan.' : 'Alle klantaccounts hebben al een dossier of er zijn nog geen klantaccounts.'}</p>}
     </section>}
 
     {canWrite && <section class="client-create-panel admin-panel" id="client-record-create">
