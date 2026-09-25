@@ -50,9 +50,9 @@ const metricUrl = (next: string) => `/admin/analytics?periode=${selectedRange.ke
 
 <AdminLayout title="Websiteanalytics" description="Bezoekers, paginaweergaven en landen van MyGrowise">
   <div class:list={['admin-page', 'analytics-studio', { 'is-pageviews': metric === 'pageviews' }]}>
-    <header class="analytics-studio__hero">
-      <div class="analytics-studio__hero-copy"><span class="analytics-studio__eyebrow">MyGrowise · website-inzicht</span><h1>Een helder beeld van je bezoek.</h1><p>Wat bekeken wordt, waar bezoekers vandaan komen en hoe het bezoek verandert.</p></div>
-      <div class="analytics-studio__hero-meta"><span class="analytics-studio__live-dot"></span><span>{analytics.lastEventAt ? `Laatste bezoek ${hourFormat.format(new Date(analytics.lastEventAt))}` : 'Wacht op eerste bezoek'}</span></div>
+    <header class="analytics-studio__heading">
+      <h1>Website in cijfers</h1>
+      <small>{analytics.lastEventAt ? `Laatste bezoek ${hourFormat.format(new Date(analytics.lastEventAt))}` : 'Nog geen bezoeken in deze periode'}</small>
     </header>
 
     <div class="analytics-studio__toolbar"><span>Periode</span><nav aria-label="Periode">{ranges.map((range) => <a href={periodUrl(range.key)} class:list={{ 'is-active': range.key === selectedRange.key }} aria-current={range.key === selectedRange.key ? 'page' : undefined}>{range.label}</a>)}</nav></div>
@@ -66,12 +66,12 @@ const metricUrl = (next: string) => `/admin/analytics?periode=${selectedRange.ke
       <div class="analytics-studio__panel-head"><div><span class="analytics-studio__section-label">Verloop</span><h2 id="analytics-chart-title">{metricLabel} doorheen de tijd</h2><p>Per {selectedRange.hourly ? 'uur' : 'dag'} · tijdzone Brussel</p></div><nav class="analytics-studio__switch" aria-label="Grafiekcijfer"><a href={metricUrl('visitors')} class:list={{ 'is-active': metric === 'visitors' }} aria-current={metric === 'visitors' ? 'page' : undefined}>Bezoekers</a><a href={metricUrl('pageviews')} class:list={{ 'is-active': metric === 'pageviews' }} aria-current={metric === 'pageviews' ? 'page' : undefined}>Paginaweergaven</a></nav></div>
       {analytics.pageviews ? <>
         <div class="analytics-studio__chart" data-analytics-chart data-points={chartData} data-unit={metric === 'pageviews' ? 'paginaweergaven' : 'bezoekers'}>
-          <div class="analytics-studio__readout" data-chart-readout aria-live="off">Beweeg over de grafiek of gebruik de pijltjestoetsen voor een tijdvak.</div>
           <div class="analytics-studio__plot"><svg viewBox={`0 0 ${chartWidth} ${chartHeight}`} role="img" aria-label={`${metricLabel} per ${selectedRange.hourly ? 'uur' : 'dag'}`} preserveAspectRatio="none">
             {[0, .5, 1].map((ratio) => { const y = top + ratio * (baseline - top); return <g><line class="analytics-studio__grid" x1={left} x2={chartWidth - right} y1={y} y2={y}/><text x={left - 9} y={y + 4}>{formatNumber(Math.round(maxValue * (1 - ratio)))}</text></g>; })}
             <polygon points={area} class="analytics-studio__area"/><polyline points={line} class="analytics-studio__line"/>
             <line class="analytics-studio__guide" data-chart-guide x1="0" x2="0" y1={top} y2={baseline} style="display:none"/><circle class="analytics-studio__dot" data-chart-dot cx="0" cy="0" r="5" style="display:none"/>
-          </svg><button class="analytics-studio__capture" type="button" data-chart-capture aria-label={`${metricLabel} grafiek. Gebruik links en rechts om tijdvakken te bekijken.`}></button></div>
+          </svg><button class="analytics-studio__capture" type="button" data-chart-capture aria-label={`${metricLabel} grafiek. Gebruik links en rechts om tijdvakken te bekijken.`}></button><div class="analytics-studio__tooltip" data-chart-tooltip hidden aria-hidden="true"><span data-tooltip-label></span><strong data-tooltip-value></strong></div></div>
+          <span class="sr-only" data-chart-status aria-live="off"></span>
           <div class="analytics-studio__ticks">{ticks.map((point) => <span>{formatPoint(point.timestamp)}</span>)}</div>
         </div>
         {metric === 'visitors' && <p class="analytics-studio__note">Een bezoeker kan op meerdere dagen voorkomen. Het totaal bovenaan telt die browser één keer binnen de hele periode.</p>}
@@ -91,12 +91,18 @@ const metricUrl = (next: string) => `/admin/analytics?periode=${selectedRange.ke
   document.querySelectorAll('[data-analytics-chart]').forEach((chart) => {
     const points = JSON.parse(chart.dataset.points || '[]');
     const capture = chart.querySelector('[data-chart-capture]');
-    const readout = chart.querySelector('[data-chart-readout]');
+    const plot = chart.querySelector('.analytics-studio__plot');
+    const tooltip = chart.querySelector('[data-chart-tooltip]');
+    const label = chart.querySelector('[data-tooltip-label]');
+    const value = chart.querySelector('[data-tooltip-value]');
+    const status = chart.querySelector('[data-chart-status]');
     const guide = chart.querySelector('[data-chart-guide]');
     const dot = chart.querySelector('[data-chart-dot]');
-    if (!points.length || !capture || !readout || !guide || !dot) return;
+    if (!points.length || !capture || !plot || !tooltip || !label || !value || !status || !guide || !dot) return;
     let activeIndex = -1;
-    const show = (index) => {
+    let keyboardMode = false;
+    let pointerFocusing = false;
+    const show = (index, clientX, clientY) => {
       activeIndex = Math.max(0, Math.min(points.length - 1, index));
       const point = points[activeIndex];
       guide.setAttribute('x1', point.x);
@@ -105,28 +111,49 @@ const metricUrl = (next: string) => `/admin/analytics?periode=${selectedRange.ke
       dot.setAttribute('cy', point.y);
       guide.style.display = '';
       dot.style.display = '';
-      readout.textContent = `${point.label} · ${new Intl.NumberFormat('nl-BE').format(point.value)} ${chart.dataset.unit}`;
+      label.textContent = point.label;
+      value.textContent = `${new Intl.NumberFormat('nl-BE').format(point.value)} ${chart.dataset.unit}`;
+      status.textContent = `${point.label}: ${value.textContent}`;
+      tooltip.hidden = false;
+      const rect = plot.getBoundingClientRect();
+      const x = clientX === undefined ? point.x / 960 * rect.width : clientX - rect.left;
+      const y = clientY === undefined ? point.y / 260 * rect.height : clientY - rect.top;
+      const width = tooltip.offsetWidth;
+      const height = tooltip.offsetHeight;
+      tooltip.style.left = `${Math.max(8, Math.min(rect.width - width - 8, x + 14))}px`;
+      tooltip.style.top = `${y - height - 14 < 8 ? Math.min(rect.height - height - 8, y + 18) : y - height - 14}px`;
     };
     const hide = () => {
-      if (document.activeElement === capture) return;
+      if (keyboardMode) return;
       activeIndex = -1;
       guide.style.display = 'none';
       dot.style.display = 'none';
-      readout.textContent = 'Beweeg over de grafiek of gebruik de pijltjestoetsen voor een tijdvak.';
+      tooltip.hidden = true;
     };
     const showAtPointer = (event) => {
       const rect = capture.getBoundingClientRect();
       const position = Math.max(0, Math.min(1, (event.clientX - rect.left) / rect.width));
-      show(Math.round(position * (points.length - 1)));
+      show(Math.round(position * (points.length - 1)), event.clientX, event.clientY);
     };
-    capture.addEventListener('pointermove', showAtPointer);
-    capture.addEventListener('pointerdown', showAtPointer);
+    capture.addEventListener('pointermove', (event) => { keyboardMode = false; showAtPointer(event); });
+    capture.addEventListener('pointerdown', (event) => { pointerFocusing = true; keyboardMode = event.pointerType !== 'mouse'; showAtPointer(event); });
     capture.addEventListener('pointerleave', hide);
-    capture.addEventListener('focus', () => { readout.setAttribute('aria-live', 'polite'); show(activeIndex < 0 ? points.length - 1 : activeIndex); });
-    capture.addEventListener('blur', () => { readout.setAttribute('aria-live', 'off'); hide(); });
+    capture.addEventListener('focus', () => {
+      if (pointerFocusing) { pointerFocusing = false; return; }
+      keyboardMode = true;
+      status.setAttribute('aria-live', 'polite');
+      show(activeIndex < 0 ? points.length - 1 : activeIndex);
+    });
+    capture.addEventListener('blur', () => {
+      keyboardMode = false;
+      status.setAttribute('aria-live', 'off');
+      hide();
+    });
     capture.addEventListener('keydown', (event) => {
       if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
       event.preventDefault();
+      keyboardMode = true;
+      status.setAttribute('aria-live', 'polite');
       if (event.key === 'Home') show(0);
       else if (event.key === 'End') show(points.length - 1);
       else show((activeIndex < 0 ? points.length - 1 : activeIndex) + (event.key === 'ArrowRight' ? 1 : -1));
