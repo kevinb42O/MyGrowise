@@ -41,6 +41,7 @@ const created = Astro.url.searchParams.get('created') === '1';
       <aside class="admin-panel admin-product-aside" aria-labelledby="product-summary-title">
         <header class="admin-panel__header"><div><h2 id="product-summary-title">Samenvatting</h2><p>Technische productstatus</p></div></header>
         <dl><div><dt>Interne ID</dt><dd>{product.id}</dd></div><div><dt>Prijs</dt><dd>{formatProductPrice(product.priceCents)}</dd></div><div><dt>Aangemaakt</dt><dd>{new Intl.DateTimeFormat('nl-BE', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(product.createdAt))}</dd></div><div><dt>Gewijzigd</dt><dd>{new Intl.DateTimeFormat('nl-BE', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(product.updatedAt))}</dd></div></dl>
+        {product.status === 'published' && <a class="admin-text-link" href={`/aanbod/${product.slug}`} target="_blank" rel="noopener noreferrer">Bekijk publieke bestelpagina ↗</a>}
         <div class="admin-product-aside__note"><AdminIcon name={wiseConfigured ? 'check' : 'warning'} size={16} /><p>{wiseConfigured ? <><strong>Handmatige Wise-betaling ingesteld.</strong> Elke bestelling krijgt een eigen betalingsreferentie.</> : <><strong>Wise-rekeninggegevens nog niet ingesteld.</strong> De afrekenpagina staat klaar; betalen wordt beschikbaar zodra de begunstigde en rekeninggegevens zijn ingevuld.</>}</p></div>
       </aside>
     </div>
