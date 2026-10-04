@@ -1,0 +1,8 @@
+---
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+import CatalogEditor from '../../../components/catalog/CatalogEditor.astro';
+import {listCatalog} from '../../../lib/catalog/server';
+const catalog=await listCatalog(true);const isNew=Astro.params.id==='nieuw';const product=catalog.find(p=>p.id===Astro.params.id);
+if(!isNew&&!product)return Astro.redirect('/admin/vragenlijsten',302);
+---
+<AdminLayout title={product?.title||'Nieuw aanbod'}><div class="admin-page"><section class="admin-page-heading"><div><p class="admin-eyebrow">Vragenlijsten & profielen</p><h1>{product?.title||'Nieuw aanbod'}</h1><p>Beheer de volledige inhoud, prijs en afname-informatie op één plek.</p></div></section>{Astro.url.searchParams.has('opgeslagen')&&<div class="catalog-admin-alert" role="status">Alle wijzigingen zijn opgeslagen. Nieuwe bestellingen gebruiken de nieuwe gegevens.</div>}<CatalogEditor product={product} questions={catalog.filter(p=>p.type==='questionnaire')}/></div></AdminLayout>

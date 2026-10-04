@@ -1,4 +1,5 @@
 import { profilePresentation } from '../content/site';
+import { publicCatalog } from './catalog/server';
 import { getSupabaseAdmin } from './supabase/server';
 
 export type PublicProduct = {
@@ -26,23 +27,12 @@ const toProduct = (row: Record<string, unknown>): PublicProduct => ({
 });
 
 export const listPublishedProfiles = async (): Promise<PublicProfile[]> => {
-  const { data, error } = await getSupabaseAdmin().from('products').select(columns)
-    .eq('type', 'profile').eq('status', 'published').not('price_cents', 'is', null)
-    .order('created_at', { ascending: true });
-  if (error) throw error;
-  return ((data || []) as Record<string, unknown>[]).map((row) => {
-    const product = toProduct(row);
-    const editorial = profilePresentation.find((item) => item.slug === product.slug);
-    return {
-      ...product,
-      image: editorial?.image || '/images/editorial/mygrowise-50.jpg',
-      features: editorial?.features || [],
-    };
-  });
+  const products = await publicCatalog();
+  return products.filter(p => p.type === 'profile' && p.availability === 'available' && p.priceCents !== null).map(p => ({ ...p, type: 'profile' as const, currency: 'EUR', priceCents: p.priceCents!, features: p.components.map(c=>c.title) }));
 };
 
 export const formatPublicPrice = (product: PublicProduct) =>
   new Intl.NumberFormat('nl-BE', { style: 'currency', currency: product.currency }).format(product.priceCents / 100);
 
 export const profileUrl = (slug: string) =>
-  slug === 'stress-en-emotieprofiel' ? `/profielen/${slug}` : `/aanbod/${slug}`;
+  `/profielen/${slug}`;

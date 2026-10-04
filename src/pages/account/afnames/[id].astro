@@ -1,0 +1,9 @@
+---
+import AccountLayout from '../../../layouts/AccountLayout.astro';
+import {getDelivery,deliveryStatusLabel} from '../../../lib/catalog/server';
+const delivery=await getDelivery(Astro.params.id||'',Astro.locals.currentUser!.sub);
+if(!delivery)return Astro.redirect('/account/bibliotheek',302);
+Astro.response.headers.set('Cache-Control','private, no-store');Astro.response.headers.set('Referrer-Policy','no-referrer');
+---
+<AccountLayout title={delivery.title}><a href="/account/bibliotheek">← Mijn afnames</a><section class="assessment-page"><span class="eyebrow">{deliveryStatusLabel[delivery.status]}</span><h1>{delivery.title}</h1><p>Onderdeel van {delivery.order_items.product_title}</p><div class="assessment-instructions"><h2>Je volgende stap</h2><p>{delivery.instructions||'MyGrowise bereidt je afname voor. Hier verschijnen je instructies zodra die klaarstaan.'}</p>{delivery.external_url&&<a class="button button-primary" href={delivery.external_url} target="_blank" rel="noopener noreferrer">Open je afname ↗</a>}</div>{delivery.report_path&&<div class="assessment-instructions"><h2>Je rapport is beschikbaar.</h2><p>Download je rapport en bewaar het op een veilige plek.</p><a class="button button-primary" href={`/api/account/afnames/${delivery.id}/rapport`}>Download mijn rapport ↓</a></div>}<p class="assessment-help">Een vraag over je afname? <a href="/contact">Neem contact op met MyGrowise.</a></p></section></AccountLayout>
+<style>.assessment-page{max-width:760px;margin-top:2rem}.assessment-page h1{font-size:clamp(3rem,6vw,4.8rem);margin:1rem 0}.assessment-page>p{color:var(--muted);font-size:.9rem;line-height:1.8}.assessment-instructions{padding:2rem;border:1px solid var(--line);border-radius:1.2rem;background:var(--cream);margin:1.5rem 0}.assessment-instructions h2{font-size:2rem}.assessment-instructions p{white-space:pre-line;line-height:1.8;color:var(--muted);font-size:.9rem}.assessment-help{margin-top:2rem}</style>

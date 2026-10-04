@@ -1,3 +1,4 @@
+import {deliverCommerceMail} from '../../../../lib/catalog/mail';
 import type { APIRoute } from 'astro';
 import { isTrustedFormOrigin } from '../../../../lib/adminAuth';
 import { getSupabaseAdmin } from '../../../../lib/supabase/server';
@@ -12,6 +13,7 @@ export const POST: APIRoute = async ({ request, params, locals }) => {
   if (!actor?.sub) return new Response('Niet aangemeld.', { status: 401 });
   const { error } = await getSupabaseAdmin().rpc('confirm_wise_manual_payment', { p_order_id: id, p_actor_id: actor.sub });
   if (error) return Response.redirect(new URL('/admin/bestellingen?melding=fout', request.url), 303);
+  await deliverCommerceMail(4,id).catch(()=>undefined);
   return Response.redirect(new URL('/admin/bestellingen?melding=bevestigd', request.url), 303);
 };
 

@@ -96,6 +96,8 @@ export const getWiseManualProduct = async (slug: string) => {
   fail(error);
   if (!data) return null;
   const row = data as Row;
+  const {data:details,error:detailsError}=await getSupabaseAdmin().from('catalog_details').select('availability').eq('product_id',row.id).maybeSingle();
+  fail(detailsError);if(details&&details.availability!=='available')return null;
   return { id: String(row.id), slug: String(row.slug), title: String(row.title), type: String(row.type), summary: String(row.summary), priceCents: Number(row.price_cents), currency: String(row.currency) };
 };
 

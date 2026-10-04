@@ -22,6 +22,19 @@ export const profilePresentation = [
   },
 ];
 
+// Keep unfinished profiles visible as previews, without accepting orders.
+export const profilesInDevelopment = [
+  {
+    slug: 'hechting-en-relatieprofiel',
+    title: 'Hechting- en relatieprofiel',
+    summary: 'We werken aan een profiel rond hechting en relationele patronen.',
+    image: '/images/editorial/mygrowise-50.jpg',
+  },
+];
+
+export const isProfileInDevelopment = (slug: string) =>
+  profilesInDevelopment.some((profile) => profile.slug === slug.toLowerCase());
+
 export const practitioners = [
   {
     slug: 'virginie',

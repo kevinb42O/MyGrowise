@@ -76,7 +76,7 @@ const paidOrders = orders.filter((order) => order.status === 'paid' || order.sta
               const products = order.productTitles.length ? order.productTitles.join(', ') : 'Bestelling';
               const orderNumber = order.id.slice(-8).toUpperCase();
               return <tr data-order-row data-status={filterStatus(order)} data-search={`${products} ${order.customerName} ${order.reference} ${order.id} ${orderNumber}`.toLocaleLowerCase()}>
-                <td data-label="Bestelling"><strong class="orders-product">{products}</strong><small class="orders-number">#{orderNumber}</small></td>
+                <td data-label="Bestelling"><a class="orders-product" href={`/admin/bestellingen/${order.id}`}>{products}</a><small class="orders-number">#{orderNumber}</small></td>
                 <td data-label="Klant"><strong class="orders-customer">{order.customerName}</strong></td>
                 <td data-label="Betaalmethode"><span class="orders-method">{paymentMethod(order.provider)}</span>{isWisePayment(order) && order.reference && <span class="orders-reference"><code>{order.reference}</code><button type="button" class="orders-copy" data-copy={order.reference} aria-label={`Kopieer referentie ${order.reference}`} title="Kopieer referentie"><AdminIcon name="copy" size={14}/></button></span>}</td>
                 <td data-label="Bedrag"><strong class="admin-table-price">{formatMoney(order.totalCents, order.currency)}</strong></td>

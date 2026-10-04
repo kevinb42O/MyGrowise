@@ -1,7 +1,7 @@
 import { getSupabaseAdmin } from './supabase/server';
 import { writeSecurityAudit, type AuditActor } from './securityAudit';
 
-export const PRODUCT_TYPES = ['profile', 'module', 'ebook'] as const;
+export const PRODUCT_TYPES = ['profile', 'module', 'ebook', 'questionnaire'] as const;
 export const PRODUCT_STATUSES = ['draft', 'review', 'published', 'archived'] as const;
 export type ProductType = (typeof PRODUCT_TYPES)[number];
 export type ProductStatus = (typeof PRODUCT_STATUSES)[number];
@@ -85,5 +85,5 @@ export const updateProduct = async (id: string, input: ProductInput, actor: Audi
 };
 
 export const formatProductPrice = (priceCents: number | null) => priceCents === null ? 'Nog niet geprijsd' : new Intl.NumberFormat('nl-BE', { style: 'currency', currency: 'EUR' }).format(priceCents / 100);
-export const productTypeLabel: Record<ProductType, string> = { profile: 'Persoonlijk profiel', module: 'Online module', ebook: 'E-book' };
+export const productTypeLabel: Record<ProductType, string> = { questionnaire: 'Vragenlijst', profile: 'Persoonlijk profiel', module: 'Online module', ebook: 'E-book' };
 export const productStatusLabel: Record<ProductStatus, string> = { draft: 'Concept', review: 'In review', published: 'Gepubliceerd', archived: 'Gearchiveerd' };

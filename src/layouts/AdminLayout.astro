@@ -14,7 +14,7 @@ const { title, description = 'Beheer MyGrowise' } = Astro.props;
 const currentPath = Astro.url.pathname.replace(/\/$/, '') || '/';
 const adminUser = Astro.locals.adminUser;
 const environmentLabel = import.meta.env.PROD ? 'Productie' : 'Lokaal';
-if (currentPath === '/admin/clienten' || currentPath.startsWith('/admin/clienten/')) {
+if (currentPath.startsWith('/admin')) {
   Astro.response.headers.set('Cache-Control', 'private, no-store, max-age=0');
   Astro.response.headers.set('Referrer-Policy', 'no-referrer');
   Astro.response.headers.set('X-Robots-Tag', 'noindex, nofollow, noarchive');
@@ -34,6 +34,8 @@ const navGroups = [
     items: [
       { label: 'Bestellingen', href: '/admin/bestellingen', icon: 'orders' },
       { label: 'Klanten', href: '/admin/klanten', icon: 'customers' },
+      { label: 'Vragenlijsten & profielen', href: '/admin/vragenlijsten', icon: 'profiles' },
+      { label: 'Afnames & rapporten', href: '/admin/afnames', icon: 'content' },
       { label: 'Producten', href: '/admin/producten', icon: 'products' },
     ],
   },

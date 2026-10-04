@@ -1,0 +1,8 @@
+---
+import ProductDetail from '../../components/catalog/ProductDetail.astro';
+import {publicCatalog,getPricing,resolveCatalogSlug} from '../../lib/catalog/server';
+const [catalog,settings]=await Promise.all([publicCatalog(),getPricing()]);
+const product=catalog.find(p=>p.type==='profile'&&p.slug===Astro.params.slug);
+if(!product){const alias=await resolveCatalogSlug(Astro.params.slug||'');return Astro.redirect(alias||'/profielen',alias?301:302);}
+---
+<ProductDetail product={product} priceLabel={settings.priceLabel}/>

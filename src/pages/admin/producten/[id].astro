@@ -7,6 +7,7 @@ import { decodeProductFormFlash, formatProductPrice, getProduct, PRODUCT_FLASH_C
 
 const product = await getProduct(Astro.params.id || '');
 if (!product) return Astro.redirect('/admin/producten?message=Product+niet+gevonden.');
+if(product.type==='profile'||product.type==='questionnaire')return Astro.redirect(`/admin/vragenlijsten/${product.id}`,302);
 const wiseConfigured = Boolean(getWiseManualDetails());
 const flash = decodeProductFormFlash(Astro.cookies.get(PRODUCT_FLASH_COOKIE)?.value);
 Astro.cookies.delete(PRODUCT_FLASH_COOKIE, { path: '/admin/producten' });

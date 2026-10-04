@@ -18,7 +18,9 @@
     "supabase:types": "dotenv -e .env -- sh -c 'generated_types=$(mktemp); if supabase gen types typescript --project-id \"$SUPABASE_PROJECT_REF\" > \"$generated_types\"; then mv \"$generated_types\" src/lib/supabase/database.types.ts; else rm -f \"$generated_types\"; exit 1; fi'",
     "supabase:migrate-catalog": "dotenv -e .env -- node scripts/migrate-local-catalog-to-supabase.mjs",
     "supabase:migrate-practice": "dotenv -e .env -- node scripts/migrate-local-practice-to-supabase.mjs",
-    "supabase:migrate-identities": "dotenv -e .env -- node scripts/migrate-local-identities-to-supabase.mjs"
+    "supabase:migrate-identities": "dotenv -e .env -- node scripts/migrate-local-identities-to-supabase.mjs",
+    "test:catalog": "node --experimental-strip-types --test tests/catalog-pricing.test.ts",
+    "test:catalog:db": "dotenv -e .env -- node tests/catalog-database.mjs"
   },
   "dependencies": {
     "@astrojs/react": "^6.0.5",
@@ -43,8 +45,10 @@
     "@types/luxon": "^3.7.5",
     "@types/node": "^24.13.6",
     "@types/nodemailer": "^8.0.2",
+    "@types/pg": "^8.23.1",
     "@types/qrcode": "^1.5.6",
     "dotenv-cli": "^11.0.0",
+    "pg": "^8.23.1",
     "supabase": "^2.117.0",
     "typescript": "^5.7.3"
   },

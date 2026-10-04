@@ -81,7 +81,7 @@ const socialImage = new URL(ogImage, siteOrigin);
 
         document.querySelectorAll('#inhoud > section').forEach((section) => {
           const container = section.querySelector(':scope > .container');
-          if (container && !container.querySelector(':scope > .reveal')) addMotion(container, 0, 'section');
+          if (container && !container.hasAttribute('data-no-motion') && !container.querySelector(':scope > .reveal')) addMotion(container, 0, 'section');
 
           const cards = section.querySelectorAll(':scope .product-grid > *, :scope .pricing > *, :scope .value-grid > *, :scope .theme-grid > *, :scope .professional-list > *, :scope .qualities > *, :scope .steps > *, :scope .module-list > *, :scope .benefits > *, :scope .process li, :scope .principles-grid > *');
           cards.forEach((card, index) => addMotion(card, index + 1, 'card'));

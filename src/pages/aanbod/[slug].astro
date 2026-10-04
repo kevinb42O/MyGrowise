@@ -1,11 +1,13 @@
 ---
+import {resolveCatalogSlug} from '../../lib/catalog/server';
 import MainLayout from '../../layouts/MainLayout.astro';
 import { SUPABASE_SESSION_COOKIE, verifySupabaseSession } from '../../lib/adminAuth';
 import { createEpcSepaQr, getWiseManualDetails, getWiseManualOrder, getWiseManualProduct } from '../../lib/wiseCheckout';
 
 const slug = String(Astro.params.slug || '').toLowerCase();
 const product = await getWiseManualProduct(slug);
-if (!product) return Astro.redirect('/prijzen', 302);
+if (!product){const alias=await resolveCatalogSlug(slug);return Astro.redirect(alias||'/prijzen',alias?301:302);}
+if(product.type==='profile'||product.type==='questionnaire'){const order=Astro.url.searchParams.get('order');return Astro.redirect(order?`/bestellen?order=${encodeURIComponent(order)}`:`/${product.type==='profile'?'profielen':'vragenlijsten'}/${product.slug}`,302);}
 const session = await verifySupabaseSession(Astro.cookies.get(SUPABASE_SESSION_COOKIE)?.value);
 const canCheckout = Boolean(session?.roles.includes('customer'));
 const next = `/aanbod/${product.slug}`;
@@ -27,11 +29,10 @@ if (order?.status === 'pending_payment' && wiseDetails) {
 }
 const pageMessage = Astro.url.searchParams.get('melding');
 const created = Astro.url.searchParams.get('besteld') === '1';
-const reported = Astro.url.searchParams.get('gemeld') === '1';
 const statusLabels: Record<string, string> = { pending_payment: 'Wacht op betaling', paid: 'Betaling bevestigd', fulfilled: 'Betaling bevestigd', cancelled: 'Geannuleerd' };
 ---
 
-<MainLayout activeNav="zelf" title={`${product.title} — bestellen bij MyGrowise`} description={`Bestel ${product.title} met een SEPA-overschrijving naar de Wise-rekening van MyGrowise.`}>
+<MainLayout activeNav="zelf" title={`${product.title} — bestellen bij MyGrowise`} description={`Bestel ${product.title} met een SEPA-overschrijving naar de rekening van MyGrowise.`}>
   <section class="wise-checkout">
     <div class="container wise-checkout__grid">
       <div>
@@ -50,16 +51,13 @@ const statusLabels: Record<string, string> = { pending_payment: 'Wacht op betali
           {order.status === 'pending_payment' && wiseDetails ? <>
             {paymentQr && <div class="wise-checkout__qr"><img src={paymentQr} width="240" height="240" alt={`SEPA-betaalcode voor ${order.reference}`} /><div><strong>Scan met je bankapp</strong><p>Bedrag en mededeling staan alvast ingevuld.</p></div></div>}
             <dl class="transfer-details"><div><dt>Begunstigde</dt><dd>{wiseDetails.accountName}</dd></div><div><dt>IBAN</dt><dd>{wiseDetails.iban}</dd></div>{wiseDetails.bic && <div><dt>BIC / SWIFT</dt><dd>{wiseDetails.bic}</dd></div>}<div><dt>Mededeling</dt><dd><strong>{order.reference}</strong></dd></div></dl>
-            {reported || order.paymentClaimedAt ? <p class="notice" role="status">Je betaalmelding is ontvangen. Na ontvangst en controle van je Wise-betaling bevestigen we je bestelling.</p> : <>
-              <p>Controleer bedrag en mededeling in je bankapp voordat je de overschrijving bevestigt.</p>
-              <form action="/api/checkout/wise-claim" method="post"><input type="hidden" name="order" value={order.id}/><input type="hidden" name="product" value={product.slug}/><button class="button button-primary" type="submit">Ik heb betaald</button></form>
-            </>}
-          </> : order.status === 'pending_payment' ? <p class="notice" role="status">De Wise-rekeninggegevens zijn nog niet ingesteld. Maak de overschrijving nog niet. Je bestelling is bewaard en de betaalinstructies verschijnen zodra ze klaarstaan.</p> : <p>Je bestelling is bevestigd. De vervolgstappen voor jouw profiel verschijnen in je account.</p>}
+            <p>Controleer bedrag en mededeling in je bankapp voordat je de overschrijving bevestigt. Na ontvangst en controle bevestigen we je betaling.</p>
+          </> : order.status === 'pending_payment' ? <p class="notice" role="status">De rekeninggegevens zijn nog niet ingesteld. Maak de overschrijving nog niet. Je bestelling is bewaard en de betaalinstructies verschijnen zodra ze klaarstaan.</p> : <p>Je bestelling is bevestigd. De vervolgstappen voor jouw profiel verschijnen in je account.</p>}
         </> : <>
           <span class="wise-checkout__provider">Bestel bij MyGrowise</span>
           <p>Maak een account aan of log in. Je bestelling en betalingsreferentie blijven daarna zichtbaar in je account.</p>
-          {canCheckout ? wiseDetails ? <form action="/api/checkout/wise-order" method="post"><input type="hidden" name="product" value={product.slug}/><button class="button button-primary" type="submit">Bestel en toon betaalinstructies</button></form> : <div class="notice" role="status">De Wise-rekeninggegevens worden ingesteld. Je kan alvast een account aanmaken; betalen wordt mogelijk zodra de gegevens klaarstaan.</div> : <div class="account-actions"><a class="button button-primary" href={registerHref}>Account aanmaken</a><a class="wise-checkout__fallback" href={loginHref}>Ik heb al een account — inloggen</a></div>}
-          {created && <p class="notice" role="status">Je account is aangemaakt. De bestelling kan worden afgerond zodra de Wise-rekeninggegevens zijn ingesteld.</p>}
+          {canCheckout ? wiseDetails ? <form action="/api/checkout/wise-order" method="post"><input type="hidden" name="product" value={product.slug}/><button class="button button-primary" type="submit">Bestel en toon betaalinstructies</button></form> : <div class="notice" role="status">De rekeninggegevens worden ingesteld. Je kan alvast een account aanmaken; betalen wordt mogelijk zodra de gegevens klaarstaan.</div> : <div class="account-actions"><a class="button button-primary" href={registerHref}>Account aanmaken</a><a class="wise-checkout__fallback" href={loginHref}>Ik heb al een account — inloggen</a></div>}
+          {created && <p class="notice" role="status">Je account is aangemaakt. De bestelling kan worden afgerond zodra de rekeninggegevens zijn ingesteld.</p>}
         </>}
         {pageMessage === 'niet-beschikbaar' && <p class="notice" role="alert">Bestellen is op dit moment niet beschikbaar. Probeer het later opnieuw.</p>}
       </aside>

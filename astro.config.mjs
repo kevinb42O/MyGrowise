@@ -7,6 +7,11 @@ export default defineConfig({
   output: 'server',
   adapter: vercel(),
   integrations: [react()],
+  vite: {
+    // Development and production optimizers must not overwrite each other's React cache.
+    cacheDir: process.env.NODE_ENV === 'production' ? 'node_modules/.vite-production' : 'node_modules/.vite-development',
+    resolve: { dedupe: ['react', 'react-dom'] },
+  },
   security: {
     // Vercel can invoke SSR functions with an internal URL that breaks Astro's
     // built-in checkOrigin. The middleware performs an explicit origin check.

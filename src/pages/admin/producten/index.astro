@@ -37,7 +37,7 @@ const message = Astro.url.searchParams.get('message');
     <section class="admin-panel">
       <form class="admin-filterbar" method="get" action="/admin/producten">
         <label class="admin-search"><span class="sr-only">Product zoeken</span><AdminIcon name="products" size={15} /><input type="search" name="q" value={q} placeholder="Zoek op naam of slug…" /></label>
-        <select name="type" aria-label="Filter op type"><option value="">Alle types</option><option value="profile" selected={type === 'profile'}>Persoonlijk profiel</option><option value="module" selected={type === 'module'}>Online module</option><option value="ebook" selected={type === 'ebook'}>E-book</option></select>
+        <select name="type" aria-label="Filter op type"><option value="">Alle types</option><option value="questionnaire" selected={type === 'questionnaire'}>Vragenlijst</option><option value="profile" selected={type === 'profile'}>Persoonlijk profiel</option><option value="module" selected={type === 'module'}>Online module</option><option value="ebook" selected={type === 'ebook'}>E-book</option></select>
         <select name="status" aria-label="Filter op status"><option value="">Alle statussen</option><option value="published" selected={status === 'published'}>Gepubliceerd</option><option value="review" selected={status === 'review'}>In review</option><option value="draft" selected={status === 'draft'}>Concept</option><option value="archived" selected={status === 'archived'}>Gearchiveerd</option></select>
         <button class="admin-button" type="submit">Filteren</button>
         {(q || type || status) && <a class="admin-text-link" href="/admin/producten">Wissen</a>}
@@ -56,7 +56,7 @@ const message = Astro.url.searchParams.get('message');
                   <td data-label="Status"><span class={`admin-product-status admin-product-status--${product.status}`}><i></i>{productStatusLabel[product.status as ProductStatus]}</span></td>
                   <td data-label="Prijs"><strong class="admin-table-price">{formatProductPrice(product.priceCents)}</strong></td>
                   <td data-label="Gewijzigd"><time datetime={product.updatedAt}>{new Intl.DateTimeFormat('nl-BE', { day: '2-digit', month: 'short', year: 'numeric' }).format(new Date(product.updatedAt))}</time></td>
-                  <td data-label="Actie"><a class="admin-row-action" href={`/admin/producten/${product.id}`}>Bewerken <AdminIcon name="arrow" size={13} /></a></td>
+                  <td data-label="Actie"><a class="admin-row-action" href={product.type === 'profile' || product.type === 'questionnaire' ? `/admin/vragenlijsten/${product.id}` : `/admin/producten/${product.id}`}>Bewerken <AdminIcon name="arrow" size={13} /></a></td>
                 </tr>
               ))}
             </tbody>

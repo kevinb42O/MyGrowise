@@ -9,6 +9,8 @@ interface Props { title: string }
 const { title } = Astro.props;
 const user = Astro.locals.currentUser!;
 const currentPath = Astro.url.pathname;
+Astro.response.headers.set('Cache-Control','private, no-store');
+Astro.response.headers.set('Referrer-Policy','no-referrer');
 const [unreadNotifications, unreadSupport] = await Promise.all([countUnreadCustomerBookingNotifications(user.sub), countUnreadCustomerSupport(user.sub)]);
 const nav = [
   { href: '/account', label: 'Vandaag', icon: 'home' as const, exact: true },
@@ -19,7 +21,7 @@ const nav = [
   { href: '/account/transacties', label: 'Transacties', icon: 'receipt' as const },
   { href: '/account/instellingen', label: 'Account', icon: 'settings' as const },
 ];
-const active = (item: { href: string; exact?: boolean }) => item.exact ? currentPath === item.href : currentPath.startsWith(item.href);
+const active = (item: { href: string; exact?: boolean }) => item.exact ? currentPath === item.href : currentPath.startsWith(item.href) || item.href === '/account/bibliotheek' && currentPath.startsWith('/account/afnames/');
 const initials = user.name.split(/\s+/).map((part) => part[0]).join('').slice(0, 2).toUpperCase();
 ---
 <!doctype html>

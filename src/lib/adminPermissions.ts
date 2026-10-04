@@ -21,6 +21,8 @@ export const ADMIN_PERMISSIONS = [
   'client_records.write',
   'client_records.assign',
   'client_records.archive',
+  'assessments.read',
+  'assessments.manage',
   'products.read',
   'products.write',
   'products.review',
@@ -84,12 +86,14 @@ export const firstAccessibleAdminPath = (roles: readonly UserRole[]) => {
 export const requiredAdminPermission = (path: string, method = 'GET'): AdminPermission | null => {
   if (path === '/admin') return 'dashboard.read';
   if (path === '/admin/analytics') return 'analytics.read';
-  if (path === '/admin/bestellingen' || path === '/admin/betalingen') return 'orders.read';
+  if (path === '/admin/bestellingen' || path.startsWith('/admin/bestellingen/') || path === '/admin/betalingen') return 'orders.read';
   if (path === '/admin/klanten' || path.startsWith('/admin/klanten/')) return 'customers.read';
   if (path === '/admin/clienten' || path.startsWith('/admin/clienten/')) return 'client_records.read';
   if (path === '/admin/boekingen') return 'bookings.read';
   if (path === '/admin/agenda') return 'agenda.read';
   if (path.startsWith('/admin/professionals')) return 'professionals.read';
+  if (path.startsWith('/admin/afnames')) return 'assessments.read';
+  if (path.startsWith('/admin/vragenlijsten')) return 'products.read';
   if (path.startsWith('/admin/producten')) return 'products.read';
   if (path === '/admin/profielen' || path === '/admin/modules' || path === '/admin/content' || path.startsWith('/admin/content/')) return 'content.read';
   if (path === '/admin/berichten' || path.startsWith('/admin/berichten/')) return 'internal_messages.read';
@@ -98,6 +102,8 @@ export const requiredAdminPermission = (path: string, method = 'GET'): AdminPerm
   if (path === '/admin/privacy') return 'privacy.read';
 
   if (path === '/api/admin/agenda') return method === 'GET' ? 'agenda.read' : 'agenda.write';
+  if (path.startsWith('/api/admin/afnames')) return 'assessments.manage';
+  if (path.startsWith('/api/admin/catalog')) return 'products.write';
   if (path.startsWith('/api/admin/products')) return method === 'GET' ? 'products.read' : 'products.write';
   if (path.startsWith('/api/admin/wise-reconciliation')) return method === 'GET' ? 'orders.read' : 'orders.verify';
   if (path.startsWith('/api/admin/content')) return method === 'GET' ? 'content.read' : 'content.write';
