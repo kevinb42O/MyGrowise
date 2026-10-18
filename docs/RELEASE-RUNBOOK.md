@@ -30,7 +30,7 @@ Alle oudere migraties waren op 18 oktober geregistreerd in de gekoppelde databas
 - 78 commerce-HTTP-controles en 38 module-HTTP/Storage-controles met synthetische gegevens. MIME is lokaal opgevangen; geen echte klantmail of betaling.
 - Aanvullende release-HTTP- en browsercontroles controleren profielroutes, de nieuwe beheerroute, CMS-rendering, robots/sitemap, redirects en de gesloten verkoopstand. Zie de tests voor de precieze scope.
 
-GitHub Actions voert bij volgende pushes `npm ci`, unit tests, build, audit en artifactcontrole uit. De workflow gebruikt geen productiegeheimen. Database- en Storage-proeven blijven bewuste operatorchecks met lokale configuratie.
+GitHub Actions is op uitdrukkelijk verzoek van Kevin verboden. Voer `npm ci`, unit tests, build, audit en artifactcontrole lokaal uit. Uitrol loopt rechtstreeks via de bestaande Vercel-integratie na push naar `main`. Database- en Storage-proeven blijven bewuste operatorchecks met lokale configuratie. Voeg geen Actions-workflows toe en schakel Actions niet opnieuw in, ook niet als een facturatieprobleem is opgelost.
 
 ## Uitrol en vrijgave
 

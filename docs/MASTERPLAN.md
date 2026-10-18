@@ -5,6 +5,7 @@
 ## Vaste keuzes
 
 - Kevin bevestigt op 18 oktober: Vercel Free/Hobby blijft de hostingrandvoorwaarde. Eén dagelijkse mailcron; directe verzendpogingen bij handelingen en expliciet herstel via beheer. Geen betaalde scheduler of keepalive.
+- Kevin verbiedt GitHub Actions. Controles worden lokaal uitgevoerd; uitrol loopt rechtstreeks via de bestaande Vercel-integratie. Dit is een vaste voorkeur, los van facturatie.
 - Digitale producten kopen en openen kan zonder account. Een bevestigd klantaccount blijft vereist voor afspraken. De voorkeur voor gastcheckout geldt dus niet automatisch voor boeken.
 - Zes zelfstandige modules van €89 blijven in ontwikkeling tot de definitieve PDF/audio en praktische informatie gecontroleerd zijn. Eerst modules 1–3 voorbereiden.
 - Modules, losse vragenlijsten en beschikbare extra's volgen 0%, 5% bij 2–3 en 10% vanaf 4 verschillende items. Vaste profielen behouden hun bevestigde pakketprijs.
@@ -21,7 +22,7 @@
 | MijnDiAd | 262 momenten, eigenaarsscheiding, alleen-lezen import, gedeelde cache bij gebruik en strengere controle voor boeken. | iCal-publicatie kan achterlopen op de bron; geen wederzijdse realtime kalender. Supabase Free kan bij inactiviteit pauzeren. |
 | Contact en mail | Eenvoudige publieke mailvraag met Reply-To; bestaande supportgesprekken blijven behouden. Directe pogingen, duurzame wachtrijen, dagelijkse fallback en `/admin/mail`. | Geen vijfminutengarantie op retries. SMTP, Auth-mail, DNS en inbox-/spamaflevering moeten in de deployment apart worden bewezen. |
 | Websitebeheer en SEO | Algemene gepubliceerde CMS-pagina's hebben nu een route; vaste routes zijn beschermd tegen slugconflicten. Sitemap, robots, vaste canonicals en een gecontroleerde set Webnode-redirects/demo-410's zijn toegevoegd. | Geen volledige migratie van alle oude content/locatiepagina's; zie releaserunbook. Redactionele siteonderdelen blijven deels in code. |
-| Release | Build, tests, dependency-audit en controle van het echte Vercel-artifact; GitHub Actions voor volgende pushes. Testmail en lokale output zijn uitgesloten. | Push, Vercel-status en productieacceptatie zijn afzonderlijke stappen. Een groene build bevestigt geen externe mail, betaling of herstelvoorziening. |
+| Release | Lokale build, tests, dependency-audit en controle van het echte Vercel-artifact; rechtstreekse Vercel-uitrol na push. GitHub Actions is niet toegestaan. Testmail en lokale output zijn uitgesloten. | Push, Vercel-status en productieacceptatie zijn afzonderlijke stappen. Een groene build bevestigt geen externe mail, betaling of herstelvoorziening. |
 
 ## Volgende volgorde
 
