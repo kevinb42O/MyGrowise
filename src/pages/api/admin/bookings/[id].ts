@@ -1,3 +1,4 @@
+import {deliverBookingMail} from '../../../../lib/bookingMail';
 import type { APIRoute } from 'astro';
 import { updateAdminBookingStatus } from '../../../../lib/superAdmin';
 import { isTrustedFormOrigin } from '../../../../lib/adminAuth';
@@ -10,6 +11,7 @@ export const POST: APIRoute = async ({ request, params, locals, url }) => {
   const form = await request.formData();
   try {
     await updateAdminBookingStatus(params.id || '', String(form.get('status') || ''), auditActor(locals.adminUser, locals.requestId, `/api/admin/bookings/${params.id || ''}`));
+    try{await deliverBookingMail(1,params.id);}catch{}
     return Response.redirect(new URL('/admin/boekingen?message=updated', url), 303);
   } catch (error) {
     const code = error instanceof Error && error.message === 'invalid_transition' ? 'invalid_transition' : 'update_failed';

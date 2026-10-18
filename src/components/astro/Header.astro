@@ -4,7 +4,7 @@ interface Props { activeNav?: string }
 const { activeNav = '' } = Astro.props;
 const customerSignedIn = isCustomerAccount(Astro.locals.currentUser);
 const nav = [
-  { href: '/profielen', label: 'Zelf aan de slag', id: 'zelf' },
+  { href: '/zelf-aan-de-slag', label: 'Zelf aan de slag', id: 'zelf' },
   { href: '/begeleiding', label: 'Begeleiding', id: 'begeleiding' },
   { href: '/over-ons', label: 'Over MyGrowise', id: 'over' },
   { href: '/contact', label: 'Contact', id: 'contact' },
@@ -26,7 +26,7 @@ const nav = [
       ))}
     </nav>
 
-    <div class="header-actions"><a class="header-login" href={customerSignedIn ? '/account' : '/account/inloggen'}>{customerSignedIn ? 'Mijn MyGrowise' : 'Inloggen'}</a><a class="header-cta" href="/startpunt">Vind je startpunt <span aria-hidden="true">→</span></a></div>
+    <div class="header-actions"><a class="header-login" href="/aankopen">Mijn aankopen</a><a class="header-login" href={customerSignedIn ? '/account' : '/account/inloggen'}>{customerSignedIn ? 'Mijn MyGrowise' : 'Inloggen'}</a><a class="header-cta" href="/startpunt">Vind je startpunt <span aria-hidden="true">→</span></a></div>
 
     <button class="menu-toggle" type="button" aria-expanded="false" aria-controls="mobile-menu">
       <span class="sr-only">Menu openen</span>
@@ -40,7 +40,7 @@ const nav = [
       <nav class="mobile-menu__links" aria-label="Mobiele navigatie">
         {nav.map((item, index) => <a href={item.href} data-menu-link class:list={{ active: activeNav === item.id }} aria-current={activeNav === item.id ? 'page' : undefined} style={`--menu-index: ${index}`}>{item.label}</a>)}
       </nav>
-      <div class="mobile-menu__footer">
+      <div class="mobile-menu__footer"><a class="mobile-account" href="/aankopen">Mijn aankopen</a><a class="mobile-account" href="/modules">Online modules</a>
         <a class="mobile-account" href={customerSignedIn ? '/account' : '/account/inloggen'}>{customerSignedIn ? 'Mijn MyGrowise' : 'Inloggen'}</a>
         <a class="mobile-primary" href="/startpunt">Vind je startpunt <span aria-hidden="true">→</span></a>
       </div>

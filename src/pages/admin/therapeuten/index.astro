@@ -1,0 +1,56 @@
+---
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+import {loadPracticeManagement} from '../../../lib/practiceManagement';
+import {getSupabaseAdmin} from '../../../lib/supabase/server';
+import {fail} from '../../../lib/appointmentCatalog';
+import {isTrustedFormOrigin} from '../../../lib/adminAuth';
+const db=getSupabaseAdmin();
+let error='',submitted:Record<string,any>|null=null;
+if(Astro.request.method==='POST'){
+ if(!isTrustedFormOrigin(Astro.request))return new Response('Ongeldige aanvraag.',{status:403});
+ const form=await Astro.request.formData();
+ try{
+ if(form.get('operation')==='invite'){
+   const id=String(form.get('id')||''),email=String(form.get('email')||'').trim().toLowerCase();
+   if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))throw new Error('Vul een geldig e-mailadres in.');
+   const {data:person,error:pe}=await db.from('practitioners').select('id,user_id,name').eq('id',id).single();fail(pe);
+   if(person?.user_id)throw new Error('Deze therapeut heeft al een account.');
+   const {data,error:ie}=await db.auth.admin.inviteUserByEmail(email,{data:{full_name:person!.name},redirectTo:new URL('/praktijk/activeren',import.meta.env.PUBLIC_SITE_URL||Astro.url.origin).href});fail(ie);
+   const {error:le}=await db.rpc('link_practitioner_invitation',{p_actor:Astro.locals.currentUser!.sub,p_practitioner:id,p_user:data.user!.id});fail(le);
+   return Astro.redirect(`/admin/therapeuten?bewerken=${id}&uitgenodigd=1`,303);
+ }
+ const rules=[];
+ for(let weekday=1;weekday<=7;weekday++)for(let n=0;n<4;n++){
+ const start=String(form.get(`start_${weekday}_${n}`)||''),end=String(form.get(`end_${weekday}_${n}`)||'');
+ if(start||end){if(!start||!end||start>=end)throw new Error('Controleer begin en einde van je beschikbaarheid.');rules.push({weekday,start_time:start,end_time:end});}
+ }
+ const strings=(key:string,max:number)=>String(form.get(key)||'').split(/[\n,]/).map(v=>v.trim()).filter(Boolean).slice(0,max);
+ const name=String(form.get('name')||'').trim(),slug=String(form.get('slug')||'').trim();
+ const image=String(form.get('image_url')||'').trim();
+ if(name.length<2||name.length>80||!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug)||image&&!/^\/[^/]|^https:\/\//.test(image))throw new Error('Controleer naam, profieladres en foto-URL.');
+ submitted={id:String(form.get('id')||''),user_id:String(form.get('user_id')||''),name,slug,public_role:String(form.get('public_role')||'').trim(),bio:String(form.get('bio')||'').trim(),expertise:strings('expertise',8),languages:strings('languages',6),active:form.has('active'),image_url:image,online_instructions:String(form.get('online_instructions')||'').trim(),minimum_notice_hours:Number(form.get('minimum_notice_hours')),booking_horizon_days:Number(form.get('booking_horizon_days')),requests_enabled:form.has('requests_enabled'),rules};
+ const {data:id,error:se}=await db.rpc('save_practice_practitioner',{p_actor:Astro.locals.currentUser!.sub,p_data:submitted});fail(se);
+ return Astro.redirect(`/admin/therapeuten?bewerken=${id}&opgeslagen=1`,303);
+ }catch(cause){error=cause instanceof Error&&/Controleer|Vul |Deze therapeut/.test(cause.message)?cause.message:'Opslaan of uitnodigen is niet gelukt. Controleer het account, de beschikbaarheid en je toegang.';}
+}
+const {practitioners,rules,staff,offers}=await loadPracticeManagement();
+const editing=submitted||practitioners.find(p=>p.id===Astro.url.searchParams.get('bewerken'));
+const settings=submitted|| (Array.isArray(editing?.practitioner_settings)?editing?.practitioner_settings[0]:editing?.practitioner_settings)||{};
+const ownRules=submitted?submitted.rules:rules.filter(r=>r.practitioner_id===editing?.id);
+const weekdays=['Maandag','Dinsdag','Woensdag','Donderdag','Vrijdag','Zaterdag','Zondag'];
+---
+<AdminLayout title="Therapeuten"><div class="admin-page practice-stack"><header class="admin-page-heading"><div><p class="admin-eyebrow">Praktijkbeheer</p><h1>Therapeuten</h1><p>Beheer publieke profielen, accounts en beschikbaarheid.</p></div><a class="admin-button admin-button--primary" href="/admin/therapeuten?nieuw=1#therapeut-formulier">Therapeut toevoegen</a></header>
+ {error&&<div class="practice-alert is-error" role="alert">{error}</div>}{Astro.url.searchParams.has('opgeslagen')&&<div class="practice-alert" role="status">Therapeut opgeslagen.</div>}{Astro.url.searchParams.has('uitgenodigd')&&<div class="practice-alert" role="status">Uitnodiging verstuurd en praktijkaccount gekoppeld.</div>}
+ <section class="practice-card practice-table-wrap"><table class="practice-table"><thead><tr><th>Therapeut</th><th>Publicatie</th><th>Boekingen</th><th>Account</th><th></th></tr></thead><tbody>{practitioners.map(p=>{const s=Array.isArray(p.practitioner_settings)?p.practitioner_settings[0]:p.practitioner_settings;return <tr><td><strong>{p.name}</strong><small>{p.public_role}</small></td><td>{p.active?'Gepubliceerd':'Niet gepubliceerd'}</td><td>{s?.requests_enabled?'Open':'Gesloten'}<small>{offers.filter(o=>o.practitioner_id===p.id&&o.active).length} gekoppelde afspraaktypes</small></td><td>{p.user_id?'Gekoppeld':'Nog te koppelen'}</td><td><a class="admin-button" href={`/admin/therapeuten?bewerken=${p.id}#therapeut-formulier`}>Bewerken</a></td></tr>;})}</tbody></table></section>
+ {(editing||Astro.url.searchParams.has('nieuw'))&&<section class="practice-card" id="therapeut-formulier"><h2>{editing?'Therapeut bewerken':'Therapeut toevoegen'}</h2><form method="post" class="practice-stack" data-unsaved-form><input type="hidden" name="id" value={editing?.id||''}/><div class="practice-grid">
+ <label>Naam<input name="name" required minlength="2" maxlength="80" value={editing?.name}/></label><label>Profieladres<input name="slug" required pattern="[a-z0-9]+(-[a-z0-9]+)*" value={editing?.slug} readonly={Boolean(editing?.id)}/><small>Blijft na aanmaken vast zodat bestaande links blijven werken.</small></label>
+ <label class="wide">Professionele rol<input name="public_role" maxlength="100" value={editing?.public_role}/></label><label class="wide">Beschrijving<textarea name="bio" maxlength="1200" rows="4">{editing?.bio}</textarea></label><label>Expertise (één per regel)<textarea name="expertise" rows="3">{editing?.expertise?.join('\n')}</textarea></label><label>Talen (één per regel)<textarea name="languages" rows="3">{editing?.languages?.join('\n')||'Nederlands'}</textarea></label>
+ <label class="wide">Foto-URL<input name="image_url" value={editing?.image_url} placeholder="/images/practitioners/... of https://..."/></label><label class="wide">Praktische online-instructies<textarea name="online_instructions" maxlength="2000" rows="3">{editing?.online_instructions||'Je therapeut bezorgt je de praktische informatie voor de online sessie.'}</textarea></label>
+ <label>Bestaand medewerkeraccount<select name="user_id"><option value="">Nog geen account koppelen</option>{staff.map(s=><option value={s.id} selected={editing?.user_id===s.id}>{s.full_name||s.id}</option>)}</select><small>Een bestaand gekoppeld account kan hier niet worden vervangen.</small></label>
+ <label>Minimale voorafboektijd<select name="minimum_notice_hours">{[0,1,2,4,12,24,48,72].map(v=><option value={v} selected={v===(settings.minimum_notice_hours??2)}>{v} uur</option>)}</select></label><label>Boekingsperiode<select name="booking_horizon_days">{[14,30,45,60,90].map(v=><option value={v} selected={v===(settings.booking_horizon_days??30)}>{v} dagen</option>)}</select></label>
+ <label class="practice-check"><input name="active" type="checkbox" checked={editing?.active||false}/>Publiek profiel publiceren</label><label class="practice-check"><input name="requests_enabled" type="checkbox" checked={settings.requests_enabled||false}/>Boekingen openstellen</label></div>
+ <section><h3>Wekelijkse beschikbaarheid</h3><p class="practice-muted">Uren in Belgische tijd. Laat ongebruikte perioden leeg.</p>{weekdays.map((day,i)=>{const periods=ownRules.filter((r:any)=>r.weekday===i+1);return <details class="practice-details practice-card" open={periods.length>0}><summary>{day} · {periods.length?`${periods.length} periode(n)`:'Niet beschikbaar'}</summary><div class="practice-grid">{Array.from({length:4},(_,n)=><><label>Van<input type="time" name={`start_${i+1}_${n}`} value={periods[n]?.start_time?.slice(0,5)}/></label><label>Tot<input type="time" name={`end_${i+1}_${n}`} value={periods[n]?.end_time?.slice(0,5)}/></label></>)}</div></details>;})}</section>
+ <div class="practice-actions"><button class="admin-button admin-button--primary" type="submit">Opslaan</button><a class="admin-button" href="/admin/therapeuten">Annuleren</a><a class="admin-button" href="/admin/afspraaktypes">Afspraaktypes koppelen</a></div></form>
+ {editing?.id&&!editing.user_id&&<form method="post" class="practice-card"><h3>Praktijkaccount uitnodigen</h3><p>Stuur een uitnodiging aan de therapeut om een eigen praktijkaccount te activeren.</p><input type="hidden" name="operation" value="invite"/><input type="hidden" name="id" value={editing.id}/><label class="practice-label">E-mailadres<input class="practice-input" name="email" type="email" required/></label><div class="practice-actions"><button class="admin-button" type="submit">Uitnodiging versturen</button></div></form>}
+ </section>}
+ </div></AdminLayout>

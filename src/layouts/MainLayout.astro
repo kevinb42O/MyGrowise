@@ -22,6 +22,7 @@ const {
   ogImageAlt = 'Virginie van MyGrowise met de boodschap: Begrijp wat er speelt. Kies wat nu past.',
 } = Astro.props;
 
+const preventIndex = noindex || import.meta.env.VERCEL_ENV === 'preview';
 const siteOrigin = Astro.site ?? Astro.url.origin;
 const canonical = new URL(Astro.url.pathname, siteOrigin);
 const socialImage = new URL(ogImage, siteOrigin);
@@ -38,7 +39,7 @@ const socialImage = new URL(ogImage, siteOrigin);
     <link rel="canonical" href={canonical} />
     <title>{title}</title>
     <meta name="description" content={description} />
-    <meta name="robots" content={noindex ? 'noindex, nofollow' : 'index, follow'} />
+    <meta name="robots" content={preventIndex ? 'noindex, nofollow' : 'index, follow'} />
     <meta property="og:type" content="website" />
     <meta property="og:locale" content="nl_BE" />
     <meta property="og:site_name" content="MyGrowise" />

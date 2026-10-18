@@ -1,3 +1,4 @@
+import {legacyRoutes} from './legacyRoutes';
 import { getSupabaseAdmin } from './supabase/server';
 import { writeSecurityAudit, type AuditActor } from './securityAudit';
 
@@ -52,6 +53,7 @@ export const validateContentInput = (form: FormData): { value?: ContentInput; er
   const errors: Record<string, string> = {};
   if (title.length < 3 || title.length > 160) errors.title = 'Gebruik tussen 3 en 160 tekens.';
   if (!slug || slug.length > 80) errors.slug = 'Gebruik een geldige URL-slug van maximaal 80 tekens.';
+  if (kind==='page'&&reservedPageSlugs.has(slug)) errors.slug='Deze URL is al gereserveerd door de website. Kies een andere slug.';
   if (!CONTENT_KINDS.includes(kind)) errors.kind = 'Kies een geldig contenttype.';
   if (!CONTENT_STATUSES.includes(status)) errors.status = 'Kies een geldige publicatiestatus.';
   if (excerpt.length > 360) errors.excerpt = 'De samenvatting mag maximaal 360 tekens bevatten.';
@@ -111,6 +113,12 @@ export const updateContent = async (id: string, input: ContentInput, actor: Audi
   }
   await writeSecurityAudit({ actor, action: 'content.updated', objectType: 'content_item', objectId: content.id, before, after: content });
   return content;
+};
+
+const reservedPageSlugs=new Set(['account','admin','praktijk','api','aankopen','afspraak','aanbod','begeleiding','bestellen','berichten','community','contact','inspiratie','modules','over-ons','prijzen','privacy','profielen','samenstellen','startpunt','verdieping','voorwaarden','vragenlijsten','zelf-aan-de-slag','nl',...Object.keys(legacyRoutes).filter(path=>path.split('/').length===2).map(path=>path.slice(1))]);
+export const getPublishedPage=async(slug:string)=>{
+ if(reservedPageSlugs.has(slug))return null;
+ const {data,error}=await getSupabaseAdmin().from('content_items').select(columns).eq('kind','page').eq('status','published').eq('slug',contentSlug(slug)).maybeSingle();failure(error);return data?rowToContent(data as Record<string,unknown>):null;
 };
 
 export const getPublishedArticle = async (slug: string) => {

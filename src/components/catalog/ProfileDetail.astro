@@ -1,0 +1,27 @@
+---
+import MainLayout from '../../layouts/MainLayout.astro';
+import type {CatalogProduct} from '../../lib/catalog/server';
+import {money} from '../../lib/catalog/pricing';
+import {profileCountLabel} from '../../lib/catalog/profiles';
+import '../../styles/catalog.css';
+import '../../styles/profiles.css';
+interface Props {product: CatalogProduct; priceLabel: string; related?: CatalogProduct[]}
+const {product:p,priceLabel,related=[]}=Astro.props;
+const c=p.profileLanding!;
+const available=p.availability==='available'&&p.priceCents!==null;
+const checkout=`/bestellen?pakket=${p.id}`;
+const instrumentGroups:{intro:string;items:string[]}[]=[];
+for(const line of c.instrumentLines){if(line.startsWith('•')){if(!instrumentGroups.length)instrumentGroups.push({intro:'',items:[]});instrumentGroups.at(-1)!.items.push(line.replace(/^•\s*/,''));}else instrumentGroups.push({intro:line,items:[]});}
+---
+<MainLayout title={`${p.title} — MyGrowise`} description={p.summary} activeNav="zelf">
+<section class="profile-hero"><div class="container"><a href="/profielen" class="detail-back">← Alle profielen</a><div class="profile-hero-grid"><div><span class="catalog-kicker">Persoonlijk profiel</span><h1>{p.title}</h1><p class="profile-question">{c.question}</p><p>{p.summary}</p><ul class="profile-facts"><li>{p.ageLabel}</li><li>{profileCountLabel(c)}</li><li>{c.formatLabel}</li><li>{c.reportLabel}</li></ul><div class="profile-buy">{available?<><small>{priceLabel} · vaste pakketprijs</small><strong>{money(p.priceCents!)}</strong><a class="catalog-checkout" href={checkout}>Kies dit profiel →</a></>:<p>Dit profiel is {p.availability==='upcoming'?'in ontwikkeling':'tijdelijk niet beschikbaar'}.</p>}<a href="/contact">Hulp bij je keuze →</a><p>Voor zelfinzicht en, waar van toepassing, screening. Geen diagnostisch onderzoek.</p></div></div><img class="profile-photo" src={p.image} alt="" width="720" height="780"/></div></div></section>
+<section class="catalog-section"><div class="container profile-body"><div>
+<section><span class="catalog-kicker">Jouw vraag als vertrekpunt</span><h2>Herken je dit?</h2>{c.introduction.map(line=><p>{line}</p>)}</section>
+<section><h2>Wat brengt dit profiel in kaart?</h2><ul class="profile-measures">{c.measures.map(line=>{const split=line.indexOf(':');return <li>{split>0?<><strong>{line.slice(0,split+1)}</strong>{line.slice(split+1)}</>:line}</li>;})}</ul></section>
+<section><h2>Welke vragenlijsten worden afgenomen?</h2>{instrumentGroups.map(group=><div class="profile-instruments">{group.intro&&<h3>{group.intro}</h3>}{group.items.length>0&&<ul>{group.items.map(line=><li>{line}</li>)}</ul>}</div>)}</section>
+<section><h2>Wat mag je verwachten?</h2>{c.expectations.map(line=><p>{line}</p>)}<p>Na bevestiging van de betaling ontvang je per e-mail een veilige link naar Mijn aankopen. Daar vind je instructies, voortgang en beschikbare rapporten. Een account is optioneel.</p></section>
+<section class="profile-important"><h2>Belangrijk om te weten</h2><p>{c.disclaimer}</p></section>
+<section><h2>Een volgende stap op jouw tempo.</h2><p>Je kiest dit profiel als geheel, met de hierboven beschreven vragenlijsten en verslaglegging. Een vast profiel heeft een eigen pakketprijs. Losse vragenlijsten volgen de combinatiekorting; een pakket is daardoor niet altijd goedkoper. Vergelijk inhoud en prijs via de samensteller.</p><a href="/samenstellen">Bekijk losse vragenlijsten en combinatieprijzen →</a>{available&&<a class="catalog-checkout profile-final-action" href={checkout}>Kies dit profiel · {money(p.priceCents!)} →</a>}</section>
+</div><aside class="profile-side"><h2>Twijfel je of dit past?</h2><p>De leeftijd en jouw vraag zijn een vertrekpunt. MyGrowise stemt de geschikte afname en informantenversie met je af.</p><a href="/contact">Vraag hulp bij je keuze →</a><a href="/profielen">Vergelijk de profielen →</a></aside></div></section>
+{related.length>0&&<section class="profile-related"><div class="container"><h2>Bekijk ook</h2><div>{related.slice(0,2).map(product=><article><h3><a href={`/profielen/${product.slug}`}>{product.title}</a></h3><p>{product.summary}</p><a href={`/profielen/${product.slug}`}>Bekijk dit profiel →</a></article>)}</div></div></section>}
+</MainLayout>

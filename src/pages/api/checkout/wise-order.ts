@@ -1,3 +1,4 @@
+import {salesEnabled,salesPausedMessage} from '../../../lib/commerce/readiness';
 import type { APIRoute } from 'astro';
 import { isTrustedFormOrigin } from '../../../lib/adminAuth';
 import { createWiseManualOrder, getWiseManualDetails } from '../../../lib/wiseCheckout';
@@ -6,6 +7,7 @@ export const prerender = false;
 
 export const POST: APIRoute = async ({ request, locals }) => {
   if (!isTrustedFormOrigin(request)) return new Response('Ongeldige aanvraag.', { status: 403 });
+  if (!salesEnabled()) return new Response(salesPausedMessage, {status:503,headers:{'cache-control':'private, no-store'}});
   const user = locals.currentUser;
   if (!user?.roles.includes('customer')) return new Response('Meld je eerst aan met een klantaccount.', { status: 401 });
   let form: FormData;

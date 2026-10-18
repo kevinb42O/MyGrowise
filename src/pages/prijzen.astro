@@ -4,13 +4,17 @@ import {money} from '../lib/catalog/pricing';
 import MainLayout from '../layouts/MainLayout.astro';
 import { formatPublicPrice, listPublishedProfiles, profileUrl } from '../lib/publicProducts';
 const [profiles,catalog,settings] = await Promise.all([listPublishedProfiles(),publicCatalog(),getPricing()]);
+const moduleProducts=catalog.filter(p=>p.type==='module'&&p.availability!=='paused'&&p.priceCents!==null);
+const modulePrices=moduleProducts.map(p=>p.priceCents!);
+const moduleAvailable=moduleProducts.some(p=>p.availability==='available');
 const questionPrices=catalog.filter(p=>p.type==='questionnaire'&&p.availability==='available'&&p.priceCents!==null).map(p=>p.priceCents!);
 ---
 <MainLayout title="Prijzen — MyGrowise" description="Een transparant overzicht van het beschikbare MyGrowise-aanbod.">
-  <section class="page-hero"><div class="container"><span class="eyebrow">Transparante prijzen</span><h1 class="heading-xl">Weten wat een stap kost, vóór je ze zet.</h1><p class="lead">We tonen een prijs alleen wanneer een aanbod beschikbaar is. Een aanvraag via MyGrowise is nooit automatisch een betaling of definitieve afspraak.</p></div></section>
+  <section class="page-hero"><div class="container"><span class="eyebrow">Transparante prijzen</span><h1 class="heading-xl">Weten wat een stap kost, vóór je ze zet.</h1><p class="lead">Je ziet per aanbod de prijs en beschikbaarheid. Bij modules in ontwikkeling vermelden we een geplande prijs. Een productbestelling is nog geen betaalbevestiging. Een geslaagde afspraakboeking wordt direct bevestigd.</p></div></section>
   <section class="section"><div class="container pricing">
     {profiles.map((product) => <article><span>Persoonlijk profiel</span><h2>{product.title}</h2><p>{product.summary}</p><div><strong>{formatPublicPrice(product)}</strong><a class="button button-primary" href={profileUrl(product.slug)}>Bekijk profiel</a></div></article>)}
-    {questionPrices.length>0&&<article class="muted"><span>Los of gecombineerd</span><h2>Vragenlijsten op jouw maat</h2><p>Kies een vragenlijst of combineer zelf. Vanaf {settings.mediumMin} lijsten {settings.mediumPercent}% korting, vanaf {settings.largeMin} {settings.largePercent}%. Vaste profielen behouden hun eigen prijs.</p><div><strong>Vanaf {money(Math.min(...questionPrices))}</strong><a class="button button-primary" href="/vragenlijsten">Ontdek vragenlijsten</a></div></article>}
+    {questionPrices.length>0&&<article class="muted"><span>Los of gecombineerd</span><h2>Vragenlijsten op jouw maat</h2><p>Kies een vragenlijst of combineer met modules. Vanaf {settings.mediumMin} verschillende producten {settings.mediumPercent}% korting, vanaf {settings.largeMin} {settings.largePercent}%. Vaste profielen behouden hun eigen prijs.</p><div><strong>Vanaf {money(Math.min(...questionPrices))}</strong><a class="button button-primary" href="/vragenlijsten">Ontdek vragenlijsten</a></div></article>}
+    {modulePrices.length>0&&<article class="muted"><span>Online modules · {moduleAvailable?'Beschikbaar aanbod':'In ontwikkeling'}</span><h2>Ontdek jouw innerlijke landschap</h2><p>Zelfstandig te volgen modules met een PDF, oefeningen en audio. Bekijk bij elke module de actuele beschikbaarheid.</p><div><strong>{!moduleAvailable&&<small style="display:block;font:400 .75rem 'DM Sans',sans-serif">Geplande prijs</small>}Vanaf {money(Math.min(...modulePrices))}</strong><a class="button button-primary" href="/modules">Ontdek de modules</a></div></article>}
     <article class="guide"><span>Persoonlijke begeleiding</span><h2>Online therapiesessie</h2><p>Begeleiding via een beveiligde online verbinding, afgestemd op jouw hulpvraag en tempo. Een sessie duurt gemiddeld 50 minuten.</p><div><strong>€80</strong><a class="button button-light" href="/begeleiding">Kies een professional</a></div></article>
   </div></section>
 </MainLayout>

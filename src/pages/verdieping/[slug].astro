@@ -1,0 +1,12 @@
+---
+import MainLayout from '../../layouts/MainLayout.astro';
+import ModuleCover from '../../components/modules/ModuleCover.astro';
+import {publicCatalog,resolveCatalogSlug} from '../../lib/catalog/server';
+import {findModule} from '../../lib/modules/server';
+import {money} from '../../lib/catalog/pricing';
+import '../../styles/modules.css';
+const p=(await publicCatalog()).find(p=>p.type==='guide'&&p.slug===Astro.params.slug&&p.availability!=='paused');
+if(!p){const alias=await resolveCatalogSlug(Astro.params.slug||'');return Astro.redirect(alias||'/zelf-aan-de-slag',alias?301:302);}
+const m=await findModule(p.slug);const available=p.availability==='available';
+---
+<MainLayout title={`${p.title} — MyGrowise`} activeNav="zelf" description={p.summary}><section class="module-hero"><div class="container"><a href="/zelf-aan-de-slag">← Zelf aan de slag</a><div class="module-hero-grid"><div><span class="eyebrow">Optionele verdieping · {m?.details.format==='audio'?'Audio':'PDF-werkboek'}</span><h1>{p.title}</h1><p>{p.summary}</p>{m?.details.introduction.map(t=><p>{t}</p>)}{p.priceCents!==null&&<p>{available?'Eenmalige prijs':'Geplande prijs'}: {money(p.priceCents)}</p>}{available?<><a class="button button-primary" href={`/bestellen?producten=${p.id}`}>Kies deze verdieping →</a><p><a href={`/samenstellen?voegtoe=${p.id}`}>Voeg toe aan mijn combinatie →</a></p></>:<p>In ontwikkeling · nog niet bestelbaar</p>}{m?.details.audience_text&&<p>{m.details.audience_text}</p>}{m?.details.access_text&&<p>{m.details.access_text}</p>}{m?.details.support_text&&<p>{m.details.support_text}</p>}</div><ModuleCover image={p.image} alt={m?.details.image_alt||p.title} hero/></div></div></section></MainLayout>

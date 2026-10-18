@@ -7,11 +7,11 @@ const products = await listProducts();
 const q = (Astro.url.searchParams.get('q') || '').trim().toLowerCase();
 const status = Astro.url.searchParams.get('status') || '';
 const type = Astro.url.searchParams.get('type') || '';
-const filtered = products.filter((product) =>
-  (!q || product.title.toLowerCase().includes(q) || product.slug.includes(q)) &&
+const matchesFilters = (product: (typeof products)[number]) =>
+  (!q || product.title.toLowerCase().includes(q) || product.slug.toLowerCase().includes(q)) &&
   (!status || product.status === status) &&
-  (!type || product.type === type)
-);
+  (!type || product.type === type);
+const filtered = products.filter(matchesFilters);
 const published = products.filter((product) => product.status === 'published').length;
 const needsReview = products.filter((product) => product.status === 'review').length;
 const drafts = products.filter((product) => product.status === 'draft').length;
@@ -35,22 +35,22 @@ const message = Astro.url.searchParams.get('message');
     </section>
 
     <section class="admin-panel">
-      <form class="admin-filterbar" method="get" action="/admin/producten">
+      <form class="admin-filterbar" method="get" action="/admin/producten" data-product-filters>
         <label class="admin-search"><span class="sr-only">Product zoeken</span><AdminIcon name="products" size={15} /><input type="search" name="q" value={q} placeholder="Zoek op naam of slug…" /></label>
         <select name="type" aria-label="Filter op type"><option value="">Alle types</option><option value="questionnaire" selected={type === 'questionnaire'}>Vragenlijst</option><option value="profile" selected={type === 'profile'}>Persoonlijk profiel</option><option value="module" selected={type === 'module'}>Online module</option><option value="ebook" selected={type === 'ebook'}>E-book</option></select>
         <select name="status" aria-label="Filter op status"><option value="">Alle statussen</option><option value="published" selected={status === 'published'}>Gepubliceerd</option><option value="review" selected={status === 'review'}>In review</option><option value="draft" selected={status === 'draft'}>Concept</option><option value="archived" selected={status === 'archived'}>Gearchiveerd</option></select>
-        <button class="admin-button" type="submit">Filteren</button>
-        {(q || type || status) && <a class="admin-text-link" href="/admin/producten">Wissen</a>}
+        <noscript><button class="admin-button" type="submit">Filteren</button></noscript>
+        <a class="admin-text-link" href="/admin/producten" data-product-clear hidden={!q && !type && !status}>Wissen</a>
       </form>
+      <p class="sr-only" role="status" aria-live="polite" data-product-count>{filtered.length} producten gevonden</p>
 
-      {filtered.length ? (
-        <div class="admin-table-wrap">
+        <div class="admin-table-wrap" data-product-table hidden={!filtered.length}>
           <table class="admin-table">
             <caption class="sr-only">Producten van MyGrowise</caption>
             <thead><tr><th>Product</th><th>Type</th><th>Status</th><th>Prijs</th><th>Gewijzigd</th><th><span class="sr-only">Actie</span></th></tr></thead>
             <tbody>
-              {filtered.map((product) => (
-                <tr>
+              {products.map((product) => (
+                <tr data-product-row data-title={product.title.toLowerCase()} data-slug={product.slug.toLowerCase()} data-type={product.type} data-status={product.status} hidden={!matchesFilters(product)}>
                   <td data-label="Product"><span class="admin-product-cell"><span class={`admin-product-icon admin-product-icon--${product.type}`}><AdminIcon name={product.type === 'module' ? 'modules' : 'profiles'} size={16} /></span><span><strong>{product.title}</strong><small>/{product.slug}</small></span></span></td>
                   <td data-label="Type">{productTypeLabel[product.type as ProductType]}</td>
                   <td data-label="Status"><span class={`admin-product-status admin-product-status--${product.status}`}><i></i>{productStatusLabel[product.status as ProductStatus]}</span></td>
@@ -62,9 +62,74 @@ const message = Astro.url.searchParams.get('message');
             </tbody>
           </table>
         </div>
-      ) : (
-        <div class="admin-empty-row"><div><span><AdminIcon name="products" size={17} /></span><strong>Geen producten gevonden</strong><p>Pas de filters aan of maak een nieuw product.</p></div></div>
-      )}
+        <div class="admin-empty-row" data-product-empty hidden={filtered.length > 0}><div><span><AdminIcon name="products" size={17} /></span><strong>Geen producten gevonden</strong><p>Pas de filters aan of maak een nieuw product.</p></div></div>
     </section>
   </div>
 </AdminLayout>
+
+<script>
+  const form = document.querySelector<HTMLFormElement>('[data-product-filters]');
+  const search = form?.querySelector<HTMLInputElement>('[name="q"]');
+  const type = form?.querySelector<HTMLSelectElement>('[name="type"]');
+  const status = form?.querySelector<HTMLSelectElement>('[name="status"]');
+  const clear = form?.querySelector<HTMLAnchorElement>('[data-product-clear]');
+  const rows = [...document.querySelectorAll<HTMLTableRowElement>('[data-product-row]')];
+  const table = document.querySelector<HTMLElement>('[data-product-table]');
+  const empty = document.querySelector<HTMLElement>('[data-product-empty]');
+  const count = document.querySelector<HTMLElement>('[data-product-count]');
+
+  const filterProducts = () => {
+    const query = search?.value.trim().toLowerCase() || '';
+    const selectedType = type?.value || '';
+    const selectedStatus = status?.value || '';
+    let visible = 0;
+
+    rows.forEach((row) => {
+      row.hidden = !(
+        (!query || row.dataset.title?.includes(query) || row.dataset.slug?.includes(query)) &&
+        (!selectedType || row.dataset.type === selectedType) &&
+        (!selectedStatus || row.dataset.status === selectedStatus)
+      );
+      if (!row.hidden) visible += 1;
+    });
+
+    if (table) table.hidden = visible === 0;
+    if (empty) empty.hidden = visible > 0;
+    if (count) count.textContent = `${visible} producten gevonden`;
+    if (clear) clear.hidden = !query && !selectedType && !selectedStatus;
+
+    const url = new URL(window.location.href);
+    for (const [name, value] of [['q', query], ['type', selectedType], ['status', selectedStatus]]) {
+      if (value) url.searchParams.set(name, value);
+      else url.searchParams.delete(name);
+    }
+    if (url.href !== window.location.href) window.history.replaceState(window.history.state, '', url);
+  };
+
+  search?.addEventListener('input', filterProducts);
+  type?.addEventListener('change', filterProducts);
+  status?.addEventListener('change', filterProducts);
+  form?.addEventListener('submit', (event) => {
+    event.preventDefault();
+    filterProducts();
+  });
+  clear?.addEventListener('click', (event) => {
+    event.preventDefault();
+    if (search) search.value = '';
+    if (type) type.value = '';
+    if (status) status.value = '';
+    filterProducts();
+  });
+  window.addEventListener('popstate', () => {
+    const params = new URL(window.location.href).searchParams;
+    if (search) search.value = params.get('q') || '';
+    if (type) type.value = params.get('type') || '';
+    if (status) status.value = params.get('status') || '';
+    filterProducts();
+  });
+  filterProducts();
+</script>
+
+<style>
+  [hidden] { display: none !important; }
+</style>

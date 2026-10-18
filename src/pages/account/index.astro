@@ -18,7 +18,8 @@ const upcoming = appointments.filter((booking) => ['pending', 'confirmed'].inclu
 const demoMode = import.meta.env.DEV && Astro.url.searchParams.get('demo') === '1';
 const demoStartsAt = new Date(now + 1000 * 60 * 60 * 24 * 6).toISOString();
 const displayUpcoming = upcoming || (demoMode ? { id: 'demo-appointment', practitionerName: 'Margot', practitionerSlug: 'margot', startsAt: demoStartsAt, endsAt: demoStartsAt, status: 'confirmed' } : undefined);
-const displayEntitlements = entitlements.length ? entitlements : demoMode ? [{ id: 'demo-library', productTitle: 'Stress- en emotieprofiel', productSlug: 'stress-en-emotieprofiel', productType: 'Profiel', status: 'active', grantedAt: new Date(now - 1000 * 60 * 60 * 24 * 4).toISOString() }] : [];
+const activeEntitlements=entitlements.filter(item=>item.status==='active');
+const displayEntitlements = activeEntitlements.length ? activeEntitlements : demoMode ? [{ id: 'demo-library', productTitle: 'Stress- en emotieprofiel', productSlug: 'stress-en-emotieprofiel', productType: 'Profiel', status: 'active', grantedAt: new Date(now - 1000 * 60 * 60 * 24 * 4).toISOString() }] : [];
 const status: Record<string, string> = { pending: 'Aanvraag in behandeling', confirmed: 'Bevestigd' };
 
 const primary = displayUpcoming ? {
@@ -36,7 +37,7 @@ const primary = displayUpcoming ? {
   description: 'Je aankoop blijft veilig in je persoonlijke bibliotheek beschikbaar. Ga verder wanneer het goed voelt.',
   href: '/account/bibliotheek',
   label: 'Open je bibliotheek',
-  status: 'Altijd beschikbaar',
+  status: 'In je bibliotheek',
   meta: `Sinds ${shortDate(displayEntitlements[0].grantedAt)}`,
   kind: 'library' as const,
 } : {

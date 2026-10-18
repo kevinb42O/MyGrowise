@@ -1,0 +1,12 @@
+<script>
+ const guarded=new Set<HTMLFormElement>();
+ document.querySelectorAll<HTMLFormElement>('form[data-unsaved-form]').forEach(form=>{
+  const mark=()=>guarded.add(form);
+  form.addEventListener('input',mark);form.addEventListener('change',mark);
+  form.addEventListener('submit',()=>{
+   guarded.delete(form);
+   form.querySelectorAll<HTMLButtonElement>('button[type="submit"]').forEach(button=>{button.disabled=true;button.setAttribute('aria-busy','true');});
+  });
+ });
+ window.addEventListener('beforeunload',event=>{if(guarded.size){event.preventDefault();event.returnValue='';}});
+</script>

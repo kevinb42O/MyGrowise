@@ -1,0 +1,8 @@
+---
+import ModuleCover from './ModuleCover.astro';
+import {money} from '../../lib/catalog/pricing';
+import type {ModuleProduct} from '../../lib/modules/server';
+interface Props{product:ModuleProduct}
+const {product:p}=Astro.props;
+---
+<article class="module-card"><ModuleCover image={p.image} alt={p.module.image_alt} number={p.module.number} slug={p.slug}/><div class="module-card-body"><span class="module-label">Module {String(p.module.number).padStart(2,'0')}</span><h3><a href={`/modules/${p.slug}`}>{p.title}</a></h3><h4>{p.module.subtitle}</h4><p>{p.summary}</p><ul class="module-topics">{p.module.topics.slice(0,3).map(t=><li>{t}</li>)}</ul><div class="module-card-bottom"><div><small>{p.availability==='available'?'Eenmalige prijs':'Geplande prijs'}</small><strong>{p.priceCents!==null?money(p.priceCents):'Binnenkort'}</strong><span class="module-status">{p.availability==='available'?'Beschikbaar':p.availability==='paused'?'Tijdelijk niet bestelbaar':'In ontwikkeling'}</span></div><a href={`/modules/${p.slug}`}>Bekijk module ↗</a></div></div></article>

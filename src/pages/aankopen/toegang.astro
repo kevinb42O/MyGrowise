@@ -1,0 +1,23 @@
+---
+import MainLayout from '../../layouts/MainLayout.astro';
+import {privateHeaders,purchaseNext} from '../../lib/commerce/purchases';
+Object.entries(privateHeaders).forEach(([k,v])=>Astro.response.headers.set(k,v));
+const next=purchaseNext(Astro.url.searchParams.get('next'));
+---
+<MainLayout title="Toegang tot je aankopen — MyGrowise" noindex><section class="section"><div class="container purchase-access"><span class="eyebrow">Jouw aankopen</span><h1>Verder zonder wachtwoord.</h1><p>Open je bestelling, modules en beschikbare resultaten. Je hoeft geen account aan te maken.</p>{Astro.url.searchParams.has('error')&&<p role="alert">Deze toegang kon niet worden geopend. Vraag hieronder een nieuwe link aan.</p>}<form data-purchase-token hidden action="/api/aankopen/toegang" method="post"><input type="hidden" name="token"/><input type="hidden" name="next" value={next}/><button class="button button-primary">Open mijn aankopen →</button></form><noscript><p>Schakel JavaScript in om je e-maillink te openen, of neem contact op voor hulp.</p></noscript>{Astro.url.searchParams.has('sent')?<p role="status">Als er aankopen bij dit adres horen, ontvang je een e-mail met een toegangslink. Kijk ook in je spammap.</p>:<form action="/api/aankopen/aanvragen" method="post"><input type="hidden" name="next" value={next}/><label>E-mailadres van je bestelling<input name="email" type="email" autocomplete="email" required maxlength="254"/></label><button class="button button-primary">Stuur mij een toegangslink</button></form>}<p>Een link is 30 minuten geldig. Je betaalde inhoud blijft ook daarna bereikbaar via een nieuwe link.</p><p>Heb je een account? <a href={`/account/inloggen?next=${encodeURIComponent(next)}`}>Log in</a>. <a href="/contact">Hulp nodig?</a></p></div></section></MainLayout>
+<script is:inline>
+ (()=>{
+  const openLink=()=>{
+   const params=new URLSearchParams(location.hash.slice(1)),token=params.get('token');
+   if(!token||!/^[A-Za-z0-9_-]{43}$/.test(token))return;
+   const form=document.querySelector('[data-purchase-token]');if(!form)return;
+   form.querySelector('[name="token"]').value=token;
+   form.querySelector('[name="next"]').value=(params.get('next')||'/aankopen').slice(0,2000);
+   form.hidden=false;
+   history.replaceState(null,'',location.pathname+location.search);
+  };
+  window.addEventListener('hashchange',openLink);
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',openLink,{once:true});else openLink();
+ })();
+</script>
+<style>.purchase-access{max-width:700px}.purchase-access h1{font-size:clamp(2.8rem,7vw,4.5rem)}.purchase-access p{line-height:1.8;color:var(--muted)}form[hidden]{display:none}form,label{display:grid;gap:1rem}form{margin:2rem 0}input{padding:1rem;border:1px solid var(--line);border-radius:.6rem;font:inherit}button{justify-self:start}</style>

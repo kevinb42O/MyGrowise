@@ -1,0 +1,23 @@
+---
+interface Props{endpoint:string}
+const {endpoint}=Astro.props;
+---
+<div data-module-player data-endpoint={endpoint}><button class="button button-primary" type="button" data-load-audio>Audio beluisteren</button><audio controls preload="none" class="module-player" aria-label="Audiobegeleiding"></audio><p data-audio-status role="status" aria-live="polite"></p></div>
+<script>
+ document.querySelectorAll<HTMLElement>('[data-module-player]').forEach(root=>{
+  const audio=root.querySelector<HTMLAudioElement>('audio')!;const button=root.querySelector<HTMLButtonElement>('button')!;const status=root.querySelector<HTMLElement>('[data-audio-status]')!;
+  let loading=false;let loadedAt=0;let retries=0;
+  const load=async(position=0,resume=true)=>{
+   if(loading)return;loading=true;button.disabled=true;status.textContent='Audio wordt klaargezet…';
+   try{
+    const r=await fetch(root.dataset.endpoint!,{credentials:'same-origin',cache:'no-store'});if(!r.ok)throw new Error(r.status===401?'Open opnieuw je aankooplink om verder te luisteren.':'Audio kan nu niet worden geopend. Probeer opnieuw.');
+    const result=await r.json();if(typeof result.url!=='string'||!result.url.startsWith('https://'))throw new Error('Audio is tijdelijk niet beschikbaar.');
+    audio.addEventListener('loadedmetadata',()=>{if(position>0&&Number.isFinite(audio.duration))audio.currentTime=Math.min(position,audio.duration);if(resume)audio.play().catch(()=>{status.textContent='Druk op afspelen om te luisteren.';});},{once:true});
+    audio.src=result.url;audio.load();loadedAt=Date.now();button.textContent='Audio opnieuw laden';status.textContent='';
+   }catch(error){status.textContent=error instanceof Error?error.message:'Audio is tijdelijk niet beschikbaar.';}finally{loading=false;button.disabled=false;}
+  };
+  button.addEventListener('click',()=>{retries=0;load(audio.currentTime||0);});
+  audio.addEventListener('error',()=>{if(!loading&&loadedAt&&retries++<1)load(audio.currentTime||0,!audio.paused);else status.textContent='Luisteren lukt momenteel niet. Laad de audio opnieuw.';});
+  audio.addEventListener('play',()=>{if(!loading&&loadedAt&&Date.now()-loadedAt>50*60000){const pos=audio.currentTime;audio.pause();load(pos,true);}});
+ });
+</script>

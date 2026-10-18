@@ -1,0 +1,9 @@
+---
+import MainLayout from '../../layouts/MainLayout.astro';
+import {listOffers,bookingPath} from '../../lib/appointmentCatalog';
+import '../../styles/practice-management.css';
+const practitioner=Astro.url.searchParams.get('therapeut')||'';
+let offers:Awaited<ReturnType<typeof listOffers>>=[];let unavailable=false;
+try{offers=(await listOffers({publicOnly:true})).filter(o=>!practitioner||o.practitionerSlug===practitioner);}catch{unavailable=true;Astro.response.status=503;}
+---
+<MainLayout activeNav="begeleiding" title="Kies je afspraak — MyGrowise"><section class="section"><div class="container practice-stack" style="max-width:1000px"><header><span class="eyebrow">Online begeleiding</span><h1>Kies je afspraak.</h1><p>Kies een afspraaktype. Daarna zie je de vrije momenten. Je boeking wordt meteen bevestigd.</p></header><div class="practice-grid">{offers.map(o=><article class="practice-card" style={`--treatment-color:${o.color}`}><p><span class="practice-dot"></span>{o.practitionerName}</p><h2>{o.name}</h2><p>{o.duration} minuten · {o.channel==='online'?'Online':o.location}</p><a class="practice-button" href={bookingPath(o)}>Kies een moment</a></article>)}</div>{unavailable&&<p role="alert">De agenda is tijdelijk niet bereikbaar. Probeer later opnieuw of <a href="/contact">neem contact op</a>. Er is geen afspraak vastgelegd.</p>}{!unavailable&&!offers.length&&<p>Er zijn momenteel geen boekbare afspraaktypes. Neem contact op met de praktijk.</p>}</div></section></MainLayout>

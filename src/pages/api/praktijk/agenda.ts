@@ -1,9 +1,13 @@
+import {listOffers} from '../../../lib/appointmentCatalog';
+import {deliverBookingMail} from '../../../lib/bookingMail';
 import type { APIRoute } from 'astro';
 import { createOwnedAgendaEvent, deleteOwnedAgendaEvent, getPracticeAgendaAccess, listPracticeAgenda, updateOwnedAgendaEvent, type OwnedAgendaInput } from '../../../lib/practiceAgenda';
 import { isTrustedFormOrigin } from '../../../lib/adminAuth';
 import { createAvailabilityException, createStaffBooking, deleteAvailabilityException, rescheduleStaffBooking, updateBookingStatus, type BookingStatus } from '../../../lib/practiceStore';
 import { auditPatientDirectoryAccess, listPatientRecords } from '../../../lib/clientRecords';
 import { auditActor } from '../../../lib/securityAudit';
+import { getSupabaseAdmin } from '../../../lib/supabase/server';
+import { ensurePracticeCalendarFresh, CALENDAR_UNAVAILABLE_MESSAGE } from '../../../lib/mijndiadSync';
 
 export const prerender = false;
 const json = (value: unknown, status = 200) => new Response(JSON.stringify(value), {
@@ -19,7 +23,7 @@ export const GET: APIRoute = async ({ url, locals }) => {
     try {
       await auditPatientDirectoryAccess(locals.currentUser!, locals.requestId);
       const patients = await listPatientRecords(locals.currentUser!, '', 'active');
-      return json({ clients: patients.map((patient) => ({ id: patient.id, name: patient.fullName, email: patient.email }))
+      return json({ offers:(await listOffers({practitionerId:locals.currentUser!.practitionerId!})).filter(o=>o.active).map(o=>({id:o.id,name:o.name,duration:o.duration})), clients: patients.map((patient) => ({ id: patient.id, name: patient.fullName, email: patient.email }))
         .filter((patient) => patient.email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(patient.email)) });
     } catch { return json({ error: 'Cliënten konden niet worden geladen.' }, 502); }
   }
@@ -28,7 +32,9 @@ export const GET: APIRoute = async ({ url, locals }) => {
   try {
     const user = locals.currentUser!;
     const { canUseItransform } = await getPracticeAgendaAccess(user.practitionerId!, user.sub);
-    return json({ events: await listPracticeAgenda(user.practitionerId!, from!, to!, canUseItransform), canUseItransform });
+    const state = canUseItransform ? await ensurePracticeCalendarFresh(user.practitionerId!, {required:false}) : null;
+    const events = await listPracticeAgenda(user.practitionerId!, from!, to!, canUseItransform);
+    return json({ events, canUseItransform, sync: state?.sync ?? null });
   }
   catch { return json({ error: 'Agenda kon niet worden geladen.' }, 502); }
 };
@@ -39,10 +45,18 @@ export const POST: APIRoute = async ({ request, locals }) => {
   try { body = await request.json(); } catch { return json({ error: 'Ongeldige aanvraag.' }, 400); }
   const user = locals.currentUser!;
   try {
+    if (body.action === 'sync') {
+      const {canUseItransform} = await getPracticeAgendaAccess(user.practitionerId!,user.sub);
+      if (!canUseItransform) return json({error:'Geen toegang tot deze koppeling.'},403);
+      const {data,error} = await getSupabaseAdmin().rpc('refresh_mijndiad_agenda');
+      if (error || data?.usable !== true || data?.configured !== true) return json({error:'MijnDiAd kon niet worden bijgewerkt. De vorige gegevens zijn behouden.'},503);
+      return json({ok:true});
+    }
     if (body.action === 'status') {
       const status = String(body.status || '') as BookingStatus;
       if (!['confirmed', 'declined', 'cancelled', 'completed', 'no_show'].includes(status)) return json({ error: 'Ongeldige status.' }, 400);
       await updateBookingStatus(String(body.id || ''), user.practitionerId!, user.sub, status, locals.requestId, '/api/praktijk/agenda');
+      try{await deliverBookingMail(1,String(body.id||''));}catch{}
       return json({ ok: true });
     }
     if (body.action === 'block') {
@@ -52,11 +66,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
       return json({ ok: true }, 201);
     }
     if (body.action === 'manual') {
-      const id = await createStaffBooking(user.practitionerId!, user.sub, String(body.patientId || ''), String(body.startsAt || ''), String(body.endsAt || ''), locals.requestId);
+      const id = await createStaffBooking(user.practitionerId!, user.sub, String(body.patientId || ''), String(body.startsAt || ''), String(body.offerId || ''), locals.requestId);
+      try{await deliverBookingMail(1,id);}catch{}
       return json({ ok: true, id }, 201);
     }
     if (body.action === 'reschedule') {
       await rescheduleStaffBooking(String(body.id || ''), user.sub, String(body.startsAt || ''), String(body.endsAt || ''), locals.requestId);
+      try{await deliverBookingMail(1,String(body.id||''));}catch{}
       return json({ ok: true });
     }
     if (['external_create', 'external_update', 'external_delete'].includes(String(body.action))) {
@@ -88,6 +104,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   } catch (error) {
     const code = error && typeof error === 'object'
       ? String((error as { code?: string; message?: string }).code || (error as { message?: string }).message || '') : '';
+    if (code === 'external_calendar_unavailable' || code === '55000') return json({error:CALENDAR_UNAVAILABLE_MESSAGE},503);
     if (code === 'not_found' || code === 'not_allowed') return json({ error: 'Geen toegang tot dit item.' }, 403);
     if (code === 'invalid_transition' || code === 'slot_unavailable') return json({ error: code === 'slot_unavailable' ? 'Dit tijdstip is intussen bezet.' : 'Deze statuswijziging is niet toegestaan.' }, 409);
     if (code === 'invalid_input') return json({ error: 'Controleer cliënt en tijdstip.' }, 400);

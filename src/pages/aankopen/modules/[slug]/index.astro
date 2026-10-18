@@ -1,0 +1,12 @@
+---
+import MainLayout from '../../../../layouts/MainLayout.astro';
+import {purchaseOwner,hasPurchase,privateHeaders} from '../../../../lib/commerce/purchases';
+import {findModule,moduleAssets} from '../../../../lib/modules/server';
+import '../../../../styles/modules.css';
+Object.entries(privateHeaders).forEach(([k,v])=>Astro.response.headers.set(k,v));
+const owner=await purchaseOwner(Astro.cookies,Astro.locals.currentUser);if(!owner)return Astro.redirect(`/aankopen/toegang?next=${encodeURIComponent(Astro.url.pathname)}`,303);
+const m=await findModule(Astro.params.slug||'');if(!m||!await hasPurchase(owner,m.product.id))return new Response('Deze inhoud is niet beschikbaar voor jouw aankopen.',{status:404,headers:privateHeaders});
+if(!m.canonical)return Astro.redirect(`/aankopen/modules/${m.product.slug}`,301);
+const assets=m.details.current_release_id?await moduleAssets(m.details.current_release_id):[];const pdf=assets.find(a=>a.kind==='pdf'&&a.status==='verified');const tracks=assets.filter(a=>a.kind==='audio'&&a.status==='verified');
+---
+<MainLayout title={`${m.product.title} — Mijn aankopen`} noindex><section class="section"><div class="container"><a href="/aankopen">← Mijn aankopen</a><h1>{m.product.title}</h1><p>{m.details.subtitle}</p>{pdf&&<section class="module-material"><h2>Jouw werkboek</h2><div class="module-actions"><a class="button button-primary" href={`/api/aankopen/material/${m.product.id}`} target="_blank" rel="noopener noreferrer">Open PDF ↗</a><a href={`/api/aankopen/material/${m.product.id}?download=1`}>Download PDF ↓</a></div></section>}{tracks.length>0&&<section class="module-material"><h2>Audio</h2><ol class="module-audio-list">{tracks.map((a,i)=><li><span>{String(i+1).padStart(2,'0')} · {a.title}</span><a href={`/aankopen/modules/${m.product.slug}/audio/${a.module_tracks!.key}`}>Beluisteren →</a></li>)}</ol></section>}{!pdf&&!tracks.length&&<p>Het materiaal is tijdelijk niet beschikbaar. <a href="/contact">Neem contact op</a>.</p>}</div></section></MainLayout>

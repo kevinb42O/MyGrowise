@@ -25,6 +25,7 @@ const eventDate = (value: string) => new Intl.DateTimeFormat('nl-BE', {
 }).format(new Date(value));
 const cancelled = Astro.url.searchParams.get('cancelled') === '1';
 const cancelError = Astro.url.searchParams.get('cancel_error');
+const confirmed = Astro.url.searchParams.get('confirmed') === '1';
 const requested = Astro.url.searchParams.get('requested') === '1';
 const rateLimited = Astro.url.searchParams.get('error') === 'rate_limited';
 ---
@@ -36,6 +37,7 @@ const rateLimited = Astro.url.searchParams.get('error') === 'rate_limited';
     <p>Volg hier je aanvragen en afspraken. Verslagen of inhoud uit gesprekken verschijnen niet in dit praktische overzicht.</p>
   </section>
 
+  {confirmed && <div class="account-message success" role="status">Je afspraak is bevestigd. Je vindt de afspraakgegevens hieronder.</div>}
   {requested && <div class="account-message success" role="status">Je aanvraag is verstuurd. Je vindt de actuele status hieronder.</div>}
   {cancelled && <div class="account-message success" role="status">Je aanvraag of afspraak is geannuleerd.</div>}
   {cancelError === 'late' && <div class="account-message" role="alert">Deze afspraak kan niet meer online worden geannuleerd omdat ze te dichtbij is. Neem contact op met je professional.</div>}
@@ -58,7 +60,7 @@ const rateLimited = Astro.url.searchParams.get('error') === 'rate_limited';
           <span>{new Intl.DateTimeFormat('nl-BE', { timeZone: 'Europe/Brussels', month: 'short' }).format(new Date(booking.startsAt))}</span>
         </div>
         <div class="appointment-main">
-          <h3>{booking.practitionerName}</h3>
+          <h3>{booking.appointmentName}</h3><p>{booking.practitionerName}</p>
           <p>{date(booking.startsAt)} · {booking.origin === 'staff' ? 'Afspraak' : 'Online afspraak'}</p>
           <span class:list={{ 'appointment-status': true, pending: booking.status === 'pending' }} role="status">{status[booking.status] || 'Status wordt bijgewerkt'}</span>
           {booking.statusHistory.length > 0 && <ol class="appointment-history" aria-label="Statusgeschiedenis">

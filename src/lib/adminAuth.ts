@@ -1,13 +1,13 @@
 import { createClient } from '@supabase/supabase-js';
 import { getSupabaseAdmin, supabaseFetch } from './supabase/server';
-import { hasAdminPermission, isUserRole, type AdminPermission, type UserRole } from './adminPermissions';
+import { hasAdminPermission, requiresPracticeManagerLookup, isUserRole, type AdminPermission, type UserRole } from './adminPermissions';
 
 export const SUPABASE_SESSION_COOKIE = 'mg_session';
 export const SESSION_TTL_SECONDS = 60 * 60;
 export type { UserRole } from './adminPermissions';
 export type UserSession = {
   sub: string; email: string; name: string; roles: UserRole[]; practitionerId: string | null;
-  emailConfirmed: boolean; issuedAt: number; expiresAt: number;
+  practiceManager?: boolean; emailConfirmed: boolean; issuedAt: number; expiresAt: number;
 };
 
 const configured = () => Boolean(import.meta.env.PUBLIC_SUPABASE_URL?.trim() && import.meta.env.PUBLIC_SUPABASE_PUBLISHABLE_KEY?.trim() && import.meta.env.SUPABASE_SECRET_KEY?.trim());
@@ -16,7 +16,7 @@ export const hasRole = (session: UserSession | null | undefined, role: UserRole)
 export const isCustomerAccount = (session: UserSession | null | undefined) =>
   Boolean(session && session.roles.includes('customer') && !session.roles.some((role) => ['super_admin', 'support', 'employee', 'practitioner'].includes(role)));
 export const hasPermission = (session: UserSession | null | undefined, permission: AdminPermission) =>
-  Boolean(session && hasAdminPermission(session.roles, permission));
+  Boolean(session && (hasAdminPermission(session.roles, permission) || (permission === 'practice.manage' && session.practiceManager)));
 export const supabaseSessionCookieOptions = () => ({ httpOnly: true, secure: import.meta.env.PROD, sameSite: 'strict' as const, path: '/', maxAge: SESSION_TTL_SECONDS });
 const trustedAppOrigins = new Set(['https://mygrowise.be', 'https://www.mygrowise.be', 'https://mygrowise.vercel.app']);
 export const isTrustedFormOrigin = (request: Request) => {
@@ -46,10 +46,10 @@ export const sanitizeAppRedirect = (value: unknown) => {
   if (path === '/account/inloggen' || path === '/account/aanmaken') return '';
   if (path === '/admin' || path.startsWith('/admin/') || path === '/praktijk' || path.startsWith('/praktijk/')) return `${path}${target.search}`;
   if (path === '/account' || path.startsWith('/account/')) return `${path}${target.search}`;
-  if (path === '/bestellen' || path === '/samenstellen') return `${path}${target.search}`;
+  if (path === '/bestellen' || path === '/samenstellen' || path === '/aankopen' || path.startsWith('/aankopen/')) return `${path}${target.search}`;
   if (path === '/berichten/gesprek') return path;
   if (/^\/aanbod\/[a-z0-9]+(?:-[a-z0-9]+)*$/.test(path)) return `${path}${target.search}`;
-  if (/^\/begeleiding\/[a-z0-9]+(?:-[a-z0-9]+)*$/.test(path)) return path;
+  if (/^\/begeleiding\/[a-z0-9]+(?:-[a-z0-9]+)*$/.test(path) || path === '/afspraak' || /^\/afspraak\/[a-z0-9-]+$/.test(path)) return `${path}${target.search}`;
   return '';
 };
 
@@ -63,8 +63,12 @@ const toSession = async (user: { id: string; email?: string | null; email_confir
   if (roleError || practitionerError) return null;
   const roles = (roleRows || []).map((row: { role: string }) => row.role).filter(isUserRole);
   if (!roles.length) return null;
+  const { data: manager, error: managerError } = requiresPracticeManagerLookup(roles)
+    ? await client.from('practice_managers').select('user_id').eq('user_id', user.id).maybeSingle()
+    : { data: null, error: null };
+  if (managerError) throw new Error('practice_permissions_unavailable');
   const now = Math.floor(Date.now() / 1000);
-  return { sub: user.id, email: user.email || '', name: String(user.user_metadata?.full_name || user.email || 'MyGrowise'), roles, practitionerId: practitioner?.id || null, emailConfirmed: Boolean(user.email_confirmed_at), issuedAt: now, expiresAt: expiresAt || now + SESSION_TTL_SECONDS };
+  return { practiceManager: Boolean(manager), sub: user.id, email: user.email || '', name: String(user.user_metadata?.full_name || user.email || 'MyGrowise'), roles, practitionerId: practitioner?.id || null, emailConfirmed: Boolean(user.email_confirmed_at), issuedAt: now, expiresAt: expiresAt || now + SESSION_TTL_SECONDS };
 };
 
 const publicAuthClient = () => {

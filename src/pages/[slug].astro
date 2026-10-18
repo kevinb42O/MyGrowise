@@ -1,0 +1,10 @@
+---
+import MainLayout from '../layouts/MainLayout.astro';
+import {getPublishedPage,resolveContentRedirect} from '../lib/adminContent';
+const slug=Astro.params.slug||'';
+const page=await getPublishedPage(slug);
+if(!page){const target=await resolveContentRedirect(`/${slug}`);if(target&&target!==`/${slug}`)return Astro.redirect(target,301);return new Response('Deze pagina bestaat niet.',{status:404,headers:{'content-type':'text/plain; charset=utf-8'}});}
+const paragraphs=page.bodyText.split(/\n{2,}/).map(s=>s.trim()).filter(Boolean);
+---
+<MainLayout title={page.seoTitle||`${page.title} — MyGrowise`} description={page.seoDescription||page.excerpt}><article class="section"><div class="container content-page"><h1 class="heading-xl">{page.title}</h1>{page.excerpt&&<p class="lead">{page.excerpt}</p>}{paragraphs.map(line=><p>{line}</p>)}</div></article></MainLayout>
+<style>.content-page{max-width:54rem}.content-page h1{overflow-wrap:break-word;margin-bottom:2rem}.content-page>p{white-space:pre-line;line-height:1.85;margin-block:1.5rem;max-width:44rem}</style>

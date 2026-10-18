@@ -1,0 +1,58 @@
+---
+import FormProtection from '../../components/practice/FormProtection.astro';
+import MainLayout from '../../layouts/MainLayout.astro';
+import PatientFields from '../../components/practice/PatientFields.astro';
+import BookingSlots from '../../components/practice/BookingSlots';
+import {listOffers,getOfferSlots,type Offer} from '../../lib/appointmentCatalog';
+import {isCustomerAccount,isTrustedFormOrigin} from '../../lib/adminAuth';
+import {bookAppointment,customerDetails} from '../../lib/bookingService';
+import {deliverBookingMail} from '../../lib/bookingMail';
+import '../../styles/practice-management.css';
+export const prerender=false;
+Astro.response.headers.set('Cache-Control','private, no-store');
+Astro.response.headers.set('Referrer-Policy','no-referrer');
+Astro.response.headers.set('X-Robots-Tag','noindex, nofollow');
+let offer:Offer|undefined;let unavailable=false;
+try{offer=(await listOffers({publicOnly:true})).find(o=>o.id===Astro.params.offer);}catch{unavailable=true;Astro.response.status=503;}
+if(!offer&&!unavailable){Astro.response.status=410;}
+const user=Astro.locals.currentUser;
+const canBook=Boolean(user&&isCustomerAccount(user)&&user.emailConfirmed);
+let error='',values:Record<string,unknown>={};
+try{if(canBook&&!unavailable)values=await customerDetails(user!);}catch{unavailable=true;Astro.response.status=503;}
+let submissionKey=crypto.randomUUID() as string;
+let selected='';
+if(Astro.request.method==='POST'&&!unavailable){
+ if(!isTrustedFormOrigin(Astro.request)) return new Response('Ongeldige aanvraag.',{status:403});
+ const form=await Astro.request.formData();values=Object.fromEntries(form.entries());
+ submissionKey=String(form.get('submission_key')||submissionKey);selected=String(form.get('starts_at')||'');
+ if(!offer||!canBook) error='Deze boeking kan niet worden uitgevoerd. Meld je aan met je cliëntaccount.';
+ else try{
+  const id=await bookAppointment(user!,offer.id,form,Astro.locals.requestId);
+  try{await deliverBookingMail(1,id);}catch{console.error('[booking.mail] queued for retry',{bookingId:id});}
+  return Astro.redirect(`/account/begeleiding?confirmed=1#booking-${id}`,303);
+ }catch(cause){error=cause instanceof Error?cause.message:'Opslaan is niet gelukt.';Astro.response.status=400;}
+}
+let slots:Awaited<ReturnType<typeof getOfferSlots>>=[];
+try{if(offer&&canBook&&!unavailable)slots=await getOfferSlots(offer);}catch{unavailable=true;Astro.response.status=503;}
+const next=Astro.url.pathname;
+---
+<MainLayout activeNav="begeleiding" title="Afspraak boeken — MyGrowise" description="Boek je afspraak bij MyGrowise.">
+ <section class="section booking-page"><div class="container booking-container practice-stack">
+ <a href="/afspraak">← Alle afspraaktypes</a>
+ {unavailable?<section class="practice-card" role="alert"><h1>De agenda is tijdelijk niet bereikbaar.</h1><p>Probeer later opnieuw of <a href="/contact">neem contact op</a>. Er is geen afspraak vastgelegd.</p></section>:offer?<>
+ <header><span class="eyebrow">Jouw afspraak</span><h1>Plan je moment.</h1><p>Je afspraak is meteen definitief zodra je ze boekt.</p></header>
+ <section class="practice-card booking-summary" style={`--treatment-color:${offer.color}`}><p><span class="practice-dot"></span>{offer.groupName}</p><h2>{offer.name}</h2><div class="practice-actions"><span>{offer.practitionerName}</span><span>· {offer.duration} minuten</span><span>· {offer.channel==='online'?'Online':offer.location||'In de praktijk'}</span></div></section>
+ {error&&<div class="practice-alert is-error" role="alert">{error}</div>}
+ {canBook?<form method="post" class="practice-stack" data-unsaved-form>
+ <input type="hidden" name="submission_key" value={submissionKey}/>
+ <BookingSlots slots={slots} selected={selected} client:load/>
+ <section><h2>2. Je gegevens</h2><p>Controleer je gegevens. Ze worden automatisch in je cliëntendossier opgenomen.</p><p>Account: {user!.email}</p></section>
+ <PatientFields values={values} booking/>
+ <section class="practice-card"><h2>3. Controleer en boek</h2><p>{offer.name} bij {offer.practitionerName} · {offer.duration} minuten · {offer.channel==='online'?'Online':offer.location}</p><p>Controleer het geselecteerde moment en je gegevens. Na het boeken is je afspraak bevestigd. Je ontvangt de bevestigingsmail volgens je meldingsvoorkeur.</p><button class="practice-button" type="submit" disabled={!slots.length}>Afspraak definitief boeken</button></section>
+ </form>:<section class="practice-card"><h2>{user&&!isCustomerAccount(user)?'Boeken met een cliëntaccount':user&&!user.emailConfirmed?'Bevestig eerst je e-mailadres':'Meld je aan om te boeken'}</h2><p>Gebruik je cliëntaccount zodat je afspraak veilig aan je dossier wordt gekoppeld. Je gekozen therapeut en afspraaktype blijven bewaard.</p><div class="practice-actions"><a class="practice-button" href={`/account/inloggen?next=${encodeURIComponent(next)}`}>Inloggen</a><a class="practice-button secondary" href={`/account/aanmaken?next=${encodeURIComponent(next)}`}>Account aanmaken</a></div>{user&&isCustomerAccount(user)&&!user.emailConfirmed&&<form method="post" action="/api/account/verification-resend"><input type="hidden" name="email" value={user.email}/><input type="hidden" name="next" value={next}/><button class="practice-button secondary" type="submit">Bevestigingsmail opnieuw sturen</button></form>}</section>}
+ </>:<section class="practice-card"><h1>Dit afspraaktype is niet meer beschikbaar.</h1><p>Bekijk het actuele aanbod of neem contact op met de praktijk.</p><a class="practice-button" href="/afspraak">Bekijk beschikbare afspraaktypes</a></section>}
+ </div></section>
+<FormProtection/></MainLayout>
+<style is:global>
+.booking-page{padding-block:2.5rem}.booking-container{max-width:960px}.booking-page .booking-container>header h1{margin:.4rem 0 .75rem;font-size:clamp(2.3rem,4vw,3.5rem)}.booking-page .booking-container>header p{margin:0}.booking-summary h2{margin:.4rem 0}.booking-summary p{margin:0}.booking-page h1{font-size:clamp(2.6rem,6vw,4.7rem)}.booking-summary{border-left:5px solid var(--treatment-color)}.booking-slots{max-width:100%}.booking-calendar-head{display:flex;justify-content:space-between;align-items:center;max-width:520px;margin-bottom:1rem}.booking-days{display:grid;grid-template-columns:repeat(7,1fr);gap:.35rem;max-width:520px}.booking-days>span{text-align:center;font-size:.75rem;color:#607268}.booking-days button{min-height:3rem;border:1px solid #bdd6c5;border-radius:8px;background:#edf7f0;color:#173d35;font:inherit;cursor:pointer}.booking-days button:disabled{background:#f3f4f2;border-color:#eee;color:#a1aaa3;cursor:default}.booking-days button.selected{outline:2px solid #173d35;background:#173d35;color:white}.booking-days small{display:block;font-size:.55rem}.booking-times{display:flex;flex-wrap:wrap;gap:.6rem}.booking-times label{cursor:pointer}.booking-times input{margin-right:.35rem}.booking-times label:has(input:checked){background:#173d35;color:white}.booking-times label{padding:.65rem;border:1px solid #bccdc2;border-radius:8px}.booking-page fieldset{min-width:0}.booking-page legend{padding:0 .5rem;font-weight:600}
+</style>

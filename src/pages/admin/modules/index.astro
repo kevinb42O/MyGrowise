@@ -1,0 +1,10 @@
+---
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+import {listCatalog} from '../../../lib/catalog/server';
+import {getSupabaseAdmin} from '../../../lib/supabase/server';
+import {money} from '../../../lib/catalog/pricing';
+import '../../../styles/catalog-admin.css';
+const products=(await listCatalog(true)).filter(p=>['module','guide'].includes(p.type));
+const {data:details,error}=await getSupabaseAdmin().from('module_details').select('product_id,number,current_release_id');if(error)throw error;
+---
+<AdminLayout title="Modules"><div class="admin-page"><section class="admin-page-heading"><div><p class="admin-eyebrow">Digitaal aanbod</p><h1>Ontdek jouw innerlijke landschap</h1><p>Beheer de zes modules, hun werkboeken en audiobegeleiding. Verkoop wordt pas beschikbaar als het materiaal klaarstaat.</p></div><a class="admin-button" href="/admin/modules/nieuw">Nieuw werkboek of audio +</a><a class="admin-button" href="/modules" target="_blank">Website bekijken ↗</a></section><div class="catalog-admin-scroll"><table class="catalog-admin-table"><thead><tr><th>Module</th><th>Prijs</th><th>Website / verkoop</th><th>Materiaal</th><th>Beheer</th></tr></thead><tbody>{products.map(p=>{const m=details?.find(d=>d.product_id===p.id);return <tr><td>{p.type==='guide'?'Extra':String(m?.number||'').padStart(2,'0')} · <strong>{p.title}</strong></td><td>{p.priceCents!==null?money(p.priceCents):'—'}</td><td>{p.status}<small>{({available:'Beschikbaar',upcoming:'In ontwikkeling',paused:'Verkoop gepauzeerd'})[p.availability]}</small></td><td>{m?.current_release_id?'Gepubliceerde versie':'Nog te publiceren'}</td><td><a href={`/admin/modules/${p.id}`}>Bewerken →</a></td></tr>})}</tbody></table></div></div></AdminLayout>

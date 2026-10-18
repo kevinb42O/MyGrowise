@@ -4,15 +4,15 @@ type Row = Record<string, unknown>;
 const fail = (error: { message?: string } | null) => { if (error) throw new Error(error.message || 'Supabase query failed.'); };
 
 export type CustomerBookingStatusEvent = { fromStatus: string | null; status: string; occurredAt: string };
-export type CustomerBooking = { id: string; practitionerName: string; practitionerSlug: string; startsAt: string; endsAt: string; status: string; origin: string; statusHistory: CustomerBookingStatusEvent[] };
+export type CustomerBooking = { appointmentName:string; id: string; practitionerName: string; practitionerSlug: string; startsAt: string; endsAt: string; status: string; origin: string; statusHistory: CustomerBookingStatusEvent[] };
 export type CustomerBookingNotification = { id: string; bookingId: string; createdAt: string; readAt: string | null; status: string; practitionerName: string; startsAt: string };
 export type CustomerTransaction = { id: string; createdAt: string; status: string; totalCents: number; currency: string; provider: string | null; productSlug: string | null; catalogOrder: boolean };
-export type CustomerEntitlement = { id: string; productTitle: string; productSlug: string; productType: string; status: string; grantedAt: string };
+export type CustomerEntitlement = { id: string; productId: string | null; productTitle: string; productSlug: string; productType: string; status: string; grantedAt: string };
 export type NotificationPreferences = { bookingEmailEnabled: boolean; bookingReminderEnabled: boolean; weeklyDigestEnabled: boolean; timezone: string };
 export type SecurityActivity = { occurredAt: string; action: string; metadata: Record<string, unknown> };
 
 export const listCustomerBookings = async (userId: string): Promise<CustomerBooking[]> => {
-  const { data, error } = await getSupabaseAdmin().from('bookings').select('id,starts_at,ends_at,status,origin,practitioners(name,slug)').eq('customer_user_id', userId).order('starts_at', { ascending: false });
+  const { data, error } = await getSupabaseAdmin().from('bookings').select('id,appointment_name,starts_at,ends_at,status,origin,practitioners(name,slug)').eq('customer_user_id', userId).order('starts_at', { ascending: false });
   fail(error);
   const rows = (data || []) as Row[];
   if (!rows.length) return [];
@@ -36,7 +36,7 @@ export const listCustomerBookings = async (userId: string): Promise<CustomerBook
   });
   return rows.map((row) => {
     const practitioner = (Array.isArray(row.practitioners) ? row.practitioners[0] : row.practitioners || {}) as Row;
-    return { id: String(row.id), practitionerName: String(practitioner.name || 'Professional'), practitionerSlug: String(practitioner.slug || ''), startsAt: String(row.starts_at), endsAt: String(row.ends_at), status: String(row.status), origin: String(row.origin || 'customer_request'), statusHistory: history.get(String(row.id)) || [] };
+    return { appointmentName:String(row.appointment_name || 'Afspraak'), id: String(row.id), practitionerName: String(practitioner.name || 'Professional'), practitionerSlug: String(practitioner.slug || ''), startsAt: String(row.starts_at), endsAt: String(row.ends_at), status: String(row.status), origin: String(row.origin || 'customer_request'), statusHistory: history.get(String(row.id)) || [] };
   });
 };
 export const countUnreadCustomerBookingNotifications = async (userId: string): Promise<number> => {
@@ -119,9 +119,9 @@ export const listCustomerTransactions = async (userId: string): Promise<Customer
   return ((data || []) as Row[]).map((row) => { const item = (Array.isArray(row.order_items) ? row.order_items[0] : row.order_items) as Row | null; return { id: String(row.id), createdAt: String(row.created_at), status: String(row.status), totalCents: Number(row.total_cents), currency: String(row.currency), provider: row.provider ? String(row.provider) : null, catalogOrder: Boolean(row.catalog_quote), productSlug: item?.product_slug ? String(item.product_slug) : null }; });
 };
 export const listCustomerEntitlements = async (userId: string): Promise<CustomerEntitlement[]> => {
-  const { data, error } = await getSupabaseAdmin().from('entitlements').select('id,product_title,product_slug,product_type,status,granted_at').eq('customer_user_id', userId).order('granted_at', { ascending: false });
+  const { data, error } = await getSupabaseAdmin().from('entitlements').select('id,product_id,product_title,product_slug,product_type,status,granted_at').eq('customer_user_id', userId).order('granted_at', { ascending: false });
   fail(error);
-  return ((data || []) as Row[]).map((row) => ({ id: String(row.id), productTitle: String(row.product_title), productSlug: String(row.product_slug), productType: String(row.product_type), status: String(row.status), grantedAt: String(row.granted_at) }));
+  return ((data || []) as Row[]).map((row) => ({ id: String(row.id), productId: row.product_id ? String(row.product_id) : null, productTitle: String(row.product_title), productSlug: String(row.product_slug), productType: String(row.product_type), status: String(row.status), grantedAt: String(row.granted_at) }));
 };
 export const cancelCustomerBooking = async (bookingId: string, customerId: string, requestId?: string, requestPath?: string) => {
   const { error } = await getSupabaseAdmin().rpc('cancel_customer_booking', {

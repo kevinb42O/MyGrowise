@@ -1,3 +1,5 @@
+import { fromBrusselsLocalInput } from './brusselsTime';
+import { patientFields, type PatientDetails } from './patientDetails';
 import { getSupabaseAdmin } from './supabase/server';
 import { writeSecurityAudit, type AuditActor } from './securityAudit';
 import type { UserSession } from './adminAuth';
@@ -50,6 +52,7 @@ export type PatientDirectoryItem = {
 };
 
 export type PatientBooking = {
+  appointmentName?: string;
   id: string;
   startsAt: string;
   endsAt: string;
@@ -91,6 +94,10 @@ export type PatientAssignment = {
 };
 
 export type PatientDetail = {
+  details: PatientDetails;
+  bookingPage: number;
+  bookingPageCount: number;
+  bookingFilterCount: number;
   id: string;
   fullName: string;
   email: string | null;
@@ -247,11 +254,11 @@ const loadAssignments = async (patientId: string, showHistory: boolean): Promise
   return rows.map((row) => ({ id: String(row.id), userId: String(row.user_id), name: names.get(String(row.user_id)) || 'Medewerker', assignedAt: String(row.assigned_at), endedAt: row.ended_at ? String(row.ended_at) : null }));
 };
 
-export const getPatientDetail = async (user: UserSession, patientId: string, historyNoteId = '', requestId?: string, requestedNotePage = 1): Promise<PatientDetail | null> => {
+export const getPatientDetail = async (user: UserSession, patientId: string, historyNoteId = '', requestId?: string, requestedNotePage = 1, requestedBookingPage = 1, bookingStatus = '', bookingFrom = '', bookingTo = ''): Promise<PatientDetail | null> => {
   assertRecordRole(user);
   if (!uuidPattern.test(patientId) || !(await hasPatientAccess(user, patientId))) return null;
   const client = getSupabaseAdmin();
-  const { data: patient, error: patientError } = await client.from('patients').select('id,full_name,email,customer_user_id,status,created_at,updated_at').eq('id', patientId).maybeSingle();
+  const { data: patient, error: patientError } = await client.from('patients').select('*').eq('id', patientId).maybeSingle();
   fail(patientError);
   if (!patient) return null;
   const { count: noteCount, error: noteCountError } = await client.from('patient_notes').select('id', { count: 'exact', head: true }).eq('patient_id', patientId);
@@ -259,9 +266,19 @@ export const getPatientDetail = async (user: UserSession, patientId: string, his
   const totalNoteCount = noteCount || 0;
   const notePageCount = Math.max(1, Math.ceil(totalNoteCount / 50));
   const notePage = Math.min(notePageCount, Math.max(1, Number.isInteger(requestedNotePage) ? requestedNotePage : 1));
+  const filterBookings = (query: any) => {
+    query=query.eq('patient_id',patientId);
+    if (['pending','confirmed','completed','no_show','cancelled','declined'].includes(bookingStatus)) query=query.eq('status',bookingStatus);
+    if (/^\d{4}-\d{2}-\d{2}$/.test(bookingFrom)) query=query.gte('starts_at',fromBrusselsLocalInput(`${bookingFrom}T00:00`));
+    if (/^\d{4}-\d{2}-\d{2}$/.test(bookingTo)) query=query.lt('starts_at',fromBrusselsLocalInput(`${new Date(Date.parse(`${bookingTo}T12:00:00Z`)+86400000).toISOString().slice(0,10)}T00:00`));
+    return query;
+  };
+  const filteredCount=await filterBookings(client.from('bookings').select('id',{count:'exact',head:true}));fail(filteredCount.error);
+  const bookingPageCount=Math.max(1,Math.ceil((filteredCount.count||0)/50));
+  const bookingPage=Math.min(bookingPageCount,Math.max(1,Number.isInteger(requestedBookingPage)?requestedBookingPage:1));
   const [{ data: noteRows, error: noteError }, { data: bookingRows, error: bookingError }, assignments, bookingCountResult] = await Promise.all([
     client.from('patient_notes_current').select('id,booking_id,note_type,occurred_at,status,current_version,created_by,created_at,updated_at,finalized_at,corrects_note_id,title,body,version_created_at').eq('patient_id', patientId).order('occurred_at', { ascending: false }).order('created_at', { ascending: false }).range((notePage - 1) * 50, notePage * 50 - 1),
-    client.from('bookings').select('id,starts_at,ends_at,status,practitioners(name)').eq('patient_id', patientId).order('starts_at', { ascending: false }).limit(100),
+    filterBookings(client.from('bookings').select('id,appointment_name,starts_at,ends_at,status,practitioners(name)')).order('starts_at', { ascending: false }).order('id').range((bookingPage-1)*50,bookingPage*50-1),
     loadAssignments(patientId, isOwner(user)),
     client.from('bookings').select('id', { count: 'exact', head: true }).eq('patient_id', patientId),
   ]);
@@ -293,7 +310,7 @@ export const getPatientDetail = async (user: UserSession, patientId: string, his
     current: { versionNumber: Number(row.current_version), title: String(row.title), body: String(row.body), createdBy: row.created_by ? String(row.created_by) : null, createdAt: String(row.version_created_at) },
     versions: versionHistory.get(String(row.id)) || [],
   }));
-  const bookings: PatientBooking[] = ((bookingRows || []) as Row[]).map((row) => ({ id: String(row.id), startsAt: String(row.starts_at), endsAt: String(row.ends_at), status: String(row.status), practitionerName: String(row.practitioners?.name || 'Professional') }));
+  const bookings: PatientBooking[] = ((bookingRows || []) as Row[]).map((row) => ({ id: String(row.id), appointmentName:String(row.appointment_name||'Afspraaktype nog te bepalen'), startsAt: String(row.starts_at), endsAt: String(row.ends_at), status: String(row.status), practitionerName: String(row.practitioners?.name || 'Professional') }));
   let linkableBookings: PatientBooking[] = [];
   const practitionerId = user.practitionerId;
   if (patient.status === 'active' && (isOwner(user) || practitionerId)) {
@@ -303,7 +320,7 @@ export const getPatientDetail = async (user: UserSession, patientId: string, his
     else if (patient.email) query = query.eq('client_email', patient.email);
     else query = query.is('customer_user_id', null).eq('client_name', patient.full_name);
     const result = await query; fail(result.error);
-    linkableBookings = ((result.data || []) as Row[]).map((row) => ({ id: String(row.id), startsAt: String(row.starts_at), endsAt: String(row.ends_at), status: String(row.status), practitionerName: String(row.practitioners?.name || 'Professional') }));
+    linkableBookings = ((result.data || []) as Row[]).map((row) => ({ id: String(row.id), appointmentName:String(row.appointment_name||'Afspraaktype nog te bepalen'), startsAt: String(row.starts_at), endsAt: String(row.ends_at), status: String(row.status), practitionerName: String(row.practitioners?.name || 'Professional') }));
   }
   let linkedCustomer: PatientDetail['linkedCustomer'] = null;
   if (patient.customer_user_id) {
@@ -312,6 +329,7 @@ export const getPatientDetail = async (user: UserSession, patientId: string, his
   }
   await audit({ userId: user.sub, email: user.email, requestId, requestPath: `/admin/clienten/${patientId}` }, 'patient.dossier_viewed', 'patient', patientId, { status: String(patient.status) });
   return {
+    details:Object.fromEntries(patientFields.map(([key])=>[key,patient[key]||''])) as PatientDetails, bookingPage,bookingPageCount,bookingFilterCount:filteredCount.count||0,
     id: String(patient.id), fullName: String(patient.full_name), email: patient.email ? String(patient.email) : null,
     customerUserId: patient.customer_user_id ? String(patient.customer_user_id) : null, status: String(patient.status) as PatientStatus,
     createdAt: String(patient.created_at), updatedAt: String(patient.updated_at), canManageAssignments: isOwner(user), canArchive: isOwner(user),

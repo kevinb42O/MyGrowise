@@ -9,7 +9,7 @@ const rejects=async(fn,reason)=>{await query('savepoint expected_failure');try{a
 try{
  await query('begin');await query("set local statement_timeout='15s'");
  const customer=randomUUID(),admin=randomUUID();
- for(const [id,kind] of [[customer,'customer'],[admin,'super_admin']]){await query("insert into auth.users(id,email,raw_user_meta_data) values($1,$2,'{}')",[id,`catalog-test-${id}@example.invalid`]);if(kind==='super_admin'){await query('delete from public.user_roles where user_id=$1',[id]);await query("insert into public.user_roles(user_id,role) values($1,'super_admin')",[id]);}}
+ for(const [id,kind] of [[customer,'customer'],[admin,'super_admin']]){await query("insert into auth.users(id,email,email_confirmed_at,raw_user_meta_data) values($1,$2,now(),'{}')",[id,`catalog-test-${id}@example.invalid`]);if(kind==='super_admin'){await query('delete from public.user_roles where user_id=$1',[id]);await query("insert into public.user_roles(user_id,role) values($1,'super_admin')",[id]);}}
  const products=(await query("select id,slug,price_cents from public.products where type in ('questionnaire','profile')")).rows;const id=slug=>products.find(x=>x.slug===slug).id;
  const quote=async(slugs,mode='custom')=>(await query('select public.catalog_quote($1::uuid[],$2) q',[slugs.map(id),mode])).rows[0].q;
  for(const [slugs,total,pct] of [[['mini-scl'],4900,0],[['cerq','feel-e'],12160,5],[['neo-pi-3','cerq','rs-nl'],20615,5],[['feel-e','brief-a','srs-a','spm-2'],24840,10],[['stress-en-emotieprofiel'],27500,0]]){const q=await quote(slugs,slugs[0]==='stress-en-emotieprofiel'?'package':'custom');assert.equal(q.totalCents,total);assert.equal(q.discountPercent,pct);assert.equal(q.items.reduce((s,x)=>s+x.priceCents,0),total);checks++;}

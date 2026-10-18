@@ -1,0 +1,83 @@
+---
+import MainLayout from '../../layouts/MainLayout.astro';
+import ProductDetail from './ProductDetail.astro';
+import {money} from '../../lib/catalog/pricing';
+import type {CatalogProduct} from '../../lib/catalog/server';
+import '../../styles/catalog.css';
+import '../../styles/questionnaire.css';
+interface Props { product: CatalogProduct; priceLabel: string }
+const {product:p,priceLabel}=Astro.props;
+const content=p.landingContent;
+const available=p.status==='published' && p.availability==='available' && p.priceCents!==null && p.priceCents>0;
+const checkout=`/bestellen?vragenlijsten=${p.id}`;
+const combine=`/samenstellen?voegtoe=${p.id}`;
+---
+{!content ? <ProductDetail product={p} priceLabel={priceLabel}/> :
+<MainLayout title={`${p.title} — MyGrowise`} description={p.summary} activeNav="zelf">
+  <section class="questionnaire-hero">
+    <div class="container">
+      <a class="questionnaire-back" href="/vragenlijsten">← Alle vragenlijsten</a>
+      <div class="questionnaire-hero-grid">
+        <div>
+          <span class="catalog-kicker">{p.category}</span>
+          <h1>{p.title}</h1>
+          <p class="questionnaire-question">{content.question}</p>
+          <div class="questionnaire-tags"><span>{p.audience}</span><span>{p.ageLabel}</span></div>
+          <p class="questionnaire-scope">Voor zelfinzicht en, waar relevant, screening. Geen diagnostisch onderzoek.</p>
+        </div>
+        <aside class="questionnaire-purchase" aria-label="Deze vragenlijst kiezen">
+          <span class="catalog-kicker">Inzicht op jouw maat</span>
+          <dl>
+            <div><dt>Wie vult in?</dt><dd>{content.respondentLabel}</dd></div>
+            <div><dt>Afname</dt><dd>{content.formatLabel}</dd></div>
+            <div><dt>Je ontvangt</dt><dd>{content.reportLabel}</dd></div>
+          </dl>
+          {available ? <>
+            <span class="questionnaire-price-label">{priceLabel} · losse vragenlijst</span>
+            <strong class="questionnaire-price">{money(p.priceCents!)}</strong>
+            <a class="catalog-checkout" href={checkout}>Kies deze vragenlijst →</a>
+            <a class="questionnaire-combine" href={combine}>Voeg toe aan een combinatie</a>
+          </> : <p class="questionnaire-availability">{p.availability==='upcoming'?'Deze vragenlijst is in ontwikkeling.':'Deze vragenlijst is tijdelijk niet beschikbaar.'}</p>}
+        </aside>
+      </div>
+    </div>
+  </section>
+  <section class="questionnaire-content">
+    <div class="container questionnaire-content-grid">
+      <div class="questionnaire-reading">
+        <div class="questionnaire-introduction">{content.introduction.map(paragraph=><p>{paragraph}</p>)}</div>
+        <section aria-labelledby="meetdomeinen" class="questionnaire-block">
+          <span class="catalog-kicker">Een gerichte blik</span>
+          <h2 id="meetdomeinen">Wat brengt deze vragenlijst in kaart?</h2>
+          <ul class="questionnaire-measures">{content.measures.map(measure=><li>{measure}</li>)}</ul>
+        </section>
+        <section aria-labelledby="verwachtingen" class="questionnaire-block">
+          <span class="catalog-kicker">Van invullen naar inzicht</span>
+          <h2 id="verwachtingen">Wat mag je verwachten?</h2>
+          {content.expectations.map(paragraph=><p>{paragraph}</p>)}
+        </section>
+        <section class="questionnaire-important" aria-labelledby="afbakening">
+          <h2 id="afbakening">Belangrijk</h2>
+          <p>{content.disclaimer}</p>
+        </section>
+      </div>
+      <aside class="questionnaire-next" aria-labelledby="volgende-stap">
+        <span class="catalog-kicker">Na je bestelling</span>
+        <h2 id="volgende-stap">Met duidelijke vervolgstappen.</h2>
+        <p>{p.deliveryText}</p>
+        <p>Via een veilige e-maillink vind je de instructies, de voortgang van je afname en je beschikbare verslag. Een account is optioneel.</p>
+        <p>De versie en eventuele informanten worden afgestemd op de leeftijd en doelgroep.</p>
+        <a href="/contact">Hulp bij je keuze →</a>
+      </aside>
+    </div>
+  </section>
+  <section class="questionnaire-closing">
+    <div class="container questionnaire-closing-grid">
+      <div><span class="catalog-kicker">Jouw volgende stap</span><h2>Meer inzicht begint met jouw vraag.</h2><p>{content.formatLabel} · {content.reportLabel}</p></div>
+      <div class="questionnaire-closing-actions">
+        {available && <><span>{priceLabel}</span><strong class="questionnaire-price">{money(p.priceCents!)}</strong><a class="catalog-checkout" href={checkout}>Kies deze vragenlijst →</a><a class="questionnaire-combine" href={combine}>Voeg toe aan een combinatie</a></>}
+        <a class="questionnaire-contact" href="/contact">Twijfel je of dit past? We denken met je mee.</a>
+      </div>
+    </div>
+  </section>
+</MainLayout>}

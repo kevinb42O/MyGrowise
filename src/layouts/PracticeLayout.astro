@@ -12,8 +12,9 @@ const initials = (user?.name || '?').split(/\s+/).map((part) => part[0]).join(''
 const nav = [
   { label: 'Vandaag', href: '/praktijk', icon: 'overview', exact: true },
   { label: 'Mijn agenda', href: '/praktijk/agenda', icon: 'calendar' },
-  { label: 'Boekingsaanvragen', href: '/praktijk/boekingen', icon: 'messages' },
+  { label: 'Afspraken', href: '/praktijk/boekingen', icon: 'messages' },
   ...(hasPermission(user, 'client_records.read') ? [{ label: 'Cliëntendossiers', href: '/admin/clienten', icon: 'customers' }] : []),
+  ...(hasPermission(user, 'practice.manage') ? [{label:'Afspraaktypes',href:'/admin/afspraaktypes',icon:'calendar'}, {label:'Boekingslinks',href:'/admin/boekingslinks',icon:'external'}, {label:'Therapeuten',href:'/admin/therapeuten',icon:'professionals'}] : []),
   { label: 'Berichten', href: '/praktijk/berichten', icon: 'messages' },
   { label: 'Beschikbaarheid', href: '/praktijk/beschikbaarheid', icon: 'clock' },
   { label: 'Mijn profiel', href: '/praktijk/profiel', icon: 'professionals' },

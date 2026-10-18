@@ -1,0 +1,9 @@
+---
+import PracticeLayout from '../../../layouts/PracticeLayout.astro';
+import AppointmentDetail from '../../../components/practice/AppointmentDetail.astro';
+import {loadAppointmentPage} from '../../../lib/appointmentDetail';
+import '../../../styles/practice-management.css';
+Astro.response.headers.set('Cache-Control','private, no-store');
+const data=await loadAppointmentPage(Astro);if(data instanceof Response)return data;
+---
+<PracticeLayout title="Afspraakdetails"><AppointmentDetail data={data}/></PracticeLayout>

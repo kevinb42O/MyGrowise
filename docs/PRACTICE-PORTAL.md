@@ -1,52 +1,25 @@
 # MyGrowise praktijkportaal
 
-Status: Supabase-backed boekingen, beschikbaarheid, professionalprofielen, accounts, voorkeuren en auditdata. Bestaande lokale identiteiten zijn zonder e-mailverzending geïmporteerd en gebruiken de wachtwoordherstelroute voor eerste toegang.
-Routes: `/praktijk`, `/praktijk/agenda`, `/praktijk/boekingen`, `/praktijk/beschikbaarheid`.
+**Stand: 18 oktober 2026, `b2cfabd` plus de releasewijzigingen.** Het [oorspronkelijke uitvoeringsplan](CLIENTENDOSSIERS-AFSPRAKEN-PLAN.md) en de [implementatiebeschrijving](PRACTICE-IMPLEMENTATION.md) bewaren de details; de onderstaande werking vervangt de oudere aanvraag-/goedkeuringsflow.
 
-## Accounts en rollen
+## Toegang
 
-| Account | Rollen | Startomgeving |
-|---|---|---|
-| `virginie@mygrowise.com` | `super_admin`, `practitioner` | `/admin` |
-| `margot@mygrowise.com` | `practitioner` | `/praktijk` |
-| `amy@mygrowise.com` | `practitioner` | `/praktijk` |
+Een gekoppelde practitioner gebruikt `/praktijk`; praktijkbeheer heeft afzonderlijke `practice.manage`-rechten. Beheer van therapeuten/afspraaktypes geeft geen automatische toegang tot behandelnotities. Dossiertoegang wordt per rol en toewijzing gecontroleerd. Alleen Virginies gekoppelde eigen praktijkidentiteit gebruikt de Itransform-agendascope; de algemene MyGrowise-adminagenda sluit die uit.
 
-Virginie kan vanuit organisatiebeheer naar haar eigen praktijk schakelen. Een professional heeft nooit toegang tot `/admin` of `/api/admin/*`; server-side middleware dwingt die grens af.
+## Boeken en dossiers
 
-## Datagrenzen
+Een bevestigd klantaccount kiest therapeut/afspraaktype, een beschikbaar tijdstip en controleert de noodzakelijke persoonsgegevens. De boeking wordt onmiddellijk **confirmed**, met automatische dossierkoppeling, tijd-/aanbodsnapshot en een duurzame bevestigingsmailtaak. De therapeut hoeft nieuwe boekingen niet eerst te aanvaarden. Historische pending-aanvragen zijn niet massaal bevestigd en blijven afzonderlijk opvolgbaar.
 
-- Elke professional werkt via één `practitioner_id`.
-- Beschikbaarheid, uitzonderingen en boekingen worden op iedere query en mutatie aan dat eigen ID gebonden.
-- Een gegokte boekings-ID van een andere professional geeft geen toegang.
-- De publieke API geeft alleen vrije start- en eindtijden terug. Geen cliënten, bezette periodes, privénotities of reden van blokkade.
-- Boekingen slaan alleen operationele gegevens op: naam, e-mail, tijdslot, professional en status. Geen intake- of sessie-inhoud.
+De slotberekening combineert rooster, uitzonderingen, volledige afspraakduur, bestaande boekingen en blokken. Dezelfde dag in Europe/Brussels is uitgesloten; de ingestelde noticeperiode vormt een aanvullende grens. De database beschermt tegen overlap en dubbele inzending. Handmatig plannen en verplaatsen gebruiken hetzelfde model; verplaatsen bewaart de oorspronkelijke duur.
 
-## Beschikbaarheid
+Agenda en dossier openen hetzelfde afspraakdetail: status, planningshistoriek, verplaatsen/annuleren, uitgevoerd/no-show en maillog/herverzending. De dossierhistoriek heeft paginering; sessie-export bevat alleen uitgevoerde sessies. Notities en correcties blijven afgeschermd en horen niet in commerciële overzichten of gewone mail.
 
-1. Iedere professional beheert een eigen wekelijks basisrooster.
-2. Een los tijdsbereik kan als onbeschikbaar worden geblokkeerd, bijvoorbeeld vakantie of opleiding.
-3. Publieke slots zijn alleen zichtbaar wanneer ze binnen het basisrooster vallen, minstens 24 uur in de toekomst liggen, niet overlappen met een blokkade en niet overlappen met een `pending` of `confirmed` boeking.
-4. Tijden worden voor gebruikers getoond in `Europe/Brussels`.
+## MijnDiAd en mail
 
-## Boekingstatus
+De 262 MijnDiAd-momenten zijn alleen-lezen geïmporteerd. Agenda en beschikbaarheid delen een cache van maximaal 300 seconden; toekomstig boeken/verplaatsen vraagt maximaal 60 seconden oude broncontrole. Bij een bronstoring blijft de opgeslagen agenda leesbaar, maar worden onzekere tijden niet als vrij aangeboden. Er is geen permanente importcron of keepalive. Zie [de koppeling](MIJNDIAD-AGENDA-IMPORT.md).
 
-```text
-publiek vrij slot → pending → confirmed
-                         └→ declined
-confirmed → cancelled | completed | no_show
-```
+Bevestiging, verplaatsing en annulering proberen direct mail te versturen. De dagelijkse Vercel Free-worker en expliciet beheerherstel zijn vangnetten. Herinneringen en weekoverzichten zijn nog niet beschikbaar. Werkende mailcode en geverifieerde lokale configuratie bewijzen geen externe inboxaflevering.
 
-- De server controleert bij een publieke aanvraag opnieuw of het slot nog vrij is.
-- Een `pending` aanvraag reserveert het slot meteen.
-- Alleen de gekoppelde professional kan een eigen `pending` aanvraag accepteren of weigeren.
-- De statusactie en beschikbaarheidswijzigingen schrijven naar `security_audit_log`.
+## Open voor dagelijks gebruik
 
-## Volgende productieblokken
-
-1. Superadmin-uitnodigingen in plaats van vooraf geconfigureerde accounts.
-2. Individueel wachtwoord wijzigen en sessies intrekken.
-3. Transactionele e-mail voor aanvraag, acceptatie, weigering en herinnering.
-4. Persoonlijke agenda-uitzonderingen met tijdzoneconversie die expliciet in de browser wordt vastgelegd.
-5. Eventuele externe agenda-integratie na toestemming en providerselectie.
-6. Configureer de productie-SMTP-, site- en herstel-URL's in Supabase Auth voordat er echte herstel- of bevestigingsmails worden verstuurd.
-7. Productie-hosting met back-up, monitoring en juridisch/privacyreview.
+Test met de eigenaar de beroepsgegevens, duur/roosters, uitnodiging, cliëntlogin, afspraak/dossier/mail/wijziging en rolgrenzen. Controleer gelijktijdig boeken via twee HTTP-sessies, zomer-/wintertijd, retentie, back-up/herstel en incidentopvolging in de doelomgeving. Zie [RELEASE-RUNBOOK.md](RELEASE-RUNBOOK.md).

@@ -1,0 +1,11 @@
+---
+import {getSupabaseAdmin} from '../../lib/supabase/server';
+import {publicCatalog} from '../../lib/catalog/server';
+import {money} from '../../lib/catalog/pricing';
+interface Props{productId:string}
+const {productId}=Astro.props;
+const {data,error}=await getSupabaseAdmin().from('module_recommendations').select('target_product_id').eq('module_product_id',productId).eq('visible',true).order('sort_order');
+const catalog=await publicCatalog();
+const items=error?[]:(data||[]).flatMap(r=>{const p=catalog.find(p=>p.id===r.target_product_id&&p.availability!=='paused');return p?[p]:[];});
+---
+<section class="module-section module-note"><div class="container"><span class="module-label">Aanvullend en optioneel</span><h2>Optionele verdieping</h2><p>Het volledige werkboek is het hoofdproduct. Aanvullende vragenlijsten, miniwerkboeken of audio koop je alleen als je daar zelf voor kiest.</p>{items.length?<div class="module-cards">{items.map(p=><article class="module-material"><h3>{p.title}</h3><p>{p.summary}</p>{p.priceCents!==null&&<p>{p.availability==='available'?'Prijs':'Geplande prijs'}: {money(p.priceCents)}</p>}<a href={`/${p.type==='questionnaire'?'vragenlijsten':p.type==='profile'?'profielen':'verdieping'}/${p.slug}`}>Bekijk verdieping →</a>{p.availability!=='available'&&<p class="module-status">In ontwikkeling</p>}</article>)}</div>:<p>Het aanvullende aanbod wordt nog voorbereid. Zodra het klaar is, vind je het hier.</p>}</div></section>

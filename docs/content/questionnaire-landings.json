@@ -1,0 +1,890 @@
+[
+  {
+    "sourceNumber": 1,
+    "slug": "hipic",
+    "instrument": "HiPIC",
+    "title": "HiPIC – Persoonlijkheidsprofiel Kind",
+    "summary": "Welke persoonlijkheidskenmerken typeren mijn kind? Met de HiPIC krijg je als ouder een genuanceerd beeld van de persoonlijkheidskenmerken van je kind.",
+    "ageLabel": "6–13 jaar",
+    "audience": "Kinderen en jongeren",
+    "category": "Persoonlijkheid & zelfbeeld",
+    "audienceGroups": [
+      "children",
+      "adolescents"
+    ],
+    "priceCents": 7900,
+    "landingContent": {
+      "schemaVersion": 1,
+      "question": "Welke persoonlijkheidskenmerken typeren mijn kind?",
+      "introduction": [
+        "Elk kind heeft een eigen persoonlijkheid. Sommige kinderen zijn spontaan en ondernemend, terwijl anderen eerder voorzichtig, gevoelig of terughoudend zijn. Ook in hun manier van samenwerken, omgaan met regels en reageren op nieuwe situaties kunnen kinderen sterk verschillen.",
+        "Met de HiPIC krijg je als ouder een genuanceerd beeld van de persoonlijkheidskenmerken van je kind."
+      ],
+      "measures": [
+        "Extraversie: hoe spontaan, sociaal en actief je kind doorgaans is.",
+        "Welwillendheid: hoe je kind omgaat met anderen, samenwerking en sociale interacties.",
+        "Consciëntieusheid: kenmerken zoals ordelijkheid, doorzettingsvermogen en taakgerichtheid.",
+        "Emotionele stabiliteit: hoe je kind doorgaans emotioneel reageert.",
+        "Openheid: nieuwsgierigheid, creativiteit en interesse in nieuwe ervaringen."
+      ],
+      "expectations": [
+        "Een ouder of andere geschikte informant vult een wetenschappelijk onderbouwde persoonlijkheidsvragenlijst online in.",
+        "Je ontvangt een persoonlijk verslag waarin de verschillende persoonlijkheidsdomeinen en hun onderliggende kenmerken worden toegelicht.",
+        "Zo krijg je meer inzicht in de unieke persoonlijkheid van je kind, zonder gedrag meteen als problematisch te beschouwen."
+      ],
+      "disclaimer": "Deze vragenlijst is bedoeld om persoonlijkheidskenmerken in kaart te brengen. Het is geen diagnostisch onderzoek en op basis van deze vragenlijst worden geen diagnoses gesteld.",
+      "respondentLabel": "Ouder of andere geschikte informant",
+      "formatLabel": "Online vragenlijst",
+      "reportLabel": "Persoonlijk verslag"
+    }
+  },
+  {
+    "sourceNumber": 2,
+    "slug": "piers-harris-3",
+    "instrument": "Piers-Harris 3",
+    "title": "Piers-Harris 3 – Zelfbeeldprofiel",
+    "summary": "Hoe kijkt mijn kind naar zichzelf? Met de Piers-Harris 3 krijg je inzicht in hoe je kind zichzelf ervaart en beoordeelt.",
+    "ageLabel": "8–17 jaar",
+    "audience": "Kinderen en jongeren",
+    "category": "Persoonlijkheid & zelfbeeld",
+    "audienceGroups": [
+      "children",
+      "adolescents"
+    ],
+    "priceCents": 5900,
+    "landingContent": {
+      "schemaVersion": 1,
+      "question": "Hoe kijkt mijn kind naar zichzelf?",
+      "introduction": [
+        "Het beeld dat kinderen en jongeren van zichzelf hebben, kan sterk verschillen. Sommige jongeren voelen zich zeker over hun mogelijkheden, terwijl anderen twijfelen aan zichzelf of zich minder goed voelen in sociale situaties.",
+        "Met de Piers-Harris 3 krijg je inzicht in hoe je kind zichzelf ervaart en beoordeelt."
+      ],
+      "measures": [
+        "Het algemene zelfbeeld en de zelfwaardering.",
+        "Hoe je kind het eigen gedrag ervaart.",
+        "Ervaren intellectuele en schoolse mogelijkheden.",
+        "Het beeld van het eigen uiterlijk.",
+        "Gevoelens van angst en onzekerheid.",
+        "Sociale acceptatie en het gevoel erbij te horen.",
+        "Geluk en tevredenheid met zichzelf."
+      ],
+      "expectations": [
+        "Je kind vult een wetenschappelijk onderbouwde zelfbeeldvragenlijst online in.",
+        "Je ontvangt een persoonlijk verslag waarin het algemene zelfbeeld en de verschillende deelgebieden worden toegelicht.",
+        "Zo krijg je meer inzicht in hoe je kind zichzelf ziet en op welke gebieden mogelijk onzekerheden of juist positieve zelfbelevingen aanwezig zijn."
+      ],
+      "disclaimer": "Deze vragenlijst brengt het zelfbeeld in kaart. Het is geen diagnostisch onderzoek en op basis van deze vragenlijst worden geen diagnoses gesteld.",
+      "respondentLabel": "Kind of jongere zelf",
+      "formatLabel": "Online vragenlijst",
+      "reportLabel": "Persoonlijk verslag"
+    }
+  },
+  {
+    "sourceNumber": 3,
+    "slug": "neo-pi-3",
+    "instrument": "NEO-PI-3",
+    "title": "NEO-PI-3 – Uitgebreid Persoonlijkheidsprofiel",
+    "summary": "Wat maakt mij tot wie ik ben? Met de NEO-PI-3 krijg je een uitgebreid en genuanceerd beeld van je persoonlijkheid.",
+    "ageLabel": "Vanaf 16 jaar",
+    "audience": "Jongeren en volwassenen",
+    "category": "Persoonlijkheid & zelfbeeld",
+    "audienceGroups": [
+      "adolescents",
+      "adults"
+    ],
+    "priceCents": 9900,
+    "landingContent": {
+      "schemaVersion": 1,
+      "question": "Wat maakt mij tot wie ik ben?",
+      "introduction": [
+        "Waarom ben je graag onder mensen, terwijl iemand anders meer behoefte heeft aan rust? Waarom zoek je nieuwe ervaringen op of hecht je juist veel belang aan structuur en voorspelbaarheid?",
+        "Iedereen heeft een unieke combinatie van persoonlijkheidskenmerken die samenhangen met hoe iemand denkt, voelt en zich doorgaans gedraagt.",
+        "Met de NEO-PI-3 krijg je een uitgebreid en genuanceerd beeld van je persoonlijkheid."
+      ],
+      "measures": [
+        "Neuroticisme: je gevoeligheid voor negatieve emoties en emotionele spanning.",
+        "Extraversie: je behoefte aan sociale interactie, activiteit en stimulatie.",
+        "Openheid: je nieuwsgierigheid, verbeelding en openheid voor nieuwe ervaringen.",
+        "Altruïsme: je houding tegenover anderen, samenwerking en vertrouwen.",
+        "Consciëntieusheid: je mate van ordelijkheid, doelgerichtheid en zelfdiscipline.",
+        "De onderliggende persoonlijkheidsfacetten binnen deze vijf domeinen."
+      ],
+      "expectations": [
+        "Je vult een uitgebreide, wetenschappelijk onderbouwde persoonlijkheidsvragenlijst online in.",
+        "Je ontvangt een persoonlijk verslag waarin je scores op de vijf persoonlijkheidsdomeinen en de onderliggende facetten worden toegelicht.",
+        "Dit profiel helpt je om je eigen persoonlijkheidskenmerken beter te begrijpen en zicht te krijgen op individuele sterktes en aandachtspunten."
+      ],
+      "disclaimer": "Deze vragenlijst beschrijft persoonlijkheidskenmerken. Het is geen diagnostisch onderzoek en op basis van deze vragenlijst worden geen diagnoses gesteld.",
+      "respondentLabel": "Je vult zelf in",
+      "formatLabel": "Online vragenlijst",
+      "reportLabel": "Uitgebreid persoonlijk verslag"
+    }
+  },
+  {
+    "sourceNumber": 4,
+    "slug": "tscyc",
+    "instrument": "TSCYC",
+    "title": "TSCYC – Traumagerelateerde Klachten bij Jonge Kinderen",
+    "summary": "Heeft een ingrijpende ervaring invloed op mijn kind? Met de TSCYC worden mogelijke traumagerelateerde symptomen bij jonge kinderen in kaart gebracht.",
+    "ageLabel": "3–12 jaar",
+    "audience": "Kinderen",
+    "category": "Ingrijpende ervaringen",
+    "audienceGroups": [
+      "children",
+      "adolescents"
+    ],
+    "priceCents": 6900,
+    "landingContent": {
+      "schemaVersion": 1,
+      "question": "Heeft een ingrijpende ervaring invloed op mijn kind?",
+      "introduction": [
+        "Kinderen kunnen op verschillende manieren reageren op ingrijpende of belastende gebeurtenissen. Soms uit zich dat in angst, spanning, slaapproblemen, teruggetrokken gedrag of veranderingen in emoties en gedrag.",
+        "Jonge kinderen kunnen niet altijd goed verwoorden wat ze voelen. Daarom kan informatie van ouders of verzorgers belangrijk zijn.",
+        "Met de TSCYC worden mogelijke traumagerelateerde symptomen bij jonge kinderen in kaart gebracht."
+      ],
+      "measures": [
+        "Mogelijke posttraumatische stresssymptomen.",
+        "Herbelevings- en vermijdingsreacties.",
+        "Verhoogde spanning en prikkelbaarheid.",
+        "Angstige en depressieve symptomen.",
+        "Dissociatieve symptomen.",
+        "Andere emotionele en gedragsmatige klachten die binnen de vragenlijst worden onderzocht."
+      ],
+      "expectations": [
+        "Een ouder of verzorger vult een wetenschappelijk onderbouwde vragenlijst online in over het gedrag en de mogelijke klachten van het kind.",
+        "Je ontvangt een persoonlijk verslag waarin de gerapporteerde symptomen worden toegelicht.",
+        "De resultaten kunnen helpen om mogelijke emotionele belasting beter te herkennen en te begrijpen."
+      ],
+      "disclaimer": "Deze vragenlijst is bedoeld voor screening van mogelijke traumagerelateerde symptomen. Het is geen diagnostisch onderzoek en op basis van deze vragenlijst worden geen diagnoses gesteld.",
+      "respondentLabel": "Ouder of verzorger",
+      "formatLabel": "Online oudervragenlijst",
+      "reportLabel": "Persoonlijk verslag"
+    }
+  },
+  {
+    "sourceNumber": 5,
+    "slug": "tscc",
+    "instrument": "TSCC",
+    "title": "TSCC – Traumagerelateerde Klachten bij Kinderen en Jongeren",
+    "summary": "Welke invloed kunnen ingrijpende ervaringen hebben op mijn kind? Met de TSCC wordt onderzocht welke traumagerelateerde en andere psychische symptomen een kind of jongere zelf rapporteert.",
+    "ageLabel": "8–16 jaar",
+    "audience": "Kinderen en jongeren",
+    "category": "Ingrijpende ervaringen",
+    "audienceGroups": [
+      "children",
+      "adolescents"
+    ],
+    "priceCents": 6900,
+    "landingContent": {
+      "schemaVersion": 1,
+      "question": "Welke invloed kunnen ingrijpende ervaringen hebben op mijn kind?",
+      "introduction": [
+        "Sommige kinderen en jongeren ervaren na belastende gebeurtenissen gevoelens van angst, somberheid, spanning of ongewenste herinneringen. Niet altijd zijn deze klachten zichtbaar voor de omgeving.",
+        "Met de TSCC wordt onderzocht welke traumagerelateerde en andere psychische symptomen een kind of jongere zelf rapporteert."
+      ],
+      "measures": [
+        "Angstklachten.",
+        "Depressieve symptomen.",
+        "Posttraumatische stresssymptomen.",
+        "Dissociatieve ervaringen.",
+        "Boosheid en andere emotionele reacties.",
+        "Seksuele zorgen, voor zover opgenomen in de betreffende versie."
+      ],
+      "expectations": [
+        "De jongere vult een wetenschappelijk onderbouwde zelfrapportagevragenlijst online in.",
+        "Je ontvangt een persoonlijk verslag waarin de verschillende klachtgebieden worden toegelicht.",
+        "Dit kan helpen om meer zicht te krijgen op de emotionele beleving van de jongere en mogelijke signalen van psychische belasting."
+      ],
+      "disclaimer": "Deze vragenlijst is bedoeld voor screening van psychische en traumagerelateerde symptomen. Het is geen diagnostisch onderzoek en op basis van deze vragenlijst worden geen diagnoses gesteld.",
+      "respondentLabel": "Kind of jongere zelf",
+      "formatLabel": "Online vragenlijst",
+      "reportLabel": "Persoonlijk verslag"
+    }
+  },
+  {
+    "sourceNumber": 6,
+    "slug": "tsi-tsi-2",
+    "instrument": "TSI-2",
+    "title": "TSI-2 – Traumagerelateerde Symptomen bij Volwassenen",
+    "summary": "Waarom blijven bepaalde ervaringen mij beïnvloeden? Met de TSI-2 worden verschillende symptomen onderzocht die kunnen voorkomen bij mensen met traumagerelateerde klachten.",
+    "ageLabel": "Vanaf 18 jaar",
+    "audience": "Volwassenen",
+    "category": "Ingrijpende ervaringen",
+    "audienceGroups": [
+      "adults"
+    ],
+    "priceCents": 6900,
+    "landingContent": {
+      "schemaVersion": 1,
+      "question": "Waarom blijven bepaalde ervaringen mij beïnvloeden?",
+      "introduction": [
+        "Ingrijpende ervaringen kunnen samengaan met uiteenlopende psychische reacties, zoals verhoogde spanning, ongewenste herinneringen, vermijding of moeilijkheden met emoties.",
+        "Met de TSI-2 worden verschillende symptomen onderzocht die kunnen voorkomen bij mensen met traumagerelateerde klachten."
+      ],
+      "measures": [
+        "Mogelijke posttraumatische stresssymptomen.",
+        "Angstige en depressieve klachten.",
+        "Intrusieve ervaringen en vermijdingsreacties.",
+        "Dissociatieve symptomen.",
+        "Problemen met emotionele regulatie.",
+        "Andere psychische en gedragsmatige symptomen die binnen de vragenlijst worden onderzocht."
+      ],
+      "expectations": [
+        "Je vult een wetenschappelijk onderbouwde vragenlijst online in.",
+        "Je ontvangt een persoonlijk verslag waarin de verschillende symptoomgebieden worden beschreven en toegelicht.",
+        "De resultaten kunnen helpen om meer inzicht te krijgen in mogelijke traumagerelateerde klachten en andere vormen van psychische belasting."
+      ],
+      "disclaimer": "Deze vragenlijst is bedoeld voor screening en zelfinzicht. Het is geen diagnostisch onderzoek en op basis van deze vragenlijst worden geen diagnoses gesteld, waaronder PTSS.",
+      "respondentLabel": "Je vult zelf in",
+      "formatLabel": "Online vragenlijst",
+      "reportLabel": "Persoonlijk verslag"
+    }
+  },
+  {
+    "sourceNumber": 7,
+    "slug": "feel-kj",
+    "instrument": "FEEL-KJ",
+    "title": "FEEL-KJ – Emotieregulatie bij Kinderen en Jongeren",
+    "summary": "Hoe gaat mijn kind om met moeilijke emoties? Met de FEEL-KJ krijg je inzicht in de strategieën die je kind gebruikt bij negatieve emoties.",
+    "ageLabel": "8–18 jaar",
+    "audience": "Kinderen en jongeren",
+    "category": "Emoties & coping",
+    "audienceGroups": [
+      "children",
+      "adolescents",
+      "adults"
+    ],
+    "priceCents": 6900,
+    "landingContent": {
+      "schemaVersion": 1,
+      "question": "Hoe gaat mijn kind om met moeilijke emoties?",
+      "introduction": [
+        "Boosheid, angst en verdriet horen bij het leven. Toch verschilt het sterk hoe kinderen en jongeren met deze gevoelens omgaan.",
+        "Sommige kinderen zoeken steun, proberen een oplossing te vinden of leiden zichzelf af. Anderen blijven piekeren, trekken zich terug of vinden het moeilijk om hun gevoelens te reguleren.",
+        "Met de FEEL-KJ krijg je inzicht in de strategieën die je kind gebruikt bij negatieve emoties."
+      ],
+      "measures": [
+        "Hoe je kind omgaat met boosheid.",
+        "Welke strategieën worden gebruikt bij angst.",
+        "Hoe je kind reageert op verdriet.",
+        "Adaptieve emotieregulatiestrategieën.",
+        "Maladaptieve emotieregulatiestrategieën.",
+        "Externe emotieregulatiestrategieën, zoals steun zoeken."
+      ],
+      "expectations": [
+        "Je kind vult een wetenschappelijk onderbouwde vragenlijst online in.",
+        "Je ontvangt een persoonlijk verslag waarin de verschillende emotieregulatiestrategieën worden toegelicht.",
+        "Zo krijg je meer inzicht in hoe je kind met negatieve emoties omgaat en welke strategieën vaker of minder vaak worden gebruikt."
+      ],
+      "disclaimer": "Deze vragenlijst brengt emotieregulatiestrategieën in kaart. Het is geen diagnostisch onderzoek en op basis van deze vragenlijst worden geen diagnoses gesteld.",
+      "respondentLabel": "Kind of jongere zelf",
+      "formatLabel": "Online vragenlijst",
+      "reportLabel": "Persoonlijk verslag"
+    }
+  },
+  {
+    "sourceNumber": 8,
+    "slug": "feel-e",
+    "instrument": "FEEL-E",
+    "title": "FEEL-E – Emotieregulatie bij Volwassenen",
+    "summary": "Hoe ga ik om met boosheid, angst en verdriet? Met de FEEL-E krijg je inzicht in je gebruikelijke emotieregulatiestrategieën.",
+    "ageLabel": "Vanaf 18 jaar",
+    "audience": "Volwassenen",
+    "category": "Emoties & coping",
+    "audienceGroups": [
+      "adults"
+    ],
+    "priceCents": 6900,
+    "landingContent": {
+      "schemaVersion": 1,
+      "question": "Hoe ga ik om met boosheid, angst en verdriet?",
+      "introduction": [
+        "Iedereen ervaart negatieve emoties, maar niet iedereen gaat er op dezelfde manier mee om.",
+        "Misschien probeer je problemen actief op te lossen, zoek je steun bij anderen of probeer je situaties anders te bekijken. Misschien merk je juist dat je blijft piekeren, emoties onderdrukt of bepaalde gevoelens moeilijk kunt loslaten.",
+        "Met de FEEL-E krijg je inzicht in je gebruikelijke emotieregulatiestrategieën."
+      ],
+      "measures": [
+        "Strategieën die je gebruikt bij boosheid.",
+        "Strategieën die je gebruikt bij angst.",
+        "Strategieën die je gebruikt bij verdriet.",
+        "Adaptieve emotieregulatiestrategieën.",
+        "Maladaptieve emotieregulatiestrategieën.",
+        "Verschillen in je aanpak van verschillende negatieve emoties."
+      ],
+      "expectations": [
+        "Je vult een wetenschappelijk onderbouwde vragenlijst online in.",
+        "Je ontvangt een persoonlijk verslag waarin je gebruikelijke emotieregulatiestrategieën worden toegelicht.",
+        "Zo krijg je meer inzicht in de manieren waarop je met negatieve emoties omgaat."
+      ],
+      "disclaimer": "Deze vragenlijst beschrijft emotieregulatiestrategieën. Het is geen diagnostisch onderzoek en op basis van deze vragenlijst worden geen diagnoses gesteld.",
+      "respondentLabel": "Je vult zelf in",
+      "formatLabel": "Online vragenlijst",
+      "reportLabel": "Persoonlijk verslag"
+    }
+  },
+  {
+    "sourceNumber": 9,
+    "slug": "conners",
+    "instrument": "Conners",
+    "title": "Conners – Aandacht, Hyperactiviteit en Gedrag",
+    "summary": "Zijn er signalen van aandachts- of hyperactiviteitsproblemen? Met de Conners-vragenlijst worden verschillende gedragskenmerken en mogelijke aandachtsproblemen in kaart gebracht.",
+    "ageLabel": "6–18 jaar, afhankelijk van de versie",
+    "audience": "Kinderen en jongeren",
+    "category": "Aandacht & executieve functies",
+    "audienceGroups": [
+      "children",
+      "adolescents",
+      "adults"
+    ],
+    "priceCents": 6900,
+    "landingContent": {
+      "schemaVersion": 1,
+      "question": "Zijn er signalen van aandachts- of hyperactiviteitsproblemen?",
+      "introduction": [
+        "Sommige kinderen hebben moeite om hun aandacht vast te houden, reageren impulsief of zijn voortdurend in beweging. Andere kinderen zijn eerder dromerig, snel afgeleid of hebben moeite om taken af te werken.",
+        "Met de Conners-vragenlijst worden verschillende gedragskenmerken en mogelijke aandachtsproblemen in kaart gebracht."
+      ],
+      "measures": [
+        "Aandachtsproblemen en onoplettendheid.",
+        "Hyperactiviteit en impulsiviteit.",
+        "Problemen met zelfregulatie.",
+        "Bepaalde gedragsmatige en emotionele problemen.",
+        "Mogelijke moeilijkheden in het dagelijks functioneren, afhankelijk van de gebruikte versie."
+      ],
+      "expectations": [
+        "Een ouder, leerkracht en/of jongere vult een wetenschappelijk onderbouwde vragenlijst online in, afhankelijk van de gekozen versie.",
+        "Je ontvangt een persoonlijk verslag waarin de gerapporteerde kenmerken en mogelijke aandachtspunten worden toegelicht."
+      ],
+      "disclaimer": "Deze vragenlijst is bedoeld voor screening van aandachts- en gedragskenmerken. Het is geen diagnostisch onderzoek en op basis van deze vragenlijst worden geen diagnoses gesteld, waaronder ADHD.",
+      "respondentLabel": "Ouder, leerkracht en/of jongere, afhankelijk van de versie",
+      "formatLabel": "Online vragenlijst",
+      "reportLabel": "Persoonlijk verslag"
+    }
+  },
+  {
+    "sourceNumber": 10,
+    "slug": "brief-2",
+    "instrument": "BRIEF-2",
+    "title": "BRIEF-2 – Executieve Functies bij Kinderen en Jongeren",
+    "summary": "Waarom heeft mijn kind moeite met plannen, organiseren of zichzelf sturen? Met de BRIEF-2 worden executieve functies in het dagelijks leven in kaart gebracht.",
+    "ageLabel": "5–18 jaar, afhankelijk van de versie",
+    "audience": "Kinderen en jongeren",
+    "category": "Aandacht & executieve functies",
+    "audienceGroups": [
+      "children",
+      "adolescents",
+      "adults"
+    ],
+    "priceCents": 6900,
+    "landingContent": {
+      "schemaVersion": 1,
+      "question": "Waarom heeft mijn kind moeite met plannen, organiseren of zichzelf sturen?",
+      "introduction": [
+        "Sommige kinderen weten goed wat ze moeten doen, maar vinden het moeilijk om eraan te beginnen. Anderen vergeten instructies, verliezen het overzicht of reageren snel en impulsief.",
+        "Deze vaardigheden hangen samen met de executieve functies: processen die helpen om gedrag, gedachten en emoties doelgericht te sturen.",
+        "Met de BRIEF-2 worden executieve functies in het dagelijks leven in kaart gebracht."
+      ],
+      "measures": [
+        "Inhibitie en impulscontrole.",
+        "Flexibiliteit en omgaan met veranderingen.",
+        "Emotionele controle.",
+        "Initiatief nemen.",
+        "Werkgeheugen.",
+        "Plannen en organiseren.",
+        "Taakmonitoring en zelfcontrole.",
+        "Organisatie van materialen."
+      ],
+      "expectations": [
+        "Een ouder, leerkracht en/of jongere vult een wetenschappelijk onderbouwde vragenlijst online in, afhankelijk van de gekozen versie.",
+        "Je ontvangt een persoonlijk verslag waarin de ervaren executieve moeilijkheden en aandachtspunten worden toegelicht."
+      ],
+      "disclaimer": "Deze vragenlijst brengt het dagelijks executief functioneren in kaart. Het is geen diagnostisch onderzoek en op basis van deze vragenlijst worden geen diagnoses gesteld.",
+      "respondentLabel": "Ouder, leerkracht en/of jongere, afhankelijk van de versie",
+      "formatLabel": "Online vragenlijst",
+      "reportLabel": "Persoonlijk verslag"
+    }
+  },
+  {
+    "sourceNumber": 11,
+    "slug": "brief-a",
+    "instrument": "BRIEF-A",
+    "title": "BRIEF-A – Executieve Functies bij Volwassenen",
+    "summary": "Waarom lukt het mij soms niet om overzicht en structuur te houden? Met de BRIEF-A krijg je inzicht in hoe je je executieve functies in het dagelijks leven ervaart.",
+    "ageLabel": "18–65 jaar",
+    "audience": "Volwassenen",
+    "category": "Aandacht & executieve functies",
+    "audienceGroups": [
+      "adults"
+    ],
+    "priceCents": 6900,
+    "landingContent": {
+      "schemaVersion": 1,
+      "question": "Waarom lukt het mij soms niet om overzicht en structuur te houden?",
+      "introduction": [
+        "Misschien heb je moeite om taken op te starten, vergeet je afspraken, raak je snel het overzicht kwijt of vind je het lastig om flexibel om te gaan met veranderingen.",
+        "Met de BRIEF-A krijg je inzicht in hoe je je executieve functies in het dagelijks leven ervaart."
+      ],
+      "measures": [
+        "Inhibitie en impulscontrole.",
+        "Flexibiliteit.",
+        "Emotionele controle.",
+        "Zelfmonitoring.",
+        "Initiatief nemen.",
+        "Werkgeheugen.",
+        "Plannen en organiseren.",
+        "Taakmonitoring.",
+        "Organisatie van materialen."
+      ],
+      "expectations": [
+        "Je vult een wetenschappelijk onderbouwde vragenlijst online in.",
+        "Je ontvangt een persoonlijk verslag waarin je ervaren executieve functioneren en mogelijke aandachtspunten worden toegelicht.",
+        "Dit kan helpen om beter te begrijpen op welke gebieden je in het dagelijks leven moeilijkheden ervaart."
+      ],
+      "disclaimer": "Deze vragenlijst is bedoeld voor screening van executieve moeilijkheden. Het is geen diagnostisch onderzoek en op basis van deze vragenlijst worden geen diagnoses gesteld, waaronder ADHD of autisme.",
+      "respondentLabel": "Je vult zelf in",
+      "formatLabel": "Online vragenlijst",
+      "reportLabel": "Persoonlijk verslag"
+    }
+  },
+  {
+    "sourceNumber": 12,
+    "slug": "srs-2",
+    "instrument": "SRS-2",
+    "title": "SRS-2 – Sociale Communicatie en Interactie",
+    "summary": "Hoe verloopt de sociale communicatie van mijn kind? Met de SRS-2 worden kenmerken van sociale communicatie, sociale interactie en bepaalde gedragspatronen in kaart gebracht.",
+    "ageLabel": "2,5–18 jaar, afhankelijk van de versie",
+    "audience": "Kinderen en jongeren",
+    "category": "Sociale communicatie & prikkelverwerking",
+    "audienceGroups": [
+      "children",
+      "adolescents",
+      "adults"
+    ],
+    "priceCents": 6900,
+    "landingContent": {
+      "schemaVersion": 1,
+      "question": "Hoe verloopt de sociale communicatie van mijn kind?",
+      "introduction": [
+        "Sommige kinderen vinden het moeilijk om sociale signalen te begrijpen, gesprekken aan te gaan of soepel om te gaan met sociale situaties.",
+        "Met de SRS-2 worden kenmerken van sociale communicatie, sociale interactie en bepaalde gedragspatronen in kaart gebracht."
+      ],
+      "measures": [
+        "Sociale opmerkzaamheid.",
+        "Sociale cognitie.",
+        "Sociale communicatie.",
+        "Sociale motivatie.",
+        "Beperkte interesses en repetitieve gedragspatronen.",
+        "De mate waarin autismespectrumgerelateerde kenmerken worden gerapporteerd."
+      ],
+      "expectations": [
+        "Een ouder, leerkracht of andere geschikte informant vult een wetenschappelijk onderbouwde vragenlijst online in.",
+        "Je ontvangt een persoonlijk verslag waarin de gerapporteerde sociale kenmerken en mogelijke aandachtspunten worden toegelicht."
+      ],
+      "disclaimer": "Deze vragenlijst is bedoeld voor screening van sociale communicatie en autismespectrumgerelateerde kenmerken. Het is geen diagnostisch onderzoek en op basis van deze vragenlijst worden geen diagnoses gesteld, waaronder autisme.",
+      "respondentLabel": "Ouder, leerkracht of andere geschikte informant",
+      "formatLabel": "Online vragenlijst",
+      "reportLabel": "Persoonlijk verslag"
+    }
+  },
+  {
+    "sourceNumber": 13,
+    "slug": "srs-a",
+    "instrument": "SRS-A",
+    "title": "SRS-A – Sociale Communicatie bij Volwassenen",
+    "summary": "Waarom verlopen sociale situaties soms anders dan verwacht? Met de SRS-A worden kenmerken van sociale communicatie en interactie bij volwassenen onderzocht.",
+    "ageLabel": "Vanaf 18 jaar",
+    "audience": "Volwassenen",
+    "category": "Sociale communicatie & prikkelverwerking",
+    "audienceGroups": [
+      "adults"
+    ],
+    "priceCents": 6900,
+    "landingContent": {
+      "schemaVersion": 1,
+      "question": "Waarom verlopen sociale situaties soms anders dan verwacht?",
+      "introduction": [
+        "Misschien vind je het moeilijk om sociale signalen te interpreteren, gesprekken spontaan aan te gaan of je aan te passen aan bepaalde sociale situaties.",
+        "Met de SRS-A worden kenmerken van sociale communicatie en interactie bij volwassenen onderzocht."
+      ],
+      "measures": [
+        "Sociale opmerkzaamheid.",
+        "Sociale cognitie.",
+        "Sociale communicatie.",
+        "Sociale motivatie.",
+        "Beperkte interesses en repetitieve gedragspatronen.",
+        "Autismespectrumgerelateerde sociale kenmerken."
+      ],
+      "expectations": [
+        "Je vult een wetenschappelijk onderbouwde vragenlijst online in, volgens de beschikbare zelfrapportage- of informantenversie.",
+        "Je ontvangt een persoonlijk verslag waarin de gerapporteerde kenmerken en mogelijke aandachtspunten worden toegelicht."
+      ],
+      "disclaimer": "Deze vragenlijst is bedoeld voor screening van autismespectrumgerelateerde kenmerken. Het is geen diagnostisch onderzoek en op basis van deze vragenlijst worden geen diagnoses gesteld, waaronder autisme.",
+      "respondentLabel": "Zelfrapportage of informant, afhankelijk van de versie",
+      "formatLabel": "Online vragenlijst",
+      "reportLabel": "Persoonlijk verslag"
+    }
+  },
+  {
+    "sourceNumber": 14,
+    "slug": "spm-2",
+    "instrument": "SPM-2",
+    "title": "SPM-2 – Prikkelverwerkingsprofiel",
+    "summary": "Waarom ervaar ik bepaalde prikkels zo sterk of juist nauwelijks? Met de SPM-2 krijg je inzicht in verschillende aspecten van sensorische informatieverwerking.",
+    "ageLabel": "Leeftijd afhankelijk van de gebruikte versie",
+    "audience": "Kinderen, jongeren en volwassenen",
+    "category": "Sociale communicatie & prikkelverwerking",
+    "audienceGroups": [
+      "children",
+      "adolescents",
+      "adults"
+    ],
+    "priceCents": 6900,
+    "landingContent": {
+      "schemaVersion": 1,
+      "question": "Waarom ervaar ik bepaalde prikkels zo sterk of juist nauwelijks?",
+      "introduction": [
+        "Geluiden, licht, aanrakingen, beweging of drukte kunnen door mensen heel verschillend worden ervaren.",
+        "Sommige mensen reageren sterk op bepaalde prikkels, terwijl anderen ze minder opmerken of actief opzoeken.",
+        "Met de SPM-2 krijg je inzicht in verschillende aspecten van sensorische informatieverwerking."
+      ],
+      "measures": [
+        "Visuele prikkelverwerking.",
+        "Auditieve prikkelverwerking.",
+        "Tactiele prikkelverwerking.",
+        "Smaak- en geurverwerking.",
+        "Lichaamsbesef.",
+        "Evenwicht en beweging.",
+        "Praxis of motorische planning.",
+        "Sociale participatie.",
+        "Patronen van overresponsiviteit, onderresponsiviteit en prikkelzoekend gedrag."
+      ],
+      "expectations": [
+        "Je vult een wetenschappelijk onderbouwde vragenlijst online in, of een geschikte informant vult deze in, afhankelijk van de leeftijd en versie.",
+        "Je ontvangt een persoonlijk verslag waarin de verschillende aspecten van sensorische informatieverwerking worden toegelicht.",
+        "Zo krijg je meer inzicht in hoe je op verschillende soorten prikkels reageert."
+      ],
+      "disclaimer": "Deze vragenlijst brengt kenmerken van sensorische informatieverwerking in kaart. Het is geen diagnostisch onderzoek en op basis van deze vragenlijst worden geen diagnoses gesteld.",
+      "respondentLabel": "Zelf of een geschikte informant, afhankelijk van leeftijd en versie",
+      "formatLabel": "Online vragenlijst",
+      "reportLabel": "Persoonlijk verslag"
+    }
+  },
+  {
+    "sourceNumber": 15,
+    "slug": "cerq",
+    "instrument": "CERQ",
+    "title": "CERQ – Cognitieve Emotieregulatie",
+    "summary": "Wat gebeurt er in mijn gedachten wanneer ik iets moeilijks meemaak? Met de CERQ krijg je inzicht in de denkstrategieën die je gebruikt om met negatieve gebeurtenissen om te gaan.",
+    "ageLabel": "Vanaf 18 jaar",
+    "audience": "Volwassenen",
+    "category": "Emoties & coping",
+    "audienceGroups": [
+      "adults"
+    ],
+    "priceCents": 5900,
+    "landingContent": {
+      "schemaVersion": 1,
+      "question": "Wat gebeurt er in mijn gedachten wanneer ik iets moeilijks meemaak?",
+      "introduction": [
+        "Na een negatieve gebeurtenis blijven sommige mensen piekeren of geven ze zichzelf de schuld. Anderen proberen de situatie te accepteren, te relativeren of op een andere manier te bekijken.",
+        "Met de CERQ krijg je inzicht in de denkstrategieën die je gebruikt om met negatieve gebeurtenissen om te gaan."
+      ],
+      "measures": [
+        "Zelfverwijt.",
+        "Anderen de schuld geven.",
+        "Piekeren.",
+        "Catastroferen.",
+        "Accepteren.",
+        "Positief heroriënteren.",
+        "Heroriëntatie op planning.",
+        "Positief herwaarderen.",
+        "Relativeren."
+      ],
+      "expectations": [
+        "Je vult een wetenschappelijk onderbouwde vragenlijst online in.",
+        "Je ontvangt een persoonlijk verslag waarin de verschillende cognitieve emotieregulatiestrategieën worden toegelicht.",
+        "Zo krijg je inzicht in welke denkstrategieën je vaker gebruikt wanneer je met negatieve gebeurtenissen wordt geconfronteerd."
+      ],
+      "disclaimer": "Deze vragenlijst brengt cognitieve emotieregulatie in kaart. Het is geen diagnostisch onderzoek en op basis van deze vragenlijst worden geen diagnoses gesteld.",
+      "respondentLabel": "Je vult zelf in",
+      "formatLabel": "Online vragenlijst",
+      "reportLabel": "Persoonlijk verslag"
+    }
+  },
+  {
+    "sourceNumber": 16,
+    "slug": "ciss",
+    "instrument": "CISS",
+    "title": "CISS – Copingstijlen bij Stress",
+    "summary": "Hoe reageer ik wanneer ik onder stress sta? Met de CISS krijg je inzicht in je gebruikelijke copingstijl bij stressvolle situaties.",
+    "ageLabel": "Vanaf 18 jaar",
+    "audience": "Volwassenen",
+    "category": "Emoties & coping",
+    "audienceGroups": [
+      "adults"
+    ],
+    "priceCents": 5900,
+    "landingContent": {
+      "schemaVersion": 1,
+      "question": "Hoe reageer ik wanneer ik onder stress sta?",
+      "introduction": [
+        "Wanneer mensen met een stressvolle situatie worden geconfronteerd, reageren ze op verschillende manieren.",
+        "Sommigen proberen het probleem actief op te lossen. Anderen richten zich vooral op hun emoties of zoeken afleiding.",
+        "Met de CISS krijg je inzicht in je gebruikelijke copingstijl bij stressvolle situaties."
+      ],
+      "measures": [
+        "Taakgerichte coping: de neiging om problemen actief aan te pakken.",
+        "Emotiegerichte coping: de neiging om je te richten op emotionele reacties bij stress.",
+        "Vermijdingsgerichte coping: de neiging om afstand te nemen van stressvolle situaties.",
+        "Verschillende vormen van vermijdingsgerichte coping, zoals afleiding zoeken en sociale afleiding."
+      ],
+      "expectations": [
+        "Je vult een wetenschappelijk onderbouwde vragenlijst online in.",
+        "Je ontvangt een persoonlijk verslag waarin je gebruikelijke copingstijlen worden toegelicht.",
+        "Zo krijg je meer inzicht in hoe je doorgaans reageert wanneer je met stressvolle situaties wordt geconfronteerd."
+      ],
+      "disclaimer": "Deze vragenlijst brengt copingstijlen in kaart. Het is geen diagnostisch onderzoek en op basis van deze vragenlijst worden geen diagnoses gesteld.",
+      "respondentLabel": "Je vult zelf in",
+      "formatLabel": "Online vragenlijst",
+      "reportLabel": "Persoonlijk verslag"
+    }
+  },
+  {
+    "sourceNumber": 17,
+    "slug": "rs-nl",
+    "instrument": "RS-NL",
+    "title": "RS-NL – Veerkrachtprofiel",
+    "summary": "Hoe ervaar ik mijn vermogen om met tegenslagen om te gaan? Met de RS-NL krijg je inzicht in je persoonlijke veerkracht.",
+    "ageLabel": "Vanaf 18 jaar",
+    "audience": "Volwassenen",
+    "category": "Emoties & coping",
+    "audienceGroups": [
+      "adults"
+    ],
+    "priceCents": 5900,
+    "landingContent": {
+      "schemaVersion": 1,
+      "question": "Hoe ervaar ik mijn vermogen om met tegenslagen om te gaan?",
+      "introduction": [
+        "Iedereen krijgt vroeg of laat te maken met moeilijke gebeurtenissen, veranderingen of perioden van verhoogde belasting.",
+        "De manier waarop mensen hun eigen veerkracht ervaren, verschilt. Sommige mensen hebben vertrouwen in hun vermogen om met uitdagingen om te gaan, terwijl anderen zich sneller uit evenwicht gebracht voelen.",
+        "Met de RS-NL krijg je inzicht in je persoonlijke veerkracht."
+      ],
+      "measures": [
+        "Je ervaren vermogen om met tegenslagen om te gaan.",
+        "Persoonlijke competentie en doorzettingsvermogen.",
+        "Zelfvertrouwen in het omgaan met moeilijke situaties.",
+        "Acceptatie van jezelf en het leven.",
+        "Aspecten van psychologische veerkracht."
+      ],
+      "expectations": [
+        "Je vult een wetenschappelijk onderbouwde vragenlijst online in.",
+        "Je ontvangt een persoonlijk verslag waarin je ervaren veerkracht wordt toegelicht.",
+        "Zo krijg je meer inzicht in hoe je jezelf beoordeelt in het omgaan met belastende omstandigheden."
+      ],
+      "disclaimer": "Deze vragenlijst brengt ervaren veerkracht in kaart. Het is geen diagnostisch onderzoek en op basis van deze vragenlijst worden geen diagnoses gesteld.",
+      "respondentLabel": "Je vult zelf in",
+      "formatLabel": "Online vragenlijst",
+      "reportLabel": "Persoonlijk verslag"
+    }
+  },
+  {
+    "sourceNumber": 18,
+    "slug": "oboi",
+    "instrument": "OBOI",
+    "title": "OBOI – Burn-outklachten",
+    "summary": "Zijn er signalen dat mijn werk mij te veel belast? Met de OBOI worden verschillende signalen en klachten onderzocht die kunnen voorkomen bij burn-out.",
+    "ageLabel": "Vanaf 18 jaar",
+    "audience": "Werkende volwassenen",
+    "category": "Werk & loopbaan",
+    "audienceGroups": [
+      "adults"
+    ],
+    "priceCents": 5900,
+    "landingContent": {
+      "schemaVersion": 1,
+      "question": "Zijn er signalen dat mijn werk mij te veel belast?",
+      "introduction": [
+        "Langdurige werkgerelateerde belasting kan samengaan met uitputting, motivatieverlies, lichamelijke klachten of veranderingen in het sociale functioneren.",
+        "Met de OBOI worden verschillende signalen en klachten onderzocht die kunnen voorkomen bij burn-out."
+      ],
+      "measures": [
+        "Uitputtingsklachten.",
+        "Prestatieverlies.",
+        "Motivatieverlies.",
+        "Lichamelijke klachten.",
+        "Intrapersoonlijke signalen.",
+        "Sociale terugtrekking."
+      ],
+      "expectations": [
+        "Je vult een wetenschappelijk onderbouwde vragenlijst online in.",
+        "Je ontvangt een persoonlijk verslag waarin de verschillende burn-outgerelateerde klachtgebieden worden toegelicht.",
+        "Zo krijg je meer inzicht in de mate waarin je bepaalde klachten ervaart."
+      ],
+      "disclaimer": "Deze vragenlijst is bedoeld voor screening van burn-outgerelateerde klachten. Het is geen diagnostisch onderzoek en op basis van deze vragenlijst worden geen diagnoses gesteld, waaronder burn-out.",
+      "respondentLabel": "Je vult zelf in",
+      "formatLabel": "Online vragenlijst",
+      "reportLabel": "Persoonlijk verslag"
+    }
+  },
+  {
+    "sourceNumber": 19,
+    "slug": "bip-6f-x",
+    "instrument": "BIP-6F-X",
+    "title": "BIP-6F-X – Professioneel Persoonlijkheidsprofiel",
+    "summary": "Welke persoonlijkheidskenmerken typeren mij op het werk? Met de BIP-6F-X krijg je inzicht in verschillende persoonlijkheidskenmerken die relevant kunnen zijn binnen een werkcontext.",
+    "ageLabel": "Vanaf 18 jaar",
+    "audience": "Volwassenen",
+    "category": "Werk & loopbaan",
+    "audienceGroups": [
+      "adults"
+    ],
+    "priceCents": 10900,
+    "landingContent": {
+      "schemaVersion": 1,
+      "question": "Welke persoonlijkheidskenmerken typeren mij op het werk?",
+      "introduction": [
+        "Iedereen heeft een eigen manier van werken, samenwerken, omgaan met uitdagingen en reageren op professionele situaties.",
+        "Met de BIP-6F-X krijg je inzicht in verschillende persoonlijkheidskenmerken die relevant kunnen zijn binnen een werkcontext."
+      ],
+      "measures": [
+        "Betrokkenheid: je werkgerelateerde inzet en betrokkenheid.",
+        "Discipline: je mate van gestructureerd en doelgericht werken.",
+        "Sociale competentie: je zelfbeschreven functioneren in sociale werksituaties.",
+        "Samenwerking: je voorkeuren in het omgaan met anderen.",
+        "Dominantie: je neiging om initiatief of invloed te nemen.",
+        "Stabiliteit: je emotionele stabiliteit in professionele situaties."
+      ],
+      "expectations": [
+        "Je vult een wetenschappelijk onderbouwde persoonlijkheidsvragenlijst online in.",
+        "Je ontvangt een persoonlijk verslag waarin de zes werkgerelateerde persoonlijkheidsfactoren worden toegelicht.",
+        "Dit kan helpen om je eigen professionele stijl en gedragsvoorkeuren beter te begrijpen."
+      ],
+      "disclaimer": "Deze vragenlijst brengt werkgerelateerde persoonlijkheidskenmerken in kaart. Het is geen diagnostisch onderzoek en op basis van deze vragenlijst worden geen diagnoses gesteld. De resultaten bepalen ook niet zelfstandig of iemand geschikt is voor een bepaalde functie.",
+      "respondentLabel": "Je vult zelf in",
+      "formatLabel": "Online vragenlijst",
+      "reportLabel": "Persoonlijk verslag"
+    }
+  },
+  {
+    "sourceNumber": 20,
+    "slug": "sds",
+    "instrument": "SDS",
+    "title": "SDS – Beroepsinteresseprofiel",
+    "summary": "Welke opleidingen en beroepen sluiten aan bij mijn interesses? Met de SDS krijg je inzicht in je beroepsinteresses volgens zes verschillende interessegebieden.",
+    "ageLabel": "Vanaf 15 jaar",
+    "audience": "Jongeren en volwassenen",
+    "category": "Werk & loopbaan",
+    "audienceGroups": [
+      "adolescents",
+      "adults"
+    ],
+    "priceCents": 6900,
+    "landingContent": {
+      "schemaVersion": 1,
+      "question": "Welke opleidingen en beroepen sluiten aan bij mijn interesses?",
+      "introduction": [
+        "Misschien twijfel je over je studiekeuze, wil je een andere richting uit of ben je benieuwd welke soorten werkzaamheden je het meest aanspreken.",
+        "Met de SDS krijg je inzicht in je beroepsinteresses volgens zes verschillende interessegebieden."
+      ],
+      "measures": [
+        "Realistisch: interesse in praktische, technische en concrete activiteiten.",
+        "Explorerend: interesse in onderzoeken, analyseren en begrijpen.",
+        "Artistiek: interesse in creatieve en expressieve activiteiten.",
+        "Sociaal: interesse in helpen, begeleiden en samenwerken.",
+        "Ondernemend: interesse in overtuigen, organiseren en initiatief nemen.",
+        "Georganiseerd: interesse in gestructureerde en administratieve werkzaamheden."
+      ],
+      "expectations": [
+        "Je vult een wetenschappelijk onderbouwde beroepsinteressevragenlijst online in.",
+        "Je ontvangt een persoonlijk verslag waarin je interesses binnen de zes domeinen worden toegelicht.",
+        "Dit kan helpen om mogelijke studie- en loopbaanrichtingen te verkennen die aansluiten bij je persoonlijke interesses."
+      ],
+      "disclaimer": "Deze vragenlijst brengt beroepsinteresses in kaart. Het is geen diagnostisch onderzoek en op basis van deze vragenlijst worden geen diagnoses gesteld. De resultaten bepalen niet automatisch of je geschikt bent voor een bepaald beroep.",
+      "respondentLabel": "Jongere of volwassene zelf",
+      "formatLabel": "Online vragenlijst",
+      "reportLabel": "Persoonlijk verslag"
+    }
+  },
+  {
+    "sourceNumber": 21,
+    "slug": "cdi-2",
+    "instrument": "CDI-2",
+    "title": "CDI-2 – Depressieve Klachten bij Kinderen en Jongeren",
+    "summary": "Ervaart mijn kind gevoelens van somberheid of andere depressieve klachten? Met de CDI-2 worden verschillende depressieve symptomen bij kinderen en jongeren onderzocht.",
+    "ageLabel": "8–21 jaar",
+    "audience": "Kinderen en jongeren",
+    "category": "Stemming & welzijn",
+    "audienceGroups": [
+      "children",
+      "adolescents",
+      "adults"
+    ],
+    "priceCents": 5900,
+    "landingContent": {
+      "schemaVersion": 1,
+      "question": "Ervaart mijn kind gevoelens van somberheid of andere depressieve klachten?",
+      "introduction": [
+        "Kinderen en jongeren kunnen perioden doormaken waarin ze zich somber, onzeker of minder gemotiveerd voelen.",
+        "Soms zijn deze gevoelens tijdelijk, maar wanneer klachten langer aanhouden of sterker aanwezig zijn, kan het zinvol zijn om ze beter in kaart te brengen.",
+        "Met de CDI-2 worden verschillende depressieve symptomen bij kinderen en jongeren onderzocht."
+      ],
+      "measures": [
+        "Somberheid en negatieve stemming.",
+        "Negatief zelfbeeld.",
+        "Gevoelens van ineffectiviteit.",
+        "Interpersoonlijke problemen.",
+        "Emotionele en functionele aspecten van depressieve klachten."
+      ],
+      "expectations": [
+        "De jongere vult een wetenschappelijk onderbouwde vragenlijst online in.",
+        "Je ontvangt een persoonlijk verslag waarin de gerapporteerde depressieve symptomen en mogelijke aandachtspunten worden toegelicht.",
+        "De resultaten kunnen helpen om mogelijke emotionele klachten beter te herkennen."
+      ],
+      "disclaimer": "Deze vragenlijst is bedoeld voor screening van depressieve symptomen. Het is geen diagnostisch onderzoek en op basis van deze vragenlijst worden geen diagnoses gesteld, waaronder depressie. Bij ernstige of aanhoudende klachten is een professionele beoordeling aangewezen.",
+      "respondentLabel": "Jongere zelf",
+      "formatLabel": "Online vragenlijst",
+      "reportLabel": "Persoonlijk verslag"
+    }
+  },
+  {
+    "sourceNumber": 22,
+    "slug": "mini-scl",
+    "instrument": "Mini-SCL",
+    "title": "Mini-SCL – Psychisch Welzijn en Klachten",
+    "summary": "Hoe gaat het met mijn psychisch welzijn? Met de Mini-SCL krijg je een beknopt overzicht van verschillende psychische en lichamelijke klachten.",
+    "ageLabel": "Vanaf 12 jaar",
+    "audience": "Jongeren en volwassenen",
+    "category": "Stemming & welzijn",
+    "audienceGroups": [
+      "adolescents",
+      "adults"
+    ],
+    "priceCents": 4900,
+    "landingContent": {
+      "schemaVersion": 1,
+      "question": "Hoe gaat het met mijn psychisch welzijn?",
+      "introduction": [
+        "Soms merk je dat je minder goed in je vel zit, meer spanning ervaart of last hebt van verschillende psychische of lichamelijke klachten.",
+        "Het is niet altijd eenvoudig om deze klachten afzonderlijk te herkennen of hun algemene impact in te schatten.",
+        "Met de Mini-SCL krijg je een beknopt overzicht van verschillende psychische en lichamelijke klachten."
+      ],
+      "measures": [
+        "Verschillende psychische klachten en symptomen.",
+        "Spannings- en stressgerelateerde klachten.",
+        "Emotionele belasting.",
+        "Lichamelijke klachten die samen kunnen gaan met psychische belasting.",
+        "De algemene mate van gerapporteerde klachten."
+      ],
+      "expectations": [
+        "Je vult een korte, wetenschappelijk onderbouwde screeningsvragenlijst online in.",
+        "Je ontvangt een persoonlijk verslag waarin de gerapporteerde klachten en de algemene psychische belasting worden toegelicht.",
+        "Dit kan helpen om een eerste beeld te krijgen van je huidige psychische welzijn."
+      ],
+      "disclaimer": "Deze vragenlijst is bedoeld voor algemene klachtenscreening en zelfinzicht. Het is geen diagnostisch onderzoek en op basis van deze vragenlijst worden geen diagnoses gesteld.",
+      "respondentLabel": "Jongere of volwassene zelf",
+      "formatLabel": "Online vragenlijst",
+      "reportLabel": "Persoonlijk verslag"
+    }
+  }
+]

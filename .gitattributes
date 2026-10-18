@@ -1,0 +1,4 @@
+# Markdown uses trailing double spaces for hard line breaks.
+*.md whitespace=-blank-at-eol
+# Preserve the exact owner-supplied source documents, including their final blank line.
+docs/content/*-brontekst.txt whitespace=-blank-at-eof

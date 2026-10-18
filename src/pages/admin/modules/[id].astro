@@ -1,0 +1,9 @@
+---
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+import ModuleEditor from '../../../components/modules/ModuleEditor.astro';
+import {getModuleAdmin,moduleOrigin} from '../../../lib/modules/server';
+import '../../../styles/catalog-admin.css';
+import '../../../styles/modules.css';
+const current=await getModuleAdmin(Astro.params.id||'');if(!current)return Astro.redirect('/admin/modules',302);
+---
+<AdminLayout title={current.product.title}><div class="admin-page"><a href="/admin/modules">← Alle modules</a><section class="admin-page-heading"><div><p class="admin-eyebrow">{current.product.type==='guide'?'Optionele verdieping':`Module ${String(current.module.number).padStart(2,'0')}`}</p><h1>{current.product.title}</h1><p>Bewaar eerst de website-inhoud. Maak daarna een materiaalconcept met PDF en audio.</p></div></section><ModuleEditor current={current} origin={moduleOrigin()}/></div></AdminLayout>

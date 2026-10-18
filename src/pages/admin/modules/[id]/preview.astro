@@ -1,0 +1,10 @@
+---
+import AdminLayout from '../../../../layouts/AdminLayout.astro';
+import {getModuleAdmin,moduleAssets,moduleOrigin} from '../../../../lib/modules/server';
+import '../../../../styles/modules.css';
+if(!Astro.locals.adminUser?.roles.includes('super_admin'))return new Response('Geen toegang.',{status:403});
+const current=await getModuleAdmin(Astro.params.id||'');const release=current?.releases.find(r=>r.id===Astro.url.searchParams.get('release'));
+if(!current||!release)return Astro.redirect('/admin/modules',302);
+const assets=await moduleAssets(release.id);const pdf=assets.find(a=>a.kind==='pdf'&&a.status==='verified');const audio=assets.filter(a=>a.kind==='audio'&&a.status==='verified');const url=(a:string)=>`/api/admin/modules/${current.product.id}/material?release=${release.id}&asset=${a}`;
+---
+<AdminLayout title={`Voorbeeld: ${current.product.title}`}><div class="admin-page"><a href={`/admin/modules/${current.product.id}`}>← Bewerken</a><p class="module-admin-preview">Beheerdersvoorbeeld · {release.status==='draft'?'Conceptmateriaal':'Gepubliceerde versie'}. Klanten krijgen alleen gepubliceerd materiaal na betaalbevestiging.</p><h1>{current.product.title}</h1><p>{current.module.subtitle}</p><section class="module-material"><h2>Werkboek</h2>{pdf?<a class="admin-button" href={url(pdf.id)} target="_blank">Open PDF ↗</a>:<p>Geen gecontroleerd werkboek aanwezig.</p>}</section><section class="module-material"><h2>Audio</h2>{audio.map(a=><article><h3>{a.title}</h3><audio class="module-player" controls preload="none" src={url(a.id)} aria-label={a.title}></audio>{moduleOrigin()&&<p>PDF-link: {`${moduleOrigin()}/account/modules/${current.product.slug}/audio/${a.module_tracks!.key}`}</p>}</article>)}</section><p>Voor controle vanuit de PDF: vergelijk elke link met de vaste audiolink hierboven. Een echte klantproef gebeurt met het eigen aankooprecht.</p></div></AdminLayout>

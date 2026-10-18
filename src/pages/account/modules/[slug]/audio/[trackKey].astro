@@ -1,0 +1,13 @@
+---
+import AccountLayout from '../../../../../layouts/AccountLayout.astro';
+import AudioPlayer from '../../../../../components/modules/AudioPlayer.astro';
+import {findModule,accessibleModuleAsset} from '../../../../../lib/modules/server';
+import {trackKeyValid} from '../../../../../lib/modules/validation';
+import '../../../../../styles/modules.css';
+const m=await findModule(Astro.params.slug||'');const key=Astro.params.trackKey||'';
+if(!m||!trackKeyValid(key))return Astro.redirect('/account/bibliotheek',302);
+if(!m.canonical)return Astro.redirect(`/account/modules/${m.product.slug}/audio/${key}`,301);
+const a=await accessibleModuleAsset(Astro.locals.currentUser!.sub,m.product.id,key);
+if(!a)Astro.response.status=404;
+---
+<AccountLayout title={a?.title||'Audio niet beschikbaar'}><a href={`/account/modules/${m.product.slug}`}>← Alle audio van {m.product.title}</a><section class="module-material"><span class="eyebrow">{m.product.title}</span><h1>{a?.title||'Deze audio is niet beschikbaar.'}</h1>{a?<AudioPlayer endpoint={`/api/account/modules/${m.product.id}/audio/${key}`}/>:<p>Controleer je aankoop in je bibliotheek of <a href="/contact">neem contact op met MyGrowise</a>.</p>}</section></AccountLayout>

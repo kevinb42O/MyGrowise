@@ -1,0 +1,12 @@
+---
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+import {requireModuleAdmin} from '../../../lib/modules/admin';
+import {getSupabaseAdmin} from '../../../lib/supabase/server';
+import '../../../styles/catalog-admin.css';
+const actor=requireModuleAdmin(Astro);let error='';
+if(Astro.request.method==='POST'){
+ const f=await Astro.request.formData();const {data,error:e}=await getSupabaseAdmin().rpc('new_supplement',{p_actor:actor,p_title:String(f.get('title')||'').trim(),p_slug:String(f.get('slug')||'').trim(),p_format:String(f.get('format')||'')});
+ if(!e)return Astro.redirect(`/admin/modules/${data}`,303);error='Aanmaken is niet gelukt. Controleer de naam en een unieke URL-slug.';
+}
+---
+<AdminLayout title="Nieuwe verdieping"><div class="admin-page"><a href="/admin/modules">← Modules en verdieping</a><h1>Nieuw werkboek of audio</h1><p>Het product begint als concept en is niet te koop. Vul na het aanmaken inhoud, prijs en materiaal aan.</p>{error&&<p role="alert">{error}</p>}<form method="post" class="catalog-admin-form"><label class="catalog-admin-field">Naam<input name="title" required minlength="3" maxlength="120"/></label><label class="catalog-admin-field">URL-slug<input name="slug" required maxlength="80" pattern="[a-z0-9]+(-[a-z0-9]+)*"/></label><label class="catalog-admin-field">Inhoud<select name="format"><option value="pdf">Miniwerkboek (PDF)</option><option value="audio">Audio / begeleide hypnose (MP3)</option></select></label><button class="admin-button admin-button--primary">Concept aanmaken</button></form></div></AdminLayout>

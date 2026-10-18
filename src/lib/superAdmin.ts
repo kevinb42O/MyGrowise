@@ -4,7 +4,7 @@ import type { AuditActor } from './securityAudit';
 type RecordRow = Record<string, any>;
 export type AdminOrder = { id: string; status: string; totalCents: number; currency: string; createdAt: string; customerId: string; paymentVerifiedAt?: string | null; paymentClaimedAt?: string | null; provider?: string };
 export type AdminOrderDetail = { id: string; status: string; totalCents: number; currency: string; createdAt: string; customerId: string; customerName: string; provider: string; reference: string; paymentClaimedAt: string | null; paymentVerifiedAt: string | null; productTitles: string[] };
-export type AdminBooking = { id: string; practitionerId: string; practitionerName: string; patientId: string | null; clientName: string; clientEmail: string; startsAt: string; endsAt: string; status: string; createdAt: string };
+export type AdminBooking = { appointmentName?:string; id: string; practitionerId: string; practitionerName: string; patientId: string | null; clientName: string; clientEmail: string; startsAt: string; endsAt: string; status: string; createdAt: string };
 export type AdminTask = { id: string; title: string; category: string; priority: number; status: string; dueAt: string | null; createdAt: string; assignedToName: string | null };
 export type IntegrationCheck = { key: string; label: string; state: 'healthy' | 'degraded' | 'not_configured' | 'failed'; detail: string | null; lastCheckedAt: string | null };
 
@@ -42,7 +42,7 @@ export const listAdminOrderDetails = async (): Promise<AdminOrderDetail[]> => {
   const rows: RecordRow[] = [];
   for (let offset = 0; ; offset += 500) {
     const { data, error } = await client.from('orders')
-      .select('id,status,total_cents,currency,created_at,customer_user_id,provider,provider_reference,payment_claimed_at,payment_verified_at,profiles!orders_customer_user_id_fkey(full_name),order_items(product_title)')
+      .select('id,status,total_cents,currency,created_at,customer_user_id,provider,provider_reference,payment_claimed_at,payment_verified_at,commerce_buyers!orders_buyer_id_fkey(email,first_name,last_name),profiles!orders_customer_user_id_fkey(full_name),order_items(product_title)')
       .order('created_at', { ascending: false }).order('id', { ascending: false }).range(offset, offset + 499);
     fail(error);
     const page = (data || []) as RecordRow[];
@@ -51,10 +51,11 @@ export const listAdminOrderDetails = async (): Promise<AdminOrderDetail[]> => {
   }
   return rows.map((row) => {
     const profile = Array.isArray(row.profiles) ? row.profiles[0] : row.profiles;
+    const buyer = Array.isArray(row.commerce_buyers) ? row.commerce_buyers[0] : row.commerce_buyers;
     const items = Array.isArray(row.order_items) ? row.order_items : row.order_items ? [row.order_items] : [];
     return {
       id: String(row.id), status: String(row.status), totalCents: Number(row.total_cents), currency: String(row.currency),
-      createdAt: String(row.created_at), customerId: String(row.customer_user_id), customerName: String(profile?.full_name || 'Naam niet ingevuld'),
+      createdAt: String(row.created_at), customerId: String(row.customer_user_id||''), customerName: String(profile?.full_name || buyer?.email || [buyer?.first_name,buyer?.last_name].filter(Boolean).join(' ') || 'Gast'),
       provider: String(row.provider || ''),
       reference: String(row.provider_reference || ''), paymentClaimedAt: row.payment_claimed_at ? String(row.payment_claimed_at) : null,
       paymentVerifiedAt: row.payment_verified_at ? String(row.payment_verified_at) : null,
@@ -64,9 +65,9 @@ export const listAdminOrderDetails = async (): Promise<AdminOrderDetail[]> => {
 };
 
 export const listAdminBookings = async (limit = 100): Promise<AdminBooking[]> => {
-  const { data, error } = await getSupabaseAdmin().from('bookings').select('id,practitioner_id,patient_id,client_name,client_email,starts_at,ends_at,status,created_at,practitioners(name)').order('starts_at', { ascending: true }).limit(limit);
+  const { data, error } = await getSupabaseAdmin().from('bookings').select('id,practitioner_id,patient_id,client_name,client_email,appointment_name,starts_at,ends_at,status,created_at,practitioners(name)').order('starts_at', { ascending: true }).limit(limit);
   fail(error);
-  return ((data || []) as RecordRow[]).map((row) => ({ id: String(row.id), practitionerId: String(row.practitioner_id), practitionerName: String(row.practitioners?.name || 'Onbekend'), patientId: row.patient_id ? String(row.patient_id) : null, clientName: String(row.client_name), clientEmail: String(row.client_email), startsAt: String(row.starts_at), endsAt: String(row.ends_at), status: String(row.status), createdAt: String(row.created_at) }));
+  return ((data || []) as RecordRow[]).map((row) => ({ id: String(row.id), practitionerId: String(row.practitioner_id), practitionerName: String(row.practitioners?.name || 'Onbekend'), patientId: row.patient_id ? String(row.patient_id) : null, appointmentName:String(row.appointment_name||'Afspraaktype nog te bepalen'), clientName: String(row.client_name), clientEmail: String(row.client_email), startsAt: String(row.starts_at), endsAt: String(row.ends_at), status: String(row.status), createdAt: String(row.created_at) }));
 };
 
 const listDashboardBookings = async (): Promise<AdminBooking[]> => {
@@ -75,14 +76,14 @@ const listDashboardBookings = async (): Promise<AdminBooking[]> => {
   const after = new Date().toISOString();
   for (let offset = 0; ; offset += 500) {
     const { data, error } = await client.from('bookings')
-      .select('id,practitioner_id,patient_id,client_name,client_email,starts_at,ends_at,status,created_at,practitioners(name)')
+      .select('id,practitioner_id,patient_id,client_name,client_email,appointment_name,starts_at,ends_at,status,created_at,practitioners(name)')
       .in('status', ['pending', 'confirmed']).or(`status.eq.pending,starts_at.gte.${after}`)
       .order('starts_at', { ascending: true }).order('id', { ascending: true }).range(offset, offset + 499);
     fail(error);
     const page = (data || []) as RecordRow[];
     bookings.push(...page.map((row) => ({
       id: String(row.id), practitionerId: String(row.practitioner_id), practitionerName: String(row.practitioners?.name || 'Onbekend'),
-      patientId: row.patient_id ? String(row.patient_id) : null, clientName: String(row.client_name), clientEmail: String(row.client_email),
+      patientId: row.patient_id ? String(row.patient_id) : null, appointmentName:String(row.appointment_name||'Afspraaktype nog te bepalen'), clientName: String(row.client_name), clientEmail: String(row.client_email),
       startsAt: String(row.starts_at), endsAt: String(row.ends_at), status: String(row.status), createdAt: String(row.created_at),
     })));
     if (page.length < 500) break;

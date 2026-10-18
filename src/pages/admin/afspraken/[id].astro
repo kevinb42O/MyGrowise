@@ -1,0 +1,7 @@
+---
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+import AppointmentDetail from '../../../components/practice/AppointmentDetail.astro';
+import {loadAppointmentPage} from '../../../lib/appointmentDetail';
+const data=await loadAppointmentPage(Astro);if(data instanceof Response)return data;
+---
+<AdminLayout title="Afspraakdetails"><AppointmentDetail data={data}/></AdminLayout>

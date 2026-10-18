@@ -1,0 +1,121 @@
+// Rehearse the new migration and workflow in a single rollback-only transaction.
+// No SMTP calls, persisted patients, invitations, bookings, or schema changes.
+import pg from 'pg';
+import fs from 'node:fs';
+import assert from 'node:assert/strict';
+import {randomUUID} from 'node:crypto';
+const c=new pg.Client({connectionString:process.env.SUPABASE_DB_URL,connectionTimeoutMillis:10000});
+await c.connect();let checks=0;
+const q=(sql,params=[])=>c.query(sql,params);
+const expectFailure=async(fn,pattern)=>{await q('savepoint expected_failure');try{await fn();assert.fail('Expected database rejection');}catch(e){if(e.code==='ERR_ASSERTION')throw e;assert.match(e.message,pattern);}finally{await q('rollback to savepoint expected_failure');}checks++;};
+const migration=fs.readdirSync('supabase/migrations').find(n=>n.endsWith('_practice_appointment_management.sql'));
+try{
+ await q('begin');await q("set local lock_timeout='3s';set local statement_timeout='25s'");
+ if(!(await q('select 1 from supabase_migrations.schema_migrations where version=$1',[migration.split('_')[0]])).rowCount)await q(fs.readFileSync(`supabase/migrations/${migration}`,'utf8'));
+ assert.equal((await q('select count(*)::int n from public.appointment_types')).rows[0].n,12);checks++;
+ assert.equal((await q('select count(*)::int n from public.practitioner_appointment_types')).rows[0].n,14);checks++;
+ const customer=randomUUID(),customer2=randomUUID(),admin=randomUUID(),therapist=randomUUID(),otherTherapist=randomUUID();
+ for(const [id,role] of [[customer,'customer'],[customer2,'customer'],[admin,'super_admin'],[therapist,'practitioner'],[otherTherapist,'practitioner']]){
+ await q("insert into auth.users(id,email,email_confirmed_at,raw_user_meta_data) values($1,$2,now(),'{\"full_name\":\"Appointment Test\"}')",[id,`appointments-${id}@example.invalid`]);
+ await q('delete from public.user_roles where user_id=$1',[id]);await q('insert into public.user_roles(user_id,role) values($1,$2)',[id,role]);
+ }
+ const practitioner=randomUUID();
+ await q("insert into public.practitioners(id,user_id,slug,name,active,online_instructions) values($1,$2,$3,'Test Therapeut',true,'Je therapeut stuurt de online-link.')",[practitioner,therapist,`test-${practitioner}`]);
+ await q('insert into public.practitioner_settings(practitioner_id,minimum_notice_hours,booking_horizon_days) values($1,0,90)',[practitioner]);
+ for(let d=1;d<=7;d++)await q("insert into public.availability_rules(practitioner_id,weekday,start_time,end_time) values($1,$2,'09:00','18:00')",[practitioner,d]);
+ const type=(await q("select id from public.appointment_types where slug='intake-emdr-online'")).rows[0].id;
+ const offer=(await q('insert into public.practitioner_appointment_types(practitioner_id,appointment_type_id,duration_minutes) values($1,$2,75) returning id',[practitioner,type])).rows[0].id;
+ await q('set local role service_role');
+ assert.equal((await q('select public.is_practice_manager($1) ok',[admin])).rows[0].ok,true);checks++;
+ const slots=(await q('select * from public.get_offer_slots($1,14)',[offer])).rows;assert.ok(slots.length>0);assert.equal(new Date(slots[0].ends_at)-new Date(slots[0].starts_at),75*60000);checks++;
+ const starts=slots.find(s=>new Date(s.starts_at)>new Date(Date.now()+86400000)).starts_at;
+ const details={first_name:'Voornaam',last_name:'Testcliënt',birth_date:'1990-03-04',gender:'unspecified',salutation:'',mobile:'+32400000000',country:'BE',street:'Teststraat',house_number:'1',city:'Brussel',postal_code:'1000',national_number:'',registration_reason:'Alleen in het dossier',referrer:'Een doorverwijzer'};
+ const key=randomUUID();
+ const book=async(user=customer,o=offer,start=starts,k=key,d=details)=>(await q('select public.book_customer_appointment($1,$2,$3,$4,$5::jsonb,null) id',[user,o,start,k,JSON.stringify(d)])).rows[0].id;
+ const id=await book();assert.equal(await book(),id);checks++;
+ const b=(await q('select * from public.bookings where id=$1',[id])).rows[0];
+ assert.equal(b.status,'confirmed');assert.ok(b.patient_id);assert.equal(b.appointment_name,'Intake EMDR – online');assert.equal(new Date(b.ends_at)-new Date(b.starts_at),75*60000);checks++;
+ assert.equal((await q('select count(*)::int n from public.patient_assignments where patient_id=$1 and user_id=$2 and ended_at is null',[b.patient_id,therapist])).rows[0].n,1);checks++;
+ const patient=(await q('select * from public.patients where id=$1',[b.patient_id])).rows[0];assert.equal(patient.first_name,details.first_name);assert.equal(patient.registration_reason,details.registration_reason);assert.equal(patient.intake_date,null);checks++;
+ const mail=(await q('select * from public.booking_mail_jobs where booking_id=$1',[id])).rows;
+ assert.equal(mail.length,1);assert.equal(mail[0].payload.appointment,b.appointment_name);assert.equal(mail[0].payload.practitioner,'Test Therapeut');assert.ok(!JSON.stringify(mail[0].payload).includes(details.registration_reason));checks++;
+ await expectFailure(()=>book(customer2,offer,starts,randomUUID()),/slot_unavailable/);
+ await expectFailure(()=>book(customer,offer,new Date(new Date(starts).getTime()+86400000),key),/idempotency_conflict/);
+ await expectFailure(()=>q('select public.save_patient_details($1,$2,$3,null)',[otherTherapist,b.patient_id,JSON.stringify(details)]),/not_allowed/);
+ await expectFailure(()=>q('select public.save_patient_details($1,$2,$3,$4)',[therapist,b.patient_id,JSON.stringify(details),'2000-01-01T00:00:00Z']),/version_conflict/);
+ await expectFailure(()=>q('select public.save_appointment_type($1,$2::jsonb)',[customer,JSON.stringify({})]),/not_allowed/);
+ await expectFailure(()=>q('select public.reschedule_practice_appointment($1,$2,$3,null)',[otherTherapist,id,new Date(new Date(starts).getTime()+86400000)]),/not_allowed/);
+ const blockedStart=new Date(new Date(starts).getTime()+86400000);
+ await q("insert into public.availability_exceptions(practitioner_id,starts_at,ends_at,kind) values($1,$2,$3,'unavailable')",[practitioner,blockedStart,new Date(+blockedStart+3600000)]);
+ await expectFailure(()=>book(customer2,offer,blockedStart,randomUUID()),/slot_unavailable/);
+ assert.equal((await q('select count(*)::int n from public.patients where customer_user_id=$1',[customer2])).rows[0].n,0);checks++;
+ const newStart=new Date(new Date(starts).getTime()+2*86400000);
+ await q('select public.reschedule_practice_appointment($1,$2,$3,null)',[therapist,id,newStart]);
+ assert.equal((await q('select count(*)::int n from public.booking_schedule_events where booking_id=$1',[id])).rows[0].n,1);checks++;
+ assert.equal((await q('select count(*)::int n from public.booking_mail_jobs where booking_id=$1 and kind=$2',[id,'rescheduled'])).rows[0].n,1);checks++;
+ const claimed=(await q('select * from public.claim_booking_mail(10,$1)',[id])).rows;assert.ok(claimed.length>0);assert.ok(claimed.every(j=>j.lease_token&&j.attempts===1));checks++;
+ assert.equal((await q('select * from public.claim_booking_mail(10,$1)',[id])).rows.length,0);checks++;
+ await expectFailure(()=>q('select public.retry_booking_mail($1,$2)',[otherTherapist,mail[0].id]),/not_allowed/);
+ await q('select public.transition_booking_status($1,$2,$3,null,null)',[id,therapist,'cancelled']);
+ assert.equal((await q('select count(*)::int n from public.booking_mail_jobs where booking_id=$1 and kind=$2',[id,'cancelled'])).rows[0].n,1);checks++;
+ const second=await book(customer,offer,starts,randomUUID(),{...details,registration_reason:'Een nieuwe vraag'});
+ assert.equal((await q('select patient_id from public.bookings where id=$1',[second])).rows[0].patient_id,b.patient_id);checks++;
+ assert.equal((await q('select registration_reason from public.patients where id=$1',[b.patient_id])).rows[0].registration_reason,details.registration_reason);checks++;
+ await q('update public.practitioner_appointment_types set bookable=false where id=$1',[offer]);
+ await expectFailure(()=>book(customer2,offer,newStart,randomUUID()),/offer_unavailable/);
+ const staffBooking=(await q('select public.create_typed_staff_booking($1,$2,$3,$4,null) id',[therapist,b.patient_id,offer,new Date(+newStart+86400000)])).rows[0].id;
+ assert.ok(staffBooking);checks++;
+ await q('update public.practitioner_appointment_types set bookable=true where id=$1',[offer]);
+ const nextSlots=(await q('select * from public.get_offer_slots($1,14)',[offer])).rows;
+ const next=nextSlots.find(s=>+new Date(s.starts_at)>Date.now()+5*86400000).starts_at;
+ await expectFailure(()=>book(customer2,offer,next,randomUUID(),{...details,national_number:'INVALID'}),/patients_extended_fields/);
+ assert.equal((await q('select count(*)::int n from public.patients where customer_user_id=$1',[customer2])).rows[0].n,0);checks++;
+ await q("update public.patients set status='archived',archived_at=now() where id=$1",[b.patient_id]);
+ await expectFailure(()=>book(customer,offer,next,randomUUID()),/patient_archived/);
+ await q("update public.patients set status='active',archived_at=null where id=$1",[b.patient_id]);
+ await q('insert into public.user_preferences(user_id,booking_email_enabled) values($1,false) on conflict(user_id) do update set booking_email_enabled=false',[customer2]);
+ const quiet=await book(customer2,offer,next,randomUUID());
+ assert.equal((await q('select status from public.booking_mail_jobs where booking_id=$1',[quiet])).rows[0].status,'suppressed');checks++;
+ // Practice manager can configure offerings without receiving clinical access.
+ await q('insert into public.practice_managers(user_id) values($1)',[otherTherapist]);
+ const extraType={name:'Evaluatiegesprek – online',group_name:'Evaluatie',color:'#d97706',session_kind:'other',channel:'online',duration_minutes:45,active:true,offers:[{practitioner_id:practitioner,bookable:true,duration_minutes:90}]};
+ const createdType=(await q('select public.save_appointment_type($1,$2::jsonb) id',[otherTherapist,JSON.stringify(extraType)])).rows[0].id;
+ assert.ok(createdType);checks++;
+ const extraOffer=(await q('select id from public.practitioner_appointment_types where appointment_type_id=$1',[createdType])).rows[0].id;
+ assert.equal(Number((await q('select extract(epoch from (ends_at-starts_at))/60 minutes from public.get_offer_slots($1,14) limit 1',[extraOffer])).rows[0].minutes),90);checks++;
+ // pg normalizes a 90-minute interval into 1 hour and 30 minutes.
+ assert.equal((await q('select public.patient_actor_can_access($1,$2) ok',[otherTherapist,b.patient_id])).rows[0].ok,false);checks++;
+ const initialName=(await q('select appointment_name from public.bookings where id=$1',[id])).rows[0].appointment_name;
+ await q("update public.appointment_types set name='Nieuwe naam' where id=$1",[type]);
+ assert.equal((await q('select appointment_name from public.bookings where id=$1',[id])).rows[0].appointment_name,initialName);checks++;
+ await q('update public.appointment_types set active=false where id=$1',[createdType]);
+ assert.equal((await q('select * from public.get_offer_slots($1,14)',[extraOffer])).rows.length,0);checks++;
+ const newPractitioner={name:'Nieuwe therapeut',slug:`new-${randomUUID()}`,public_role:'Psycholoog',bio:'Testprofiel',expertise:['Relaties'],languages:['Nederlands'],active:true,image_url:'',online_instructions:'Instructies',minimum_notice_hours:2,booking_horizon_days:30,requests_enabled:true,rules:[{weekday:1,start_time:'09:00',end_time:'12:00'}]};
+ const newPid=(await q('select public.save_practice_practitioner($1,$2::jsonb) id',[otherTherapist,JSON.stringify(newPractitioner)])).rows[0].id;assert.ok(newPid);checks++;
+ await expectFailure(()=>q('select public.save_practice_practitioner($1,$2::jsonb)',[customer,JSON.stringify(newPractitioner)]),/not_allowed/);
+ await expectFailure(()=>q('select public.save_practice_practitioner($1,$2::jsonb)',[otherTherapist,JSON.stringify({...newPractitioner,id:newPid,rules:[{weekday:1,start_time:'09:00',end_time:'12:00'},{weekday:1,start_time:'11:00',end_time:'13:00'}]})]),/overlapping_availability/);
+ assert.equal((await q('select count(*)::int n from public.availability_rules where practitioner_id=$1',[newPid])).rows[0].n,1);checks++;
+ const invitation=randomUUID();
+ await q('reset role');await q("insert into auth.users(id,email,invited_at,raw_user_meta_data) values($1,$2,now(),'{}')",[invitation,`invite-${invitation}@example.invalid`]);await q('set local role service_role');
+ await q('select public.link_practitioner_invitation($1,$2,$3)',[otherTherapist,newPid,invitation]);
+ assert.equal((await q('select user_id from public.practitioners where id=$1',[newPid])).rows[0].user_id,invitation);checks++;
+ assert.equal((await q("select count(*)::int n from public.user_roles where user_id=$1 and role='customer'",[invitation])).rows[0].n,0);checks++;
+ await expectFailure(()=>q('select public.link_practitioner_invitation($1,$2,$3)',[otherTherapist,newPid,customer]),/account_already_linked/);
+ // Creation-time snapshots also protect later duration changes.
+ await q('update public.practitioner_appointment_types set duration_minutes=30 where id=$1',[offer]);
+ assert.equal(Number((await q('select extract(epoch from (ends_at-starts_at))/60 minutes from public.bookings where id=$1',[second])).rows[0].minutes),75);checks++;
+ for(const table of ['practice_managers','treatment_groups','appointment_types','practitioner_appointment_types','booking_mail_jobs']){
+ const row=(await q('select relrowsecurity from pg_class where oid=$1::regclass',[`public.${table}`])).rows[0];assert.equal(row.relrowsecurity,true);checks++;
+ }
+ assert.equal((await q("select has_function_privilege('anon','practice_private.confirmed_email(uuid)','execute') allowed")).rows[0].allowed,false);checks++;
+ assert.equal((await q("select has_function_privilege('authenticated','public.book_customer_appointment(uuid,uuid,timestamptz,uuid,jsonb,uuid)','execute') allowed")).rows[0].allowed,false);checks++;
+ await q('set local role anon');
+ await expectFailure(()=>q('select * from public.patients'),/permission denied/);
+ await expectFailure(()=>q('select * from public.booking_mail_jobs'),/permission denied/);
+ await expectFailure(()=>q('select public.book_customer_appointment($1,$2,$3,$4,$5,null)',[customer,offer,next,randomUUID(),JSON.stringify(details)]),/permission denied/);
+ await q('reset role');await q('set local role authenticated');
+ await expectFailure(()=>q('select * from public.practice_managers'),/permission denied/);
+ await expectFailure(()=>q('select public.save_appointment_type($1,$2)',[admin,'{}']),/permission denied/);
+ await q('reset role');
+ console.log(`${checks} database checks passed: direct confirmation, dossier reuse, snapshots, privacy, type duration, overlap, idempotency, access, atomic rollback, staff booking, rescheduling and mail leases.`);
+}finally{await q('rollback');await c.end();console.log('All migration changes and fixtures rolled back; no mail sent.');}

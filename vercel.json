@@ -1,5 +1,8 @@
 {
   "crons": [
-    { "path": "/api/cron/support-mail", "schedule": "0 8 * * *" }
+    {
+      "path": "/api/cron/support-mail",
+      "schedule": "0 8 * * *"
+    }
   ]
 }

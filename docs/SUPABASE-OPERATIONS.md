@@ -1,84 +1,39 @@
-# Supabase operations
+# Supabase: ontwikkeling en beheer
 
-MyGrowise uses Supabase as its source of truth for accounts, practitioner availability,
-booking requests, products, orders, entitlements, and private audit data. The schema is
-versioned in `supabase/migrations`; never make production-only schema changes in the
-Dashboard SQL editor.
+**Controle: 18 oktober 2026**, basis `b2cfabd` plus de releasewijzigingen. Alle lokale migraties, inclusief praktijk, websiteherstel, MijnDiAd en de twee nieuwe profielmigraties, zijn in de gekoppelde database geregistreerd. Dit bewijst geen volledige productieconfiguratie van Auth, mail of back-ups. Zie [RELEASE-RUNBOOK.md](RELEASE-RUNBOOK.md).
 
-## Local configuration
+## Systeemgrenzen
 
-Copy `.env.example` to `.env`. Keep it local (it is ignored by Git) and lock it down:
+Supabase bevat Auth-identiteiten, profielen, professionals, beschikbaarheid, boekingen, producten, orders, rechten, support, cliëntdossiers en auditgegevens. Astro-serverroutes gebruiken voor vertrouwde acties `src/lib/supabase/server.ts` en de geheime sleutel. Browsercode mag die sleutel nooit ontvangen. Publieke sleutels en URL staan in `.env.example`; `SUPABASE_DB_URL` en `SUPABASE_ACCESS_TOKEN` zijn uitsluitend voor lokale CLI-taken. De laatste is nodig voor typegeneratie, niet voor de runtime.
 
-```sh
-chmod 600 .env
-```
+`PUBLIC_SITE_URL`, Auth-redirects, support-SMTP en de getoonde Wise-rekeninggegevens verdienen een expliciete controle per doelomgeving. De Wise-code heeft publieke fallback-rekeninggegevens in `src/lib/wiseCheckout.ts`; ontbrekende `WISE_*`-variabelen schakelen betaalinstructies dus niet automatisch uit. Bevestig de begunstigde en IBAN vóór een bestelproef. Supabase Auth-mail en de eigen supportmail via Webnode SMTP zijn afzonderlijke configuraties.
 
-`PUBLIC_SUPABASE_URL` and `PUBLIC_SUPABASE_PUBLISHABLE_KEY` may be used in browser
-code. `SUPABASE_SECRET_KEY` and `SUPABASE_DB_URL` are server/terminal secrets;
-never prefix either with `PUBLIC_` or place either in an Astro client bundle.
-`SUPABASE_ACCESS_TOKEN` is a local-only personal token used to generate database types;
-it is not a deployment secret and should not be set in Vercel.
+## Lokale setup en migraties
 
-All account, practice, and admin routes use Supabase Auth. Legacy local identities can be
-imported with `npm run supabase:migrate-identities`; it creates no outbound mail and assigns
-an inaccessible random credential, so each existing person must use the normal password-reset
-flow before their first sign-in.
+Maak een lokale `.env` vanuit `.env.example` en beperk de bestandstoegang. `npm run supabase:push:dry-run` toont de migraties voor de database uit `SUPABASE_DB_URL`; controleer de doel-URL vóór `npm run supabase:push`. Maak voor elke schemawijziging een nieuwe migratie en werk daarna `src/lib/supabase/database.types.ts` bij met `npm run supabase:types`. `npm run check` voert TypeScript-controle en een Astro-productiebuild uit. Een build controleert geen live database.
 
-## Database workflow
+De scripts `supabase:migrate-catalog`, `supabase:migrate-practice` en `supabase:migrate-identities` migreren oude lokale data. Hun aanwezigheid bewijst niet dat migratie is uitgevoerd. Het identiteiten-script leest een lokale SQLite-database, maakt zo nodig Supabase Auth-gebruikers met een willekeurig onbekend wachtwoord en verstuurt zelf geen mail. Voer zo'n migratie alleen uit op basis van een gecontroleerde bron, mapping en herstelplan; geïmporteerde personen hebben daarna de wachtwoordherstelstroom nodig.
 
-```sh
-npm run supabase:push      # apply committed migrations to the linked database
-npm run supabase:types     # regenerate src/lib/supabase/database.types.ts after schema changes
-npm run build
-```
+## Beveiliging en rollen
 
-Use a new timestamped migration for every schema change. `supabase db pull` is only for
-recovering an emergency Dashboard change; commit the resulting migration immediately.
-Type generation uses the Management API and therefore needs `SUPABASE_ACCESS_TOKEN` in
-your local `.env`; it is intentionally not required for migrations, which use the database
-connection string directly.
+De migraties schakelen RLS in op de applicatietabellen en geven specifieke leesrechten/policies. De basispolicy laat een ingelogde gebruiker het eigen profiel wijzigen; de oude claim dat browserclients nergens rechtstreeks mogen schrijven was dus te absoluut. De huidige boekingsaanvraag loopt via een serverroute en `book_customer_appointment`, waarvan de actuele migratie uitvoering voor `service_role` toestaat. Publieke leesrechten op gepubliceerde producten en actieve professionals zijn bedoeld; support, orders, dossierinhoud en audit vragen afzonderlijke rol- of eigendomschecks.
 
-## Production checklist
+`src/middleware.ts` en `src/lib/adminPermissions.ts` vormen de applicatielaag bovenop Auth. Onbekende adminroutes worden geweigerd; dossierfuncties toetsen ook de cliënttoewijzing in `src/lib/clientRecords.ts`. Omdat serverroutes de service client gebruiken en daarmee RLS omzeilen, moet elke nieuwe route zijn actor, recht, objecttoegang en audit expliciet controleren. Auditmetadata mogen geen geheimen, berichtinhoud of klinische notities bevatten.
 
-1. In **Authentication → URL Configuration**, set the production site URL and every
-   exact callback URL. Keep localhost callbacks only for development.
-2. In **Authentication → Providers**, enable only providers that are implemented. For
-   email/password, require email confirmation and keep secure password changes enabled.
-3. Configure a production SMTP provider before inviting real users or enabling password resets;
-   the default email delivery is not appropriate for production.
-4. Add `/account/wachtwoord-herstellen` on the production domain to Supabase Auth's exact
-   redirect allow-list before activating password reset.
-5. Store payment/email provider credentials as Supabase Edge Function secrets or Vercel
-   server environment variables—never in the database, a migration, or a `PUBLIC_` value.
-6. Keep the database network restriction on Supabase’s managed default until there is a
-   stable production egress IP. Enforce SSL for every external database client.
-7. Enable daily backups/PITR according to the selected Supabase plan and test restoration
-   before relying on it for customer records.
+## Cron en retentie uit de migraties
 
-## Security model
+- `20260925060000_analytics_country_retention.sql` plant verwijdering van analytics-events ouder dan 13 maanden via `pg_cron`.
+- `20260925122000_support_data_retention.sql` plant dagelijkse opschoning van gasttokens, sessies, rate limits en supportgesprekken ouder dan twaalf maanden sinds `last_message_at`. Die tijdstempel wordt bijgewerkt door zichtbare berichten, niet door interne notities.
+- `vercel.json` plant één dagelijkse geconsolideerde mailworker op `0 8 * * *` UTC, beveiligd met `CRON_SECRET`. Directe verzending en handmatig herstel blijven de primaire paden. Er is geen vijfminutencron op Vercel Free. MijnDiAd ververst bij gebruik; de oude achtergrondjob is gedeactiveerd.
 
-Row-level security is enabled on every application table. Anonymous users can only read
-active practitioner profiles and published products. PII, bookings, orders, entitlements,
-availability exceptions, and audit logs are never publicly readable. Browser clients have
-no direct table write permissions; booking creation uses a narrowly scoped RPC. All
-privileged writes use the server-only service-role client, which bypasses RLS and therefore
-must remain inside trusted Astro routes/webhooks.
+Controleer in de doelomgeving of migraties en jobs daadwerkelijk bestaan en slagen. Verifieer de privacytekst tegen het werkelijke retentiegedrag en leg een uitzonderingsproces voor lopende AVG-verzoeken vast.
 
-The organisation dashboard applies a deny-by-default permission matrix in
-`src/lib/adminPermissions.ts` on top of Supabase roles. A role alone never grants a route:
-the Astro middleware checks the specific required permission, and privileged endpoints
-recheck action-specific permissions such as product publishing. Unknown `/admin` routes
-are denied. Every new admin route or server mutation must be registered in that matrix.
+## Productiecontrole vóór gebruik met echte gegevens
 
-`security_audit_log` records the authenticated actor, request ID, route, and available
-before/after summaries for privileged dashboard changes. Do not put secrets, full message
-content, clinical notes, or health data in audit snapshots or metadata.
+1. Bevestig Supabase-project, toegepaste migraties en gegenereerde types. Test een registratie, bevestigingsmail, login en wachtwoordherstel met de echte domein- en redirectinstellingen.
+2. Controleer dat de service key alleen server-side beschikbaar is. Test anonieme toegang, klantgrenzen, supportrollen, praktijkrollen en dossier-toewijzingen met afzonderlijke accounts.
+3. Proef de aankoop, handmatige Wise-controle, entitlement en werkelijke levering. Vergelijk de getoonde rekeninggegevens met de bedoelde begunstigde.
+4. Test een echte supportmail, reply, mislukking en retry; controleer `CRON_SECRET`, Vercel-cron en de Webnode-mailbox. Test Auth-mail afzonderlijk.
+5. Controleer `pg_cron`-jobs, logs, monitoring, back-upinstellingen en een daadwerkelijke herstelproef. `/api/health` controleert slechts een Supabase-productquery en is geen volledige systeemcheck.
 
-## Interne communicatie
-
-De interne inbox is uitsluitend voor actieve MyGrowise-medewerkers en professionals met een
-account. De database dwingt deelname aan een thread af, maakt een notificatie aan voor elke
-ontvanger (nooit voor de afzender), en houdt de inhoud buiten het auditlog. Het belletje in de
-admin- en praktijknavigatie haalt ongelezen meldingen elke 30 seconden op; het openen van een
-thread markeert de bijhorende meldingen als gelezen. Gebruik deze inbox niet voor cliëntgegevens,
-intakes, diagnoses of sessienotities.
+Interne teamcommunicatie gebruikt thread-deelnemers en meldingen; berichtinhoud hoort buiten commerciële analytics en audit. Boekingsbevestiging, verplaatsing en annulering hebben een geteste mailstroom. Herinneringen en weekoverzichten zijn nog niet actief. Productieaflevering en Auth-mail vragen elk een eigen proef.

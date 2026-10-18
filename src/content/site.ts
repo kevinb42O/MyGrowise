@@ -1,9 +1,11 @@
+import { profileImages } from './profileImages';
+
 // Editorial details only. Publication status, title, summary and price live in Supabase.
 export const profilePresentation = [
   {
     slug: 'stress-en-emotieprofiel',
     eyebrow: 'Een helder vertrekpunt',
-    image: '/images/editorial/mygrowise-46.jpg',
+    image: profileImages['stress-en-emotieprofiel'],
     features: [
       'Persoonlijk en genuanceerd inzicht',
       'Overzicht van stress- en emotiepatronen',
@@ -13,7 +15,7 @@ export const profilePresentation = [
   {
     slug: 'hechting-en-relatieprofiel',
     eyebrow: 'Inzicht in verbinding',
-    image: '/images/editorial/mygrowise-50.jpg',
+    image: profileImages['hechting-en-relatieprofiel'],
     features: [
       'Inzicht in relationele patronen',
       'Aandacht voor behoeften en grenzen',
@@ -28,7 +30,7 @@ export const profilesInDevelopment = [
     slug: 'hechting-en-relatieprofiel',
     title: 'Hechting- en relatieprofiel',
     summary: 'We werken aan een profiel rond hechting en relationele patronen.',
-    image: '/images/editorial/mygrowise-50.jpg',
+    image: profileImages['hechting-en-relatieprofiel'],
   },
 ];
 
@@ -39,8 +41,8 @@ export const practitioners = [
   {
     slug: 'virginie',
     name: 'Virginie',
-    role: 'Oprichter van MyGrowise',
-    focus: 'Stress, emotionele belasting en EMDR-therapie bij trauma',
+    role: 'Oprichter · erkend klinisch psychotherapeut',
+    focus: 'Jongeren en volwassenen · stress, emotionele belasting, burn-out, depressie, EMDR, hypnotherapie en cognitieve en oplossingsgerichte therapie',
     image: '/images/practitioners/virginie-real.jpg',
   },
   {
@@ -53,7 +55,7 @@ export const practitioners = [
   {
     slug: 'amy',
     name: 'Amy',
-    role: 'Seksuoloog',
+    role: 'Erkend seksuoloog',
     focus: 'Intimiteit, lichaamsbeleving en seksueel welzijn',
     image: '/images/practitioners/amy-real.jpg',
   },
@@ -73,7 +75,7 @@ export const homeFaqs = [
   {
     question: 'Hoe verloopt online begeleiding?',
     answer:
-      'Je kiest een professional, bekijkt de vrije online momenten en vraagt je afspraak rechtstreeks aan via MyGrowise. Je professional bevestigt daarna de praktische informatie.',
+      'Je kiest een professional, bekijkt de vrije online momenten en vraagt een beschikbaar moment rechtstreeks via MyGrowise. Een geslaagde boeking is meteen bevestigd; je ontvangt de praktische informatie per e-mail.',
   },
   {
     question: 'Kan ik alles op mijn eigen tempo doen?',

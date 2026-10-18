@@ -10,6 +10,7 @@ export type UserRole = (typeof APP_ROLES)[number];
 export type AdminRole = Exclude<UserRole, 'customer'>;
 
 export const ADMIN_PERMISSIONS = [
+  'practice.manage',
   'dashboard.read',
   'analytics.read',
   'orders.read',
@@ -84,6 +85,7 @@ export const firstAccessibleAdminPath = (roles: readonly UserRole[]) => {
 
 /** Null is deliberate: unregistered admin routes are denied by default. */
 export const requiredAdminPermission = (path: string, method = 'GET'): AdminPermission | null => {
+  if (path.startsWith('/admin/afspraken/') || path === '/admin/afspraaktypes' || path === '/admin/boekingslinks' || path.startsWith('/admin/therapeuten') || path.startsWith('/api/admin/practice')) return 'practice.manage';
   if (path === '/admin') return 'dashboard.read';
   if (path === '/admin/analytics') return 'analytics.read';
   if (path === '/admin/bestellingen' || path.startsWith('/admin/bestellingen/') || path === '/admin/betalingen') return 'orders.read';
@@ -93,16 +95,20 @@ export const requiredAdminPermission = (path: string, method = 'GET'): AdminPerm
   if (path === '/admin/agenda') return 'agenda.read';
   if (path.startsWith('/admin/professionals')) return 'professionals.read';
   if (path.startsWith('/admin/afnames')) return 'assessments.read';
+  if (path === '/admin/modules' || path.startsWith('/admin/modules/')) return 'products.read';
   if (path.startsWith('/admin/vragenlijsten')) return 'products.read';
   if (path.startsWith('/admin/producten')) return 'products.read';
   if (path === '/admin/profielen' || path === '/admin/modules' || path === '/admin/content' || path.startsWith('/admin/content/')) return 'content.read';
   if (path === '/admin/berichten' || path.startsWith('/admin/berichten/')) return 'internal_messages.read';
+  if (path === '/admin/mail') return 'integrations.manage';
+  if (path === '/api/admin/mail') return 'integrations.manage';
   if (path === '/admin/instellingen') return 'integrations.read';
   if (path === '/admin/gebruikers') return 'users.read';
   if (path === '/admin/privacy') return 'privacy.read';
 
   if (path === '/api/admin/agenda') return method === 'GET' ? 'agenda.read' : 'agenda.write';
   if (path.startsWith('/api/admin/afnames')) return 'assessments.manage';
+  if (path.startsWith('/api/admin/modules/')) return method === 'GET' ? 'products.read' : 'products.write';
   if (path.startsWith('/api/admin/catalog')) return 'products.write';
   if (path.startsWith('/api/admin/products')) return method === 'GET' ? 'products.read' : 'products.write';
   if (path.startsWith('/api/admin/wise-reconciliation')) return method === 'GET' ? 'orders.read' : 'orders.verify';
@@ -111,6 +117,8 @@ export const requiredAdminPermission = (path: string, method = 'GET'): AdminPerm
   if (path.startsWith('/api/admin/privacy')) return method === 'GET' ? 'privacy.read' : 'privacy.manage';
   if (path.startsWith('/api/admin/bookings')) return method === 'GET' ? 'bookings.read' : 'bookings.manage';
   if (path.startsWith('/api/admin/recurring-costs')) return 'integrations.manage';
+  if (path.startsWith('/api/admin/clienten/') && path.endsWith('/sessiedata')) return 'client_records.read';
+  if (path.startsWith('/api/admin/clienten/') && path.endsWith('/gegevens')) return 'client_records.write';
   if (path === '/api/admin/clienten/zoeken') return 'client_records.read';
   if (path.startsWith('/api/admin/clienten/') && path.endsWith('/account')) return 'client_records.assign';
   if (path.startsWith('/api/admin/clienten/') && path.endsWith('/toewijzingen')) return 'client_records.assign';
@@ -121,3 +129,7 @@ export const requiredAdminPermission = (path: string, method = 'GET'): AdminPerm
   if (path.startsWith('/api/admin/work-items')) return 'operations.manage';
   return null;
 };
+
+/** Customers cannot gain practice management; superadmins already have this permission. */
+export const requiresPracticeManagerLookup = (roles: readonly UserRole[]) =>
+  !roles.every(role => role === 'customer') && !hasAdminPermission(roles, 'practice.manage');

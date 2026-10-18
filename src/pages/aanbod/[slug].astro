@@ -1,13 +1,15 @@
 ---
+import {salesEnabled} from '../../lib/commerce/readiness';
 import {resolveCatalogSlug} from '../../lib/catalog/server';
 import MainLayout from '../../layouts/MainLayout.astro';
 import { SUPABASE_SESSION_COOKIE, verifySupabaseSession } from '../../lib/adminAuth';
 import { createEpcSepaQr, getWiseManualDetails, getWiseManualOrder, getWiseManualProduct } from '../../lib/wiseCheckout';
 
 const slug = String(Astro.params.slug || '').toLowerCase();
+if (!salesEnabled() && !Astro.url.searchParams.has('order')) return Astro.redirect('/bestellen',303);
 const product = await getWiseManualProduct(slug);
 if (!product){const alias=await resolveCatalogSlug(slug);return Astro.redirect(alias||'/prijzen',alias?301:302);}
-if(product.type==='profile'||product.type==='questionnaire'){const order=Astro.url.searchParams.get('order');return Astro.redirect(order?`/bestellen?order=${encodeURIComponent(order)}`:`/${product.type==='profile'?'profielen':'vragenlijsten'}/${product.slug}`,302);}
+if(product.type==='profile'||product.type==='questionnaire'||product.type==='module'){const order=Astro.url.searchParams.get('order');return Astro.redirect(order?`/bestellen?order=${encodeURIComponent(order)}`:`/${product.type==='profile'?'profielen':product.type==='module'?'modules':'vragenlijsten'}/${product.slug}`,302);}
 const session = await verifySupabaseSession(Astro.cookies.get(SUPABASE_SESSION_COOKIE)?.value);
 const canCheckout = Boolean(session?.roles.includes('customer'));
 const next = `/aanbod/${product.slug}`;

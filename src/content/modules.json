@@ -1,0 +1,117 @@
+[
+  {
+    "number": 1,
+    "slug": "het-meer",
+    "title": "Het Meer",
+    "tagline": "Waar je lichaam spreekt",
+    "subtitle": "Herken wat je lichaam je vertelt",
+    "introduction": [
+      "Je reis begint aan de oever van het meer. Je leert kijken naar de bewegingen van het water en ontdekt wat jouw lichaam je probeert duidelijk te maken.",
+      "Wat is stress eigenlijk? Waarom reageert je lichaam soms al voordat je zelf begrijpt wat er gebeurt? Je leert lichamelijke, emotionele en cognitieve signalen herkennen en ontdekt welke hulpbronnen zich in jouw meer bevinden."
+    ],
+    "topics": [
+      "Stress begrijpen",
+      "Fysiologische stressreacties",
+      "Lichaamsbewustzijn",
+      "Stresssignalen",
+      "Hulpbronnen"
+    ],
+    "summary": "Wat is stress eigenlijk? Waarom reageert je lichaam soms al voordat je zelf begrijpt wat er gebeurt? Je leert lichamelijke, emotionele en cognitieve signalen herkennen en ontdekt welke hulpbronnen zich in jouw meer bevinden."
+  },
+  {
+    "number": 2,
+    "slug": "de-stromingen",
+    "title": "De Stromingen",
+    "tagline": "De patronen onder het oppervlak",
+    "subtitle": "Ontdek hoe jij met stress omgaat",
+    "introduction": [
+      "Onder het wateroppervlak bevinden zich stromingen die je niet altijd kunt zien. Sommige brengen je telkens opnieuw in dezelfde richting.",
+      "Ook jij hebt automatische manieren ontwikkeld om met stress, emoties en moeilijke situaties om te gaan. Je onderzoekt jouw reactiepatronen en leert begrijpen waarom je soms terugvalt op vertrouwde gewoontes."
+    ],
+    "topics": [
+      "Copingstijlen",
+      "Automatische stressreacties",
+      "Gedragspatronen",
+      "Gedachten, gevoelens en gedrag"
+    ],
+    "summary": "Ook jij hebt automatische manieren ontwikkeld om met stress, emoties en moeilijke situaties om te gaan. Je onderzoekt jouw reactiepatronen en leert begrijpen waarom je soms terugvalt op vertrouwde gewoontes."
+  },
+  {
+    "number": 3,
+    "slug": "de-mist",
+    "title": "De Mist",
+    "tagline": "Wanneer onzekerheid het zicht vertroebelt",
+    "subtitle": "Omgaan met angst en piekeren",
+    "introduction": [
+      "Soms trekt er mist over het landschap. Wat eerst duidelijk leek, wordt onzeker. Je gedachten proberen in te vullen wat je niet kunt zien.",
+      "Angst en piekeren kunnen op dezelfde manier je blik beïnvloeden. Je ontdekt hoe angst en piekergedachten werken en oefent met manieren om anders om te gaan met onzekerheid, controlebehoefte en vermijding."
+    ],
+    "topics": [
+      "Angst begrijpen",
+      "Piekergedachten",
+      "Onzekerheid",
+      "Controlebehoefte",
+      "Vermijdingsgedrag"
+    ],
+    "summary": "Angst en piekeren kunnen op dezelfde manier je blik beïnvloeden. Je ontdekt hoe angst en piekergedachten werken en oefent met manieren om anders om te gaan met onzekerheid, controlebehoefte en vermijding."
+  },
+  {
+    "number": 4,
+    "slug": "het-evenwicht",
+    "title": "Het Evenwicht",
+    "tagline": "Leren bewegen met het water",
+    "subtitle": "Begrijp je zenuwstelsel en leer reguleren",
+    "introduction": [
+      "Het water hoeft niet altijd stil te zijn. Soms zijn er golven, soms is er nauwelijks beweging. Het gaat erom te ontdekken wat jou helpt wanneer je uit evenwicht raakt.",
+      "Je verdiept je in de werking van je zenuwstelsel en leert spanning en ontregeling herkennen. Met gerichte oefeningen ontdek je manieren om je lichaam te ondersteunen bij het vinden van meer evenwicht."
+    ],
+    "topics": [
+      "Window of Tolerance",
+      "Hyperarousal",
+      "Hypoarousal",
+      "Ademhaling",
+      "Hartcoherentie",
+      "Regulatie"
+    ],
+    "summary": "Je verdiept je in de werking van je zenuwstelsel en leert spanning en ontregeling herkennen. Met gerichte oefeningen ontdek je manieren om je lichaam te ondersteunen bij het vinden van meer evenwicht."
+  },
+  {
+    "number": 5,
+    "slug": "de-bergen",
+    "title": "De Bergen",
+    "tagline": "Ontdek hoe jouw landschap gevormd werd",
+    "subtitle": "Persoonlijkheid, beschermingsmechanismen en zelfzorg",
+    "introduction": [
+      "Rondom het meer rijzen bergen op. Sommige hellingen zijn zacht, andere steil. Er zijn vertrouwde paden en routes die je nog nooit hebt verkend.",
+      "Je ontdekt hoe persoonlijkheid, aanleg, opvoeding en levenservaringen mee vormgeven aan hoe je denkt, voelt en reageert. Je verkent overtuigingen, beschermingsmechanismen, grenzen en zelfzorg: wat helpt jou vandaag nog en wat mag anders?"
+    ],
+    "topics": [
+      "Persoonlijkheid",
+      "Nature en nurture",
+      "Overtuigingen",
+      "Beschermingsmechanismen",
+      "Grenzen",
+      "Zelfzorg"
+    ],
+    "summary": "Je ontdekt hoe persoonlijkheid, aanleg, opvoeding en levenservaringen mee vormgeven aan hoe je denkt, voelt en reageert. Je verkent overtuigingen, beschermingsmechanismen, grenzen en zelfzorg: wat helpt jou vandaag nog en wat mag anders?"
+  },
+  {
+    "number": 6,
+    "slug": "het-volledige-landschap",
+    "title": "Het Volledige Landschap",
+    "tagline": "Alles krijgt een plaats",
+    "subtitle": "Integreren en vooruitkijken",
+    "introduction": [
+      "Je staat opnieuw aan het meer. De bergen zijn er nog, net als de stromingen en de mist. Maar je kijkt met andere ogen.",
+      "Je brengt jouw inzichten samen, ontdekt hoe je ze in het dagelijks leven kunt toepassen en geeft vorm aan je persoonlijke innerlijke landschap: je patronen, krachten, kwetsbaarheden en mogelijkheden."
+    ],
+    "topics": [
+      "Zelfinzicht",
+      "Persoonlijke patronen",
+      "Hulpbronnen",
+      "Integratie",
+      "Toepassing in het dagelijks leven"
+    ],
+    "summary": "Je brengt jouw inzichten samen, ontdekt hoe je ze in het dagelijks leven kunt toepassen en geeft vorm aan je persoonlijke innerlijke landschap: je patronen, krachten, kwetsbaarheden en mogelijkheden."
+  }
+]

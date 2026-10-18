@@ -19,8 +19,19 @@
     "supabase:migrate-catalog": "dotenv -e .env -- node scripts/migrate-local-catalog-to-supabase.mjs",
     "supabase:migrate-practice": "dotenv -e .env -- node scripts/migrate-local-practice-to-supabase.mjs",
     "supabase:migrate-identities": "dotenv -e .env -- node scripts/migrate-local-identities-to-supabase.mjs",
-    "test:catalog": "node --experimental-strip-types --test tests/catalog-pricing.test.ts",
-    "test:catalog:db": "dotenv -e .env -- node tests/catalog-database.mjs"
+    "test:catalog": "node --experimental-strip-types --test tests/catalog-pricing.test.ts tests/questionnaire-landings.test.ts",
+    "test:catalog:db": "dotenv -e .env -- node tests/catalog-database.mjs",
+    "test:appointments:db": "dotenv -e .env -- node tests/appointments-database.mjs",
+    "test:appointments": "node --experimental-strip-types --test tests/appointments.test.ts",
+    "test:questionnaires:db": "dotenv -e .env -- node tests/questionnaire-landings-database.mjs",
+    "test:modules": "node --experimental-strip-types --test tests/modules.test.ts",
+    "test:modules:db": "dotenv -e .env -- node tests/modules-database.mjs",
+    "test:modules:http": "dotenv -e .env -- node tests/modules-http.mjs",
+    "test:commerce:db": "node tests/commerce-database.mjs",
+    "test:commerce:http": "dotenv -e .env -- node tests/commerce-http.mjs",
+    "test": "node --experimental-strip-types --test tests/*.test.ts tests/*.test.mjs",
+    "test:profiles:db": "node tests/profiles-database.mjs",
+    "check:artifact": "node scripts/check-release-artifact.mjs"
   },
   "dependencies": {
     "@astrojs/react": "^6.0.5",
@@ -33,13 +44,15 @@
     "@fullcalendar/react": "^6.1.21",
     "@fullcalendar/timegrid": "^6.1.21",
     "@supabase/supabase-js": "^2.116.0",
+    "@vercel/functions": "3.9.8",
     "astro": "^7.2.4",
     "framer-motion": "^13.3.0",
     "luxon": "^3.7.2",
     "nodemailer": "^10.0.10",
     "qrcode": "^1.5.4",
     "react": "^19.3.0",
-    "react-dom": "^19.3.0"
+    "react-dom": "^19.3.0",
+    "tus-js-client": "4.3.1"
   },
   "devDependencies": {
     "@types/luxon": "^3.7.5",

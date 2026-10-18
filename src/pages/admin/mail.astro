@@ -1,0 +1,16 @@
+---
+import AdminLayout from '../../layouts/AdminLayout.astro';
+import {getSupabaseAdmin} from '../../lib/supabase/server';
+import {websiteMailReady} from '../../lib/commerce/websiteMail';
+const db=getSupabaseAdmin();
+const queues=[['support_mail_jobs','Bestaande supportgesprekken'],['commerce_mail_jobs','Bestellingen en afnames'],['booking_mail_jobs','Afspraken'],['website_mail_jobs','Contact en aankooplinks']] as const;
+const counts=await Promise.all(queues.map(async([table,label])=>{
+ const states=await Promise.all(['pending','sending','failed'].map(async status=>{const {count,error}=await db.from(table).select('id',{count:'exact',head:true}).eq('status',status);if(error)throw new Error('Mailwachtrij tijdelijk niet beschikbaar.');return count||0;}));
+ return {label,states};
+}));
+Astro.response.headers.set('Cache-Control','private, no-store');
+---
+<AdminLayout title="Mailopvolging"><div class="admin-page"><section class="admin-page-heading"><div><p class="admin-eyebrow">Organisatie</p><h1>Mailopvolging</h1><p>Nieuwe berichten worden direct geprobeerd. De dagelijkse herstelronde verwerkt achterstallige taken. Je kunt hier ook bewust een nieuwe poging starten.</p></div></section>
+{Astro.url.searchParams.has('processed')&&<p role="status">De verzendronde is uitgevoerd. Controleer de resterende aantallen hieronder.</p>}
+{!websiteMailReady()&&<p role="alert">E-mail is nog niet volledig ingesteld en geverifieerd. Taken blijven bewaard tot de configuratie hersteld is.</p>}
+<section class="admin-panel" style="padding:1.5rem;overflow-x:auto"><table class="admin-table"><thead><tr><th>Wachtrij</th><th>Wachtend</th><th>Bezig</th><th>Mislukt</th></tr></thead><tbody>{counts.map(({label,states})=><tr><td>{label}</td>{states.map(n=><td>{n}</td>)}</tr>)}</tbody></table><form method="post" action="/api/admin/mail"><button class="admin-button admin-button--primary">Verwerk wachtende mail</button><p>Dit verwerkt een beperkte ronde van vervallen of wachtende taken. Definitief mislukte taken worden pas na controle opnieuw klaargezet.</p></form><form method="post" action="/api/admin/mail"><input type="hidden" name="retry_failed" value="1"/><label style="display:block;margin:1rem 0"><input type="checkbox" required name="checked" value="yes"/> Ik heb de mailconfiguratie en oorzaak gecontroleerd. Een eerdere mail kan alsnog aangekomen zijn.</label><button class="admin-button">Zet mislukte mail opnieuw klaar en probeer</button></form><p>Er is geen garantie op verzending binnen vijf minuten. Zonder directe succesvolle verzending of handmatige actie volgt de volgende automatische poging tijdens de dagelijkse ronde. Supabase Auth-mails hebben hun eigen verzendvoorziening.</p></section></div></AdminLayout>

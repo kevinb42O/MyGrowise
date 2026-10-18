@@ -26,13 +26,15 @@ export type PracticeAgendaItem = {
   color: string;
   editable: boolean;
   patientId?: string | null;
+  externalSource?: 'mijndiad' | null;
+  externalUrl?: string | null;
 };
 
 export const listPracticeAgenda = async (practitionerId: string, from: string, to: string, canUseItransform: boolean): Promise<PracticeAgendaItem[]> => {
   const client = getSupabaseAdmin();
   const [bookings, exceptions, ownedEvents, itransformEvents, slots] = await Promise.all([
     client.from('bookings')
-      .select('id,patient_id,client_name,client_email,starts_at,ends_at,status')
+      .select('id,patient_id,client_name,client_email,appointment_name,offer:practitioner_appointment_types(appointment_types(treatment_groups(color))),starts_at,ends_at,status')
       .eq('practitioner_id', practitionerId)
       .in('status', ['pending', 'confirmed'])
       .lt('starts_at', to).gt('ends_at', from).order('starts_at'),
@@ -41,22 +43,23 @@ export const listPracticeAgenda = async (practitionerId: string, from: string, t
       .eq('practitioner_id', practitionerId).eq('kind', 'unavailable')
       .lt('starts_at', to).gt('ends_at', from).order('starts_at'),
     client.from('practice_calendar_events')
-      .select('id,title,starts_at,ends_at,event_kind,location,color,calendar_scope')
+      .select('id,title,starts_at,ends_at,event_kind,location,color,calendar_scope,external_source,external_url')
       .eq('practitioner_id', practitionerId).eq('calendar_scope', 'mygrowise').eq('status', 'confirmed')
       .lt('starts_at', to).gt('ends_at', from).order('starts_at'),
     canUseItransform ? client.from('practice_calendar_events')
-      .select('id,title,starts_at,ends_at,event_kind,location,color,calendar_scope')
-      .eq('calendar_scope', 'itransform').eq('status', 'confirmed')
+      .select('id,title,starts_at,ends_at,event_kind,location,color,calendar_scope,external_source,external_url')
+      .eq('practitioner_id', practitionerId).eq('calendar_scope', 'itransform').eq('status', 'confirmed')
       .lt('starts_at', to).gt('ends_at', from).order('starts_at') : Promise.resolve({ data: [], error: null }),
-    getBookableSlots(practitionerId, 62),
+    // A source outage must not hide existing appointments or suggest free time.
+    getBookableSlots(practitionerId, 62).catch(() => []),
   ]);
   if (bookings.error || exceptions.error || ownedEvents.error || itransformEvents.error) throw bookings.error || exceptions.error || ownedEvents.error || itransformEvents.error;
 
   const appointments: PracticeAgendaItem[] = ((bookings.data || []) as Row[]).map((row) => ({
     id: String(row.id), source: 'mygrowise', title: String(row.client_name),
-    subtitle: String(row.client_email), startsAt: String(row.starts_at), endsAt: String(row.ends_at),
+    subtitle: `${String(row.appointment_name)} · ${String(row.client_email)}`, startsAt: String(row.starts_at), endsAt: String(row.ends_at),
     status: String(row.status), kind: 'appointment', location: '',
-    color: row.status === 'pending' ? '#b7791f' : '#1f7060', editable: false,
+    color: row.offer?.appointment_types?.treatment_groups?.color || '#1f7060', editable: false,
     patientId: row.patient_id ? String(row.patient_id) : null,
   }));
   const blocks: PracticeAgendaItem[] = ((exceptions.data || []) as Row[]).map((row) => ({
@@ -67,10 +70,12 @@ export const listPracticeAgenda = async (practitionerId: string, from: string, t
   }));
   const customEvents: PracticeAgendaItem[] = ([...(ownedEvents.data || []), ...(itransformEvents.data || [])] as Row[]).map((row) => ({
     id: String(row.id), source: row.calendar_scope === 'itransform' ? 'itransform' : 'mygrowise', title: String(row.title),
-    subtitle: String(row.location || (row.calendar_scope === 'itransform' ? 'Praktijk Itransform' : 'MyGrowise')),
+    subtitle: row.external_source === 'mijndiad' ? ['MijnDiAd', row.location].filter(Boolean).join(' · ') : String(row.location || (row.calendar_scope === 'itransform' ? 'Praktijk Itransform' : 'MyGrowise')),
     startsAt: String(row.starts_at), endsAt: String(row.ends_at), status: 'confirmed',
     kind: String(row.event_kind) as PracticeAgendaItem['kind'],
-    location: String(row.location || ''), color: String(row.color || '#d26479'), editable: true,
+    location: String(row.location || ''), color: String(row.color || '#d26479'), editable: !row.external_source,
+    externalSource: row.external_source === 'mijndiad' ? 'mijndiad' : null,
+    externalUrl: row.external_source === 'mijndiad' && /^https:\/\/praktijkitransform\.mijndiad\.nl\/appointments\/\d+$/.test(row.external_url || '') ? row.external_url : null,
   }));
   const available: PracticeAgendaItem[] = [];
   for (const slot of slots.filter((item) => Date.parse(item.startsAt) < Date.parse(to) && Date.parse(item.endsAt) > Date.parse(from))
@@ -121,10 +126,10 @@ export const updateOwnedAgendaEvent = async (practitionerId: string, id: string,
   const values = validateOwnedEvent(input, canUseItransform);
   const client = getSupabaseAdmin();
   const { data: before, error: readError } = await client.from('practice_calendar_events')
-    .select('id,practitioner_id,title,starts_at,ends_at,event_kind,location,color,calendar_scope')
+    .select('id,practitioner_id,title,starts_at,ends_at,event_kind,location,color,calendar_scope,external_source')
     .eq('id', id).maybeSingle();
   if (readError) throw readError;
-  if (!before || !(before.calendar_scope === 'itransform' && canUseItransform || before.calendar_scope === 'mygrowise' && before.practitioner_id === practitionerId)) throw new Error('not_found');
+  if (!before || before.external_source || before.practitioner_id !== practitionerId || !(before.calendar_scope === 'itransform' && canUseItransform || before.calendar_scope === 'mygrowise')) throw new Error('not_found');
   const { data, error } = await client.from('practice_calendar_events')
     .update({ ...values, practitioner_id: input.calendarScope === 'mygrowise' ? practitionerId : before.practitioner_id || practitionerId })
     .eq('id', id)
@@ -137,9 +142,9 @@ export const updateOwnedAgendaEvent = async (practitionerId: string, id: string,
 export const deleteOwnedAgendaEvent = async (practitionerId: string, id: string, actor: AuditActor, canUseItransform: boolean) => {
   const client = getSupabaseAdmin();
   const { data: before, error: readError } = await client.from('practice_calendar_events')
-    .select('id,practitioner_id,title,starts_at,ends_at,event_kind,calendar_scope').eq('id', id).maybeSingle();
+    .select('id,practitioner_id,title,starts_at,ends_at,event_kind,calendar_scope,external_source').eq('id', id).maybeSingle();
   if (readError) throw readError;
-  if (!before || !(before.calendar_scope === 'itransform' && canUseItransform || before.calendar_scope === 'mygrowise' && before.practitioner_id === practitionerId)) throw new Error('not_found');
+  if (!before || before.external_source || before.practitioner_id !== practitionerId || !(before.calendar_scope === 'itransform' && canUseItransform || before.calendar_scope === 'mygrowise')) throw new Error('not_found');
   const { data, error } = await client.from('practice_calendar_events').delete()
     .eq('id', id).select('id,practitioner_id,title,starts_at,ends_at,event_kind,calendar_scope').maybeSingle();
   if (error) throw error;

@@ -1,7 +1,9 @@
 ---
+import FormProtection from '../components/practice/FormProtection.astro';
 import AdminIcon from '../components/admin/AdminIcon.astro';
 import NotificationBell from '../components/admin/NotificationBell.astro';
 import '../styles/admin.css';
+import '../styles/practice-management.css';
 import { hasPermission } from '../lib/adminAuth';
 import { requiredAdminPermission } from '../lib/adminPermissions';
 
@@ -26,6 +28,7 @@ const navGroups = [
     label: 'Overzicht',
     items: [
       { label: 'Dashboard', href: '/admin', icon: 'overview', exact: true },
+      { label: 'Mailopvolging', href: '/admin/mail', icon: 'messages' },
       { label: 'Analytics', href: '/admin/analytics', icon: 'analytics' },
     ],
   },
@@ -45,7 +48,9 @@ const navGroups = [
       { label: 'Agenda', href: '/admin/agenda', icon: 'calendar' },
       { label: 'Boekingen', href: '/admin/boekingen', icon: 'calendar' },
       { label: 'Cliëntendossiers', href: '/admin/clienten', icon: 'customers' },
-      { label: 'Professionals', href: '/admin/professionals', icon: 'professionals' },
+      { label: 'Therapeuten', href: '/admin/therapeuten', icon: 'professionals' },
+      { label: 'Afspraaktypes', href: '/admin/afspraaktypes', icon: 'calendar' },
+      { label: 'Boekingslinks', href: '/admin/boekingslinks', icon: 'external' },
     ],
   },
   {
@@ -175,5 +180,6 @@ const canOpen = (href: string) => {
         if (event.key === 'Escape') setSidebar(false);
       });
     </script>
+    <FormProtection/>
   </body>
 </html>

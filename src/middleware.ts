@@ -1,3 +1,4 @@
+import {legacyRoutes,retiredLegacyRoutes} from './lib/legacyRoutes';
 import { defineMiddleware } from 'astro:middleware';
 import { SUPABASE_SESSION_COOKIE, hasPermission, hasRole, isCustomerAccount, isSupabaseAuthConfigured, isTrustedFormOrigin, sanitizeAppRedirect, verifySupabaseSession } from './lib/adminAuth';
 import { firstAccessibleAdminPath, requiredAdminPermission } from './lib/adminPermissions';
@@ -14,6 +15,11 @@ export const onRequest = defineMiddleware(async (context, next) => {
   }
 
   const path = context.url.pathname;
+  const oldPath=path.replace(/\/$/,'')||'/';
+  if(['GET','HEAD'].includes(request.method)){
+    if(Object.hasOwn(legacyRoutes,oldPath))return context.redirect(legacyRoutes[oldPath],301);
+    if(retiredLegacyRoutes.has(oldPath))return new Response('Dit oude aanbod is niet meer beschikbaar.',{status:410,headers:{'content-type':'text/plain; charset=utf-8'}});
+  }
   context.locals.requestId = crypto.randomUUID();
   const isAdminPage = path.startsWith('/admin');
   const isAdminApi = path.startsWith('/api/admin');
@@ -23,12 +29,12 @@ export const onRequest = defineMiddleware(async (context, next) => {
   const isAccountApi = path.startsWith('/api/account');
   const isInternalApi = path.startsWith('/api/internal');
   const isCheckoutApi = path === '/api/checkout' || path.startsWith('/api/checkout/');
-  const isBookingPage = /^\/begeleiding\/[a-z0-9]+(?:-[a-z0-9]+)*$/.test(path);
+  const isBookingPage = path === '/afspraak' || path.startsWith('/afspraak/') || /^\/begeleiding\/[a-z0-9]+(?:-[a-z0-9]+)*$/.test(path);
   const isBookingApi = path === '/api/bookings';
-  const isOptionalSessionPath = isBookingPage || isBookingApi || path === '/bestellen' || path === '/samenstellen' || path === '/vragenlijsten' || path === '/profielen' || path.startsWith('/vragenlijsten/') || path.startsWith('/profielen/') || path === '/contact' || path === '/api/contact' || path === '/berichten/gesprek';
+  const isOptionalSessionPath = path === '/aankopen' || path.startsWith('/aankopen/') || path.startsWith('/api/aankopen/') || path === '/api/checkout/catalog-order' || path === '/verdieping' || path.startsWith('/verdieping/') || path === '/zelf-aan-de-slag' || path === '/modules' || path.startsWith('/modules/') || isBookingPage || isBookingApi || path === '/bestellen' || path === '/samenstellen' || path === '/vragenlijsten' || path === '/profielen' || path.startsWith('/vragenlijsten/') || path.startsWith('/profielen/') || path === '/contact' || path === '/api/contact' || path === '/berichten/gesprek';
   if (!isAdminPage && !isAdminApi && !isPracticePage && !isPracticeApi && !isAccountPage && !isAccountApi && !isInternalApi && !isCheckoutApi && !isOptionalSessionPath) return next();
 
-  if (path === '/api/admin/login' || path === '/api/admin/logout' || path === '/api/account/login' || path === '/api/account/register' || path === '/api/account/logout' || path === '/api/account/password-reset' || path === '/api/account/verification-resend' || path === '/account/bevestigingslink' || path === '/account/wachtwoord-vergeten' || path === '/account/wachtwoord-herstellen') return next();
+  if (path === '/praktijk/activeren' || path === '/api/admin/login' || path === '/api/admin/logout' || path === '/api/account/login' || path === '/api/account/register' || path === '/api/account/logout' || path === '/api/account/password-reset' || path === '/api/account/verification-resend' || path === '/account/bevestigingslink' || path === '/account/wachtwoord-vergeten' || path === '/account/wachtwoord-herstellen') return next();
 
   let session;
   try {
@@ -72,6 +78,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
   }
 
   if (!session) {
+    if (path.startsWith('/account/modules/')) return context.redirect(path.replace('/account/modules/','/aankopen/modules/'),303);
     context.cookies.delete(SUPABASE_SESSION_COOKIE, { path: '/' });
     if (isAdminApi || isPracticeApi || isAccountApi || isInternalApi || isCheckoutApi) {
       return new Response(JSON.stringify({ error: 'Niet aangemeld.' }), {

@@ -1,0 +1,12 @@
+---
+import AccountLayout from '../../../../layouts/AccountLayout.astro';
+import {findModule,hasModuleAccess,moduleAssets} from '../../../../lib/modules/server';
+import '../../../../styles/modules.css';
+const m=await findModule(Astro.params.slug||'');
+if(!m)return Astro.redirect('/account/bibliotheek',302);
+if(!m.canonical)return Astro.redirect(`/account/modules/${m.product.slug}`,301);
+const owned=await hasModuleAccess(Astro.locals.currentUser!.sub,m.product.id);
+const assets=owned&&m.details.current_release_id?await moduleAssets(m.details.current_release_id):[];
+const pdf=assets.find(a=>a.kind==='pdf'&&a.status==='verified');const tracks=assets.filter(a=>a.kind==='audio'&&a.status==='verified');
+---
+<AccountLayout title={m.product.title}><a href="/account/bibliotheek">← Mijn bibliotheek</a><section class="account-heading"><span class="eyebrow">Module {String(m.details.number).padStart(2,'0')}</span><h1>{m.product.title}</h1><p>{m.details.subtitle}</p></section>{!owned?<section class="module-material"><h2>Deze module staat nog niet in je bibliotheek.</h2><p>Heb je al besteld? Je toegang verschijnt na bevestiging van de betaling.</p><div class="module-actions"><a href="/account/transacties">Mijn bestellingen</a><a href={`/modules/${m.product.slug}`}>Bekijk deze module →</a></div></section>:<><section class="module-material"><h2>Jouw werkboek</h2>{pdf?<><p>Lees de uitleg en oefeningen. Vanuit de PDF en de audiolijst hieronder open je de bijbehorende begeleiding.</p><div class="module-actions"><a class="button button-primary" href={`/api/account/modules/${m.product.id}/werkboek`} target="_blank" rel="noopener noreferrer">Open werkboek ↗</a><a href={`/api/account/modules/${m.product.id}/werkboek?download=1`}>Download PDF ↓</a></div></>:<p>Het werkboek is tijdelijk niet beschikbaar. <a href="/contact">Neem contact op met MyGrowise.</a></p>}</section><section class="module-material"><h2>Audio bij deze module</h2>{tracks.length?<ol class="module-audio-list">{tracks.map((a,i)=><li><span>{String(i+1).padStart(2,'0')} · {a.title}</span><a href={`/account/modules/${m.product.slug}/audio/${a.module_tracks!.key}`}>Beluisteren →</a></li>)}</ol>:<p>Er is momenteel geen audio beschikbaar. Probeer later opnieuw of neem contact op.</p>}</section></>}</AccountLayout>

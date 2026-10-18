@@ -1,0 +1,39 @@
+---
+import AdminLayout from '../../layouts/AdminLayout.astro';
+import {loadPracticeManagement,appointmentTypeInput} from '../../lib/practiceManagement';
+import {getSupabaseAdmin} from '../../lib/supabase/server';
+import {isTrustedFormOrigin} from '../../lib/adminAuth';
+import {fail} from '../../lib/appointmentCatalog';
+let error='',submitted:Record<string,any>|null=null;
+if(Astro.request.method==='POST'){
+ if(!isTrustedFormOrigin(Astro.request))return new Response('Ongeldige aanvraag.',{status:403});
+ try{const form=await Astro.request.formData();submitted=appointmentTypeInput(form);const {error}=await getSupabaseAdmin().rpc('save_appointment_type',{p_actor:Astro.locals.currentUser!.sub,p_data:submitted});fail(error);return Astro.redirect('/admin/afspraaktypes?opgeslagen=1',303);}catch(cause){error=cause instanceof Error&&cause.message.includes('used_type_identity_change')?'Controleer het type: maak een nieuw afspraaktype aan om de behandeling, intake/vervolg of uitvoeringsvorm van een al gebruikt type te veranderen.':cause instanceof Error?cause.message:'Opslaan is niet gelukt.';}
+}
+const {types,groups,offers,practitioners}=await loadPracticeManagement();
+const editing=submitted||types.find(t=>t.id===Astro.url.searchParams.get('bewerken'));
+const selectedGroup=groups.find(g=>g.id===editing?.treatment_group_id||g.id===editing?.group_id);
+const selectedOffers=submitted?submitted.offers:offers.filter(o=>o.appointment_type_id===editing?.id&&o.active);
+const term=(Astro.url.searchParams.get('zoeken')||'').toLowerCase();
+const filtered=types.filter(t=>`${t.name} ${groups.find(g=>g.id===t.treatment_group_id)?.name}`.toLowerCase().includes(term));
+---
+<AdminLayout title="Afspraaktypes"><div class="admin-page practice-stack"><header class="admin-page-heading"><div><p class="admin-eyebrow">Praktijkbeheer</p><h1>Afspraaktypes</h1><p>Beheer behandelingen, kleuren en het aanbod per therapeut.</p></div><a class="admin-button admin-button--primary" href="/admin/afspraaktypes?nieuw=1#type-formulier">Nieuw afspraaktype</a></header>
+ {error&&<div class="practice-alert is-error" role="alert">Opslaan is niet gelukt. {error.includes('Controleer')?error:'Controleer de gegevens en je toegang.'}</div>}
+ {Astro.url.searchParams.has('opgeslagen')&&<div class="practice-alert" role="status">Afspraaktype opgeslagen.</div>}
+ <section class="practice-card"><form class="practice-filter"><label>Zoeken<input name="zoeken" value={term} placeholder="Naam of behandeling"/></label><button class="admin-button">Zoeken</button></form><div class="practice-table-wrap"><table class="practice-table"><thead><tr><th>Afspraaktype</th><th>Duur</th><th>Therapeuten</th><th>Status</th><th></th></tr></thead><tbody>{filtered.map(t=>{const g=groups.find(g=>g.id===t.treatment_group_id);const linked=offers.filter(o=>o.appointment_type_id===t.id&&o.active);return <tr><td><span class="practice-dot" style={`--treatment-color:${g?.color}`}></span><strong>{t.name}</strong><small>{t.session_kind==='intake'?'Intake':t.session_kind==='follow_up'?'Vervolg':'Overig'} · {g?.name} · {t.channel==='online'?'Online sessie':'In de praktijk'}</small></td><td>{t.duration_minutes} min</td><td>{linked.map(o=><small>{practitioners.find(p=>p.id===o.practitioner_id)?.name} · {o.duration_minutes||t.duration_minutes} min · {o.bookable?'Zelf boekbaar':'Alleen medewerker'}</small>)}</td><td>{t.active?'Actief':'Gedeactiveerd'}</td><td><a class="admin-button" href={`/admin/afspraaktypes?bewerken=${t.id}#type-formulier`}>Bewerken</a></td></tr>;})}</tbody></table></div></section>
+ {(editing||Astro.url.searchParams.has('nieuw'))&&<section class="practice-card" id="type-formulier"><h2>{editing?'Afspraaktype bewerken':'Nieuw afspraaktype'}</h2><form method="post" class="practice-stack" data-unsaved-form><input type="hidden" name="id" value={editing?.id||''}/><div class="practice-grid">
+ <label class="wide">Naam<input name="name" required minlength="2" maxlength="120" value={editing?.name}/></label>
+ <label>Behandeling<select name="group_id" data-group><option value="">Nieuwe behandelgroep</option>{groups.map(g=><option value={g.id} data-color={g.color} selected={selectedGroup?.id===g.id}>{g.name}</option>)}</select></label>
+ <label>Naam nieuwe behandelgroep<input name="group_name" maxlength="80" value={submitted?.group_name} placeholder="Alleen bij een nieuwe groep"/></label>
+ <label>Kleur<input name="color" data-color type="color" value={submitted?.color||selectedGroup?.color||'#1f7060'}/><small>Intake en vervolg binnen deze behandelgroep delen deze kleur.</small></label>
+ <label>Soort<select name="session_kind">{[['intake','Intake'],['follow_up','Vervolgsessie'],['other','Overig']].map(([v,l])=><option value={v} selected={editing?.session_kind===v}>{l}</option>)}</select></label>
+ <label>Uitvoeringsvorm<select name="channel"><option value="online" selected={editing?.channel!=='in_person'}>Online sessie</option><option value="in_person" selected={editing?.channel==='in_person'}>In de praktijk</option></select></label>
+ <label>Locatie bij fysieke sessie<input name="location" maxlength="200" value={editing?.location}/></label>
+ <label>Standaardduur (minuten)<input name="duration_minutes" type="number" min="15" max="240" step="5" required value={editing?.duration_minutes||60}/></label>
+ <label class="practice-check"><input type="checkbox" name="active" checked={editing?editing.active:true}/>Actief afspraaktype</label></div>
+ <section><h3>Aanbod per therapeut</h3><p class="practice-muted">Selecteer de therapeuten. Een lege afwijkende duur gebruikt de standaardduur.</p>{practitioners.map(p=>{const o=selectedOffers.find((o:any)=>o.practitioner_id===p.id);return <div class="practice-offer"><label class="practice-check"><input type="checkbox" name="practitioner_id" value={p.id} checked={Boolean(o)}/>{p.name}{!p.active?' (inactief)':''}</label><label>Afwijkende duur<input name={`duration_${p.id}`} type="number" min="15" max="240" step="5" value={o?.duration_minutes}/></label><label class="practice-check"><input type="checkbox" name={`bookable_${p.id}`} checked={o?o.bookable:true}/>Door cliënten boekbaar</label></div>;})}</section>
+ <div class="practice-actions"><button class="admin-button admin-button--primary" type="submit">Opslaan</button><a class="admin-button" href="/admin/afspraaktypes">Annuleren</a></div></form></section>}
+ </div></AdminLayout>
+<script>
+ const group=document.querySelector<HTMLSelectElement>('[data-group]'),color=document.querySelector<HTMLInputElement>('[data-color]');
+ group?.addEventListener('change',()=>{const value=group.selectedOptions[0]?.dataset.color;if(color&&value)color.value=value;});
+</script>

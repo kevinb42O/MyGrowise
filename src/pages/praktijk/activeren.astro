@@ -1,0 +1,24 @@
+---
+import MainLayout from '../../layouts/MainLayout.astro';
+import '../../styles/practice-management.css';
+Astro.response.headers.set('Cache-Control','private, no-store');
+Astro.response.headers.set('Referrer-Policy','no-referrer');
+---
+<MainLayout title="Praktijkaccount activeren — MyGrowise" noindex><section class="section"><div class="container practice-card" style="max-width:600px"><span class="eyebrow">Mijn praktijk</span><h1>Welkom bij MyGrowise.</h1><p id="activation-status" role="status">We controleren je uitnodigingslink.</p><form id="activation-form" hidden class="practice-stack"><label class="practice-label">Kies een wachtwoord<input class="practice-input" type="password" name="password" minlength="12" maxlength="256" autocomplete="new-password" required/></label><label class="practice-label">Herhaal je wachtwoord<input class="practice-input" type="password" name="confirm" minlength="12" maxlength="256" autocomplete="new-password" required/></label><button class="practice-button" type="submit">Praktijkaccount activeren</button></form><p><a href="/praktijk/login">Naar praktijklogin</a></p></div></section></MainLayout>
+<script>
+ import {createBrowserSupabaseClient} from '../../lib/supabase/browser';
+ const status=document.querySelector<HTMLElement>('#activation-status')!,form=document.querySelector<HTMLFormElement>('#activation-form')!;
+ const parameters=new URLSearchParams(window.location.hash.slice(1));
+ const invitation=parameters.get('type')==='invite'&&parameters.has('access_token');
+ const client=createBrowserSupabaseClient();
+ const {data:{session}}=await client.auth.getSession();
+ if(!session||!invitation)status.textContent='Deze uitnodiging is ongeldig of verlopen. Vraag de praktijkbeheerder om een nieuwe uitnodiging.';
+ else{status.textContent='Kies een uniek wachtwoord van minstens 12 tekens om je praktijkaccount te activeren.';form.hidden=false;}
+ form.addEventListener('submit',async event=>{
+ event.preventDefault();const values=new FormData(form),password=String(values.get('password')||'');
+ if(password.length<12||password!==values.get('confirm')){status.textContent='Gebruik twee gelijke wachtwoorden van minstens 12 tekens.';return;}
+ const button=form.querySelector<HTMLButtonElement>('button')!;button.disabled=true;
+ try{const {error}=await client.auth.updateUser({password});if(error)throw error;await client.auth.signOut();window.location.assign('/praktijk/login?activated=1');}catch{status.textContent='Activeren is niet gelukt. Probeer opnieuw of vraag een nieuwe uitnodiging.';button.disabled=false;}
+ });
+</script>
+<style is:global>#activation-form[hidden]{display:none!important}</style>

@@ -1,0 +1,11 @@
+---
+import {patientFields,genderLabels} from '../../lib/patientDetails';
+interface Props {values?:Record<string,unknown>;booking?:boolean;}
+const {values={},booking=false}=Astro.props;
+const groups=[['Persoonsgegevens',['first_name','last_name','birth_date','gender','salutation',...(!booking?['intake_date']:[])]],['Adres & contact',['street','house_number','address_box','postal_code','city','country','mobile',...(!booking?['email']:[]),'national_number']],['Aanmelding',['registration_reason','referrer']]] as const;
+---
+{groups.map(([title,keys])=><fieldset class="practice-card"><legend>{title}</legend><div class="practice-fields">{keys.map(key=>{
+ const field=patientFields.find(f=>f[0]===key)!;
+ const required=['first_name','last_name',...(booking?['birth_date','mobile']:[])].includes(key);
+ return <label class:list={{wide:key==='registration_reason'}}><span>{field[1]}{required?' *':''}</span>{key==='gender'?<select name={key}>{Object.entries(genderLabels).map(([value,label])=><option value={value} selected={values[key]===value}>{label}</option>)}</select>:key==='salutation'?<select name={key}>{['','mevrouw','meneer','heer'].map(value=><option value={value} selected={values[key]===value}>{value||'Geen aanhef'}</option>)}</select>:key==='registration_reason'?<textarea name={key} maxlength={field[2]} rows="3">{String(values[key]||'')}</textarea>:<input name={key} type={key.endsWith('_date')?'date':key==='email'?'email':key==='mobile'?'tel':'text'} value={String(values[key]??(key==='country'?'BE':''))} required={required} maxlength={field[2]} autocomplete={key==='first_name'?'given-name':key==='last_name'?'family-name':key==='mobile'?'tel':undefined}/> }</label>;
+})}</div></fieldset>)}

@@ -28,7 +28,7 @@ Opslaan gebeurt atomair. Oude catalogus-URL's worden bij slugwijzigingen als ali
 
 ## Bestelling en betaling
 
-De klant maakt een bestelling met het bestaande klantaccount en aanvaardt de voorwaarden. De prijsberekening gebruikt de database; meegestuurde browserprijzen worden niet vertrouwd. Een unieke aanvraag-ID voorkomt dubbele bestellingen door dubbel klikken. Een prijs-/inhoudshash voorkomt bestellen op een verouderd overzicht. Eén bestelling heeft één overschrijvingsreferentie en één QR-code.
+De klant bestelt als gast of met een bestaand klantaccount. Nieuwe productieorders blijven gepauzeerd tot de definitieve voorwaarden en verkoopgegevens zijn verwerkt; zie [RELEASE-RUNBOOK.md](RELEASE-RUNBOOK.md). De prijsberekening gebruikt de database; meegestuurde browserprijzen worden niet vertrouwd. Een unieke aanvraag-ID voorkomt dubbele bestellingen door dubbel klikken. Een prijs-/inhoudshash voorkomt bestellen op een verouderd overzicht. Eén bestelling heeft één overschrijvingsreferentie en één QR-code.
 
 Open **Bestellingen** en klik op de productnaam voor het volledige besteloverzicht (`/admin/bestellingen/[id]`). Vergelijk bedrag en mededeling met de werkelijke bankoverschrijving en bevestig alleen een ontvangen betaling. Een klantverklaring of QR-scan activeert niets.
 
@@ -44,7 +44,7 @@ Open **Afnames & rapporten** (`/admin/afnames`) of de afnames vanuit het bestelo
 4. Upload het afgewerkte rapport als PDF, maximaal 15 MB. Het bestand staat in de private bucket `assessment-reports`. De naam in opslag bevat alleen UUID's. Er worden geen rapportinhoud, scores of afnamelinks naar het auditlog geschreven.
 5. De klant vindt instructies, voortgang, afnamelink en beschikbare rapporten in **Mijn bibliotheek** en de afnamedetailpagina.
 
-Rapporttoegang vereist een eigen klantaccount, eigendom van de afname en een bestelling met status betaald/afgehandeld. De download gebruikt een ondertekende URL die 60 seconden geldig is, met private/no-store- en no-referrerheaders. Een vervangende upload verandert de rapportverwijzing; oudere bestanden worden bewaard. Bij een niet langer betaalde bestelling is nieuwe rapporttoegang geblokkeerd.
+Rapporttoegang vereist bewezen gast- of accounteigendom van de afname en een bestelling met status betaald/afgehandeld. De download gebruikt een ondertekende URL die 60 seconden geldig is, met private/no-store- en no-referrerheaders. Een vervangende upload verandert de rapportverwijzing; oudere bestanden worden bewaard. Bij een niet langer betaalde bestelling is nieuwe rapporttoegang geblokkeerd.
 
 Dit is een complete workflow voor professioneel beheerde afname en levering. Er zijn geen uitgeversvragen, automatische scores, rapportinhoud, licenties of uitgevers-API's verzonnen. Virginie koppelt de juiste bestaande afname en het professioneel opgemaakte resultaat per taak.
 

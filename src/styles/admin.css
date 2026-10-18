@@ -1381,6 +1381,122 @@ html { background: var(--admin-canvas); }
 .practice-agenda-legend .is-available { background:#e7f4eb; border:1px solid #b8d7c4; }
 .practice-agenda-detail { display:grid; gap:9px; padding:20px; color:var(--admin-text); font-size:12px; }
 .practice-agenda-detail span { color:var(--admin-muted); }
+.unified-agenda__private-toggle { display:flex; align-items:center; gap:6px; color:var(--admin-muted); font-size:11px; white-space:nowrap; }
+.unified-agenda__private-toggle input { accent-color:var(--admin-green); }
+.unified-agenda__controls { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:center; gap:14px 20px; padding:18px; }
+.unified-agenda__filters { display:flex; align-items:center; flex-wrap:wrap; gap:12px 16px; min-width:0; }
+.unified-agenda__filters .unified-agenda__search { margin-left:0; }
+.unified-agenda__actions { display:flex; align-items:center; justify-content:flex-end; flex-wrap:wrap; gap:8px; }
+.unified-agenda__view-options { grid-column:1/-1; display:flex; align-items:center; flex-wrap:wrap; gap:12px 24px; padding-top:12px; border-top:1px solid var(--admin-border); }
+.unified-agenda__view-options > span { margin-left:auto; color:var(--admin-faint); font-size:11px; }
+.unified-agenda__count { display:inline-grid; place-items:center; min-width:20px; padding:1px 5px; border-radius:10px; background:#eaf1ef; color:var(--admin-green); font-size:10px; }
+.unified-agenda__weekend-notice { display:flex; align-items:center; flex-wrap:wrap; gap:10px; padding:10px 18px; border-bottom:1px solid #e6ddba; background:#fffcf1; color:#6d5e2e; font-size:12px; }
+.unified-agenda__weekend-notice button { padding:3px 8px; border:1px solid #e6ddba; border-radius:5px; background:white; color:inherit; cursor:pointer; }
+.unified-agenda__import-summary { display:flex; align-items:center; flex-wrap:wrap; gap:5px 24px; padding:11px 16px; border-bottom:1px solid var(--admin-border); background:#f5f8fa; color:var(--admin-muted); font-size:11px; line-height:1.55; }
+.unified-agenda__import-summary > div { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+.unified-agenda__import-summary strong { color:#326b9e; font-size:11px; }
+.unified-agenda__import-summary p { margin:0; }
+.unified-agenda .unified-agenda__event.is-imported { display:flex; flex-direction:column; gap:2px; padding:2px; font-size:11px; }
+.unified-agenda__event.is-imported b { font-size:10px; }
+.unified-agenda__event.is-imported span { white-space:normal; line-height:1.3; overflow-wrap:anywhere; }
+.unified-agenda__event.is-imported small { font-size:10px; opacity:.85; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.unified-agenda .unified-agenda__event.is-imported.is-compact { display:grid; grid-template-columns:auto 1fr; gap:4px; font-size:10px; }
+.unified-agenda__event.is-imported.is-compact span { white-space:nowrap; }
+.unified-agenda .fc-list .unified-agenda__event.is-imported { display:grid; grid-template-columns:auto minmax(0,1fr) auto; align-items:center; gap:12px; color:var(--admin-text); }
+/* Time-grid cards need their own density: a half-hour appointment has less
+   room than a full hour. Margins separate adjacent appointments without
+   moving their actual time positions. */
+.unified-agenda--practice .fc { padding:18px; --fc-border-color:#e7ece9; --fc-today-bg-color:#f8fbf9; }
+.unified-agenda--practice .fc .fc-toolbar { margin-bottom:18px; }
+.unified-agenda--practice .fc .fc-toolbar-title { font-size:20px; }
+.unified-agenda--practice .fc .fc-button { padding:8px 12px; font-size:12px; }
+.unified-agenda--practice .fc .fc-col-header-cell-cushion { padding:14px 5px; font-size:12px; }
+.unified-agenda--practice .fc .fc-timegrid-slot { height:52px; }
+.unified-agenda--practice .fc .fc-timegrid-slot-label-cushion { padding-right:12px; color:#7c8983; font-size:11px; }
+.unified-agenda--practice .fc .fc-timegrid-axis { width:62px; }
+.unified-agenda--practice .fc .fc-timegrid-col-events { margin:0 3px; }
+.unified-agenda--practice .fc .fc-timegrid-event { min-height:0; margin:3px 4px; padding:0; overflow:hidden; border-width:0 0 0 3px; border-radius:7px; box-shadow:0 1px 2px rgba(20,45,35,.06); }
+.unified-agenda--practice .fc .fc-timegrid-event:hover { filter:brightness(.98); box-shadow:0 2px 8px rgba(20,45,35,.12); }
+.unified-agenda--practice .fc .fc-timegrid-event .fc-event-main { height:100%; padding:8px 10px; overflow:hidden; }
+.unified-agenda--practice .fc-timegrid .unified-agenda__event { display:flex; flex-direction:column; gap:5px; height:100%; padding:0; font-size:12px; line-height:1.35; }
+.unified-agenda--practice .fc-timegrid .unified-agenda__event b { flex-shrink:0; font-size:11px; font-weight:500; opacity:.8; }
+.unified-agenda--practice .fc-timegrid .unified-agenda__event span { display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2; flex-shrink:0; overflow:hidden; white-space:normal; overflow-wrap:normal; font-weight:600; line-height:1.35; }
+.unified-agenda--practice .fc-timegrid .unified-agenda__event small { overflow:hidden; flex-shrink:0; font-size:10px; line-height:1.3; opacity:.7; }
+.unified-agenda--practice .fc .fc-timegrid-event:has(.is-short) .fc-event-main { padding:5px 9px; }
+.unified-agenda--practice .fc .fc-timegrid-event:has(.is-tiny) .fc-event-main { padding:1px 7px; }
+.unified-agenda--practice .fc-timegrid .unified-agenda__event.is-short { gap:2px; }
+.unified-agenda--practice .fc-timegrid .unified-agenda__event.is-short span { display:block; overflow:hidden; font-size:11px; white-space:nowrap; text-overflow:ellipsis; }
+.unified-agenda--practice .fc-timegrid .unified-agenda__event.is-tiny { display:grid; grid-template-columns:auto minmax(0,1fr); align-items:center; gap:6px; }
+.unified-agenda--practice .fc-timegrid .unified-agenda__event.is-tiny b { font-size:10px; }
+.unified-agenda--practice .fc .fc-timegrid .fc-bg-event { opacity:.18; }
+.unified-agenda--practice .fc .fc-list-event td { padding:12px 14px; }
+.unified-agenda--practice .fc-list .unified-agenda__event { font-size:12px; }
+@media (max-width:1280px) {
+  .unified-agenda__controls { grid-template-columns:1fr; }
+  .unified-agenda__actions { justify-content:flex-start; }
+}
+@media (max-width:620px) {
+  .unified-agenda__controls { gap:14px; padding:14px; }
+  .unified-agenda__actions { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; }
+  .unified-agenda__actions .unified-agenda__new { display:inline-flex; align-items:center; justify-content:center; width:100%; min-width:0; min-height:36px; height:auto; padding:9px 6px; font-size:12px; line-height:1.25; white-space:nowrap; }
+  .unified-agenda__filters { gap:14px; }
+  .unified-agenda__source { width:100%; justify-content:space-between; }
+  .unified-agenda__filters .unified-agenda__search { flex:1; }
+  .unified-agenda__filters .unified-agenda__search input { width:100%; min-width:0; }
+  .unified-agenda__view-options { gap:12px 16px; }
+  .unified-agenda__view-options > span { width:100%; margin-left:0; }
+  .unified-agenda--practice .fc { padding:12px; }
+  .unified-agenda--practice .fc .fc-toolbar { align-items:flex-start; flex-wrap:wrap; gap:12px; }
+  .unified-agenda--practice .fc .fc-toolbar-title { font-size:16px; }
+  .unified-agenda--practice .fc .fc-button { padding:7px 9px; font-size:11px; }
+  .unified-agenda--practice .fc .fc-toolbar-chunk:last-child { width:100%; }
+}
+.practice-agenda-import-details { padding:0 20px 20px; }
+.practice-agenda-import-details dl { margin:0 0 16px; border-top:1px solid var(--admin-border); }
+.practice-agenda-import-details dl > div { display:grid; grid-template-columns:100px 1fr; gap:12px; padding:10px 0; border-bottom:1px solid var(--admin-border); font-size:12px; }
+.practice-agenda-import-details dt { color:var(--admin-muted); }
+.practice-agenda-import-details dd { margin:0; color:var(--admin-text); }
+.practice-agenda-import-details__link { display:inline-flex; border-radius:7px; padding:10px 12px; background:#edf3f8; color:#285e8c; font-size:12px; font-weight:650; text-decoration:none; }
+.practice-agenda-import-details p { margin:12px 0 0; color:var(--admin-muted); font-size:11px; line-height:1.65; }
+.practice-body .admin-main:has(> .agenda-page) { padding:20px 24px; }
+.unified-agenda--practice { overflow:visible; }
+.unified-agenda--practice .unified-agenda__controls { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px 16px; padding:12px 14px; border-radius:10px 10px 0 0; }
+.unified-agenda--practice .unified-agenda__filters { flex:1; gap:12px; }
+.unified-agenda--practice .unified-agenda__actions { display:flex; flex-wrap:wrap; gap:8px; }
+.unified-agenda--practice .unified-agenda__source button { min-height:30px; font-size:11px; }
+.unified-agenda__menu { position:relative; }
+.unified-agenda__menu summary { display:flex; align-items:center; justify-content:center; gap:8px; min-height:34px; padding:7px 11px; border:1px solid var(--admin-border); border-radius:6px; background:white; color:var(--admin-text); font-size:12px; font-weight:550; line-height:1.4; white-space:nowrap; list-style:none; cursor:pointer; }
+.unified-agenda__menu summary::-webkit-details-marker { display:none; }
+.unified-agenda__menu[open] summary { background:var(--admin-green-soft); border-color:var(--admin-border-strong); }
+.unified-agenda__create summary { background:var(--admin-green); border-color:var(--admin-green); color:white; }
+.unified-agenda__popover { position:absolute; z-index:35; top:calc(100% + 8px); right:0; display:grid; gap:14px; width:310px; max-width:calc(100vw - 40px); padding:18px; border:1px solid var(--admin-border); border-radius:9px; background:white; color:var(--admin-text); box-shadow:0 12px 36px rgba(18,42,33,.16); font-size:12px; line-height:1.55; }
+.unified-agenda__popover strong { font-size:13px; }
+.unified-agenda__popover p { margin:0; color:var(--admin-muted); }
+.unified-agenda__popover p.is-warning { color:#875410; }
+.unified-agenda__popover button { display:block; width:100%; padding:9px 11px; border:1px solid var(--admin-border); border-radius:6px; background:#f5f8f6; color:var(--admin-green); text-align:left; font-size:12px; cursor:pointer; }
+.unified-agenda__popover button:hover { background:var(--admin-green-soft); }
+.unified-agenda__popover button:disabled { opacity:.6; cursor:wait; }
+.unified-agenda__popover a { color:var(--admin-green); }
+.unified-agenda__sync summary { border-color:transparent; background:transparent; color:var(--admin-muted); font-size:11px; }
+.unified-agenda__sync summary > i { width:6px; height:6px; border-radius:50%; background:#29805e; }
+.unified-agenda__sync.is-warning summary > i { background:#bd811c; }
+.unified-agenda__mini-legend { display:grid; gap:8px; padding-top:12px; border-top:1px solid var(--admin-border); color:var(--admin-muted); font-size:11px; }
+.unified-agenda__mini-legend span { display:flex; align-items:center; gap:9px; }
+.unified-agenda__mini-legend i { width:8px; height:8px; border-radius:3px; }
+@media (max-width:620px) {
+  .practice-body .admin-main:has(> .agenda-page) { padding:12px; }
+  .unified-agenda--practice .unified-agenda__filters { flex-basis:100%; gap:8px; }
+  .unified-agenda--practice .unified-agenda__source { width:auto; flex:1; }
+  .unified-agenda--practice .unified-agenda__source button { padding:5px 6px; font-size:10px; }
+  .unified-agenda--practice .unified-agenda__search { flex-basis:100%; }
+  .unified-agenda--practice .unified-agenda__actions { width:100%; justify-content:flex-end; }
+  .unified-agenda--practice .unified-agenda__actions { gap:6px; }
+  .unified-agenda--practice .unified-agenda__menu summary { min-height:32px; padding:6px 8px; font-size:11px; }
+  .unified-agenda--practice .unified-agenda__sync summary { gap:6px; font-size:10px; }
+  .unified-agenda__sync { margin-right:auto; }
+  .unified-agenda__sync .unified-agenda__popover { right:auto; left:0; }
+  .unified-agenda__popover { width:280px; }
+}
 .practice-agenda-detail a { color:var(--admin-green); font-weight:600; }
 .practice-agenda-detail p, .practice-agenda-form-error { grid-column:1/-1; margin:0; color:var(--admin-danger); font-size:11px; }
 .practice-agenda-actions { flex-wrap:wrap; }

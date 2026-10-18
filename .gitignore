@@ -16,3 +16,9 @@ data/admin/*.sqlite-shm
 data/admin/*.sqlite-wal
 .vercel
 .env*
+
+# Local capture mailbox contains disposable test access links.
+output/mail-test/
+
+# Local QA images, database review snapshots and generated imports stay on this machine.
+output/

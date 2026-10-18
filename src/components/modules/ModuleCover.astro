@@ -1,0 +1,14 @@
+---
+import {moduleImages} from '../../content/moduleImages';
+interface Props{image?:string;alt?:string;number?:number;hero?:boolean;slug?:string;width?:number;height?:number}
+const {image,alt='',number,hero=false,slug='',width=512,height=512}=Astro.props;
+const customImage=image&&!['/images/editorial/mygrowise-74.jpg','/images/editorial/mygrowise-50.jpg'].includes(image);
+const coverImage=customImage?{src:image,alt:alt||moduleImages[slug]?.alt||''}:moduleImages[slug];
+const real=Boolean(coverImage);
+---
+<div class:list={['module-cover',{'is-hero':hero,'has-image':real,mist:slug==='de-mist',mountains:slug==='de-bergen'}]} aria-hidden={!real?'true':undefined}>
+ {coverImage&&<img src={coverImage.src} alt={coverImage.alt} loading={hero?'eager':'lazy'} fetchpriority={hero?'high':undefined} width={width} height={height}/>}{number&&<span>{String(number).padStart(2,'0')}</span>}
+</div>
+<style>
+ .module-cover.has-image>span{color:#fff;text-shadow:0 2px 12px #000b}
+</style>

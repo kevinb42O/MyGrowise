@@ -1,0 +1,9 @@
+---
+import MainLayout from '../../../layouts/MainLayout.astro';
+import {purchaseOwner,purchaseDeliveries,privateHeaders} from '../../../lib/commerce/purchases';
+import {deliveryStatusLabel} from '../../../lib/catalog/server';
+Object.entries(privateHeaders).forEach(([k,v])=>Astro.response.headers.set(k,v));
+const owner=await purchaseOwner(Astro.cookies,Astro.locals.currentUser);if(!owner)return Astro.redirect(`/aankopen/toegang?next=${encodeURIComponent(Astro.url.pathname)}`,303);
+const d=(await purchaseDeliveries(owner)).find(d=>d.id===Astro.params.id);if(!d)return new Response('Afname niet beschikbaar.',{status:404,headers:privateHeaders});
+---
+<MainLayout title={`${d.title} — Mijn aankopen`} noindex><section class="section"><div class="container" style="max-width:800px"><a href="/aankopen">← Mijn aankopen</a><h1>{d.title}</h1><p>{deliveryStatusLabel[d.status]}</p><p style="white-space:pre-wrap">{d.instructions}</p>{d.external_url&&<p><a class="button button-primary" href={d.external_url} target="_blank" rel="noopener noreferrer">Open vragenlijst ↗</a></p>}{d.report_path&&<p><a class="button button-primary" href={`/api/aankopen/rapport?id=${d.id}`}>Download persoonlijk rapport ↓</a></p>}<p><a href="/contact">Een praktische vraag stellen</a></p></div></section></MainLayout>

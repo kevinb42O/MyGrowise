@@ -8,20 +8,7 @@ const canUseItransform = profile?.slug === 'virginie';
 
 <PracticeLayout title="Mijn agenda" description="Beheer je afspraken, aanvragen en beschikbaarheid in één agenda.">
   <div class="admin-page agenda-page">
-    <section class="admin-page-heading agenda-heading" aria-labelledby="practice-agenda-title">
-      <div>
-        <p class="admin-eyebrow">Mijn praktijk</p>
-        <h1 id="practice-agenda-title">Mijn agenda</h1>
-        <p>{canUseItransform ? 'MyGrowise en Praktijk Itransform samen, met een duidelijke keuze bij elk eigen moment.' : 'Je MyGrowise-afspraken, privémomenten, blokkades en boekbare tijden op één plek.'}</p>
-      </div>
-    </section>
-    <div class="practice-agenda-legend" aria-label="Agendakleuren">
-      <span><i class="is-pending"></i> Aanvraag</span>
-      <span><i class="is-confirmed"></i> Bevestigd</span>
-      <span><i class="is-blocked"></i> Niet beschikbaar</span>
-      {canUseItransform && <span><i class="is-external"></i> Itransform</span>}
-      <span><i class="is-available"></i> Boekbaar</span>
-    </div>
+    <h1 class="sr-only" id="practice-agenda-title">Mijn agenda</h1>
     <UnifiedAgenda mode="practice" allowItransform={canUseItransform} client:only="react" />
   </div>
 </PracticeLayout>

@@ -1,9 +1,10 @@
 import { getSupabaseAdmin } from './supabase/server';
 import { fromBrusselsLocalInput } from './brusselsTime';
+import { ensurePracticeCalendarFresh } from './mijndiadSync';
 
 export type AvailabilityRule = { weekday: number; startTime: string; endTime: string };
 export type BookingStatus = 'pending' | 'confirmed' | 'declined' | 'cancelled' | 'completed' | 'no_show';
-export type PracticeBooking = { id: string; practitionerId: string; patientId: string | null; clientName: string; clientEmail: string; startsAt: string; endsAt: string; status: BookingStatus; origin: 'customer_request' | 'staff'; calendarBookedAt: string | null; createdAt: string; updatedAt: string };
+export type PracticeBooking = { appointmentName: string; id: string; practitionerId: string; patientId: string | null; clientName: string; clientEmail: string; startsAt: string; endsAt: string; status: BookingStatus; origin: 'customer_request' | 'staff'; calendarBookedAt: string | null; createdAt: string; updatedAt: string };
 export type BookableSlot = { practitionerId: string; practitionerSlug: string; startsAt: string; endsAt: string; dateLabel: string; timeLabel: string };
 export type AvailabilityException = { id: string; practitionerId: string; startsAt: string; endsAt: string; kind: 'available' | 'unavailable'; privateReason: string | null; createdAt: string };
 export type PractitionerProfile = {
@@ -30,13 +31,13 @@ const profileFromRow = (row: Row): PractitionerProfile => {
   return {
     id: String(row.id), slug: String(row.slug), name: String(row.name), email: '', active: Boolean(row.active),
     publicRole: String(row.public_role || ''), bio: String(row.bio || ''), expertise: list(row.expertise), languages: list(row.languages),
-    appointmentDurationMinutes: Number(settings.appointment_duration_minutes ?? 60), minimumNoticeHours: Number(settings.minimum_notice_hours ?? 2),
+    appointmentDurationMinutes: Number(settings.appointment_duration_minutes ?? 50), minimumNoticeHours: Number(settings.minimum_notice_hours ?? 2),
     bookingHorizonDays: Number(settings.booking_horizon_days ?? 30), requestsEnabled: Boolean(settings.requests_enabled ?? true),
     profileUpdatedAt: row.updated_at ? String(row.updated_at) : null,
   };
 };
 const bookingFromRow = (row: Row): PracticeBooking => ({
-  id: String(row.id), practitionerId: String(row.practitioner_id), patientId: row.patient_id ? String(row.patient_id) : null, clientName: String(row.client_name), clientEmail: String(row.client_email),
+  appointmentName:String(row.appointment_name||'Afspraaktype nog te bepalen'), id: String(row.id), practitionerId: String(row.practitioner_id), patientId: row.patient_id ? String(row.patient_id) : null, clientName: String(row.client_name), clientEmail: String(row.client_email),
   startsAt: String(row.starts_at), endsAt: String(row.ends_at), status: String(row.status) as BookingStatus, origin: String(row.origin || 'customer_request') as PracticeBooking['origin'],
   calendarBookedAt: row.calendar_booked_at ? String(row.calendar_booked_at) : null, createdAt: String(row.created_at), updatedAt: String(row.updated_at),
 });
@@ -65,6 +66,7 @@ export const getAvailabilityRules = async (idOrSlug: string): Promise<Availabili
 export const getBookableSlots = async (idOrSlug: string, days = 14): Promise<BookableSlot[]> => {
   const practitioner = await resolvePractitioner(idOrSlug);
   if (!practitioner?.active || !practitioner.requestsEnabled) return [];
+  await ensurePracticeCalendarFresh(practitioner.id);
   const visibleDays = Math.min(Math.max(days, 1), practitioner.bookingHorizonDays);
   const { data, error } = await getSupabaseAdmin().rpc('get_bookable_slots', { p_practitioner_slug: practitioner.slug, p_days: visibleDays });
   fail(error);
@@ -123,7 +125,7 @@ export const deleteAvailabilityException = async (id: string, idOrSlug: string, 
 export const listBookings = async (idOrSlug: string, status?: BookingStatus): Promise<PracticeBooking[]> => {
   const practitioner = await resolvePractitioner(idOrSlug);
   if (!practitioner) return [];
-  let query = getSupabaseAdmin().from('bookings').select('id,practitioner_id,patient_id,client_name,client_email,starts_at,ends_at,status,origin,calendar_booked_at,created_at,updated_at').eq('practitioner_id', practitioner.id).order('starts_at');
+  let query = getSupabaseAdmin().from('bookings').select('id,practitioner_id,patient_id,client_name,client_email,appointment_name,starts_at,ends_at,status,origin,calendar_booked_at,created_at,updated_at').eq('practitioner_id', practitioner.id).order('starts_at');
   if (status) query = query.eq('status', status);
   const { data, error } = await query;
   fail(error);
@@ -133,6 +135,7 @@ export const listBookings = async (idOrSlug: string, status?: BookingStatus): Pr
 export const updateBookingStatus = async (bookingId: string, idOrSlug: string, actorUserId: string, nextStatus: BookingStatus, requestId?: string, requestPath?: string) => {
   const practitioner = await resolvePractitioner(idOrSlug);
   if (!practitioner) throw new Error('not_found');
+  if (nextStatus === 'confirmed') await ensurePracticeCalendarFresh(practitioner.id, {maxAgeSeconds:60});
   const { error } = await getSupabaseAdmin().rpc('transition_booking_status', {
     p_booking_id: bookingId,
     p_actor_user_id: actorUserId,
@@ -146,47 +149,25 @@ export const updateBookingStatus = async (bookingId: string, idOrSlug: string, a
   fail(error);
 };
 
-export const createStaffBooking = async (practitionerId: string, actorUserId: string, patientId: string, startsAt: string, endsAt: string, requestId?: string) => {
-  const { data, error } = await getSupabaseAdmin().rpc('create_staff_booking', {
-    p_practitioner_id: practitionerId, p_actor_user_id: actorUserId, p_patient_id: patientId,
-    p_starts_at: startsAt, p_ends_at: endsAt, p_request_id: requestId || null,
-  });
-  if (error?.code === '42501') throw new Error('not_allowed');
-  if (error?.code === '23P01') throw new Error('slot_unavailable');
-  if (error?.code === '22023') throw new Error('invalid_input');
-  fail(error);
-  return String(data);
+export const createStaffBooking = async (practitionerId: string, actorUserId: string, patientId: string, startsAt: string, offerId: string, requestId?: string) => {
+  const {data:offer,error:offerError}=await getSupabaseAdmin().from('practitioner_appointment_types').select('practitioner_id').eq('id',offerId).maybeSingle();fail(offerError);
+  if(offer?.practitioner_id!==practitionerId) throw new Error('invalid_input');
+  await ensurePracticeCalendarFresh(practitionerId, {maxAgeSeconds:60});
+  const { data, error } = await getSupabaseAdmin().rpc('create_typed_staff_booking', {p_actor:actorUserId,p_patient:patientId,p_offer:offerId,p_starts:startsAt,p_request:requestId||null});
+  if(error?.code==='23P01')throw new Error('slot_unavailable');
+  if(error?.code==='42501')throw new Error('not_allowed');
+  fail(error); return String(data);
 };
 
-export const rescheduleStaffBooking = async (bookingId: string, actorUserId: string, startsAt: string, endsAt: string, requestId?: string) => {
-  const { error } = await getSupabaseAdmin().rpc('reschedule_staff_booking', {
-    p_booking_id: bookingId, p_actor_user_id: actorUserId,
-    p_starts_at: startsAt, p_ends_at: endsAt, p_request_id: requestId || null,
-  });
-  if (error?.code === '42501' || error?.code === 'P0002') throw new Error('not_allowed');
-  if (error?.code === '23P01') throw new Error('slot_unavailable');
-  if (error?.code === '22023') throw new Error('invalid_input');
+export const rescheduleStaffBooking = async (bookingId: string, actorUserId: string, startsAt: string, _endsAt: string, requestId?: string) => {
+  const {data:booking,error:readError} = await getSupabaseAdmin().from('bookings').select('practitioner_id').eq('id',bookingId).maybeSingle();
+  fail(readError);
+  if (!booking) throw new Error('not_found');
+  await ensurePracticeCalendarFresh(booking.practitioner_id, {maxAgeSeconds:60});
+  const { error } = await getSupabaseAdmin().rpc('reschedule_practice_appointment', {p_actor:actorUserId,p_booking:bookingId,p_starts:startsAt,p_request:requestId||null});
+  if(error?.code==='23P01')throw new Error('slot_unavailable');
+  if(error?.code==='42501')throw new Error('not_allowed');
   fail(error);
-};
-
-export const createBookingRequest = async (slug: string, customerUserId: string, startsAt: string, endsAt: string, submissionKey: string, requestId?: string) => {
-  const practitioner = await getPractitionerBySlug(slug);
-  if (!practitioner) throw new Error('slot_unavailable');
-  const { data, error } = await getSupabaseAdmin().rpc('request_customer_booking', {
-    p_practitioner_slug: practitioner.slug,
-    p_customer_user_id: customerUserId,
-    p_starts_at: startsAt,
-    p_ends_at: endsAt,
-    p_submission_key: submissionKey,
-    p_request_id: requestId || null,
-  });
-  if (error?.code === 'P0001' || error?.code === '23P01') throw new Error('slot_unavailable');
-  if (error?.code === '42501') throw new Error('customer_required');
-  if (error?.code === '28000') throw new Error('email_confirmation');
-  if (error?.code === '22023') throw new Error('invalid_input');
-  if (error?.code === '23505') throw new Error('idempotency_conflict');
-  fail(error);
-  return String(data);
 };
 
 const parseList = (value: string, maximum: number) => Array.from(new Set(value.split(/[\n,]/).map((item) => item.trim().replace(/\s+/g, ' ')).filter((item) => item.length >= 2 && item.length <= 60))).slice(0, maximum);
@@ -197,7 +178,7 @@ export const updatePractitionerProfile = async (idOrSlug: string, actorUserId: s
   const name = input.name.trim().replace(/\s+/g, ' '); const publicRole = input.publicRole.trim().replace(/\s+/g, ' '); const bio = input.bio.trim().replace(/\s+/g, ' ');
   const expertise = parseList(input.expertise, 8); const languages = parseList(input.languages, 6);
   if (name.length < 2 || name.length > 80 || publicRole.length < 2 || publicRole.length > 100 || bio.length < 40 || bio.length > 1200 || expertise.length === 0 || languages.length === 0) throw new Error('invalid_profile');
-  const duration = oneOfNumber(input.appointmentDurationMinutes, [45, 60, 75, 90], 60);
+  const duration = oneOfNumber(input.appointmentDurationMinutes, [45, 50, 60, 75, 90], 50);
   const notice = oneOfNumber(input.minimumNoticeHours, [0, 1, 2, 4, 12, 24, 48, 72], 2);
   const horizon = oneOfNumber(input.bookingHorizonDays, [14, 30, 45, 60, 90], 30);
   const client = getSupabaseAdmin();
