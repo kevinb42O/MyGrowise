@@ -1,0 +1,43 @@
+---
+import ModuleCover from '../modules/ModuleCover.astro';
+import '../../styles/modules.css';
+
+interface Props { mode: 'packages' | 'questionnaires' }
+const { mode } = Astro.props;
+const profiles = mode === 'packages';
+const facts = profiles
+  ? ['Online vragenlijsten', 'Persoonlijk verslag', 'Vaste pakketprijs']
+  : ['Online vragenlijst', 'Persoonlijk verslag', 'Eenmalige prijs'];
+---
+
+<section class="module-hero catalog-listing-hero" aria-labelledby="catalog-title">
+  <div class="container module-hero-grid">
+    <div>
+      <span class="eyebrow">{profiles ? 'Persoonlijke profielen' : 'Losse vragenlijsten'} · op jouw tempo</span>
+      <h1 id="catalog-title">{profiles ? <>Welk profiel past <em>bij jouw vraag?</em></> : <>Welke vragenlijst past <em>bij jouw vraag?</em></>}</h1>
+      <p><strong>{profiles ? 'Krijg inzicht in jezelf of je kind.' : 'Krijg gericht inzicht in jezelf of je kind.'}</strong></p>
+      <p>{profiles
+        ? 'Kies een profiel rond persoonlijkheid, stress, werk of emotioneel welzijn. Je vult de vragenlijsten online in en ontvangt een persoonlijk verslag.'
+        : 'Verken ons aanbod per thema en ontdek wat je invult, wat je ontvangt en welke vragenlijst aansluit bij jouw vraag.'}</p>
+      <div class="module-facts">{facts.map(fact => <span>{fact}</span>)}</div>
+      <a class="button button-primary" href="#aanbod">{profiles ? 'Ontdek de profielen' : 'Ontdek de vragenlijsten'} <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14m-6-6 6 6 6-6" /></svg></a>
+      <p class="listing-scope">Voor zelfinzicht en, waar relevant, screening. Geen diagnostisch onderzoek.</p>
+    </div>
+    <ModuleCover hero
+      image={profiles ? '/images/profiles/persoonlijkheidsprofiel-volwassenen-v1.webp' : '/images/profiles/stress-en-emotieprofiel-v1.webp'}
+      alt={profiles ? 'Een man neemt buiten een rustig moment voor zichzelf.' : 'Een vrouw zit thuis bij het raam en kijkt rustig naar buiten.'}
+      width={1536} height={1024}
+    />
+  </div>
+</section>
+
+<style>
+  /* The module overview owns the shared hero proportions, type and cover shape. */
+  .catalog-listing-hero .listing-scope{max-width:56ch;margin:1rem 0 0;font-size:.78rem;line-height:1.7}
+  .catalog-listing-hero .button{line-height:1.4;text-align:left}
+  .catalog-listing-hero .button svg{width:19px;height:19px;flex-shrink:0;fill:none;stroke:currentColor;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+  .catalog-listing-hero :global(.module-cover img){object-position:48% center}
+  @media(max-width:600px){
+    .catalog-listing-hero :global(.module-cover.is-hero){aspect-ratio:4/5;max-width:450px}
+  }
+</style>
