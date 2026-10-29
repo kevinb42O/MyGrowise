@@ -3053,7 +3053,15 @@
 
 /* The same quiet thought windows fit a phone without stacking all three stories. */
 @media (max-width: 760px) {
-  .home-experience.hero-enhanced .recognition-inner { inset: 29% 7% 5%; }
+  .home-experience.hero-enhanced .recognition-logo {
+    top: 4%;
+    width: min(40%, calc(var(--stage) * .24));
+  }
+  .home-experience.hero-enhanced .recognition-inner { inset: 25% 7% 6%; }
+  .home-experience.hero-enhanced .recognition h2 {
+    font-size: clamp(28px, 7.4vw, 42px);
+    margin-bottom: 20px;
+  }
   .home-experience.hero-enhanced .recognition-lines { flex: 1; min-height: 150px; }
   .home-experience.hero-enhanced .recognition-lines p { position: absolute; top: 50%; padding: 0; }
 }

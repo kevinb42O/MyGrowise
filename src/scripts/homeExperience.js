@@ -91,7 +91,8 @@
   set(recognitionLogo,{opacity:frame});
   set(recognitionCaption,{opacity:entry*(1-release)});
   const landscapeScale=portalLayout?8/(8-(1-1/portalLayout.endScale)):1.12;
-  set(recognitionScenery,{transform:innerWidth<=760?`translateY(${-33*frame}%)`:`scale(${landscapeScale})`});
+  // Scaling keeps the photograph covering the stage, including on phones.
+  set(recognitionScenery,{transform:`scale(${landscapeScale})`});
  }
  function measure(){
   if(!initialized)return;
@@ -123,7 +124,7 @@
   root.classList.toggle('portal-enhanced',portalEnabled);
   stageSize=available;
   // Measure the untransformed heading so its opening position is centered in the stage.
-  recognitionTitleOffset=available*.5-(recognitionInner.offsetTop+recognitionTitle.offsetTop+recognitionTitle.offsetHeight/2);
+  recognitionTitleOffset=innerWidth<=760?0:available*.5-(recognitionInner.offsetTop+recognitionTitle.offsetTop+recognitionTitle.offsetHeight/2);
   score=composeScore();
   root.style.setProperty('--journey-height',`${stageSize*(1+score.total)}px`);
   root.style.setProperty('--opening-height',`${stageSize*(1+score.openingEnd)}px`);
@@ -244,7 +245,9 @@
    set(recognitionInner,{opacity:phase(position,score.recognitionEnter.start+.10,score.recognitionEnter.end),transform:'none',clipPath:innerWidth<=760?'none':`inset(0 ${clamp((61-67*enter)/54)*100}% 0 0)`});
    const lift=progress(position,score.recognitionLift);
    set(recognitionTitle,{transform:`translateY(${recognitionTitleOffset*(1-lift)}px)`});
-   const firstThought=phase(position,score.recognitionLift.start+.06,score.recognitionLift.end);
+   const firstThought=innerWidth<=760
+    ?phase(position,score.recognitionEnter.start+.10,score.recognitionEnter.end)
+    :phase(position,score.recognitionLift.start+.06,score.recognitionLift.end);
    const thoughtPosition=phase(reading,.32,.45)+phase(reading,.77,.90);
    recognitionLines.forEach((line,i)=>{
     const distance=i-thoughtPosition,focus=1-phase(Math.abs(distance),.05,.95);
