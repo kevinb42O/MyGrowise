@@ -219,8 +219,10 @@
     set(heroBrand,{opacity:.32*brandReveal*(1-exit),transform:`translate(-50%, -50%) scale(${1+.16*camera})`,visibility:brandReveal>0&&exit<1?'visible':'hidden'});
     const gather=phase(intro,0,.25);
     const {centerX,centerY,stageWidth,lines,readingScale}=portalLayout;
-    // Grow only after the two lines have finished gathering, keeping their shared center.
-    const readingSize=readingScale*(1+.65*phase(intro,.38,.62));
+    // Grow after gathering, but keep phone lettering inside a real safe area.
+    // The desktop camera's 65% growth otherwise pushes a fitted line offscreen.
+    const readingLimit=mobile?stageWidth*.88/Math.max(...lines.map(line=>line.width)):Infinity;
+    const readingSize=Math.min(readingScale*(1+.65*phase(intro,.38,.62)),readingLimit);
     const gap=lines[0].height*readingSize*.16;
     heroTitleLines.forEach((line,i)=>{
      const targetX=centerX+(stageWidth/2-centerX)/textScale;

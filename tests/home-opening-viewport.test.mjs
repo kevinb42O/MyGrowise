@@ -44,3 +44,24 @@ test('reduced motion and an explicit quiet-view choice still disable the intro',
   assert.equal(eligibility({ available: 583, reduced: true }).heroEnabled, false);
   assert.equal(eligibility({ available: 583, manualOff: true }).heroEnabled, false);
 });
+
+test('phone title growth stays within the viewport at every zoom position', () => {
+  const start = scene.indexOf('    const readingLimit=');
+  const sizing = scene.slice(start, scene.indexOf('    const gap=', start));
+  for (const stageWidth of [320, 375, 390, 430]) {
+    const lines = [{ width: stageWidth * .65 }, { width: stageWidth * .9 }];
+    const readingScale = Math.min(1, stageWidth * .82 / Math.max(...lines.map(line => line.width)));
+    for (let step = 0; step <= 100; step++) {
+      const readingSize = vm.runInNewContext(`${sizing}\n readingSize;`, {
+        mobile: true, stageWidth, lines, readingScale, intro: step / 100,
+        phase: (value, from, to) => Math.max(0, Math.min(1, (value - from) / (to - from))),
+      });
+      for (const line of lines) assert.ok(line.width * readingSize <= stageWidth * .88 + .001);
+    }
+  }
+  const desktopSize = vm.runInNewContext(`${sizing}\n readingSize;`, {
+    mobile: false, stageWidth: 1440, lines: [{ width: 500 }], readingScale: 1, intro: .7,
+    phase: () => 1,
+  });
+  assert.equal(desktopSize, 1.65, 'desktop title growth is preserved');
+});

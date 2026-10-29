@@ -74,3 +74,11 @@ Een aparte `compact-opening`-compositie laat de tekst, acties en het portret na 
 Gecontroleerd op 375 px breed met viewporthoogtes 601, 620, 640, 664 en 724 px: telkens `hero-enhanced` en `portal-enhanced`, zonder de uitgebreide latere scenes in te schakelen. Geen horizontale overflow en een positieve afstand tussen tekst/acties en het portret. Een daadwerkelijke browserscroll veranderde de schaal van het hoofd van 1 naar circa 7,51. Dit is Chromium-emulatie; de fysieke iPhone-test gebeurt door Kevin.
 
 Drie regressietests bewaken de compacte hoogtegevallen, de ongewijzigde desktopgrens en de reduced-motion/handmatige rustige weergave. Alle 68 tests slagen. Bewijs: [compacte intro](audits/mobile-2026-10-29/after/iphone-mini-intro.png) en [metingen](audits/mobile-2026-10-29/after/iphone-mini-checks.json).
+
+## Nacorrectie na de fysieke iPhone-feedback: landing en titelgroei
+
+De eerste compacte compositie maakte het portret te klein en liet de naam er smal onder staan. Het portret en onderschrift staan nu naast elkaar in een gezamenlijk blok, met de vervolgactie op een eigen rij. Op 375 px breed is de foto 165 px breed; de crèmekleurige strook beslaat 30% van de stage. De correctie is uitsluitend op `compact-opening.hero-enhanced` van toepassing. De hoofdintro blijft actief.
+
+Op zes viewporthoogtes van 601–724 px bleef het portret onder de tekst/acties, de naam naast het beeld en de vervolgactie onder beide. Er was geen horizontale overflow. Zie [nieuwe landing](audits/mobile-2026-10-29/after/iphone-mini-landing.png) en [landingsmetingen](audits/mobile-2026-10-29/after/iphone-mini-landing-checks.json).
+
+De tweede fysieke screenshot liet zien dat de titel tijdens de zoom werd afgesneden. De oorzaak was de extra 65% groei ná de eerste breedtepassing. Die groei wordt nu op telefoonbreedtes begrensd op 88% van de stagebreedte; desktop behoudt zijn bestaande groei. In achttien echte Chromium-scrollstappen van 0 tot 680 px bleven beide tekstregels binnen de 375px-viewport. Een aanvullende regressietest controleert de titelmaat op 101 animatieposities voor vier telefoonbreedtes en bewaakt de ongewijzigde desktopgroei. Zie [titel op zijn grootste mobiele schaal](audits/mobile-2026-10-29/after/iphone-mini-title-fit.png) en [scrollmetingen](audits/mobile-2026-10-29/after/iphone-mini-title-checks.json).
