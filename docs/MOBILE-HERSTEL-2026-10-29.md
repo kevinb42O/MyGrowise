@@ -64,3 +64,13 @@ De 640px-varianten zijn nog kleiner. Dit zijn bestandsgroottes; er is geen nieuw
 Safari op een echte iPhone, Android-apparaten, schermtoetsenborden, systeemtekstvergroting en ingelogde agenda-/afname-/moduleflows zijn niet integraal getest. Er zijn geen berichten verzonden, afspraken vastgelegd, accounts aangemaakt of bestellingen geplaatst. De lokale testselectie is gewist. De desktopcompositie is behouden; dit document claimt geen goedkeuring van elke private productflow of elk fysiek toestel.
 
 Alle controles zijn lokaal uitgevoerd. Geen GitHub Actions of betaalde dienst toegevoegd; de bestaande Vercel Free/Hobby-randvoorwaarde blijft gelden.
+
+## Nacorrectie: compacte iPhone-intro
+
+De eerste herstelronde behield een te strenge ondergrens van 600 px beschikbare stagehoogte voor de opening. Daardoor werd op een compacte telefoon met uitgeklapte Safari-balken ook het hoofd uitgeschakeld. De opening mag nu op telefoonbreedtes vanaf 520 px beschikbare hoogte animeren. De bestaande drempel en fit-controles voor de latere scrollsecties blijven intact.
+
+Een aparte `compact-opening`-compositie laat de tekst, acties en het portret na de zoom zonder overlap landen. Zij wordt bepaald door dezelfde gemeten kleine viewport als de scrolllogica, zodat Safari's grotere layoutviewport de compacte opmaak niet per ongeluk omzeilt. Desktop, aanbod, checkout en de overige mobiele componenten zijn voor deze nacorrectie niet gewijzigd.
+
+Gecontroleerd op 375 px breed met viewporthoogtes 601, 620, 640, 664 en 724 px: telkens `hero-enhanced` en `portal-enhanced`, zonder de uitgebreide latere scenes in te schakelen. Geen horizontale overflow en een positieve afstand tussen tekst/acties en het portret. Een daadwerkelijke browserscroll veranderde de schaal van het hoofd van 1 naar circa 7,51. Dit is Chromium-emulatie; de fysieke iPhone-test gebeurt door Kevin.
+
+Drie regressietests bewaken de compacte hoogtegevallen, de ongewijzigde desktopgrens en de reduced-motion/handmatige rustige weergave. Alle 68 tests slagen. Bewijs: [compacte intro](audits/mobile-2026-10-29/after/iphone-mini-intro.png) en [metingen](audits/mobile-2026-10-29/after/iphone-mini-checks.json).

@@ -3292,6 +3292,15 @@
 }
 
 .home-experience .responsive-photo { display: contents; }
+
+/* Compact Safari viewport: preserve the portal without crowding its landing. */
+.home-experience.compact-opening.hero-enhanced .hero-supporting { top: 3%; }
+.home-experience.compact-opening.hero-enhanced .hero-statement { font-size: 28px; margin-bottom: 8px; }
+.home-experience.compact-opening.hero-enhanced .hero-promise { font-size: 22px; margin-bottom: 12px; }
+.home-experience.compact-opening.hero-enhanced .hero-description { margin-bottom: 12px; }
+.home-experience.compact-opening.hero-enhanced .hero-introduction .hero-portrait { width: min(38%, calc(var(--stage) * .18)); }
+.home-experience.compact-opening.hero-enhanced .hero-portrait figcaption span:first-child { font-size: 22px; line-height: 1.2; }
+.home-experience.compact-opening.hero-enhanced .hero-portrait figcaption span:last-child { font-size: 11px; line-height: 1.3; }
 @media (max-width: 760px) {
   .home-experience.enhanced .module-deck { height: 32%; }
   .home-experience.enhanced .module-copies { top: 53%; }

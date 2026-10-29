@@ -106,7 +106,10 @@
   root.style.setProperty('--bar',`${bar}px`);root.style.setProperty('--top',`${bar+header}px`);
   const mobile=innerWidth<=600, available=viewportMeasure.clientHeight;
   enabled=!manualOff&&!reduced.matches&&available>=(mobile?650:650)&&innerWidth>=350;
-  heroEnabled=!manualOff&&!reduced.matches&&available>=600;
+  // Safari's expanded bars leave compact phones less than 600px below the
+  // header. The opening has a compact composition independent of later scenes.
+  heroEnabled=!manualOff&&!reduced.matches&&available>=(mobile?520:600);
+  root.classList.toggle('compact-opening',mobile&&available<650);
   // Always measure one clean candidate layout. Previous animation classes and
   // inline transforms must never decide whether the next measurement fits.
   [heroStage,stage,recognitionInner,recognitionTitle,recognitionClosing,...recognitionLines,heroSupporting,heroPortrait,insightCopy,insightHeading,...moduleCopies].forEach(e=>e.removeAttribute('style'));
