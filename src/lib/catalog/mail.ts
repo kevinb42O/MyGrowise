@@ -2,7 +2,7 @@ import {sendWebsiteEmail,websiteMailReady} from '../commerce/websiteMail';
 import {makePurchaseLink} from '../commerce/purchases';
 import {getSupabaseAdmin} from '../supabase/server';
 import {money} from './pricing';
-import {termsForEmail} from '../commerce/terms';
+import {legacyTerms20261029} from '../commerce/termsArchive';
 export async function deliverCommerceMail(limit=4,orderId?:string){
  if(!websiteMailReady())return {sent:0,failed:0,configured:false};
  const db=getSupabaseAdmin();const {data:jobs,error}=await db.rpc('claim_commerce_mail',{p_limit:limit,p_order_id:orderId||null});if(error)throw new Error('mail_claim_failed');
@@ -18,7 +18,10 @@ export async function deliverCommerceMail(limit=4,orderId?:string){
   const intro=team?(event==='created'?'Er is een nieuwe bestelling om op te volgen.':'Een betaling is bevestigd. Bekijk de gekochte producten en hun levering.'):event==='created'?'Je bestelling is ontvangen. Open je bestelling en betaalgegevens via de link hieronder. Een account is niet nodig.':event==='paid'?`Je betaling is bevestigd. ${paidIntro}`: 'Er staat een update over je afname voor je klaar. Open je instructies en beschikbare rapporten veilig via de link hieronder, zonder verplicht account.';
   const link=team?`${origin}/admin/${event==='paid'?(modulesOnly?'modules':'afnames'):'bestellingen'}`:event==='created'?await makePurchaseLink(email,`/bestellen?order=${job.order_id}`):await makePurchaseLink(email);
   const text=`${intro}\n\nReferentie: ${order.provider_reference}\n${team?`Producten: ${order.order_items.map((i:any)=>i.product_title).join(' · ')}`:'Je vindt de inhoud van je bestelling via de beveiligde link.'}${event!=='delivery'?`\nBedrag: ${money(order.total_cents)}`:''}\n\n${team?`Contact: ${buyer!.email}\nDeelnemer: ${order.contact_snapshot?.first_name||buyer!.first_name} ${order.contact_snapshot?.last_name||buyer!.last_name}\n\n`:''}${link}\n\nDeel geen medische gegevens via gewone e-mail.\n\nMyGrowise`;
-  const message=!team&&event==='created'?`${text}\n\n${termsForEmail()}`:text;
+  const consent=order.contact_snapshot?.digital_delivery_consent;
+  const confirmation=consent&&typeof consent.statement==='string'?`\n\nBevestiging directe digitale levering:\n${consent.statement}\nGeregistreerd bij bestelling ${order.provider_reference}. De toestemming geldt uitsluitend voor de digitale inhoud waarvoor je deze afzonderlijk gaf.`:'';
+  const agreedTerms=typeof order.contact_snapshot?.terms_text==='string'?order.contact_snapshot.terms_text:legacyTerms20261029;
+  const message=!team&&event==='created'?`${text}${confirmation}\n\n${agreedTerms}`:text;
   await sendWebsiteEmail(recipient,subject,message);
   const {error}=await db.from('commerce_mail_jobs').update({status:'sent',sent_at:new Date().toISOString(),lease_until:null,last_error:null}).eq('id',job.id).eq('lease_token',job.lease_token);if(error)throw new Error('mail_status_failed');sent++;
  }catch{await db.from('commerce_mail_jobs').update({status:job.attempts>=6?'failed':'pending',next_attempt_at:new Date(Date.now()+Math.min(2**job.attempts*60000,21600000)).toISOString(),lease_until:null,last_error:'delivery_failed'}).eq('id',job.id).eq('lease_token',job.lease_token);failed++;}}

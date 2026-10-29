@@ -1,5 +1,7 @@
 import {salesEnabled,salesPausedMessage} from '../../../lib/commerce/readiness';
 import {deliverCommerceMail} from '../../../lib/catalog/mail';
+import {quoteCatalog} from '../../../lib/catalog/server';
+import {digitalContentItems,digitalDeliveryStatement,termsRevision,termsForEmail} from '../../../lib/commerce/terms';
 import type {APIRoute} from 'astro';
 import {isTrustedFormOrigin,isCustomerAccount} from '../../../lib/adminAuth';
 import {isUuid} from '../../../lib/catalog/pricing';
@@ -16,8 +18,12 @@ export const POST:APIRoute=async({request,locals,cookies})=>{
   if(form.get('website'))return new Response('Controleer je gegevens.',{status:400});
   if(form.get('terms')!=='accepted'||!ids.length||ids.length>30||ids.some(x=>!isUuid(x))||!['package','custom'].includes(mode)||!isUuid(key)||!/^[a-f0-9]{32}$/.test(hash)||!getWiseManualDetails())return new Response('Controleer je samenstelling en aanvaard de voorwaarden.',{status:400});
   const signedIn=isCustomerAccount(locals.currentUser);if(signedIn)form.set('email',locals.currentUser!.email);
-  const contact=parseBuyer(form),ip=request.headers.get('x-forwarded-for')?.split(',')[0]||'unknown';
-  if(!await rateLimitSupport('checkout-ip',ip,15,3600)||!await rateLimitSupport('checkout-email',contact.email,8,3600))return new Response('Te veel aanvragen. Probeer later opnieuw.',{status:429,headers:privateHeaders});
+  const buyer=parseBuyer(form),ip=request.headers.get('x-forwarded-for')?.split(',')[0]||'unknown';
+  if(!await rateLimitSupport('checkout-ip',ip,15,3600)||!await rateLimitSupport('checkout-email',buyer.email,8,3600))return new Response('Te veel aanvragen. Probeer later opnieuw.',{status:429,headers:privateHeaders});
+  const quote=await quoteCatalog(ids,mode);
+  const digitalItems=digitalContentItems(quote.items);
+  if(digitalItems.length&&form.get('digital_delivery')!=='accepted')return new Response('Bevestig de directe digitale levering en de erkenning van het verlies van je herroepingsrecht voor die inhoud.',{status:400,headers:privateHeaders});
+  const contact={...buyer,terms_revision:termsRevision,terms_text:termsForEmail(),...(digitalItems.length?{digital_delivery_consent:{revision:termsRevision,statement:digitalDeliveryStatement,product_ids:digitalItems.map(item=>item.id).sort()}}:{})};
   const db=getSupabaseAdmin();let result;
   const owner=await purchaseOwner(cookies,locals.currentUser);
   if(owner){const owned=await purchasedProducts(owner);if(owned.some(p=>['module','guide'].includes(p.product_type)&&ids.includes(p.product_id)))return new Response(null,{status:303,headers:{...privateHeaders,location:'/aankopen'}});}

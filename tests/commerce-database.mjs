@@ -23,11 +23,12 @@ try{
  }
  const questions=(await q("select p.id from public.products p join public.catalog_details d on d.product_id=p.id where p.type='questionnaire' and p.status='published' and d.availability='available' and p.price_cents=5900 order by p.id limit 4")).rows.map(r=>r.id);assert.equal(questions.length,4);
  const quote=async(ids,mode='custom')=>(await q('select public.catalog_quote($1,$2) v',[ids,mode])).rows[0].v;
- const contact={email,first_name:'Test',last_name:'Deelnemer',birth_date:'1990-03-04',gender:'unspecified',participant:'self'};
+ const contact={email,first_name:'Test',last_name:'Deelnemer',birth_date:'1990-03-04',gender:'unspecified',participant:'self',terms_revision:'TEST-ONLY',terms_text:'Synthetic consent storage test',digital_delivery_consent:{revision:'TEST-ONLY',statement:'Synthetic direct-delivery consent',product_ids:questions.slice(0,2)}};
  const guest=async(ids,quoteHash,checkout=hash(),submission=randomUUID(),details=contact,mode='custom')=>(await q('select public.create_guest_catalog_order($1,$2,$3,$4,$5,$6) id',[checkout,ids,mode,quoteHash,submission,details])).rows[0].id;
  const firstQuote=await quote(questions.slice(0,2)),checkout=hash(),submission=randomUUID();
  const order=await guest(questions.slice(0,2),firstQuote.hash,checkout,submission);
  assert.equal(await guest(questions.slice(0,2),firstQuote.hash,checkout,submission),order);checks++;
+ assert.deepEqual((await q('select contact_snapshot from public.orders where id=$1',[order])).rows[0].contact_snapshot,contact);checks++;
  await fail(()=>guest(questions.slice(0,2),firstQuote.hash,checkout,submission,{...contact,first_name:'Ander'}),/submission_conflict/);
  await fail(()=>guest(questions.slice(0,2),'0'.repeat(32)),/quote_changed/);
  await fail(()=>quote([questions[0],questions[0]]),/invalid_selection/);
@@ -44,6 +45,7 @@ try{
  const expired=hash();await q("insert into public.commerce_access_tokens(token_hash,email,expires_at) values($1,$2,now()-interval '1 second')",[expired,email]);assert.equal((await q('select public.consume_purchase_token($1,$2) ok',[expired,hash()])).rows[0].ok,false);checks++;
  await fail(()=>q('select public.link_guest_purchases($1,$2)',[other,session]),/forbidden/);
  const accountOrder=(await q("select public.create_account_checkout($1,$2,'custom',$3,$4,$5) id",[account,questions.slice(0,2),firstQuote.hash,randomUUID(),contact])).rows[0].id;
+ assert.deepEqual((await q('select contact_snapshot from public.orders where id=$1',[accountOrder])).rows[0].contact_snapshot,contact);checks++;
  await q('select public.confirm_wise_manual_payment($1,$2)',[accountOrder,admin]);
  await q('select public.link_guest_purchases($1,$2)',[account,session]);await q('select public.link_guest_purchases($1,$2)',[account,session]);
  assert.equal((await q('select count(*)::int n from public.orders where id=any($1) and customer_user_id=$2',[[order,accountOrder],account])).rows[0].n,2);
