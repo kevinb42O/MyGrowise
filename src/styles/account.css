@@ -107,5 +107,5 @@
   .account-brand-emblem { top: auto; right: clamp(-5.5rem, -7vw, -2.5rem); bottom: clamp(-5.5rem, -6vw, -3.5rem); width: clamp(16.5rem, 25vw, 24rem); transform: none; }
   .account-brand-emblem__glow { inset: 13% 8% 5%; filter: blur(22px); transform: scale(1.36); }
 }
-@media (max-width: 520px) { .account-header__context { display: none; }.account-focus__art { width: 15rem; opacity: .55; }.account-brand-emblem { right: -1.4rem; width: 12rem; }.account-focus { min-height: 25rem; }.account-dashboard h1 { font-size: clamp(2.8rem,13vw,4rem); }.account-date { display: none; }.account-secondary-route em { display: none; } }
+@media (max-width: 520px) { .account-header__inner { grid-template-columns: minmax(0, 1fr) auto; column-gap: .75rem; }.account-header__context { display: none; }.account-focus__art { width: 15rem; opacity: .55; }.account-brand-emblem { right: -1.4rem; width: 12rem; }.account-focus { min-height: 25rem; }.account-dashboard h1 { font-size: clamp(2.8rem,13vw,4rem); }.account-date { display: none; }.account-secondary-route em { display: none; } }
 @media (prefers-reduced-motion: reduce) { .account-brand img, .account-sidebar nav a, .account-sidebar nav a svg, .account-button svg, .account-text-action svg, .account-section-heading > a svg, .account-summary, .account-summary::after, .account-secondary-route { transition: none !important; } }
