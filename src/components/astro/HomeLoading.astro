@@ -1,0 +1,53 @@
+<!-- The head guard shows this before the first scene can paint. -->
+<div class="home-loading" data-home-loading role="status" aria-live="polite" aria-atomic="true">
+  <div class="home-loading__identity">
+    <img src="/images/logo-lelie.webp" alt="" width="382" height="289" />
+    <span>De opening wordt klaargezet…</span>
+  </div>
+</div>
+
+<style is:global>
+  .home-experience .home-loading {
+    position: fixed;
+    inset: var(--top) 0 0;
+    z-index: 46;
+    display: none;
+    place-items: center;
+    pointer-events: none;
+    color: var(--white);
+    background-image: linear-gradient(rgb(0 0 0 / 38%), rgb(0 0 0 / 38%)), url("data:image/jpeg;base64,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");
+    background-size: cover;
+    background-position: center;
+    opacity: 1;
+    transition: opacity 480ms cubic-bezier(.16, 1, .3, 1);
+  }
+  html.home-booting .home-loading,
+  html.home-revealing .home-loading { display: grid; }
+  html.home-revealing .home-loading { opacity: 0; }
+  html.home-booting-quiet .home-loading__identity { visibility: hidden; }
+  .home-loading__identity {
+    display: grid;
+    justify-items: center;
+    gap: 24px;
+    padding: 24px;
+    text-align: center;
+  }
+  .home-loading__identity img {
+    width: 104px;
+    height: auto;
+    animation: opening-breathe 2.4s ease-in-out infinite;
+  }
+  .home-loading__identity span {
+    font-size: 14px;
+    line-height: 1.5;
+    text-shadow: 0 2px 8px rgb(0 0 0 / 65%);
+  }
+  @keyframes opening-breathe {
+    0%, 100% { transform: scale(.97); opacity: .8; }
+    50% { transform: scale(1); opacity: 1; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .home-experience .home-loading { transition: none; }
+    .home-loading__identity img { animation: none; }
+  }
+</style>

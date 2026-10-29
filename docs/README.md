@@ -15,6 +15,7 @@ De [MijnDiAd-agendakoppeling](MIJNDIAD-AGENDA-IMPORT.md) beschrijft de 262 overg
 
 | Document | Doel en actualiteit |
 |---|---|
+| [HOMEPAGE-VISUEEL-PLAN.md](HOMEPAGE-VISUEEL-PLAN.md) | Goedgekeurde homepageproef lokaal geïntegreerd op 29 oktober, met alle hoofdstukken, scrolltransities en Virginies foto in de hero; lokale browsercontroles en bewijsgrenzen vastgelegd. |
 | [PROFILES-RUNBOOK.md](PROFILES-RUNBOOK.md) | Acht volledige profielpagina’s, filters, inhoudsbeheer en broncontrole. |
 | [PROFIELEN-LANDINGSPAGINA-PLAN.md](PROFIELEN-LANDINGSPAGINA-PLAN.md) | Uitgevoerde profielspecificatie; actuele uitvoering in het profielrunbook. |
 | [ADMIN-MASTERPLAN.md](ADMIN-MASTERPLAN.md) | Actuele codeaudit van beheermodules, rechten, datagrenzen en beperkingen. |

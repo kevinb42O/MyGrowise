@@ -1,18 +1,20 @@
 ---
 import BusinessDetails from './BusinessDetails.astro';
+interface Props { showIntro?: boolean }
+const { showIntro = true } = Astro.props;
 const year = new Date().getFullYear();
 ---
 
-<footer class="site-footer">
+<footer class:list={['site-footer', { 'site-footer--compact': !showIntro }]}>
   <div class="container footer-main">
-    <div class="footer-intro">
+    {showIntro && <div class="footer-intro">
       <span class="footer-kicker">Een volgende stap die bij jou past</span>
       <h2>Begrijpen mag ook<br /><em>het begin zijn.</em></h2>
       <div class="footer-actions">
         <a class="button footer-button" href="/startpunt">Vind je startpunt</a>
         <a class="button footer-button ghost" href="/begeleiding">Vind begeleiding</a>
       </div>
-    </div>
+    </div>}
     <div class="footer-nav">
       <div>
         <strong>Aanbod</strong>
@@ -47,8 +49,16 @@ const year = new Date().getFullYear();
 </footer>
 
 <style>
-  .site-footer { overflow: hidden; background: var(--ink-deep); color: white; }
+  .site-footer {
+    overflow: hidden;
+    background:
+      linear-gradient(180deg, var(--ink-deep), transparent 48%),
+      radial-gradient(ellipse at 90% 70%, #6c796035, transparent 62%),
+      linear-gradient(125deg, var(--ink-deep), #183b31 58%, #263f34);
+    color: white;
+  }
   .footer-main { display: grid; gap: 4rem; padding-block: clamp(4rem, 9vw, 8rem); }
+  .site-footer--compact .footer-main { grid-template-columns: 1fr; padding-block: clamp(3rem, 5vw, 5rem); }
   .footer-kicker { display: block; margin-bottom: 1.2rem; color: var(--yellow); font-size: 0.75rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; }
   .footer-intro h2 { margin-bottom: 2rem; font-size: clamp(3rem, 7vw, 6.5rem); line-height: 0.92; }
   .footer-intro h2 em { color: var(--pink); font-weight: 400; }

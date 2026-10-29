@@ -27,5 +27,5 @@ export const bookAppointment=async(user:UserSession,offerId:string,form:FormData
 };
 export const customerDetails=async(user:UserSession)=>{
  if(!isCustomerAccount(user)) return {};
- const {data,error}=await getSupabaseAdmin().from('patients').select('first_name,last_name,birth_date,gender,salutation,street,house_number,address_box,postal_code,city,country,mobile,national_number,registration_reason,referrer').eq('customer_user_id',user.sub).maybeSingle();fail(error);return data||{};
+ const {data,error}=await getSupabaseAdmin().from('patients').select('first_name,last_name,birth_date,gender,salutation,street,house_number,address_box,postal_code,city,country,mobile,registration_reason,referrer').eq('customer_user_id',user.sub).maybeSingle();fail(error);return data||{};
 };

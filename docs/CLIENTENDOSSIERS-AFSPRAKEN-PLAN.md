@@ -35,7 +35,7 @@ Dit bevestigt de lokale implementatie, niet welke migraties, mailinstellingen of
 
 ## 3. Cliëntendossier
 
-Bij het openen verschijnt bovenaan een vaste overzichtskaart met alle twaalf gevraagde gegevens:
+Bij het openen verschijnt bovenaan een vaste overzichtskaart met de gevraagde cliëntgegevens:
 
 - Voornaam en achternaam als afzonderlijke velden.
 - Geboortedatum.
@@ -45,7 +45,6 @@ Bij het openen verschijnt bovenaan een vaste overzichtskaart met alle twaalf gev
 - Adres: straat, huisnummer, bus, postcode, gemeente en land.
 - Mobiel telefoonnummer.
 - E-mailadres.
-- Rijksregisternummer.
 - Reden van aanmelding.
 - Doorverwijzer.
 
@@ -53,11 +52,11 @@ Daaronder staat onmiddellijk het afsprakenoverzicht; notities en toegangsbeheer 
 
 De foto's tonen het scherm **Cliënt wijzigen**. Voor MyGrowise onderscheiden we een leesoverzicht bij openen en een actie **Gegevens bewerken**. In het leesoverzicht groeperen we de kaart in Persoonsgegevens, Adres & contact en Aanmelding. Reden van aanmelding en doorverwijzer blijven dus ook direct in het overzicht staan. In de bewerkweergave staan dezelfde groepen, met duidelijke acties Opslaan en Annuleren, veldvalidatie en behoud van invoer bij een fout. Een waarschuwing bij verlaten voorkomt verlies van niet-opgeslagen wijzigingen.
 
-Voorletters, tussenvoegsel, een tweede telefoonnummer, alternatief postadres, zorgverzekering en extra e-mailadressen zijn zichtbaar in DIAD, maar zijn geen aanvullende harde eis uit de klanttekst. Een Belgische naam kan volledig worden ingevoerd in de velden voornaam/achternaam; een apart tussenvoegsel is daarvoor niet verplicht. Het rijksregisternummer blijft wel onderdeel van de vraag, ook al is dat niet herkenbaar als afzonderlijk veld op deze foto's. Verzekerings- of polisnummers worden niet zonder verificatie als rijksregisternummer geïnterpreteerd.
+Voorletters, tussenvoegsel, een tweede telefoonnummer, alternatief postadres, zorgverzekering en extra e-mailadressen zijn zichtbaar in DIAD, maar zijn geen aanvullende harde eis uit de klanttekst. Een Belgische naam kan volledig worden ingevoerd in de velden voornaam/achternaam; een apart tussenvoegsel is daarvoor niet verplicht. Op 29 oktober 2026 is op verzoek van Kevin het rijksregisternummer uit alle formulieren, dossierweergaven en gegevensverwerking verwijderd. De database blokkeert opslag; de lege compatibiliteitskolom voorkomt fouten bij oudere websiteversies.
 
 Een bevoegde medewerker kan gegevens toevoegen en corrigeren. Geboortedatum en intakedatum zijn echte datumvelden. De intakedatum is niet de aanmaakdatum van een account of dossier. Voorstel: datum van de eerste uitgevoerde intake, met mogelijkheid tot correctie voor oudere dossiers. Bij meerdere behandeltrajecten blijven de afzonderlijke intakes herkenbaar in de historiek.
 
-De definitieve verplichte velden worden vooraf vastgesteld. Rijksregisternummer en doorverwijzer zijn niet automatisch voor iedere cliënt verplicht. Het rijksregisternummer hoort uitsluitend in de beveiligde dossierflow, nooit in boekingslinks, bevestigingsmails of gewone applicatielogs. Bestaande toegangsbeperkingen blijven van toepassing op de uitgebreide gegevens.
+De verplichte velden worden per formulier aangegeven. Doorverwijzer is niet automatisch voor iedere cliënt verplicht. Er wordt geen rijksregisternummer gevraagd of verwerkt. Bestaande toegangsbeperkingen blijven van toepassing op de uitgebreide gegevens.
 
 ## 4. Beheerbare afspraaktypes en behandelkleuren
 

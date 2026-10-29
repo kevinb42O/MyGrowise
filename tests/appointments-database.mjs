@@ -8,10 +8,12 @@ const c=new pg.Client({connectionString:process.env.SUPABASE_DB_URL,connectionTi
 await c.connect();let checks=0;
 const q=(sql,params=[])=>c.query(sql,params);
 const expectFailure=async(fn,pattern)=>{await q('savepoint expected_failure');try{await fn();assert.fail('Expected database rejection');}catch(e){if(e.code==='ERR_ASSERTION')throw e;assert.match(e.message,pattern);}finally{await q('rollback to savepoint expected_failure');}checks++;};
-const migration=fs.readdirSync('supabase/migrations').find(n=>n.endsWith('_practice_appointment_management.sql'));
+const migrations=fs.readdirSync('supabase/migrations').filter(n=>n.endsWith('_practice_appointment_management.sql')||n.endsWith('_remove_patient_national_number.sql')).sort();
 try{
  await q('begin');await q("set local lock_timeout='3s';set local statement_timeout='25s'");
+ for(const migration of migrations){
  if(!(await q('select 1 from supabase_migrations.schema_migrations where version=$1',[migration.split('_')[0]])).rowCount)await q(fs.readFileSync(`supabase/migrations/${migration}`,'utf8'));
+ }
  assert.equal((await q('select count(*)::int n from public.appointment_types')).rows[0].n,12);checks++;
  assert.equal((await q('select count(*)::int n from public.practitioner_appointment_types')).rows[0].n,14);checks++;
  const customer=randomUUID(),customer2=randomUUID(),admin=randomUUID(),therapist=randomUUID(),otherTherapist=randomUUID();
@@ -29,7 +31,7 @@ try{
  assert.equal((await q('select public.is_practice_manager($1) ok',[admin])).rows[0].ok,true);checks++;
  const slots=(await q('select * from public.get_offer_slots($1,14)',[offer])).rows;assert.ok(slots.length>0);assert.equal(new Date(slots[0].ends_at)-new Date(slots[0].starts_at),75*60000);checks++;
  const starts=slots.find(s=>new Date(s.starts_at)>new Date(Date.now()+86400000)).starts_at;
- const details={first_name:'Voornaam',last_name:'Testcliënt',birth_date:'1990-03-04',gender:'unspecified',salutation:'',mobile:'+32400000000',country:'BE',street:'Teststraat',house_number:'1',city:'Brussel',postal_code:'1000',national_number:'',registration_reason:'Alleen in het dossier',referrer:'Een doorverwijzer'};
+ const details={first_name:'Voornaam',last_name:'Testcliënt',birth_date:'1990-03-04',gender:'unspecified',salutation:'',mobile:'+32400000000',country:'BE',street:'Teststraat',house_number:'1',city:'Brussel',postal_code:'1000',registration_reason:'Alleen in het dossier',referrer:'Een doorverwijzer'};
  const key=randomUUID();
  const book=async(user=customer,o=offer,start=starts,k=key,d=details)=>(await q('select public.book_customer_appointment($1,$2,$3,$4,$5::jsonb,null) id',[user,o,start,k,JSON.stringify(d)])).rows[0].id;
  const id=await book();assert.equal(await book(),id);checks++;
@@ -37,6 +39,10 @@ try{
  assert.equal(b.status,'confirmed');assert.ok(b.patient_id);assert.equal(b.appointment_name,'Intake EMDR – online');assert.equal(new Date(b.ends_at)-new Date(b.starts_at),75*60000);checks++;
  assert.equal((await q('select count(*)::int n from public.patient_assignments where patient_id=$1 and user_id=$2 and ended_at is null',[b.patient_id,therapist])).rows[0].n,1);checks++;
  const patient=(await q('select * from public.patients where id=$1',[b.patient_id])).rows[0];assert.equal(patient.first_name,details.first_name);assert.equal(patient.registration_reason,details.registration_reason);assert.equal(patient.intake_date,null);checks++;
+ // Old clients may submit the removed field: the RPC must discard it.
+ await q('select public.save_patient_details($1,$2,$3,null)',[customer,b.patient_id,JSON.stringify({...details,national_number:'12345678901'})]);
+ assert.equal((await q('select national_number from public.patients where id=$1',[b.patient_id])).rows[0].national_number,'');checks++;
+ await expectFailure(()=>q('update public.patients set national_number=$1 where id=$2',['12345678901',b.patient_id]),/patients_no_national_number/);
  const mail=(await q('select * from public.booking_mail_jobs where booking_id=$1',[id])).rows;
  assert.equal(mail.length,1);assert.equal(mail[0].payload.appointment,b.appointment_name);assert.equal(mail[0].payload.practitioner,'Test Therapeut');assert.ok(!JSON.stringify(mail[0].payload).includes(details.registration_reason));checks++;
  await expectFailure(()=>book(customer2,offer,starts,randomUUID()),/slot_unavailable/);
@@ -68,7 +74,7 @@ try{
  await q('update public.practitioner_appointment_types set bookable=true where id=$1',[offer]);
  const nextSlots=(await q('select * from public.get_offer_slots($1,14)',[offer])).rows;
  const next=nextSlots.find(s=>+new Date(s.starts_at)>Date.now()+5*86400000).starts_at;
- await expectFailure(()=>book(customer2,offer,next,randomUUID(),{...details,national_number:'INVALID'}),/patients_extended_fields/);
+ await expectFailure(()=>book(customer2,offer,next,randomUUID(),{...details,country:'INVALID'}),/patients_extended_fields/);
  assert.equal((await q('select count(*)::int n from public.patients where customer_user_id=$1',[customer2])).rows[0].n,0);checks++;
  await q("update public.patients set status='archived',archived_at=now() where id=$1",[b.patient_id]);
  await expectFailure(()=>book(customer,offer,next,randomUUID()),/patient_archived/);

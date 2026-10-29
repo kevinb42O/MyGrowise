@@ -77,7 +77,7 @@ const overview = [
  ['Intakedatum',patient.details.intake_date?formatDate(patient.details.intake_date):''],
  ['Adres',[`${patient.details.street} ${patient.details.house_number}${patient.details.address_box?` bus ${patient.details.address_box}`:''}`.trim(),`${patient.details.postal_code} ${patient.details.city}`.trim(),patient.details.country].filter(Boolean).join(', ')],
  ['Mobiel telefoonnummer',patient.details.mobile],['E-mailadres',patient.details.email],
- ['Rijksregisternummer',patient.details.national_number],['Reden van aanmelding',patient.details.registration_reason],['Doorverwijzer',patient.details.referrer],
+ ['Reden van aanmelding',patient.details.registration_reason],['Doorverwijzer',patient.details.referrer],
 ];
 ---
 

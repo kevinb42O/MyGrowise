@@ -10,7 +10,7 @@ export const GET:APIRoute=async()=>{
    db.from('content_items').select('slug,kind').eq('status','published'),
   ]);
   for(const result of [products,practitioners,content])if(result.error)throw result.error;
-  const paths=['/','/zelf-aan-de-slag','/profielen','/vragenlijsten','/samenstellen','/modules','/begeleiding','/over-ons','/contact','/prijzen','/inspiratie'];
+  const paths=['/','/zelf-aan-de-slag','/profielen','/vragenlijsten','/samenstellen','/modules','/begeleiding','/over-ons','/contact','/privacy','/prijzen','/inspiratie'];
   for(const p of products.data||[])paths.push(`/${p.type==='profile'?'profielen':p.type==='questionnaire'?'vragenlijsten':p.type==='module'?'modules':'verdieping'}/${p.slug}`);
   for(const p of practitioners.data||[])paths.push(`/begeleiding/${p.slug}`);
   for(const p of content.data||[])paths.push(p.kind==='article'?`/inspiratie/${p.slug}`:`/${p.slug}`);

@@ -1,0 +1,48 @@
+<script is:inline>
+  (() => {
+    const html = document.documentElement;
+    const motion = matchMedia('(prefers-reduced-motion: reduce)');
+    const key = 'mygrowise:opening-seen';
+    let finished = false;
+    let cleanup;
+    // Run in the head, before any homepage content can paint. Returning visits
+    // still need this guard: cached images do not mean the scene has been laid out.
+    html.classList.add('home-booting');
+    html.dataset.homeOpening = 'pending';
+    try {
+      if (sessionStorage.getItem(key)) html.classList.add('home-booting-quiet');
+    } catch { /* Storage is optional. */ }
+    const hide = () => {
+      clearTimeout(cleanup);
+      html.classList.remove('home-revealing', 'home-booting-quiet');
+    };
+    const finish = (immediate = false, fallback = false) => {
+      if (finished) { if (immediate) hide(); return; }
+      finished = true;
+      html.dataset.homeOpening = fallback ? 'fallback' : 'ready';
+      clearTimeout(deadline);
+      window.removeEventListener('home:ready', onReady);
+      window.removeEventListener('pagehide', onPageHide);
+      if (!immediate && !motion.matches) html.classList.add('home-revealing');
+      html.classList.remove('home-booting');
+      try { sessionStorage.setItem(key, '1'); } catch { /* Storage is optional. */ }
+      if (immediate || motion.matches) hide();
+      else cleanup = setTimeout(hide, 480);
+    };
+    const onReady = () => finish();
+    const onPageHide = () => finish(true);
+    const deadline = setTimeout(() => finish(true, true), 4500);
+    window.addEventListener('home:ready', onReady);
+    window.addEventListener('pagehide', onPageHide);
+  })();
+</script>
+
+<style is:global>
+  /* Opacity also covers descendants whose scene styles set visibility: visible.
+     Geometry stays measurable while the animated layout is prepared. */
+  html.home-booting [data-home-experience] > :not([data-home-loading]) {
+    opacity: 0 !important;
+    pointer-events: none !important;
+  }
+  [data-home-experience] { overflow-anchor: none; }
+</style>

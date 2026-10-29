@@ -2,7 +2,7 @@
 import {patientFields,genderLabels} from '../../lib/patientDetails';
 interface Props {values?:Record<string,unknown>;booking?:boolean;}
 const {values={},booking=false}=Astro.props;
-const groups=[['Persoonsgegevens',['first_name','last_name','birth_date','gender','salutation',...(!booking?['intake_date']:[])]],['Adres & contact',['street','house_number','address_box','postal_code','city','country','mobile',...(!booking?['email']:[]),'national_number']],['Aanmelding',['registration_reason','referrer']]] as const;
+const groups=[['Persoonsgegevens',['first_name','last_name','birth_date','gender','salutation',...(!booking?['intake_date']:[])]],['Adres & contact',['street','house_number','address_box','postal_code','city','country','mobile',...(!booking?['email']:[])]],['Aanmelding',['registration_reason','referrer']]] as const;
 ---
 {groups.map(([title,keys])=><fieldset class="practice-card"><legend>{title}</legend><div class="practice-fields">{keys.map(key=>{
  const field=patientFields.find(f=>f[0]===key)!;

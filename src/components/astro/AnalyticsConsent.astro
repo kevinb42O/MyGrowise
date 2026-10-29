@@ -1,4 +1,20 @@
-<div class="analytics-consent" hidden data-analytics-consent role="region" aria-label="Privacyinstellingen"><p><strong>Help MyGrowise verbeteren.</strong> Met jouw toestemming meten we bezochte pagina’s en enkele website-interacties met een anonieme browser-ID en een geschat land. We bewaren geen IP-adres of gezondheidsgegevens in analytics.</p><div><button type="button" data-analytics-accept>Akkoord</button><button type="button" data-analytics-decline>Alleen noodzakelijk</button></div><a href="/privacy">Lees hoe we meten</a></div>
+---
+interface Props { compact?: boolean }
+const { compact = false } = Astro.props;
+const explanation = 'Met jouw toestemming meten we bezochte pagina’s en enkele website-interacties met een anonieme browser-ID en een geschat land. We bewaren geen IP-adres of gezondheidsgegevens in analytics.';
+---
+<div class:list={['analytics-consent', { 'analytics-consent--compact': compact }]} hidden data-analytics-consent role="region" aria-label="Privacyinstellingen">
+  <p><strong>Help MyGrowise verbeteren.</strong>{!compact && explanation}</p>
+  {compact && <details><summary>Welke gegevens meten we?</summary><p>{explanation}</p><a href="/privacy">Lees hoe we meten</a></details>}
+  <div><button type="button" data-analytics-accept>Akkoord</button><button type="button" data-analytics-decline>Alleen noodzakelijk</button></div>
+  {!compact && <a href="/privacy">Lees hoe we meten</a>}
+</div>
+<style>
+  .analytics-consent--compact { max-width: 25rem; }
+  .analytics-consent--compact summary { min-height: 24px; cursor: pointer; text-underline-offset: .2em; }
+  .analytics-consent--compact details p { margin-top: .5rem; }
+  .analytics-consent--compact details[open] { max-height: 35svh; overflow-y: auto; }
+</style>
 <script is:inline>
   (() => { const root = document.querySelector('[data-analytics-consent]'); if (!root) return; const consent = document.cookie.match(/(?:^|; )mg_analytics_consent=([^;]+)/)?.[1]; const route = location.pathname.startsWith('/begeleiding') ? 'care' : location.pathname.startsWith('/profielen') || location.pathname.startsWith('/modules') || location.pathname.startsWith('/aanbod') ? 'self' : ''; const track = (event = 'page_view') => fetch('/api/analytics', { method: 'POST', headers: { 'content-type': 'application/json' }, credentials: 'same-origin', keepalive: true, body: JSON.stringify({ event, path: location.pathname, route }) }).catch(() => {}); const trackPage = () => { if (/^\/(account|admin|praktijk|api|aankopen|bestellen|berichten)(\/|$)/.test(location.pathname)) return; track(); if (/^\/(profielen|modules|aanbod)\/.+/.test(location.pathname)) track('product_viewed'); else if (/^\/begeleiding\/.+/.test(location.pathname)) track('professional_viewed'); else if (location.pathname === '/profielen' || location.pathname === '/modules' || location.pathname === '/begeleiding') track('route_selected'); }; if (consent === 'granted') trackPage(); else if (!consent) root.hidden = false; const set = (value) => { document.cookie = `mg_analytics_consent=${value}; Path=/; Max-Age=15552000; SameSite=Lax`; root.hidden = true; if (value === 'granted') trackPage(); }; root.querySelector('[data-analytics-accept]')?.addEventListener('click', () => set('granted')); root.querySelector('[data-analytics-decline]')?.addEventListener('click', () => set('denied')); })();
 </script>

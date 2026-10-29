@@ -5,8 +5,13 @@ import {bookingMailContent} from '../src/lib/bookingMailContent.ts';
 import {hasAdminPermission,requiredAdminPermission} from '../src/lib/adminPermissions.ts';
 const base={first_name:'  Anne Marie ',last_name:'De Vries',birth_date:'1980-02-29',mobile:'+32 400 00 00 00',country:'be'};
 test('structured details preserve names and normalize only intended fields',()=>{
- const d=parsePatientDetails({...base,national_number:'80.02.29-123.45'},true);
- assert.equal(d.first_name,'Anne Marie');assert.equal(d.last_name,'De Vries');assert.equal(d.country,'BE');assert.equal(d.national_number,'80022912345');assert.equal(d.intake_date,'');
+ const d=parsePatientDetails(base,true);
+ assert.equal(d.first_name,'Anne Marie');assert.equal(d.last_name,'De Vries');assert.equal(d.country,'BE');assert.equal(d.intake_date,'');
+});
+test('removed national number input is discarded, including stale form submissions',()=>{
+ const details=parsePatientDetails({...base,national_number:'80.02.29-123.45'},true);
+ assert.equal(Object.hasOwn(details,'national_number'),false);
+ assert.ok(!JSON.stringify(details).includes('80.02.29-123.45'));
 });
 test('booking requires birth date and mobile and rejects impossible dates',()=>{
  assert.throws(()=>parsePatientDetails({...base,birth_date:'2025-02-29'},true));
@@ -14,7 +19,6 @@ test('booking requires birth date and mobile and rejects impossible dates',()=>{
  assert.throws(()=>parsePatientDetails({...base,mobile:'ongeldig'},true));
  assert.throws(()=>parsePatientDetails({...base,birth_date:'2999-01-01'},true));
  assert.throws(()=>parsePatientDetails({...base,gender:'invalid'},true));
- assert.throws(()=>parsePatientDetails({...base,national_number:'123'},true));
  assert.throws(()=>parsePatientDetails({...base,last_name:'x'.repeat(61)},true));
 });
 test('confirmation includes full appointment type, therapist and Belgian time',()=>{
