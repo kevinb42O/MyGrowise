@@ -1,5 +1,19 @@
 ---
 import MainLayout from '../layouts/MainLayout.astro';
 import BusinessDetails from '../components/astro/BusinessDetails.astro';
+import {termsVersion,termsSections} from '../lib/commerce/terms';
 ---
-<MainLayout noindex title="Voorwaarden — MyGrowise" description="Gebruiks- en verkoopvoorwaarden van MyGrowise."><section class="page-hero"><div class="container"><span class="eyebrow">Juridisch</span><h1 class="heading-xl">Voorwaarden</h1><p class="lead">De definitieve gebruiks-, verkoop- en annuleringsvoorwaarden worden vóór checkoutactivatie juridisch gecontroleerd.</p></div></section><section class="section"><div class="container legal"><div class="notice"><strong>Nog niet klaar voor publicatie.</strong> Deze pagina bevat nog geen definitieve verkoopvoorwaarden. Afspraken over digitale levering, prijs en btw, herroeping, garantie, terugbetaling, klachten en begeleiding moeten nog juridisch worden goedgekeurd.</div><h2>Aanbieder</h2><p>MyGrowise wordt aangeboden door I-Transform SLU.</p><BusinessDetails /><p class="body-copy">Praktische vragen kan je stellen via <a href="mailto:info@mygrowise.be">info@mygrowise.be</a>.</p></div></section></MainLayout><style>.legal{max-width:780px}.legal p{margin-top:2rem}.legal h2{margin-top:2rem}</style>
+<MainLayout title="Algemene voorwaarden — MyGrowise" description="Voorwaarden voor bestellen, digitale levering, herroeping, terugbetaling en persoonlijke begeleiding bij MyGrowise.">
+  <section class="page-hero"><div class="container"><span class="eyebrow">Juridisch</span><h1 class="heading-xl">Algemene voorwaarden</h1><p class="lead">Duidelijke afspraken over je aankoop, digitale toegang en persoonlijke begeleiding.</p><p class="legal-updated">Versie: {termsVersion}</p></div></section>
+  <section class="section"><div class="container legal-layout">
+    <nav class="legal-toc" aria-label="Op deze pagina"><strong>Op deze pagina</strong><a href="#aanbieder">Aanbieder</a>{termsSections.map(section=><a href={`#${section.id}`}>{section.title}</a>)}</nav>
+    <div class="legal-content">
+      <section id="aanbieder"><span class="eyebrow">MyGrowise</span><h2>Aanbieder en contact</h2><BusinessDetails /><p>Voor vragen over je bestelling, afspraken, herroeping of een klacht kan je schrijven naar <a href="mailto:info@mygrowise.be">info@mygrowise.be</a> of naar bovenstaand postadres.</p></section>
+      {termsSections.map(section=><section id={section.id}><h2>{section.title}</h2>{section.paragraphs.map(paragraph=><p>{paragraph}</p>)}</section>)}
+      <p>Lees ook onze <a href="/privacy">privacyverklaring</a>. Je kan deze voorwaarden via de afdrukfunctie van je browser bewaren of als PDF opslaan.</p>
+    </div>
+  </div></section>
+</MainLayout>
+<style>
+.legal-updated{margin-top:1.5rem;color:var(--muted);font-size:.8rem}.legal-layout{display:grid;gap:2.5rem;max-width:1100px}.legal-toc{display:grid;align-content:start;gap:.7rem}.legal-toc strong{font-size:.75rem;text-transform:uppercase;letter-spacing:.1em}.legal-toc a{color:var(--muted);font-size:.78rem;text-decoration:none;line-height:1.5}.legal-toc a:hover{text-decoration:underline}.legal-content{min-width:0}.legal-content>section{padding:2rem 0;border-bottom:1px solid var(--line);scroll-margin-top:2rem}.legal-content>section:first-child{padding-top:0}.legal-content h2{margin:0 0 1rem;font-size:clamp(1.6rem,3vw,2.3rem)}.legal-content p{color:var(--muted);line-height:1.8;margin:1rem 0}.legal-content a{color:var(--ink);font-weight:750}@media(min-width:850px){.legal-layout{grid-template-columns:15rem minmax(0,1fr)}.legal-toc{position:sticky;top:2rem}}@media print{.legal-toc{display:none}.legal-layout{display:block}.legal-content>section{break-inside:avoid}.page-hero{padding:1rem 0}}
+</style>

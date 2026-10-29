@@ -1,0 +1,63 @@
+/** The same dated text is shown before purchase and included in the order email. */
+export const termsVersion = '29 oktober 2026';
+export const termsSections = [
+  { id: 'toepassing', title: 'Voor wie gelden deze voorwaarden?', paragraphs: [
+    'Deze voorwaarden gelden voor het gebruik van MyGrowise en voor aankopen van digitale modules, werkboeken, audio, vragenlijsten en profielen bij I-Transform SLU. Voor persoonlijke begeleiding gelden daarnaast de afspraken die de betrokken professional vóór de boeking duidelijk met je maakt. Dwingende consumenten- en patiëntenrechten blijven altijd gelden.',
+    'Je bestelt als meerderjarige voor jezelf of als ouder of bevoegde vertegenwoordiger voor een minderjarige. Controleer de doelgroep en leeftijdsgrenzen op de productpagina. Een aankoop is bestemd voor één deelnemer; een aankoop voor een kind geeft niet automatisch onbeperkt recht op inzage in vertrouwelijke begeleidingsgegevens van dat kind.',
+  ] },
+  { id: 'bestellen', title: 'Aanbod en bestellen', paragraphs: [
+    'De productpagina beschrijft de inhoud, doelgroep, vorm, prijs en beschikbaarheid. Een vermelding van een product in ontwikkeling is geen toezegging dat je het al kan kopen. Je koopt alleen wat in jouw besteloverzicht is opgenomen; persoonlijke begeleiding is alleen inbegrepen als dat uitdrukkelijk bij het gekozen aanbod staat.',
+    'Je kiest je producten, controleert je gegevens en het totaal, aanvaardt de voorwaarden en plaatst de bestelling met betalingsverplichting. Tot die laatste stap kan je teruggaan en je keuze of gegevens corrigeren. Na een geslaagde bestelling krijg je een bestelreferentie en betaalgegevens. Een technische foutmelding is geen bestelbevestiging. Bij een gewijzigde prijs of beschikbaarheid vragen we je het overzicht opnieuw te controleren.',
+    'De overeenkomst wordt in het Nederlands gesloten. Je bestelling en aankoopstatus blijven via je beveiligde aankooptoegang beschikbaar. Een account is optioneel voor digitale aankopen. Bewaar je bestelbevestiging en de meegestuurde voorwaarden zelf; een actuele webpagina kan later worden bijgewerkt.',
+  ] },
+  { id: 'betaling', title: 'Prijs en betaling', paragraphs: [
+    'Prijzen zijn in euro. Het totaal dat je vóór bestellen ziet, is de volledige consumentenprijs, inclusief toepasselijke belastingen en de getoonde kortingen. Er worden geen niet vooraf vermelde verplichte kosten achteraf toegevoegd. Een digitale productaankoop is een eenmalige betaling en start geen abonnement.',
+    'Je betaalt via overschrijving naar de rekening en met de referentie in jouw besteloverzicht. Een betaal-QR vult die gegevens in je bankapp in; controleer ze voordat je zelf de betaling goedkeurt. Het aanmaken van een bestelling of scannen van een QR is geen bewijs van ontvangst van je betaling.',
+    'MyGrowise controleert de ontvangen overschrijving voordat de betaling wordt bevestigd en betaalde toegang wordt verleend. Bij een fout bedrag, dubbele betaling of verkeerde referentie kan je ons met je bestelreferentie contacteren. Je hoeft niet opnieuw te betalen om een administratieve fout te laten nakijken.',
+  ] },
+  { id: 'levering', title: 'Digitale levering en toegang', paragraphs: [
+    'Na bevestiging van de betaling worden beschikbare digitale materialen via Mijn aankopen toegankelijk gemaakt. Een veilige link per e-mail geeft je toegang zonder verplicht account. Een verlopen link beëindigt je aankoop niet; je kan een nieuwe toegangslink aanvragen met het contactadres van de bestelling.',
+    'Vragenlijstafnames en persoonlijke rapporten vragen voorbereiding of verwerking door een professional. Een betaalbevestiging betekent daarom niet dat het rapport al klaar is. De afgesproken vervolgstappen en eventuele specifieke leveringstermijn staan bij het aanbod of in je persoonlijke afname-instructies. We leveren zonder onnodige vertraging en informeren je bij een probleem. Bij uitblijvende levering kan je ons vragen alsnog binnen een redelijke aanvullende termijn te leveren; je wettelijke recht op ontbinding en terugbetaling blijft gelden.',
+    'Je hebt een internetverbinding, toegang tot je contactmail en een actuele browser nodig. Voor downloads heb je een programma nodig dat het vermelde bestandsformaat kan openen, bijvoorbeeld een PDF-lezer of audiospeler. Externe afnames kunnen een afzonderlijke beveiligde omgeving gebruiken; de instructies vermelden hoe je die opent. Specifieke technische beperkingen of een beperkte toegangsduur worden vóór aankoop bij het aanbod vermeld. Deze voorwaarden voeren geen aanvullende vervaldatum voor bestaande aankooptoegang in.',
+  ] },
+  { id: 'herroeping', title: 'Herroeping en terugbetaling', paragraphs: [
+    'Voor een digitale productaankoop kan je de overeenkomst binnen veertien dagen na het sluiten ervan zonder reden herroepen. Stuur vóór het einde van die termijn een ondubbelzinnige verklaring naar info@mygrowise.be of naar ons postadres, met je naam, contactadres en bestelreferentie. Je hoeft het onderstaande voorbeeld niet te gebruiken. Als de wet door ontbrekende informatie een langere termijn geeft, blijft die langere termijn gelden.',
+    'Je behoudt deze bedenktijd ook als je de digitale inhoud al hebt geopend of gedownload. Het aanvaarden van deze algemene voorwaarden betekent geen afstand van je herroepingsrecht. Dit geldt ook voor digitale vragenlijstaankopen; het persoonlijke karakter van een product doet dit recht niet automatisch vervallen.',
+    'Na een geldige herroeping betalen we de ontvangen bedragen voor het herroepen deel van de bestelling uiterlijk binnen veertien dagen na ontvangst van je verklaring terug, via hetzelfde betaalmiddel, tenzij je uitdrukkelijk akkoord gaat met een andere kosteloze manier. De toegang tot de terugbetaalde inhoud vervalt. Gebruik of verspreid die inhoud daarna niet verder.',
+    'Voor een afzonderlijke dienst op afstand waarvoor een wettelijk herroepingsrecht geldt, gelden de wettelijke regels voor de aanvang en uitvoering daarvan. Beginnen binnen de bedenktijd vraagt een afzonderlijk uitdrukkelijk verzoek; een evenredige vergoeding of verlies van het herroepingsrecht geldt alleen als aan alle wettelijke voorwaarden is voldaan. Zorgverlening kan onder een ander wettelijk regime vallen. De praktische annulering van een afspraak staat hieronder en beperkt een eventueel wettelijk herroepingsrecht niet.',
+  ] },
+  { id: 'herroepingsvoorbeeld', title: 'Voorbeeld van een herroepingsbericht', paragraphs: [
+    'Aan I-Transform SLU, Carrer de la Costa, num 20, Edifici Orquidia, Pis planta Baixa, porta 2, El Tarter, AD100 Canillo, Andorra; e-mail: info@mygrowise.be.',
+    'Hierbij deel ik mee dat ik de overeenkomst voor de volgende aankoop herroep: [product of producten]. Besteld op: [datum]. Bestelreferentie: [referentie]. Naam: [naam]. Adres: [adres]. Datum: [datum]. Handtekening: [alleen als je dit bericht op papier verstuurt].',
+  ] },
+  { id: 'garantie', title: 'Als de inhoud of toegang niet klopt', paragraphs: [
+    'De geleverde inhoud moet beantwoorden aan wat je redelijkerwijs op basis van de overeenkomst en de productbeschrijving mag verwachten. Je wettelijke garantie en rechten bij ontbrekende, gebrekkige of onbruikbare digitale inhoud blijven gelden. Meld het probleem via info@mygrowise.be, liefst met je bestelreferentie en een praktische beschrijving zonder gevoelige gezondheidsinformatie.',
+    'We zorgen waar wettelijk vereist kosteloos voor herstel, correcte levering of de noodzakelijke updates binnen een redelijke termijn en zonder ernstige hinder. Als herstel of levering niet mogelijk is of niet volgens de wettelijke voorwaarden gebeurt, kan je recht hebben op een evenredige prijsvermindering of ontbinding en terugbetaling. Een eigen terugbetalingsbeleid mag deze rechten niet beperken.',
+  ] },
+  { id: 'afspraken', title: 'Begeleiding, verplaatsen en annuleren', paragraphs: [
+    'Bij een afspraak controleer je de professional, het afspraaktype, de duur, het tijdstip, de locatie of online vorm en het vooraf meegedeelde tarief. Een geslaagde boeking wordt bevestigd. Tijdstippen worden in Belgische tijd weergegeven, met de toepasselijke zomer- of wintertijd.',
+    'Je kan een afspraak via je account annuleren zolang de online annuleringsmogelijkheid beschikbaar is. Dicht bij de afspraak kan die mogelijkheid sluiten; neem dan rechtstreeks contact op met je professional of via info@mygrowise.be. Het sluiten van de online knop betekent niet dat een annulering of verzoek om verplaatsing niet meer kan worden gemeld.',
+    'Een vergoeding bij laattijdig annuleren of niet verschijnen is alleen verschuldigd als de toepasselijke termijn en vergoeding vóór de boeking duidelijk zijn meegedeeld en rechtsgeldig zijn overeengekomen. Deze algemene voorwaarden voeren zelf geen annuleringsboete in. Als de professional een afspraak niet kan uitvoeren, stemmen we een nieuw moment af of betalen we de niet geleverde, vooruitbetaalde prestatie terug.',
+    'Zelfhulpmateriaal, profielen en vragenlijsten geven geen garantie op een bepaald resultaat en zijn op zichzelf geen diagnose of vervanging van noodzakelijke medische zorg. De professionele verantwoordelijkheid en je patiëntenrechten blijven gelden waar sprake is van zorgverlening. MyGrowise is geen crisisdienst; bel bij onmiddellijk gevaar 112.',
+  ] },
+  { id: 'gebruik', title: 'Persoonlijk gebruik en veiligheid', paragraphs: [
+    'Je krijgt een persoonlijk gebruiksrecht op de aangekochte inhoud voor de gekozen deelnemer. Je mag toegestane downloads voor dat persoonlijke gebruik bewaren. Je mag de inhoud niet zonder toestemming doorverkopen, openbaar delen of commercieel verspreiden. Wettelijke uitzonderingen op het auteursrecht blijven gelden.',
+    'Houd je wachtwoord en aankooplinks vertrouwelijk en meld vermoedelijk misbruik. Bij aantoonbaar misbruik kan MyGrowise de betreffende toegang evenredig beperken om de dienst of anderen te beschermen. We leggen de reden en herstelroute uit voor zover dat de beveiliging of wetgeving niet schaadt. Je wettelijke aanspraken op levering of terugbetaling blijven bestaan.',
+  ] },
+  { id: 'klachten', title: 'Vragen, klachten en verantwoordelijkheid', paragraphs: [
+    'Stuur praktische vragen, klachten en verzoeken om terugbetaling naar info@mygrowise.be. Vermeld de bestelreferentie of afspraakdatum en wat je opgelost wilt zien. Deel geen diagnoses of sessieverslagen via gewone e-mail; vraag indien nodig om een veilige contactroute. We behandelen klachten binnen een redelijke termijn en houden je op de hoogte als nader onderzoek nodig is.',
+    'MyGrowise blijft verantwoordelijk voor zijn contractuele en wettelijke verplichtingen. Deze voorwaarden sluiten geen aansprakelijkheid uit die volgens de wet niet mag worden uitgesloten, waaronder voor opzet, zware fout of aantasting van leven of lichamelijke integriteit. Een storing of een probleem bij een leverancier doet je wettelijke consumentenrechten niet vervallen.',
+    'Je kan een geschil voorleggen aan de rechter die volgens de toepasselijke wet bevoegd is. De vestiging van I-Transform SLU in Andorra ontneemt consumenten in de EU niet de dwingende bescherming waarop zij volgens het toepasselijke recht aanspraak hebben. Er wordt geen exclusieve buitenlandse rechtbank opgelegd.',
+  ] },
+  { id: 'privacy-wijzigingen', title: 'Privacy en wijzigingen', paragraphs: [
+    'De privacyverklaring op /privacy beschrijft welke persoonsgegevens we verwerken, waarom, hoe lang en welke rechten je hebt. Een akkoord met deze algemene voorwaarden is geen toestemming voor optionele analytics of verwerking van gezondheidsgegevens waarvoor afzonderlijke toestemming nodig is.',
+    'De voorwaarden die bij het sluiten van je overeenkomst gelden, blijven daarop van toepassing. Een latere wijziging op deze pagina wijzigt een bestaande aankoop niet automatisch. Dwingende wetswijzigingen en je wettelijke rechten blijven van toepassing. Bewaar de versie die je bij je bestelling per e-mail ontvangt.',
+  ] },
+] as const;
+export const termsForEmail = () => [
+  `ALGEMENE VOORWAARDEN MYGROWISE — ${termsVersion}`,
+  'Aanbieder: I-Transform SLU. Fiscaal nummer: L-720368-C.',
+  'Adres: Carrer de la Costa, num 20, Edifici Orquidia, Pis planta Baixa, porta 2, El Tarter, AD100 Canillo, Andorra.',
+  'Contact: info@mygrowise.be. Privacy: https://mygrowise.be/privacy.',
+  ...termsSections.flatMap(section => [section.title, ...section.paragraphs]),
+].join('\n\n');

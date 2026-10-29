@@ -22,3 +22,17 @@ test('daily worker isolates queue failures and uses bounded batches on the free 
 test('mail recovery requires a trusted origin and administrative integration permission',async()=>{
  let called=false;for(const trusted of [true,false]){const route=load('pages/api/admin/mail.ts',{'../../../lib/adminAuth':{isTrustedFormOrigin:()=>trusted,hasPermission:()=>false},'../../../lib/mailWorker':{deliverQueuedMail:()=>{called=true;}},'../../../lib/supabase/server':{getSupabaseAdmin:()=>{called=true;}}});assert.equal((await route.POST({request:{},locals:{}})).status,403);}assert.equal(called,false);
 });
+test('order confirmation sends a durable copy of the terms only to the buyer at order creation',async()=>{
+ const sent=[];const terms=load('lib/commerce/terms.ts');
+ const order={status:'paid',provider_reference:'TEST-REFERENCE',total_cents:2500,contact_snapshot:{email:'buyer@example.invalid'},commerce_buyers:{email:'buyer@example.invalid',first_name:'Test',last_name:'Buyer'},order_items:[{product_type:'module',product_title:'Module'}]};
+ const db={rpc:async()=>({data:[{id:'created',event:'created',target:'buyer'},{id:'team',event:'created',target:'team'},{id:'paid',event:'paid',target:'buyer'},{id:'delivery',event:'delivery',target:'buyer'}].map(job=>({...job,order_id:'test-order',lease_token:'lease'})),error:null}),from:table=>table==='orders'?{select:()=>({eq:()=>({single:async()=>({data:order,error:null})})})}:{update:()=>({eq:()=>({eq:async()=>({error:null})})})}};
+ const {deliverCommerceMail}=load('lib/catalog/mail.ts',{
+  '../commerce/websiteMail':{websiteMailReady:()=>true,sendWebsiteEmail:async(to,subject,text)=>{sent.push({to,subject,text});}},
+  '../commerce/purchases':{makePurchaseLink:async()=> 'https://example.invalid/aankopen'},
+  '../supabase/server':{getSupabaseAdmin:()=>db},'./pricing':{money:()=> '€25,00'},'../commerce/terms':terms,
+ },{PUBLIC_SITE_URL:'https://example.invalid'});
+ const result=await deliverCommerceMail();assert.equal(result.sent,4);assert.equal(result.failed,0);
+ assert.equal(sent[0].to,'buyer@example.invalid');assert.ok(sent[0].text.endsWith(terms.termsForEmail()));
+ assert.match(sent[0].text,/binnen veertien dagen/);assert.match(sent[0].text,/info@mygrowise.be/);
+ for(const message of sent.slice(1))assert.ok(!message.text.includes('ALGEMENE VOORWAARDEN MYGROWISE'));
+});
