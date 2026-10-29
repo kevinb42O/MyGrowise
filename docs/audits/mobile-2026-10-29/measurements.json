@@ -1,0 +1,748 @@
+{
+  "date": "2026-10-29",
+  "routeAudit": [
+    {
+      "path": "/zelf-aan-de-slag",
+      "h": 2858,
+      "inputs": [],
+      "overflow": [],
+      "sw": 390,
+      "title": "Zelf aan de slag — MyGrowise",
+      "w": 390
+    },
+    {
+      "path": "/profielen",
+      "h": 10118,
+      "inputs": [
+        {
+          "font": "13.6px",
+          "h": 52,
+          "type": "select-one",
+          "w": 358
+        },
+        {
+          "font": "13.6px",
+          "h": 52,
+          "type": "select-one",
+          "w": 358
+        }
+      ],
+      "overflow": [],
+      "sw": 390,
+      "title": "Persoonlijke profielen — MyGrowise",
+      "w": 390
+    },
+    {
+      "path": "/profielen/stress-en-emotieprofiel",
+      "h": 6844,
+      "inputs": [],
+      "overflow": [],
+      "sw": 390,
+      "title": "Persoonlijk Stress- & Emotieprofiel — MyGrowise",
+      "w": 390
+    },
+    {
+      "path": "/vragenlijsten",
+      "h": 14236,
+      "inputs": [
+        {
+          "font": "13.6px",
+          "h": 52,
+          "type": "search",
+          "w": 358
+        },
+        {
+          "font": "13.6px",
+          "h": 52,
+          "type": "select-one",
+          "w": 358
+        }
+      ],
+      "overflow": [],
+      "sw": 390,
+      "title": "Vragenlijsten — MyGrowise",
+      "w": 390
+    },
+    {
+      "path": "/samenstellen",
+      "h": 15628,
+      "inputs": [
+        {
+          "font": "13.6px",
+          "h": 52,
+          "type": "search",
+          "w": 358
+        },
+        {
+          "font": "13.6px",
+          "h": 52,
+          "type": "select-one",
+          "w": 358
+        }
+      ],
+      "overflow": [],
+      "sw": 390,
+      "title": "Stel je eigen combinatie samen — MyGrowise",
+      "w": 390
+    },
+    {
+      "path": "/modules",
+      "h": 9895,
+      "inputs": [],
+      "overflow": [],
+      "sw": 390,
+      "title": "Ontdek jouw innerlijke landschap — MyGrowise modules",
+      "w": 390
+    },
+    {
+      "path": "/modules/het-meer",
+      "h": 3978,
+      "inputs": [],
+      "overflow": [],
+      "sw": 390,
+      "title": "Het Meer — Herken wat je lichaam je vertelt | MyGrowise",
+      "w": 390
+    },
+    {
+      "path": "/begeleiding",
+      "h": 9045,
+      "inputs": [],
+      "overflow": [],
+      "sw": 390,
+      "title": "Online psychologische begeleiding — MyGrowise",
+      "w": 390
+    },
+    {
+      "path": "/begeleiding/virginie",
+      "h": 3584,
+      "inputs": [],
+      "overflow": [],
+      "sw": 390,
+      "title": "Begeleiding bij Virginie — MyGrowise",
+      "w": 390
+    },
+    {
+      "path": "/afspraak",
+      "h": 4778,
+      "inputs": [],
+      "overflow": [],
+      "sw": 390,
+      "title": "Kies je afspraak — MyGrowise",
+      "w": 390
+    },
+    {
+      "path": "/contact",
+      "h": 4811,
+      "inputs": [
+        {
+          "font": "13.6px",
+          "h": 48,
+          "type": "text",
+          "w": 195
+        },
+        {
+          "font": "13.6px",
+          "h": 48,
+          "type": "select-one",
+          "w": 313
+        },
+        {
+          "font": "13.6px",
+          "h": 132,
+          "type": "textarea",
+          "w": 313
+        },
+        {
+          "font": "13.6px",
+          "h": 48,
+          "type": "email",
+          "w": 313
+        },
+        {
+          "font": "13.6px",
+          "h": 48,
+          "type": "text",
+          "w": 313
+        }
+      ],
+      "overflow": [
+        {
+          "c": "contact-honeypot",
+          "l": -9902,
+          "r": -9707,
+          "t": "Website"
+        },
+        {
+          "c": "",
+          "l": -9902,
+          "r": -9707,
+          "t": "Website"
+        },
+        {
+          "c": "",
+          "l": -9902,
+          "r": -9707,
+          "t": ""
+        }
+      ],
+      "sw": 390,
+      "title": "Contact — MyGrowise",
+      "w": 390
+    },
+    {
+      "path": "/over-ons",
+      "h": 6237,
+      "inputs": [],
+      "overflow": [],
+      "sw": 390,
+      "title": "Over MyGrowise — ontstaan vanuit de praktijk",
+      "w": 390
+    },
+    {
+      "path": "/prijzen",
+      "h": 7033,
+      "inputs": [],
+      "overflow": [
+        {
+          "c": "is-motion-visible",
+          "l": 18,
+          "r": 498,
+          "t": "Persoonlijk profielPersoonlijk Stress- & Emotiepro"
+        },
+        {
+          "c": "",
+          "l": 42,
+          "r": 473,
+          "t": "Persoonlijk profiel"
+        },
+        {
+          "c": "",
+          "l": 42,
+          "r": 473,
+          "t": "Persoonlijk Stress- & Emotieprofiel"
+        },
+        {
+          "c": "",
+          "l": 42,
+          "r": 473,
+          "t": "Krijg zicht op hoe je reageert onder druk, waar je"
+        },
+        {
+          "c": "",
+          "l": 42,
+          "r": 473,
+          "t": "€ 275,00Bekijk profiel"
+        },
+        {
+          "c": "button button-primary",
+          "l": 340,
+          "r": 473,
+          "t": "Bekijk profiel"
+        },
+        {
+          "c": "",
+          "l": 20,
+          "r": 496,
+          "t": "Persoonlijk profielPersoonlijkheidsprofiel Volwass"
+        },
+        {
+          "c": "",
+          "l": 44,
+          "r": 471,
+          "t": "Persoonlijk profiel"
+        },
+        {
+          "c": "",
+          "l": 44,
+          "r": 471,
+          "t": "Persoonlijkheidsprofiel Volwassenen"
+        },
+        {
+          "c": "",
+          "l": 44,
+          "r": 471,
+          "t": "Leer je persoonlijkheid, denkpatronen en veerkrach"
+        }
+      ],
+      "sw": 498,
+      "title": "Prijzen — MyGrowise",
+      "w": 390
+    },
+    {
+      "path": "/account/inloggen",
+      "h": 973,
+      "inputs": [
+        {
+          "font": "14.88px",
+          "h": 54,
+          "type": "email",
+          "w": 342
+        },
+        {
+          "font": "14.88px",
+          "h": 54,
+          "type": "password",
+          "w": 342
+        }
+      ],
+      "overflow": [],
+      "sw": 390,
+      "title": "Inloggen — Mijn MyGrowise",
+      "w": 390
+    },
+    {
+      "path": "/account/aanmaken",
+      "h": 2303,
+      "inputs": [
+        {
+          "font": "12.48px",
+          "h": 50,
+          "type": "text",
+          "w": 340
+        },
+        {
+          "font": "12.48px",
+          "h": 50,
+          "type": "email",
+          "w": 340
+        },
+        {
+          "font": "12.48px",
+          "h": 50,
+          "type": "password",
+          "w": 340
+        },
+        {
+          "font": "12.48px",
+          "h": 50,
+          "type": "password",
+          "w": 340
+        }
+      ],
+      "overflow": [],
+      "sw": 390,
+      "title": "Account aanmaken — Mijn MyGrowise",
+      "w": 390
+    },
+    {
+      "path": "/aankopen",
+      "h": 2043,
+      "inputs": [
+        {
+          "font": "16px",
+          "h": 55,
+          "type": "email",
+          "w": 357
+        }
+      ],
+      "overflow": [],
+      "sw": 390,
+      "title": "Toegang tot je aankopen — MyGrowise",
+      "w": 390
+    }
+  ],
+  "narrowAudit": [
+    {
+      "path": "/zelf-aan-de-slag",
+      "h": 3181,
+      "overflow": [],
+      "sw": 320,
+      "title": "Zelf aan de slag — MyGrowise"
+    },
+    {
+      "path": "/startpunt",
+      "h": 3058,
+      "overflow": [],
+      "sw": 320,
+      "title": "Vind je startpunt — MyGrowise"
+    },
+    {
+      "path": "/profielen",
+      "h": 11111,
+      "overflow": [],
+      "sw": 320,
+      "title": "Persoonlijke profielen — MyGrowise"
+    },
+    {
+      "path": "/profielen/stress-en-emotieprofiel",
+      "h": 7598,
+      "overflow": [],
+      "sw": 320,
+      "title": "Persoonlijk Stress- & Emotieprofiel — MyGrowise"
+    },
+    {
+      "path": "/vragenlijsten",
+      "h": 15831,
+      "overflow": [
+        {
+          "c": "",
+          "r": 329,
+          "t": "HiPIC – Persoonlijkheidsprofiel Kind"
+        },
+        {
+          "c": "",
+          "r": 329,
+          "t": "NEO-PI-3 – Uitgebreid Persoonlijkheidsprofiel"
+        },
+        {
+          "c": "",
+          "r": 368,
+          "t": "SPM-2 – Prikkelverwerkingsprofiel"
+        },
+        {
+          "c": "",
+          "r": 329,
+          "t": "BIP-6F-X – Professioneel Persoonlijkheidsprofiel"
+        },
+        {
+          "c": "",
+          "r": 336,
+          "t": "SDS – Beroepsinteresseprofiel"
+        }
+      ],
+      "sw": 320,
+      "title": "Vragenlijsten — MyGrowise"
+    },
+    {
+      "path": "/vragenlijsten/hipic",
+      "h": 5609,
+      "overflow": [],
+      "sw": 320,
+      "title": "HiPIC – Persoonlijkheidsprofiel Kind — MyGrowise"
+    },
+    {
+      "path": "/samenstellen",
+      "h": 17526,
+      "overflow": [
+        {
+          "c": "",
+          "r": 329,
+          "t": "HiPIC – Persoonlijkheidsprofiel Kind"
+        },
+        {
+          "c": "",
+          "r": 329,
+          "t": "NEO-PI-3 – Uitgebreid Persoonlijkheidsprofiel"
+        },
+        {
+          "c": "",
+          "r": 368,
+          "t": "SPM-2 – Prikkelverwerkingsprofiel"
+        },
+        {
+          "c": "",
+          "r": 329,
+          "t": "BIP-6F-X – Professioneel Persoonlijkheidsprofiel"
+        },
+        {
+          "c": "",
+          "r": 336,
+          "t": "SDS – Beroepsinteresseprofiel"
+        }
+      ],
+      "sw": 320,
+      "title": "Stel je eigen combinatie samen — MyGrowise"
+    },
+    {
+      "path": "/modules",
+      "h": 10496,
+      "overflow": [],
+      "sw": 320,
+      "title": "Ontdek jouw innerlijke landschap — MyGrowise modules"
+    },
+    {
+      "path": "/modules/het-meer",
+      "h": 4394,
+      "overflow": [],
+      "sw": 320,
+      "title": "Het Meer — Herken wat je lichaam je vertelt | MyGrowise"
+    },
+    {
+      "path": "/begeleiding",
+      "h": 9931,
+      "overflow": [],
+      "sw": 320,
+      "title": "Online psychologische begeleiding — MyGrowise"
+    },
+    {
+      "path": "/begeleiding/virginie",
+      "h": 3825,
+      "overflow": [],
+      "sw": 320,
+      "title": "Begeleiding bij Virginie — MyGrowise"
+    },
+    {
+      "path": "/afspraak",
+      "h": 5124,
+      "overflow": [],
+      "sw": 320,
+      "title": "Kies je afspraak — MyGrowise"
+    },
+    {
+      "path": "/afspraak/777fafa3-49d3-457c-8cb8-3fa833e7184a",
+      "h": 2192,
+      "overflow": [],
+      "sw": 320,
+      "title": "Afspraak boeken — MyGrowise"
+    },
+    {
+      "path": "/contact",
+      "h": 5323,
+      "overflow": [],
+      "sw": 320,
+      "title": "Contact — MyGrowise"
+    },
+    {
+      "path": "/over-ons",
+      "h": 6752,
+      "overflow": [],
+      "sw": 320,
+      "title": "Over MyGrowise — ontstaan vanuit de praktijk"
+    },
+    {
+      "path": "/prijzen",
+      "h": 7264,
+      "overflow": [
+        {
+          "c": "",
+          "r": 495,
+          "t": "Persoonlijk profielPersoonlijk Stress- & EmotieprofielKrijg zicht"
+        },
+        {
+          "c": "",
+          "r": 470,
+          "t": "Persoonlijk profiel"
+        },
+        {
+          "c": "",
+          "r": 470,
+          "t": "Persoonlijk Stress- & Emotieprofiel"
+        },
+        {
+          "c": "",
+          "r": 470,
+          "t": "Krijg zicht op hoe je reageert onder druk, waar je draagkracht li"
+        },
+        {
+          "c": "",
+          "r": 470,
+          "t": "€ 275,00Bekijk profiel"
+        },
+        {
+          "c": "button button-primary",
+          "r": 470,
+          "t": "Bekijk profiel"
+        }
+      ],
+      "sw": 494,
+      "title": "Prijzen — MyGrowise"
+    },
+    {
+      "path": "/account/inloggen",
+      "h": 1055,
+      "overflow": [],
+      "sw": 320,
+      "title": "Inloggen — Mijn MyGrowise"
+    },
+    {
+      "path": "/account/aanmaken",
+      "h": 2484,
+      "overflow": [],
+      "sw": 320,
+      "title": "Account aanmaken — Mijn MyGrowise"
+    },
+    {
+      "path": "/aankopen",
+      "h": 2228,
+      "overflow": [],
+      "sw": 320,
+      "title": "Toegang tot je aankopen — MyGrowise"
+    },
+    {
+      "path": "/inspiratie",
+      "h": 1996,
+      "overflow": [],
+      "sw": 320,
+      "title": "Inzichten — MyGrowise"
+    },
+    {
+      "path": "/community",
+      "h": 2084,
+      "overflow": [],
+      "sw": 320,
+      "title": "Community in ontwikkeling — MyGrowise"
+    },
+    {
+      "path": "/privacy",
+      "h": 17714,
+      "overflow": [],
+      "sw": 320,
+      "title": "Privacy — MyGrowise"
+    },
+    {
+      "path": "/voorwaarden",
+      "h": 14939,
+      "overflow": [],
+      "sw": 320,
+      "title": "Algemene voorwaarden — MyGrowise"
+    }
+  ],
+  "homeMatrix": [
+    {
+      "width": 320,
+      "height": 568,
+      "cls": "home-experience",
+      "disabled": true,
+      "h": 12953,
+      "sw": 320,
+      "toggle": "Rustige weergave",
+      "y": 0
+    },
+    {
+      "width": 360,
+      "height": 800,
+      "cls": "home-experience hero-enhanced enhanced story-enhanced portal-enhanced",
+      "disabled": false,
+      "h": 15481,
+      "sw": 360,
+      "toggle": "Rustige weergave",
+      "y": 0
+    },
+    {
+      "width": 375,
+      "height": 667,
+      "cls": "home-experience",
+      "disabled": true,
+      "h": 12739,
+      "sw": 375,
+      "toggle": "Rustige weergave",
+      "y": 0
+    },
+    {
+      "width": 390,
+      "height": 844,
+      "cls": "home-experience hero-enhanced enhanced story-enhanced portal-enhanced",
+      "disabled": false,
+      "h": 16150,
+      "sw": 390,
+      "toggle": "Rustige weergave",
+      "y": 0
+    },
+    {
+      "width": 393,
+      "height": 852,
+      "cls": "home-experience",
+      "disabled": true,
+      "h": 12707,
+      "sw": 393,
+      "toggle": "Rustige weergave",
+      "y": 0
+    },
+    {
+      "width": 390,
+      "height": 932,
+      "cls": "home-experience hero-enhanced enhanced story-enhanced portal-enhanced",
+      "disabled": false,
+      "h": 17470,
+      "sw": 390,
+      "toggle": "Rustige weergave",
+      "y": 0
+    },
+    {
+      "width": 412,
+      "height": 915,
+      "cls": "home-experience",
+      "disabled": true,
+      "h": 12765,
+      "sw": 412,
+      "toggle": "Rustige weergave",
+      "y": 0
+    },
+    {
+      "width": 430,
+      "height": 932,
+      "cls": "home-experience hero-enhanced enhanced story-enhanced portal-enhanced",
+      "disabled": false,
+      "h": 17534,
+      "sw": 430,
+      "toggle": "Rustige weergave",
+      "y": 0
+    },
+    {
+      "width": 768,
+      "height": 1024,
+      "cls": "home-experience hero-enhanced enhanced story-enhanced portal-enhanced",
+      "disabled": false,
+      "h": 16979,
+      "sw": 768,
+      "toggle": "Rustige weergave",
+      "y": 0
+    },
+    {
+      "width": 844,
+      "height": 390,
+      "cls": "home-experience",
+      "disabled": true,
+      "h": 8143,
+      "sw": 844,
+      "toggle": "Rustige weergave",
+      "y": 0
+    }
+  ],
+  "instability": [
+    {
+      "cls": "home-experience",
+      "h": 846,
+      "total": 12694
+    },
+    {
+      "cls": "home-experience hero-enhanced enhanced story-enhanced portal-enhanced",
+      "h": 847,
+      "total": 16195
+    },
+    {
+      "cls": "home-experience",
+      "h": 848,
+      "total": 12694
+    },
+    {
+      "cls": "home-experience hero-enhanced enhanced story-enhanced portal-enhanced",
+      "h": 849,
+      "total": 16225
+    }
+  ],
+  "transitions": [
+    {
+      "cls": "home-experience",
+      "h": 845,
+      "recClient": 532,
+      "recScroll": 532,
+      "total": 12694,
+      "w": 390
+    },
+    {
+      "cls": "home-experience hero-enhanced enhanced story-enhanced portal-enhanced",
+      "h": 844,
+      "recClient": 504,
+      "recScroll": 516,
+      "total": 16150,
+      "w": 390
+    },
+    {
+      "cls": "home-experience",
+      "h": 845,
+      "recClient": 532,
+      "recScroll": 532,
+      "total": 12694,
+      "w": 390
+    },
+    {
+      "cls": "home-experience hero-enhanced enhanced story-enhanced portal-enhanced",
+      "h": 844,
+      "recClient": 504,
+      "recScroll": 516,
+      "total": 16150,
+      "w": 390
+    }
+  ]
+}

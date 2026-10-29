@@ -1,0 +1,628 @@
+{
+  "routes": [
+    {
+      "h": 6736,
+      "inputs": [],
+      "overflow": [],
+      "path": "/prijzen",
+      "sw": 320,
+      "w": 320
+    },
+    {
+      "h": 15798,
+      "inputs": [
+        {
+          "font": "16px",
+          "type": "search"
+        },
+        {
+          "font": "16px",
+          "type": "select-one"
+        }
+      ],
+      "overflow": [],
+      "path": "/vragenlijsten",
+      "sw": 320,
+      "w": 320
+    },
+    {
+      "h": 17268,
+      "inputs": [
+        {
+          "font": "16px",
+          "type": "search"
+        },
+        {
+          "font": "16px",
+          "type": "select-one"
+        }
+      ],
+      "overflow": [],
+      "path": "/samenstellen",
+      "sw": 320,
+      "w": 320
+    },
+    {
+      "h": 11039,
+      "inputs": [
+        {
+          "font": "16px",
+          "type": "select-one"
+        },
+        {
+          "font": "16px",
+          "type": "select-one"
+        }
+      ],
+      "overflow": [],
+      "path": "/profielen",
+      "sw": 320,
+      "w": 320
+    },
+    {
+      "h": 7598,
+      "inputs": [],
+      "overflow": [],
+      "path": "/profielen/stress-en-emotieprofiel",
+      "sw": 320,
+      "w": 320
+    },
+    {
+      "h": 10496,
+      "inputs": [],
+      "overflow": [],
+      "path": "/modules",
+      "sw": 320,
+      "w": 320
+    },
+    {
+      "h": 4394,
+      "inputs": [],
+      "overflow": [],
+      "path": "/modules/het-meer",
+      "sw": 320,
+      "w": 320
+    },
+    {
+      "h": 9931,
+      "inputs": [],
+      "overflow": [],
+      "path": "/begeleiding",
+      "sw": 320,
+      "w": 320
+    },
+    {
+      "h": 3825,
+      "inputs": [],
+      "overflow": [],
+      "path": "/begeleiding/virginie",
+      "sw": 320,
+      "w": 320
+    },
+    {
+      "h": 5124,
+      "inputs": [],
+      "overflow": [],
+      "path": "/afspraak",
+      "sw": 320,
+      "w": 320
+    },
+    {
+      "h": 5346,
+      "inputs": [
+        {
+          "font": "16px",
+          "type": "select-one"
+        },
+        {
+          "font": "16px",
+          "type": "textarea"
+        },
+        {
+          "font": "16px",
+          "type": "email"
+        },
+        {
+          "font": "16px",
+          "type": "text"
+        }
+      ],
+      "overflow": [],
+      "path": "/contact",
+      "sw": 320,
+      "w": 320
+    },
+    {
+      "h": 2808,
+      "inputs": [],
+      "overflow": [],
+      "path": "/startpunt",
+      "sw": 320,
+      "w": 320
+    },
+    {
+      "h": 1055,
+      "inputs": [
+        {
+          "font": "16px",
+          "type": "email"
+        },
+        {
+          "font": "16px",
+          "type": "password"
+        }
+      ],
+      "overflow": [],
+      "path": "/account/inloggen",
+      "sw": 320,
+      "w": 320
+    },
+    {
+      "h": 2484,
+      "inputs": [
+        {
+          "font": "16px",
+          "type": "text"
+        },
+        {
+          "font": "16px",
+          "type": "email"
+        },
+        {
+          "font": "16px",
+          "type": "password"
+        },
+        {
+          "font": "16px",
+          "type": "password"
+        }
+      ],
+      "overflow": [],
+      "path": "/account/aanmaken",
+      "sw": 320,
+      "w": 320
+    },
+    {
+      "h": 2228,
+      "inputs": [
+        {
+          "font": "16px",
+          "type": "email"
+        }
+      ],
+      "overflow": [],
+      "path": "/aankopen/toegang",
+      "sw": 320,
+      "w": 320
+    },
+    {
+      "h": 5582,
+      "inputs": [],
+      "overflow": [],
+      "path": "/prijzen",
+      "sw": 390,
+      "w": 390
+    },
+    {
+      "h": 14130,
+      "inputs": [
+        {
+          "font": "16px",
+          "type": "search"
+        },
+        {
+          "font": "16px",
+          "type": "select-one"
+        }
+      ],
+      "overflow": [],
+      "path": "/vragenlijsten",
+      "sw": 390,
+      "w": 390
+    },
+    {
+      "h": 15585,
+      "inputs": [
+        {
+          "font": "16px",
+          "type": "search"
+        },
+        {
+          "font": "16px",
+          "type": "select-one"
+        }
+      ],
+      "overflow": [],
+      "path": "/samenstellen",
+      "sw": 390,
+      "w": 390
+    },
+    {
+      "h": 9990,
+      "inputs": [
+        {
+          "font": "16px",
+          "type": "select-one"
+        },
+        {
+          "font": "16px",
+          "type": "select-one"
+        }
+      ],
+      "overflow": [],
+      "path": "/profielen",
+      "sw": 390,
+      "w": 390
+    },
+    {
+      "h": 6844,
+      "inputs": [],
+      "overflow": [],
+      "path": "/profielen/stress-en-emotieprofiel",
+      "sw": 390,
+      "w": 390
+    },
+    {
+      "h": 9895,
+      "inputs": [],
+      "overflow": [],
+      "path": "/modules",
+      "sw": 390,
+      "w": 390
+    },
+    {
+      "h": 3978,
+      "inputs": [],
+      "overflow": [],
+      "path": "/modules/het-meer",
+      "sw": 390,
+      "w": 390
+    },
+    {
+      "h": 9045,
+      "inputs": [],
+      "overflow": [],
+      "path": "/begeleiding",
+      "sw": 390,
+      "w": 390
+    },
+    {
+      "h": 3584,
+      "inputs": [],
+      "overflow": [],
+      "path": "/begeleiding/virginie",
+      "sw": 390,
+      "w": 390
+    },
+    {
+      "h": 4778,
+      "inputs": [],
+      "overflow": [],
+      "path": "/afspraak",
+      "sw": 390,
+      "w": 390
+    },
+    {
+      "h": 4834,
+      "inputs": [
+        {
+          "font": "16px",
+          "type": "select-one"
+        },
+        {
+          "font": "16px",
+          "type": "textarea"
+        },
+        {
+          "font": "16px",
+          "type": "email"
+        },
+        {
+          "font": "16px",
+          "type": "text"
+        }
+      ],
+      "overflow": [],
+      "path": "/contact",
+      "sw": 390,
+      "w": 390
+    },
+    {
+      "h": 2524,
+      "inputs": [],
+      "overflow": [],
+      "path": "/startpunt",
+      "sw": 390,
+      "w": 390
+    },
+    {
+      "h": 973,
+      "inputs": [
+        {
+          "font": "16px",
+          "type": "email"
+        },
+        {
+          "font": "16px",
+          "type": "password"
+        }
+      ],
+      "overflow": [],
+      "path": "/account/inloggen",
+      "sw": 390,
+      "w": 390
+    },
+    {
+      "h": 2303,
+      "inputs": [
+        {
+          "font": "16px",
+          "type": "text"
+        },
+        {
+          "font": "16px",
+          "type": "email"
+        },
+        {
+          "font": "16px",
+          "type": "password"
+        },
+        {
+          "font": "16px",
+          "type": "password"
+        }
+      ],
+      "overflow": [],
+      "path": "/account/aanmaken",
+      "sw": 390,
+      "w": 390
+    },
+    {
+      "h": 2043,
+      "inputs": [
+        {
+          "font": "16px",
+          "type": "email"
+        }
+      ],
+      "overflow": [],
+      "path": "/aankopen/toegang",
+      "sw": 390,
+      "w": 390
+    }
+  ],
+  "home": [
+    {
+      "cls": "home-experience",
+      "h": 568,
+      "sw": 320,
+      "total": 11340,
+      "w": 320
+    },
+    {
+      "cls": "home-experience hero-enhanced enhanced portal-enhanced story-enhanced",
+      "h": 800,
+      "sw": 360,
+      "total": 14484,
+      "w": 360
+    },
+    {
+      "cls": "home-experience",
+      "h": 667,
+      "sw": 375,
+      "total": 10985,
+      "w": 375
+    },
+    {
+      "cls": "home-experience hero-enhanced enhanced portal-enhanced story-enhanced",
+      "h": 844,
+      "sw": 390,
+      "total": 15062,
+      "w": 390
+    },
+    {
+      "cls": "home-experience hero-enhanced enhanced portal-enhanced story-enhanced",
+      "h": 845,
+      "sw": 390,
+      "total": 15077,
+      "w": 390
+    },
+    {
+      "cls": "home-experience hero-enhanced enhanced portal-enhanced story-enhanced",
+      "h": 846,
+      "sw": 390,
+      "total": 15092,
+      "w": 390
+    },
+    {
+      "cls": "home-experience hero-enhanced enhanced portal-enhanced story-enhanced",
+      "h": 847,
+      "sw": 390,
+      "total": 15107,
+      "w": 390
+    },
+    {
+      "cls": "home-experience hero-enhanced enhanced portal-enhanced story-enhanced",
+      "h": 848,
+      "sw": 390,
+      "total": 15122,
+      "w": 390
+    },
+    {
+      "cls": "home-experience hero-enhanced enhanced portal-enhanced story-enhanced",
+      "h": 852,
+      "sw": 393,
+      "total": 15184,
+      "w": 393
+    },
+    {
+      "cls": "home-experience hero-enhanced enhanced portal-enhanced story-enhanced",
+      "h": 915,
+      "sw": 412,
+      "total": 16121,
+      "w": 412
+    },
+    {
+      "cls": "home-experience hero-enhanced enhanced portal-enhanced story-enhanced",
+      "h": 932,
+      "sw": 430,
+      "total": 16340,
+      "w": 430
+    },
+    {
+      "cls": "home-experience hero-enhanced enhanced portal-enhanced story-enhanced",
+      "h": 1024,
+      "sw": 768,
+      "total": 17204,
+      "w": 768
+    },
+    {
+      "cls": "home-experience",
+      "h": 390,
+      "sw": 844,
+      "total": 8369,
+      "w": 844
+    }
+  ],
+  "stableResize": [
+    {
+      "c": "home-experience hero-enhanced enhanced portal-enhanced story-enhanced",
+      "h": 845,
+      "total": 14933
+    },
+    {
+      "c": "home-experience hero-enhanced enhanced portal-enhanced story-enhanced",
+      "h": 846,
+      "total": 14963
+    },
+    {
+      "c": "home-experience hero-enhanced enhanced portal-enhanced story-enhanced",
+      "h": 847,
+      "total": 14978
+    },
+    {
+      "c": "home-experience hero-enhanced enhanced portal-enhanced story-enhanced",
+      "h": 848,
+      "total": 14993
+    },
+    {
+      "c": "home-experience hero-enhanced enhanced portal-enhanced story-enhanced",
+      "h": 844,
+      "total": 14933
+    }
+  ],
+  "headerChecks": [
+    {
+      "headerRight": 0,
+      "menuVisible": "grid",
+      "navHeight": 0,
+      "sw": 768,
+      "w": 768
+    },
+    {
+      "headerRight": 0,
+      "menuVisible": "grid",
+      "navHeight": 0,
+      "sw": 860,
+      "w": 860
+    },
+    {
+      "headerRight": 0,
+      "menuVisible": "grid",
+      "navHeight": 0,
+      "sw": 1406,
+      "w": 1024
+    },
+    {
+      "headerRight": 1068,
+      "menuVisible": "none",
+      "navHeight": 18,
+      "sw": 1424,
+      "w": 1100
+    },
+    {
+      "headerRight": 1230,
+      "menuVisible": "none",
+      "navHeight": 18,
+      "sw": 1466,
+      "w": 1280
+    },
+    {
+      "headerRight": 1310,
+      "menuVisible": "none",
+      "navHeight": 18,
+      "sw": 1546,
+      "w": 1440
+    }
+  ],
+  "desktopModuleBefore": {
+    "copy": {
+      "bottom": 818.1015625,
+      "height": 491.40625,
+      "left": 806.3984375,
+      "right": 1324.8046875,
+      "top": 326.6953125,
+      "width": 518.40625,
+      "x": 806.3984375,
+      "y": 326.6953125
+    },
+    "deck": {
+      "bottom": 809.8984375,
+      "height": 532.34375,
+      "left": 115.1953125,
+      "right": 662.390625,
+      "top": 277.5546875,
+      "width": 547.1953125,
+      "x": 115.1953125,
+      "y": 277.5546875
+    },
+    "title": {
+      "bottom": 206.859375,
+      "height": 89.859375,
+      "left": 100.796875,
+      "right": 459.4453125,
+      "top": 117,
+      "width": 358.6484375,
+      "x": 100.796875,
+      "y": 117
+    },
+    "y": 5774
+  },
+  "desktopModuleAfter": {
+    "copy": {
+      "bottom": 818.1015625,
+      "height": 491.40625,
+      "left": 806.3984375,
+      "right": 1324.8046875,
+      "top": 326.6953125,
+      "width": 518.40625,
+      "x": 806.3984375,
+      "y": 326.6953125
+    },
+    "deck": {
+      "bottom": 809.8984375,
+      "height": 532.34375,
+      "left": 115.1953125,
+      "right": 662.390625,
+      "top": 277.5546875,
+      "width": 547.1953125,
+      "x": 115.1953125,
+      "y": 277.5546875
+    },
+    "title": {
+      "bottom": 206.859375,
+      "height": 89.859375,
+      "left": 100.796875,
+      "right": 459.4453125,
+      "top": 117,
+      "width": 358.6484375,
+      "x": 100.796875,
+      "y": 117
+    },
+    "y": 5898
+  },
+  "notes": [
+    "Checkout inputs verified again at 16px after the scoped fix.",
+    "Footer and BusinessDetails were modified externally during this work."
+  ]
+}

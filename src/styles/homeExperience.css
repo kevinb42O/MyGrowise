@@ -544,7 +544,8 @@
   overflow: clip
 }
 
-.home-experience .route>img {
+.home-experience .route>img,
+.home-experience .route>.responsive-photo>img {
   position: absolute;
   inset: 0;
   width: 100%;
@@ -1911,7 +1912,8 @@
   min-height: 42px
 }
 
-.home-experience.enhanced .route-care>img {
+.home-experience.enhanced .route-care>img,
+.home-experience.enhanced .route-care>.responsive-photo>img {
   object-position: 65% 35%
 }
 
@@ -3239,4 +3241,61 @@
   .home-experience:not(.hero-enhanced) .recognition-inner { max-width: none; }
   .home-experience:not(.hero-enhanced) .recognition h2 { margin-bottom: 24px; font-size: clamp(32px, 6vw, 42px); }
   .home-experience:not(.hero-enhanced) .recognition-lines p { padding: 18px 0; }
+}
+
+/* Phone composition: keep the landscape, give content and controls their own space. */
+@media (max-width: 760px) {
+  .home-experience { position: relative; }
+  .home-experience .motion-toggle {
+    position: absolute;
+    top: 8px;
+    right: 16px;
+    bottom: auto;
+    min-height: 44px;
+    padding: 10px 14px;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    background: var(--paper);
+    color: var(--ink);
+    mix-blend-mode: normal;
+    font-size: 12px;
+    line-height: 1.4;
+  }
+  .home-experience .motion-toggle:disabled { display: none; }
+  .home-experience:not(.hero-enhanced) .hero-main { padding-top: 76px; }
+  .home-experience .hero-description { font-size: 16px; line-height: 1.6; }
+  .home-experience.hero-enhanced .hero-description { font-size: 14px; line-height: 1.6; }
+  .home-experience.hero-enhanced .recognition-lines { min-height: 128px; }
+  .home-experience .module-nav button { min-height: 44px; font-size: 12px; }
+  .home-experience .all-modules { min-height: 44px; font-size: 14px; }
+  .home-experience:not(.enhanced) .module-copies { gap: 2rem; }
+  .home-experience:not(.enhanced) .module-copy { margin-bottom: 0; }
+  .home-experience:not(.enhanced) .module-copy > p { font-size: 15px; line-height: 1.7; }
+  .home-experience:not(.enhanced) .fallback-module-image { aspect-ratio: 3/2; max-height: 280px; margin-bottom: 0; }
+  .home-experience:not(.enhanced) .module-copy .availability { font-size: 12px; }
+  .home-experience:not(.enhanced) .route { min-height: 460px; }
+  .home-experience:not(.enhanced) .route h3 { font-size: 48px; }
+  .home-experience:not(.enhanced) .route-copy { bottom: 8%; }
+  .home-experience:not(.enhanced) .route-copy > p { font-size: 15px; }
+  .home-experience .people { padding-block: 3rem; }
+  .home-experience .people-grid { gap: 2rem; margin-bottom: 1.5rem; }
+  .home-experience .person { display: grid; grid-template-columns: minmax(100px,.8fr) minmax(0,1.2fr); column-gap: 1.25rem; align-items: start; }
+  .home-experience .person-portrait { grid-column: 1; grid-row: 1 / 4; margin: 0; }
+  .home-experience .person-print { padding: 8px; }
+  .home-experience .person-print figcaption { padding: 12px 0 4px; }
+  .home-experience .person h3 { font-size: 28px; }
+  .home-experience .person > p, .home-experience .person > .text-link { grid-column: 2; }
+  .home-experience .person > p { font-size: 14px; line-height: 1.6; margin-bottom: .75rem; }
+  .home-experience .person > .text-link { min-height: 44px; align-self: start; font-size: 13px; }
+  .home-experience:not(.story-enhanced) .story-photo { height: 300px; margin-bottom: 24px; }
+  .home-experience .text-link { min-height: 44px; }
+}
+
+.home-experience .responsive-photo { display: contents; }
+@media (max-width: 760px) {
+  .home-experience.enhanced .module-deck { height: 32%; }
+  .home-experience.enhanced .module-copies { top: 53%; }
+  .home-experience.enhanced .module-copy h3 { font-size: 26px; }
+  .home-experience.enhanced .module-copy > p { font-size: 14px; line-height: 1.55; }
+  .home-experience.enhanced .module-copy .availability { font-size: 11px; }
 }

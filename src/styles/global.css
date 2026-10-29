@@ -238,3 +238,9 @@ button, input, select, textarea { font: inherit; }
   }
 }
 @media (min-width: 768px) { .container { width: min(1180px, calc(100% - 4rem)); } }
+
+/* Mobile form text is independent of the smaller labels around it. */
+@media (max-width: 899px) {
+  body main :is(input, select, textarea):not([type=hidden]):not([type=checkbox]):not([type=radio]) { font-size: 16px; }
+  input, textarea { caret-color: var(--ink); }
+}

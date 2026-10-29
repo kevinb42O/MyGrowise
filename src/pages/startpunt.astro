@@ -10,6 +10,7 @@ import MainLayout from '../layouts/MainLayout.astro';
         <span class="eyebrow">Een rustige keuzehulp</span>
         <h1>Je hoeft het niet al precies te weten.</h1>
         <p class="lead">Beantwoord drie korte vragen. We helpen je kiezen tussen zelfstandig inzicht en een gesprek met een professional — zonder label of diagnose.</p>
+        <a class="button button-primary start-action" href="#keuzehulp">Start de keuzehulp <span aria-hidden="true">→</span></a>
         <p class="start-note">Dit is een keuzehulp, geen klinische beoordeling. Bij acute nood bel je 112; bij zelfmoordgedachten kan je in België terecht bij Zelfmoordlijn 1813.</p>
       </div>
       <aside class="start-card" aria-label="Wat deze keuzehulp doet">
@@ -20,7 +21,7 @@ import MainLayout from '../layouts/MainLayout.astro';
     </div>
   </section>
 
-  <section class="section chooser-section">
+  <section class="section chooser-section" id="keuzehulp">
     <div class="container chooser-layout">
       <form class="chooser" data-chooser>
         <div class="chooser-progress" aria-hidden="true"><i></i></div>
@@ -56,6 +57,25 @@ import MainLayout from '../layouts/MainLayout.astro';
 
 <style>
   .start-hero{padding-block:clamp(3rem,8vw,7rem);background:var(--cream)}.start-hero__grid{display:grid;gap:2rem;align-items:end}.back{display:inline-block;margin-bottom:2.5rem;color:var(--muted);font-size:.78rem;font-weight:700;text-decoration:none}.start-hero h1{max-width:11ch;margin-bottom:1.3rem;font-size:clamp(3.5rem,8vw,7.2rem);line-height:.9}.start-note{max-width:65ch;margin:1.6rem 0 0;color:var(--muted);font-size:.75rem;line-height:1.65}.start-card{display:grid;gap:.8rem;padding:2rem;border-radius:var(--radius-lg);background:var(--ink);color:white}.start-card>span{color:var(--yellow);font-size:.7rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase}.start-card strong{font-family:'DM Serif Display',Georgia,serif;font-size:2rem;font-weight:400}.start-card p{margin:0;color:rgba(255,255,255,.7);font-size:.85rem;line-height:1.6}.chooser-layout{display:grid;gap:2rem;align-items:start}.chooser{padding:clamp(1.4rem,4vw,3rem);border:1px solid var(--line);border-radius:var(--radius-lg);background:var(--white)}.chooser-progress{height:.3rem;margin-bottom:2.5rem;border-radius:999px;background:var(--cream)}.chooser-progress i{display:block;width:33.333%;height:100%;border-radius:inherit;background:var(--pink);transition:width 220ms ease}.chooser fieldset{margin:0;padding:0;border:0}.chooser legend{max-width:22ch;margin-bottom:1.5rem;color:var(--ink-deep);font-family:'DM Serif Display',Georgia,serif;font-size:clamp(2rem,4vw,3.4rem);line-height:1}.chooser legend span{display:block;margin-bottom:1rem;color:var(--pink);font-family:'DM Sans',sans-serif;font-size:.7rem;font-weight:700;letter-spacing:.12em}.chooser label{display:block;margin-bottom:.8rem;cursor:pointer}.chooser input{position:absolute;opacity:0}.chooser label span{display:block;padding:1.2rem 1.25rem;border:1px solid var(--line);border-radius:var(--radius-sm);transition:border-color 180ms ease,background 180ms ease}.chooser label:hover span{border-color:var(--ink)}.chooser input:checked+span{border-color:var(--ink);background:var(--ink);color:white}.chooser label b,.chooser label small{display:block}.chooser label b{margin-bottom:.35rem;font-size:.95rem}.chooser label small{color:var(--muted);font-size:.8rem;line-height:1.5}.chooser input:checked+span small{color:rgba(255,255,255,.72)}.chooser-actions{display:flex;justify-content:space-between;gap:1rem;margin-top:2rem}.chooser-layout:has(.chooser[hidden]){grid-template-columns:minmax(0,48rem);justify-content:center}.result{position:relative;overflow:hidden;padding:clamp(1.7rem,4vw,3.5rem);border-radius:var(--radius-lg);background:var(--ink);color:white;box-shadow:var(--shadow)}.result-topline{position:relative;z-index:1;display:flex;align-items:center;gap:.7rem;margin-bottom:2.2rem;color:var(--yellow);font-size:.7rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase}.result-topline span+span{display:inline-flex;align-items:center;gap:.45rem;color:rgba(255,255,255,.65);letter-spacing:.08em}.result-topline span+span::before{width:.25rem;height:.25rem;border-radius:50%;background:var(--pink);content:''}.result-orbit{position:absolute;top:-4.2rem;right:-3.4rem;width:13rem;height:13rem;border:1px solid rgba(255,255,255,.2);border-radius:50%}.result-orbit i{position:absolute;inset:1.3rem;border:1px solid rgba(255,255,255,.12);border-radius:inherit}.result-orbit b{position:absolute;bottom:1.9rem;left:1.8rem;display:grid;width:2.9rem;height:2.9rem;place-content:center;border-radius:50%;background:var(--pink);font-size:1.2rem}.result h2{position:relative;z-index:1;max-width:11ch;margin-bottom:1rem;font-size:clamp(2.65rem,5.2vw,4.7rem);line-height:.94}.result .lead{position:relative;z-index:1;max-width:48ch;color:rgba(255,255,255,.74);font-size:clamp(1rem,1.8vw,1.18rem);line-height:1.65}.result-details{position:relative;z-index:1;margin:2.2rem 0 1.8rem;padding:1.2rem 0;border-block:1px solid rgba(255,255,255,.18)}.result-details>span{display:block;margin-bottom:.8rem;color:var(--yellow);font-size:.68rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase}.result ul{display:grid;gap:.55rem;margin:0;padding:0;list-style:none}.result li{color:rgba(255,255,255,.88);font-size:.88rem;line-height:1.5}.result li::before{content:'✓';margin-right:.65rem;color:var(--pink);font-weight:700}.result-actions{position:relative;z-index:1;display:flex;flex-wrap:wrap;align-items:center;gap:1.2rem}.result .button{border-color:white;background:white;color:var(--ink);box-shadow:none}.restart{border:0;background:transparent;color:rgba(255,255,255,.65);font-size:.78rem;font-weight:700;text-decoration:underline;cursor:pointer;text-underline-offset:3px}@media(min-width:900px){.start-hero__grid{grid-template-columns:1.2fr .8fr}.chooser-layout{grid-template-columns:1.1fr .9fr}.result{position:sticky;top:6.5rem}.chooser-layout:has(.chooser[hidden]) .result{position:relative;top:auto}}
+
+.start-action{display:none}
+@media(max-width:899px){
+ .start-hero{padding-block:2rem}
+ .start-hero__grid{gap:1.25rem}
+ .start-hero h1{font-size:clamp(2.5rem,9.5vw,3.5rem);max-width:15ch;line-height:1}
+ .back{margin-bottom:1.5rem;min-height:44px;display:flex;align-items:center}
+ .start-action{display:inline-flex;margin-top:.5rem}
+ .start-card{padding:1.25rem;gap:.4rem}
+ .start-card strong{font-size:1.5rem}
+ .start-note{margin-top:1rem}
+ .chooser-section{padding-block:2rem;scroll-margin-top:6rem}
+ .chooser-progress{margin-bottom:1.5rem}
+ .chooser-actions{flex-wrap:wrap}
+ .chooser-actions .button{flex:1;line-height:1.35}
+ .result-topline{flex-wrap:wrap}
+ .restart{min-height:44px}
+}
+.chooser input:focus-visible+span{outline:3px solid var(--yellow);outline-offset:3px}
 </style>
 
 <script>

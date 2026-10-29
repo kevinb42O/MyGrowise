@@ -51,13 +51,33 @@ const nav = [
 <script>
   const toggle = document.querySelector<HTMLButtonElement>('.menu-toggle');
   const menu = document.querySelector<HTMLElement>('#mobile-menu');
-  const setMenuState = (shouldOpen: boolean) => {
+  const header = document.querySelector<HTMLElement>('.site-header');
+  const background = [...document.querySelectorAll<HTMLElement>('main, .site-ending, [data-analytics-consent], .skip-link')];
+  const previousInert = new Map<HTMLElement, boolean>();
+  const setMenuState = (shouldOpen: boolean, restoreFocus = true) => {
     if (!toggle || !menu) return;
+    const wasOpen = toggle.getAttribute('aria-expanded') === 'true';
     toggle.setAttribute('aria-expanded', String(shouldOpen));
     menu.hidden = !shouldOpen;
     document.body.classList.toggle('menu-open', shouldOpen);
+    // The close button belongs to the modal surface as well as its links.
+    if (shouldOpen) {
+      header?.setAttribute('role', 'dialog');
+      header?.setAttribute('aria-modal', 'true');
+      header?.setAttribute('aria-label', 'Navigatie');
+    } else {
+      ['role', 'aria-modal', 'aria-label'].forEach(attribute => header?.removeAttribute(attribute));
+    }
     const label = toggle.querySelector('.sr-only');
     if (label) label.textContent = shouldOpen ? 'Menu sluiten' : 'Menu openen';
+    if (shouldOpen && !wasOpen) {
+      background.forEach(element => { previousInert.set(element, element.inert); element.inert = true; });
+      menu.querySelector<HTMLAnchorElement>('a')?.focus();
+    } else if (!shouldOpen && wasOpen) {
+      previousInert.forEach((inert, element) => { element.inert = inert; });
+      previousInert.clear();
+      if (restoreFocus) toggle.focus();
+    }
   };
 
   toggle?.addEventListener('click', () => {
@@ -65,12 +85,22 @@ const nav = [
     setMenuState(!open);
   });
 
-  menu?.querySelectorAll<HTMLAnchorElement>('a').forEach((link) => link.addEventListener('click', () => setMenuState(false)));
+  menu?.querySelectorAll<HTMLAnchorElement>('a').forEach((link) => link.addEventListener('click', () => setMenuState(false, false)));
   document.addEventListener('keydown', (event) => {
-    if (event.key === 'Escape' && toggle?.getAttribute('aria-expanded') === 'true') setMenuState(false);
+    if (!toggle || !menu || toggle.getAttribute('aria-expanded') !== 'true') return;
+    if (event.key === 'Escape') { event.preventDefault(); setMenuState(false); }
+    if (event.key === 'Tab') {
+      const stops = [toggle, ...menu.querySelectorAll<HTMLAnchorElement>('a[href]')];
+      const index = stops.indexOf(document.activeElement as HTMLButtonElement | HTMLAnchorElement);
+      if (event.shiftKey && index <= 0) { event.preventDefault(); stops.at(-1)?.focus(); }
+      else if (!event.shiftKey && (index === stops.length - 1 || index < 0)) { event.preventDefault(); toggle.focus(); }
+    }
   });
-  window.matchMedia('(min-width: 860px)').addEventListener('change', (event) => {
-    if (event.matches) setMenuState(false);
+  window.matchMedia('(min-width: 1100px)').addEventListener('change', (event) => {
+    if (event.matches && toggle?.getAttribute('aria-expanded') === 'true') {
+      setMenuState(false, false);
+      header?.querySelector<HTMLAnchorElement>('.wordmark')?.focus({ preventScroll: true });
+    }
   });
 </script>
 
@@ -112,5 +142,11 @@ const nav = [
   .mobile-primary:hover { background: var(--ink-deep); transform: translateY(-2px); }
   @keyframes menu-link-in { from { opacity: 0; transform: translateY(0.8rem); } to { opacity: 1; transform: translateY(0); } }
   .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; }
-  @media (min-width: 860px) { .desktop-nav,.header-actions { display: flex; } .header-cta { display: inline-flex; } .menu-toggle { display: none; } }
+  @media (max-width: 1099px) {
+    .mobile-account { display: flex; align-items: center; min-height: 44px; text-decoration: underline; text-underline-offset: .25em; }
+    .mobile-account::after { display: none; }
+    .mobile-menu__footer { gap: .35rem; }
+    .mobile-menu__inner { padding-bottom: max(1.5rem, env(safe-area-inset-bottom)); }
+  }
+  @media (min-width: 1100px) { .desktop-nav,.header-actions { display: flex; } .header-cta { display: inline-flex; } .menu-toggle { display: none; } .desktop-nav a,.header-login,.header-cta { white-space: nowrap; } }
 </style>

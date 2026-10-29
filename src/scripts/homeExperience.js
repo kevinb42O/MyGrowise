@@ -53,6 +53,11 @@
  const modulePapers=$$('.module-paper'), moduleCopies=$$('.module-copy'), moduleButtons=$$('.module-nav button');
  const routeSelf=$('.route-self'), routeCare=$('.route-care'), storyCurtain=$('.story-curtain'), storyPortrait=$('.story-portrait'), storyFilm=$('.story-film');
  const reduced=matchMedia('(prefers-reduced-motion: reduce)'), button=$('[data-motion-toggle]');
+ // Read the same small-viewport height used by CSS, including mobile browser chrome.
+ const viewportMeasure=document.createElement('div');
+ viewportMeasure.setAttribute('aria-hidden','true');
+ viewportMeasure.style.cssText='position:absolute;top:0;left:0;width:0;height:var(--stage);visibility:hidden;pointer-events:none';
+ root.append(viewportMeasure);
  // Distances are in visible stages. One score drives rendering, track height and links.
  let manualOff=false, enabled=false, heroEnabled=false, storyEnabled=false, frame=0, current='hero';
  let score, stageSize=1;
@@ -99,16 +104,18 @@
   const bar=0;
   const header=document.querySelector('.site-header')?.getBoundingClientRect().height ?? 80;
   root.style.setProperty('--bar',`${bar}px`);root.style.setProperty('--top',`${bar+header}px`);
-  const mobile=innerWidth<=600, available=innerHeight-bar-header;
+  const mobile=innerWidth<=600, available=viewportMeasure.clientHeight;
   enabled=!manualOff&&!reduced.matches&&available>=(mobile?650:650)&&innerWidth>=350;
   heroEnabled=!manualOff&&!reduced.matches&&available>=600;
+  // Always measure one clean candidate layout. Previous animation classes and
+  // inline transforms must never decide whether the next measurement fits.
+  [heroStage,stage,recognitionInner,recognitionTitle,recognitionClosing,...recognitionLines,heroSupporting,heroPortrait,insightCopy,insightHeading,...moduleCopies].forEach(e=>e.removeAttribute('style'));
   root.classList.toggle('hero-enhanced',heroEnabled);
+  root.classList.toggle('enhanced',enabled);
+  root.classList.toggle('portal-enhanced',heroEnabled&&portalImage.complete&&portalImage.naturalWidth>0);
   if(heroEnabled){
    heroEnabled=recognitionInner.scrollHeight<=recognitionInner.clientHeight+1;
-   root.classList.toggle('hero-enhanced',heroEnabled);
   }
-  storyEnabled=enabled;
-  root.classList.toggle('enhanced',enabled);root.classList.toggle('story-enhanced',storyEnabled);
   if (enabled) {
    // Measure the real catalog copy: long titles and larger text must never be clipped.
    const moduleCopyTop=$('.module-copies').offsetTop;
@@ -116,8 +123,10 @@
    const insightFits=insightCopy.offsetTop+insightCopy.scrollHeight<=stage.clientHeight-24;
    const heroFits=!mobile||heroSupporting.offsetTop+heroSupporting.scrollHeight<=heroPortrait.offsetTop-12;
    enabled=moduleFits&&insightFits&&heroFits&&heroEnabled;
-   root.classList.toggle('enhanced',enabled);
   }
+  root.classList.toggle('hero-enhanced',heroEnabled);
+  root.classList.toggle('enhanced',enabled);
+  root.classList.toggle('story-enhanced',enabled);
   storyEnabled=enabled&&$('.story-copy').offsetTop+$('.story-copy').scrollHeight<=storyStage.clientHeight-16;
   root.classList.toggle('story-enhanced',storyEnabled);
   portalEnabled=heroEnabled&&portalImage.complete&&portalImage.naturalWidth>0;
@@ -371,7 +380,29 @@
  portalImage.addEventListener('load',measure);
  portalImage.addEventListener('error',measure);
  window.addEventListener('scroll',schedule,{passive:true});
- window.addEventListener('resize',()=>{const anchor=location.hash.slice(1);measure();if(anchor&&['welkom','herkenning','inzicht','modules','routes'].includes(anchor))go(anchor,true);},{passive:true});
+ let measuredWidth=innerWidth,measuredHeight=viewportMeasure.clientHeight;
+ window.addEventListener('resize',()=>{
+  const width=innerWidth,height=viewportMeasure.clientHeight;
+  // Browser chrome and the soft keyboard do not change the CSS small viewport.
+  if(width===measuredWidth&&height===measuredHeight)return;
+  const previousSize=stageSize,origin=journeyOrigin();
+  const position=(scrollY-origin)/previousSize;
+  const wasHero=heroEnabled,wasEnabled=enabled;
+  const inJourney=wasHero&&position>=0&&position<=(wasEnabled?score.total:score.openingEnd);
+  const animatedAnchor={hero:'welkom',recognition:'herkenning',insight:'inzicht',modules:'modules',routes:'routes'}[current];
+  const readingLine=document.querySelector('.site-header').getBoundingClientRect().bottom+24;
+  const documentAnchor=[['welkom',hero],['herkenning',recognition],['inzicht',layer.insight],['modules',layer.modules],['routes',layer.routes]].find(([,element])=>{
+   const bounds=element.getBoundingClientRect();return bounds.top<=readingLine&&bounds.bottom>readingLine;
+  })?.[0];
+  const readAnchor=inJourney?animatedAnchor:documentAnchor;
+  measuredWidth=width;measuredHeight=height;
+  measure();
+  if(inJourney&&heroEnabled&&wasEnabled===enabled){
+   scrollTo({top:journeyOrigin()+position*stageSize,behavior:'instant'});schedule();
+  } else if(readAnchor&&(wasHero!==heroEnabled||wasEnabled!==enabled)) {
+   go(readAnchor,true);
+  }
+ },{passive:true});
  reduced.addEventListener('change',measure);
  window.addEventListener('popstate',()=>go(location.hash.slice(1)||'welkom',true));
  window.addEventListener('hashchange',()=>go(location.hash.slice(1),true));
