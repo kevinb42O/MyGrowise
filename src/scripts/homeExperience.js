@@ -237,7 +237,10 @@
     // The distant landscape (z=8) advances gently instead of inheriting the head's huge zoom.
     const cameraAdvance=1-1/scale,landscapeScale=8/(8-cameraAdvance);
     set(heroPortal,{transform:`translate(${mobile?'-45.8%,-48.8%':'-46.6%,-46.6%'}) scale(${scale})`,visibility:intro<.82?'visible':'hidden'});
-    set(heroLandscape,{transform:`scale(${landscapeScale})`});
+    // Focus moves from the sharp head to the landscape as the camera enters.
+    const landscapeBlur=(mobile?2:3)*(1-phase(intro,0,.72));
+    // A tiny overscan keeps softened image edges outside the frame at rest.
+    set(heroLandscape,{transform:`scale(${Math.max(landscapeScale,1+landscapeBlur*.006)})`,filter:landscapeBlur>.01?`blur(${landscapeBlur.toFixed(2)}px)`:'none',willChange:landscapeBlur>.01?'transform, filter':'auto'});
     set(heroShade,{opacity:.3+.7*land});
     // Lettering sits between the near stone and the distant landscape (z=1.7).
     // The head overtakes it instead of stretching it like a print on the photograph.

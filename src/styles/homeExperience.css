@@ -2504,6 +2504,7 @@
 .home-experience .hero-portal picture,
 .home-experience .hero-portal img { display: block; width: 100%; height: 100%; }
 .home-experience .hero-world img { object-position: 50% 50%; transform-origin: 46.6% 46.6%; transform: scale(1.12); }
+.home-experience.portal-enhanced .hero-world img { filter: blur(3px); }
 .home-experience.portal-enhanced .hero-shade { z-index: 2; pointer-events: none; }
 .home-experience.portal-enhanced .hero-copy { z-index: 3; transform-origin: 0 0; will-change: transform, opacity; }
 .home-experience.portal-enhanced .hero-copy h1 {
@@ -2550,6 +2551,7 @@
 .home-experience .hero-skip:focus-visible { outline: 2px solid currentColor; outline-offset: 4px; }
 @media (max-width: 600px) {
   .home-experience .hero-world img { transform: scale(1.12); transform-origin: 45.8% 48.8%; }
+  .home-experience.portal-enhanced .hero-world img { filter: blur(2px); }
   .home-experience.portal-enhanced .hero-portal {
     width: max(100%, calc(var(--stage) / 2));
     aspect-ratio: 1 / 2;

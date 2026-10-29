@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-29T15:30:00Z",
+  "title": "Design System: MyGrowise — Startpunt",
+  "extensions": {
+    "motion": [
+      { "name": "answer-state", "value": "180ms ease", "purpose": "Background and border feedback; disabled for reduced motion." },
+      { "name": "progress", "value": "240ms ease", "purpose": "Progress width; question content changes immediately." }
+    ],
+    "breakpoints": [
+      { "name": "compact-desktop", "value": "1000px" },
+      { "name": "stacked", "value": "700px" }
+    ]
+  },
+  "narrative": {
+    "northStar": "Warm en uitgesproken",
+    "overview": "Route-specific guidance for /startpunt. Real practice photography, rose introduction, forest-green result and direct answer actions.",
+    "keyCharacteristics": ["Large practice portrait", "Immediate progress after selection", "Existing MyGrowise typefaces"],
+    "dos": ["Preserve answers when going back", "Move keyboard focus to each new question"],
+    "donts": ["Do not add a next button after selection", "Do not persist or send answers"]
+  }
+}

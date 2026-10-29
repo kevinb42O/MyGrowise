@@ -1,125 +1,228 @@
 ---
 import MainLayout from '../layouts/MainLayout.astro';
+
+const questions = [
+  { name: 'need', title: 'Wat heb je vandaag het meest nodig?', intro: 'Begin bij wat jij voelt. Er is geen goed of fout antwoord.', options: [
+    { value: 'insight', title: 'Rustig zelf inzicht krijgen', copy: 'Ik wil eerst beter begrijpen wat er gebeurt.' },
+    { value: 'talk', title: 'Mijn verhaal met iemand bespreken', copy: 'Ik wil graag samen ordenen en afstemmen.' },
+  ] },
+  { name: 'pace', title: 'Wat voelt op dit moment haalbaar?', intro: 'Een kleine stap is ook een stap. Jij bepaalt het tempo.', options: [
+    { value: 'own', title: 'Op mijn eigen tempo starten', copy: 'Ik heb vooral nood aan ruimte en een eerste houvast.' },
+    { value: 'together', title: 'Liever niet alleen zoeken', copy: 'Een eerste gesprek zou nu beter passen.' },
+  ] },
+  { name: 'focus', title: 'Waar past je vraag het best bij?', intro: 'Je hoeft je hulpvraag nog niet precies te kunnen omschrijven.', options: [
+    { value: 'stress', title: 'Stress, emoties of draagkracht', copy: 'Ik wil begrijpen hoe spanning en emoties bij mij doorwerken.' },
+    { value: 'other', title: 'Een andere of bredere hulpvraag', copy: 'Ik wil bekijken welke professional of begeleiding past.' },
+  ] },
+];
 ---
 
-<MainLayout title="Vind je startpunt — MyGrowise" description="Verken in drie korte vragen welke volgende stap bij jou kan passen: zelfstandig inzicht of persoonlijke begeleiding.">
-  <section class="start-hero">
-    <div class="container start-hero__grid">
-      <div class="reveal">
-        <a class="back" href="/">← Terug naar MyGrowise</a>
-        <span class="eyebrow">Een rustige keuzehulp</span>
-        <h1>Je hoeft het niet al precies te weten.</h1>
-        <p class="lead">Beantwoord drie korte vragen. We helpen je kiezen tussen zelfstandig inzicht en een gesprek met een professional — zonder label of diagnose.</p>
-        <a class="button button-primary start-action" href="#keuzehulp">Start de keuzehulp <span aria-hidden="true">→</span></a>
-        <p class="start-note">Dit is een keuzehulp, geen klinische beoordeling. Bij acute nood bel je 112; bij zelfmoordgedachten kan je in België terecht bij Zelfmoordlijn 1813.</p>
+<MainLayout footerCta={false} title="Vind je startpunt — MyGrowise" description="Verken in drie korte vragen welke volgende stap bij jou kan passen: zelfstandig inzicht of persoonlijke begeleiding.">
+  <div class="startpunt">
+    <section class="welcome" aria-labelledby="start-title">
+      <div class="welcome-copy">
+        <a class="back-link" href="/"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5m6-6-6 6 6 6" /></svg> Terug naar MyGrowise</a>
+        <h1 id="start-title">Je hoeft het <br />nog niet <br /><em>te weten.</em></h1>
+        <p class="welcome-description">Wel wat je voelt. Met drie korte vragen helpen we je een eerste stap te vinden die bij jou past.</p>
+        <a class="begin-link" href="#keuzehulp">Vind mijn startpunt <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6" /></svg></a>
+        <div class="welcome-facts"><span>3 korte vragen</span><span>Geen account nodig</span></div>
       </div>
-      <aside class="start-card" aria-label="Wat deze keuzehulp doet">
-        <span>3 vragen</span>
-        <strong>Een helder vertrekpunt</strong>
-        <p>Je antwoord blijft in je browser en wordt nergens verstuurd of bewaard.</p>
-      </aside>
-    </div>
-  </section>
+      <figure class="welcome-photo">
+        <img src="/images/editorial/mygrowise-13.jpg" alt="Virginie, oprichter van MyGrowise, in haar praktijk" width="1282" height="1920" fetchpriority="high" />
+        <figcaption><span>Een eerste stap, op jouw tempo.</span><span>Virginie · oprichter MyGrowise</span></figcaption>
+      </figure>
+    </section>
 
-  <section class="section chooser-section" id="keuzehulp">
-    <div class="container chooser-layout">
-      <form class="chooser" data-chooser>
-        <div class="chooser-progress" aria-hidden="true"><i></i></div>
-        <fieldset data-question="0">
-          <legend><span>01</span>Wat heb je vandaag het meest nodig?</legend>
-          <label><input type="radio" name="need" value="insight" required /><span><b>Rustig zelf inzicht krijgen</b><small>Ik wil eerst beter begrijpen wat er gebeurt.</small></span></label>
-          <label><input type="radio" name="need" value="talk" /><span><b>Mijn verhaal met iemand bespreken</b><small>Ik wil graag samen ordenen en afstemmen.</small></span></label>
-        </fieldset>
-        <fieldset data-question="1" hidden>
-          <legend><span>02</span>Wat voelt op dit moment haalbaar?</legend>
-          <label><input type="radio" name="pace" value="own" required /><span><b>Ik wil op mijn eigen tempo starten</b><small>Ik heb vooral nood aan ruimte en een eerste houvast.</small></span></label>
-          <label><input type="radio" name="pace" value="together" /><span><b>Ik wil liever niet alleen zoeken</b><small>Een eerste gesprek zou nu beter passen.</small></span></label>
-        </fieldset>
-        <fieldset data-question="2" hidden>
-          <legend><span>03</span>Waar past je vraag het best bij?</legend>
-          <label><input type="radio" name="focus" value="stress" required /><span><b>Stress, emoties of draagkracht</b><small>Ik wil begrijpen hoe spanning en emoties bij mij doorwerken.</small></span></label>
-          <label><input type="radio" name="focus" value="other" /><span><b>Een andere of bredere hulpvraag</b><small>Ik wil eerst bekijken welke professional of vorm van begeleiding past.</small></span></label>
-        </fieldset>
-        <div class="chooser-actions"><button class="button button-light" type="button" data-back hidden>← Vorige vraag</button><button class="button button-primary" type="button" data-next>Volgende vraag <span aria-hidden="true">→</span></button></div>
-      </form>
+    <section class="conversation" id="keuzehulp" aria-label="Vind jouw startpunt">
+      <div class="conversation-layout">
+        <aside class="journey" aria-label="Jouw voortgang">
+          <h2>Even stilstaan. <br />Dan verder.</h2>
+          <ol class="journey-steps">
+            {['Wat je nodig hebt', 'Wat haalbaar voelt', 'Waar je mee zit'].map((label, index) => <li data-step-marker={index} aria-current={index === 0 ? 'step' : undefined}><span class="step-number">{index + 1}</span><span>{label}</span><svg class="step-check" viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 4 4L19 6" /></svg></li>)}
+          </ol>
+          <p class="privacy-note"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="10" width="14" height="11" rx="2" /><path d="M8 10V7a4 4 0 0 1 8 0v3m-4 4v3" /></svg><span>Alleen voor jou. Je antwoorden worden niet verstuurd of bewaard.</span></p>
+        </aside>
 
-      <aside class="result" data-result hidden aria-live="polite" tabindex="-1">
-        <div class="result-topline"><span>Jouw route</span><span data-result-route></span></div>
-        <div class="result-orbit" aria-hidden="true"><i></i><b>→</b></div>
-        <h2 data-result-title></h2>
-        <p class="lead" data-result-copy></p>
-        <div class="result-details"><span>Waarom dit kan passen</span><ul data-result-points></ul></div>
-        <div class="result-actions"><a class="button button-light" data-result-link href="/"></a><button class="restart" type="button" data-restart>Andere antwoorden kiezen</button></div>
-      </aside>
-    </div>
-  </section>
+        <div class="conversation-content">
+          <form class="chooser" data-chooser hidden>
+            <div class="question-status"><span data-step-label>Vraag 1 van 3</span><span>Kies wat nu bij je past</span></div>
+            <div class="question-progress" aria-hidden="true"><span data-progress></span></div>
+            {questions.map((question, index) => <fieldset data-question={index} hidden={index !== 0}>
+              <legend tabindex="-1">{question.title}</legend>
+              <p class="question-intro">{question.intro}</p>
+              <div class="answer-list">{question.options.map(option => <button class="answer" type="button" data-answer data-name={question.name} value={option.value} aria-pressed="false"><span class="answer-copy"><strong>{option.title}</strong><span>{option.copy}</span></span><span class="answer-arrow"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6" /></svg></span></button>)}</div>
+            </fieldset>)}
+            <div class="question-footer"><button class="previous" type="button" data-back hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5m6-6-6 6 6 6" /></svg> Vorige vraag</button><p>Je keuze brengt je meteen verder.</p></div>
+          </form>
+
+          <section class="result" data-result hidden aria-labelledby="result-title">
+            <div class="result-topline"><span>Jouw startpunt</span><span data-result-route></span></div>
+            <h2 id="result-title" tabindex="-1" data-result-title></h2>
+            <p class="result-copy" data-result-copy></p>
+            <div class="result-details"><h3>Waarom dit kan passen</h3><ul data-result-points></ul></div>
+            <a class="result-link" data-result-link href="/"><span data-result-link-label></span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6" /></svg></a>
+            <div class="result-footer"><button class="restart" type="button" data-restart>Opnieuw beginnen</button><button class="restart" type="button" data-edit>Laatste antwoord wijzigen</button></div>
+          </section>
+          <noscript><div class="no-script"><h2>Vind een eerste stap die past.</h2><p>Schakel JavaScript in om de drie vragen te beantwoorden, of verken meteen de mogelijkheden.</p><a href="/profielen/stress-en-emotieprofiel">Ontdek het stress- en emotieprofiel</a><a href="/begeleiding">Bekijk persoonlijke begeleiding</a></div></noscript>
+        </div>
+      </div>
+      <p class="scope-note">Een richting om te verkennen, geen label of diagnose. Deze keuzehulp vervangt geen klinische beoordeling. Bij acute nood bel je 112. Hulp bij zelfmoordgedachten vind je via <a href="https://www.zelfmoord1813.be/">Zelfmoordlijn 1813</a>.</p>
+    </section>
+  </div>
 </MainLayout>
 
 <style>
-  .start-hero{padding-block:clamp(3rem,8vw,7rem);background:var(--cream)}.start-hero__grid{display:grid;gap:2rem;align-items:end}.back{display:inline-block;margin-bottom:2.5rem;color:var(--muted);font-size:.78rem;font-weight:700;text-decoration:none}.start-hero h1{max-width:11ch;margin-bottom:1.3rem;font-size:clamp(3.5rem,8vw,7.2rem);line-height:.9}.start-note{max-width:65ch;margin:1.6rem 0 0;color:var(--muted);font-size:.75rem;line-height:1.65}.start-card{display:grid;gap:.8rem;padding:2rem;border-radius:var(--radius-lg);background:var(--ink);color:white}.start-card>span{color:var(--yellow);font-size:.7rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase}.start-card strong{font-family:'DM Serif Display',Georgia,serif;font-size:2rem;font-weight:400}.start-card p{margin:0;color:rgba(255,255,255,.7);font-size:.85rem;line-height:1.6}.chooser-layout{display:grid;gap:2rem;align-items:start}.chooser{padding:clamp(1.4rem,4vw,3rem);border:1px solid var(--line);border-radius:var(--radius-lg);background:var(--white)}.chooser-progress{height:.3rem;margin-bottom:2.5rem;border-radius:999px;background:var(--cream)}.chooser-progress i{display:block;width:33.333%;height:100%;border-radius:inherit;background:var(--pink);transition:width 220ms ease}.chooser fieldset{margin:0;padding:0;border:0}.chooser legend{max-width:22ch;margin-bottom:1.5rem;color:var(--ink-deep);font-family:'DM Serif Display',Georgia,serif;font-size:clamp(2rem,4vw,3.4rem);line-height:1}.chooser legend span{display:block;margin-bottom:1rem;color:var(--pink);font-family:'DM Sans',sans-serif;font-size:.7rem;font-weight:700;letter-spacing:.12em}.chooser label{display:block;margin-bottom:.8rem;cursor:pointer}.chooser input{position:absolute;opacity:0}.chooser label span{display:block;padding:1.2rem 1.25rem;border:1px solid var(--line);border-radius:var(--radius-sm);transition:border-color 180ms ease,background 180ms ease}.chooser label:hover span{border-color:var(--ink)}.chooser input:checked+span{border-color:var(--ink);background:var(--ink);color:white}.chooser label b,.chooser label small{display:block}.chooser label b{margin-bottom:.35rem;font-size:.95rem}.chooser label small{color:var(--muted);font-size:.8rem;line-height:1.5}.chooser input:checked+span small{color:rgba(255,255,255,.72)}.chooser-actions{display:flex;justify-content:space-between;gap:1rem;margin-top:2rem}.chooser-layout:has(.chooser[hidden]){grid-template-columns:minmax(0,48rem);justify-content:center}.result{position:relative;overflow:hidden;padding:clamp(1.7rem,4vw,3.5rem);border-radius:var(--radius-lg);background:var(--ink);color:white;box-shadow:var(--shadow)}.result-topline{position:relative;z-index:1;display:flex;align-items:center;gap:.7rem;margin-bottom:2.2rem;color:var(--yellow);font-size:.7rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase}.result-topline span+span{display:inline-flex;align-items:center;gap:.45rem;color:rgba(255,255,255,.65);letter-spacing:.08em}.result-topline span+span::before{width:.25rem;height:.25rem;border-radius:50%;background:var(--pink);content:''}.result-orbit{position:absolute;top:-4.2rem;right:-3.4rem;width:13rem;height:13rem;border:1px solid rgba(255,255,255,.2);border-radius:50%}.result-orbit i{position:absolute;inset:1.3rem;border:1px solid rgba(255,255,255,.12);border-radius:inherit}.result-orbit b{position:absolute;bottom:1.9rem;left:1.8rem;display:grid;width:2.9rem;height:2.9rem;place-content:center;border-radius:50%;background:var(--pink);font-size:1.2rem}.result h2{position:relative;z-index:1;max-width:11ch;margin-bottom:1rem;font-size:clamp(2.65rem,5.2vw,4.7rem);line-height:.94}.result .lead{position:relative;z-index:1;max-width:48ch;color:rgba(255,255,255,.74);font-size:clamp(1rem,1.8vw,1.18rem);line-height:1.65}.result-details{position:relative;z-index:1;margin:2.2rem 0 1.8rem;padding:1.2rem 0;border-block:1px solid rgba(255,255,255,.18)}.result-details>span{display:block;margin-bottom:.8rem;color:var(--yellow);font-size:.68rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase}.result ul{display:grid;gap:.55rem;margin:0;padding:0;list-style:none}.result li{color:rgba(255,255,255,.88);font-size:.88rem;line-height:1.5}.result li::before{content:'✓';margin-right:.65rem;color:var(--pink);font-weight:700}.result-actions{position:relative;z-index:1;display:flex;flex-wrap:wrap;align-items:center;gap:1.2rem}.result .button{border-color:white;background:white;color:var(--ink);box-shadow:none}.restart{border:0;background:transparent;color:rgba(255,255,255,.65);font-size:.78rem;font-weight:700;text-decoration:underline;cursor:pointer;text-underline-offset:3px}@media(min-width:900px){.start-hero__grid{grid-template-columns:1.2fr .8fr}.chooser-layout{grid-template-columns:1.1fr .9fr}.result{position:sticky;top:6.5rem}.chooser-layout:has(.chooser[hidden]) .result{position:relative;top:auto}}
-
-.start-action{display:none}
-@media(max-width:899px){
- .start-hero{padding-block:2rem}
- .start-hero__grid{gap:1.25rem}
- .start-hero h1{font-size:clamp(2.5rem,9.5vw,3.5rem);max-width:15ch;line-height:1}
- .back{margin-bottom:1.5rem;min-height:44px;display:flex;align-items:center}
- .start-action{display:inline-flex;margin-top:.5rem}
- .start-card{padding:1.25rem;gap:.4rem}
- .start-card strong{font-size:1.5rem}
- .start-note{margin-top:1rem}
- .chooser-section{padding-block:2rem;scroll-margin-top:6rem}
- .chooser-progress{margin-bottom:1.5rem}
- .chooser-actions{flex-wrap:wrap}
- .chooser-actions .button{flex:1;line-height:1.35}
- .result-topline{flex-wrap:wrap}
- .restart{min-height:44px}
-}
-.chooser input:focus-visible+span{outline:3px solid var(--yellow);outline-offset:3px}
+  .startpunt{--rose:#f3c9c8;--rose-dark:#823f49;--rose-light:#fcf0eb;--surface:#fbf8f2;color:var(--ink-deep)}
+  .startpunt [hidden]{display:none!important}
+  .startpunt svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}
+  .welcome{display:grid;grid-template-columns:1.1fr 1fr;background:var(--rose)}
+  .welcome-copy{padding:2rem clamp(2rem,6.5vw,7rem) 2.7rem max(2rem,calc((100vw - 1180px)/2));display:flex;align-items:flex-start;flex-direction:column}
+  .back-link{display:inline-flex;gap:.6rem;align-items:center;min-height:44px;font-size:.78rem;text-decoration:none;margin-bottom:2rem}
+  .back-link svg{width:17px;height:17px}
+  .back-link:hover{text-decoration:underline;text-underline-offset:4px}
+  .welcome h1{font-size:clamp(3.8rem,6.3vw,6rem);line-height:.99;letter-spacing:-.04em;margin:0 0 1.5rem}
+  .welcome h1 em{color:var(--rose-dark);font-weight:400}
+  .welcome-description{max-width:34ch;font-size:1.05rem;line-height:1.7;margin-bottom:1.6rem}
+  .begin-link,.result-link{display:inline-flex;align-items:center;justify-content:space-between;gap:2rem;min-height:58px;padding:1rem 1.5rem;background:var(--ink);color:var(--white);text-decoration:none;border-radius:6px;font-size:.9rem;font-weight:700;transition:background 180ms ease}
+  .begin-link:hover{background:var(--ink-deep)}
+  .welcome-facts{display:flex;gap:1rem;margin-top:1.25rem;font-size:.73rem;line-height:1.5}
+  .welcome-facts span+span{border-left:1px solid #823f4950;padding-left:1rem}
+  .welcome-photo{position:relative;margin:0;min-width:0;overflow:hidden}
+  .welcome-photo img{position:absolute;width:100%;height:100%;object-fit:cover;object-position:50% 22%}
+  .welcome-photo figcaption{position:absolute;bottom:1.6rem;left:1.6rem;right:1.6rem;padding:1.15rem 1.35rem;background:var(--surface);color:var(--ink);display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:.65rem}
+  .welcome-photo figcaption span:first-child{font-family:'DM Serif Display',Georgia,serif;font-size:1.3rem;letter-spacing:-.02em}
+  .welcome-photo figcaption span+span{font-size:.65rem}
+  .conversation{background:var(--surface);padding:clamp(3rem,6vw,5.5rem) max(2rem,calc((100vw - 1180px)/2)) 2rem;scroll-margin-top:6.5rem}
+  .conversation-layout{display:grid;grid-template-columns:1fr 2fr;gap:clamp(2.5rem,6vw,6rem)}
+  .journey h2{font-size:clamp(1.8rem,2.8vw,2.5rem);line-height:1.15;margin-bottom:2rem}
+  .journey-steps{list-style:none;padding:0;margin:0 0 2.5rem;display:grid;gap:1.2rem}
+  .journey-steps li{display:flex;align-items:center;gap:.8rem;font-size:.82rem;color:var(--muted);min-height:36px}
+  .step-number{display:grid;place-items:center;border:1px solid var(--line);border-radius:50%;width:34px;height:34px;flex-shrink:0;font-size:.75rem;font-weight:700}
+  .journey-steps [aria-current]{color:var(--ink);font-weight:700}
+  .journey-steps [aria-current] .step-number{border-color:var(--rose);background:var(--rose)}
+  .journey-steps .is-complete .step-number{border-color:var(--ink);background:var(--ink);color:var(--white)}
+  .step-check{display:none;width:16px!important;height:16px!important;margin-left:auto;color:var(--ink)}
+  .is-complete .step-check{display:block}
+  .privacy-note{display:flex;align-items:flex-start;gap:.7rem;max-width:26ch;font-size:.75rem;line-height:1.65;color:var(--muted)}
+  .privacy-note svg{width:18px;height:18px;margin-top:.15rem}
+  .conversation-content{min-width:0;scroll-margin-top:7rem}
+  .question-status{display:flex;justify-content:space-between;gap:1rem;font-size:.72rem;line-height:1.5;color:var(--muted);margin-bottom:1rem}
+  .question-status span:first-child{color:var(--rose-dark);font-weight:700}
+  .question-progress{height:3px;background:#e6e4da;margin-bottom:2rem}
+  .question-progress span{display:block;width:33.333%;height:100%;background:var(--rose-dark);transition:width 240ms ease}
+  .chooser{margin:0;min-height:430px}
+  .chooser fieldset{border:0;padding:0;margin:0;min-width:0}
+  .chooser legend{padding:0;font-family:'DM Serif Display',Georgia,serif;font-size:clamp(2rem,3.5vw,3.1rem);line-height:1.12;letter-spacing:-.03em;max-width:22ch}
+  .question-intro{font-size:.88rem;line-height:1.65;color:var(--muted);margin:1rem 0 1.6rem}
+  .answer-list{display:grid;gap:.8rem}
+  .answer{display:flex;align-items:center;justify-content:space-between;gap:1rem;text-align:left;color:var(--ink);background:#fffdf9;border:1px solid #173d3538;border-radius:10px;padding:1.3rem 1.4rem;cursor:pointer;min-height:100px;transition:background 180ms ease,border-color 180ms ease}
+  .answer-copy{display:grid;gap:.4rem}
+  .answer strong{font-size:.97rem;font-weight:600;line-height:1.4}
+  .answer-copy>span{font-size:.8rem;color:var(--muted);line-height:1.5}
+  .answer-arrow{display:grid;place-items:center;width:38px;height:38px;border-radius:50%;flex-shrink:0;background:var(--rose-light);transition:background 180ms ease}
+  .answer-arrow svg{width:19px;height:19px}
+  .answer:hover,.answer[aria-pressed=true]{background:var(--rose-light);border-color:var(--rose-dark)}
+  .answer:hover .answer-arrow,.answer[aria-pressed=true] .answer-arrow{background:var(--rose)}
+  .question-footer{display:flex;align-items:center;justify-content:space-between;gap:1rem;margin-top:1.2rem;min-height:44px}
+  .question-footer p{margin:0 0 0 auto;font-size:.7rem;color:var(--muted)}
+  .previous{display:inline-flex;align-items:center;gap:.5rem;min-height:44px;padding:.5rem 0;background:none;border:0;color:var(--ink);cursor:pointer;font-size:.78rem}
+  .previous svg{width:17px;height:17px}
+  .previous:hover,.restart:hover{text-decoration:underline;text-underline-offset:4px}
+  .result{padding:clamp(1.5rem,3.5vw,3rem);background:var(--ink);color:var(--white);border-radius:12px}
+  .result-topline{display:flex;justify-content:space-between;gap:1rem;flex-wrap:wrap;font-size:.72rem;color:var(--rose);margin-bottom:1.6rem}
+  .result h2{font-size:clamp(2.4rem,3.8vw,3.4rem);line-height:1.06;margin-bottom:1.3rem;max-width:17ch}
+  .result-copy{font-size:.95rem;line-height:1.75;color:#e0e8e2;max-width:52ch;margin-bottom:2rem}
+  .result-details{border-top:1px solid #ffffff35;padding-top:1.5rem;margin-bottom:2rem}
+  .result-details h3{font-family:'DM Sans',sans-serif;font-size:.78rem;font-weight:700;letter-spacing:0;color:var(--rose);margin:0 0 1rem}
+  .result-details ul{padding-left:1.1rem;margin:0;display:grid;gap:.7rem;font-size:.82rem;line-height:1.6;color:#e0e8e2}
+  .result-details li::marker{color:var(--rose)}
+  .result-link{background:var(--rose);color:var(--ink-deep);width:100%}
+  .result-link:hover{background:#f8dbd9}
+  .result-footer{display:flex;justify-content:space-between;gap:1rem;flex-wrap:wrap;margin-top:1rem}
+  .restart{min-height:44px;background:none;border:0;padding:.4rem 0;color:#e0e8e2;font-size:.73rem;cursor:pointer}
+  .scope-note{max-width:76ch;font-size:.7rem;line-height:1.8;color:var(--muted);margin:3rem 0 0 auto;padding-top:1.5rem;border-top:1px solid var(--line)}
+  .scope-note a{text-underline-offset:3px}
+  .no-script h2{font-size:2.5rem}.no-script p{line-height:1.7}.no-script a{display:block;margin-top:1rem;min-height:44px}
+  @media(max-width:1000px){.welcome-copy{padding-right:2rem}.welcome h1{font-size:clamp(3.5rem,7.3vw,5rem)}.welcome-photo figcaption{display:grid}.conversation-layout{grid-template-columns:1fr 2.1fr;gap:2rem}}
+  @media(max-width:700px){
+    .welcome{grid-template-columns:1fr}.welcome-copy{padding:1rem 1.5rem 1.8rem}.back-link{margin-bottom:1.1rem}.welcome h1{font-size:clamp(3.2rem,12vw,4.8rem);margin-bottom:1.1rem}.welcome-description{font-size:.95rem;max-width:37ch;margin-bottom:1.2rem}.begin-link{min-height:54px}.welcome-facts{margin-top:1rem}.welcome-photo{height:310px}.welcome-photo img{object-position:50% 15%}.welcome-photo figcaption{display:flex;bottom:1rem;left:1rem;right:1rem;padding:.85rem 1rem}.welcome-photo figcaption span:first-child{font-size:1.1rem}.welcome-photo figcaption span+span{font-size:.6rem}
+    .conversation{padding:2.2rem 1.5rem 1.5rem;scroll-margin-top:6rem}.conversation-layout{grid-template-columns:1fr;gap:1.75rem}.journey h2{font-size:1.65rem;margin-bottom:1.2rem}.journey h2 br{display:none}.journey-steps{display:flex;gap:.5rem;justify-content:space-between;margin-bottom:1rem}.journey-steps li{gap:.4rem;font-size:.65rem;align-items:flex-start;flex:1;flex-direction:column}.step-number{width:28px;height:28px}.step-check{display:none!important}.privacy-note{max-width:none;margin:0;font-size:.7rem}.privacy-note svg{width:16px;height:16px}.question-status{font-size:.67rem}.question-progress{margin-bottom:1.5rem}.chooser{min-height:0}.chooser legend{font-size:2.1rem}.question-intro{font-size:.82rem;margin-bottom:1.3rem}.answer{padding:1.1rem;min-height:110px;gap:.7rem}.answer strong{font-size:.9rem}.answer-copy>span{font-size:.76rem}.answer-arrow{width:32px;height:32px}.question-footer{flex-wrap:wrap;gap:0}.question-footer p{font-size:.65rem}.scope-note{margin-top:2rem;font-size:.65rem}.result{padding:1.5rem}.result h2{font-size:2.5rem}.result-topline{gap:.5rem}.result-copy{font-size:.87rem}.result-details ul{font-size:.78rem}
+  }
+  @media(prefers-reduced-motion:reduce){.startpunt *{transition:none!important}}
 </style>
 
 <script>
-  const chooser = document.querySelector('[data-chooser]');
-  if (chooser instanceof HTMLFormElement) {
-    const questions = [...chooser.querySelectorAll('fieldset')];
-    const progress = chooser.querySelector('.chooser-progress i');
-    const back = chooser.querySelector('[data-back]');
-    const next = chooser.querySelector('[data-next]');
-    const result = document.querySelector('[data-result]');
-    const route = document.querySelector('[data-result-route]');
-    const title = document.querySelector('[data-result-title]');
-    const copy = document.querySelector('[data-result-copy]');
-    const points = document.querySelector('[data-result-points]');
-    const link = document.querySelector('[data-result-link]');
+  const chooser = document.querySelector<HTMLFormElement>('[data-chooser]');
+  if (chooser) {
+    const questions = [...chooser.querySelectorAll<HTMLFieldSetElement>('fieldset')];
+    const markers = [...document.querySelectorAll<HTMLElement>('[data-step-marker]')];
+    const progress = chooser.querySelector<HTMLElement>('[data-progress]');
+    const stepLabel = chooser.querySelector('[data-step-label]');
+    const back = chooser.querySelector<HTMLButtonElement>('[data-back]');
+    const result = document.querySelector<HTMLElement>('[data-result]');
+    const answers: Record<string, string> = {};
     let step = 0;
 
-    const showStep = () => {
+    const updateProgress = (complete = false) => {
+      markers.forEach((marker, index) => {
+        marker.classList.toggle('is-complete', complete || index < step);
+        if (!complete && index === step) marker.setAttribute('aria-current', 'step');
+        else marker.removeAttribute('aria-current');
+      });
+      if (progress) progress.style.width = `${((step + 1) / questions.length) * 100}%`;
+      if (stepLabel) stepLabel.textContent = `Vraag ${step + 1} van ${questions.length}`;
+    };
+    const focusQuestion = (element: HTMLElement | null) => {
+      element?.focus({ preventScroll: true });
+      const content = document.querySelector('.conversation-content');
+      if (content && (content.getBoundingClientRect().top < 90 || content.getBoundingClientRect().top > window.innerHeight / 2)) {
+        content.scrollIntoView({ block: 'start', behavior: 'instant' });
+      }
+    };
+    const showStep = (focus = true) => {
+      if (result) result.hidden = true;
+      chooser.hidden = false;
       questions.forEach((question, index) => question.hidden = index !== step);
-      if (progress instanceof HTMLElement) progress.style.width = `${((step + 1) / questions.length) * 100}%`;
-      if (back instanceof HTMLButtonElement) back.hidden = step === 0;
-      if (next instanceof HTMLButtonElement) next.textContent = step === questions.length - 1 ? 'Bekijk mijn startpunt' : 'Volgende vraag →';
+      if (back) back.hidden = step === 0;
+      chooser.querySelectorAll<HTMLButtonElement>('[data-answer]').forEach(button => {
+        button.setAttribute('aria-pressed', String(answers[button.dataset.name!] === button.value));
+      });
+      updateProgress();
+      if (focus) focusQuestion(questions[step].querySelector('legend'));
     };
-    const selection = (name) => chooser.querySelector(`input[name="${name}"]:checked`)?.value;
     const renderResult = () => {
-      const need = selection('need'); const pace = selection('pace'); const focus = selection('focus');
-      const guidance = need === 'talk' || pace === 'together' || focus === 'other'
+      const guidance = answers.need === 'talk' || answers.pace === 'together' || answers.focus === 'other'
         ? { route: 'Samen met iemand', title: 'Je hoeft dit niet alleen te ordenen.', copy: 'Een gesprek met een professional lijkt nu een passende eerste stap. Kies rustig wie aansluit bij jouw vraag en tempo.', link: '/begeleiding', label: 'Bekijk begeleiding', points: ['Je kiest zelf welke professional je aanspreekt.', 'Een tijdstip kiezen is eerst een aanvraag.', 'Je hoeft je hulpvraag niet perfect te kunnen uitleggen.'] }
-        : { route: 'Op je eigen tempo', title: 'Eerst ruimte om te begrijpen.', copy: 'Een persoonlijk profiel kan nu een passend vertrekpunt zijn als je zicht wil krijgen op stress, emoties en draagkracht.', link: '/profielen/stress-en-emotieprofiel', label: 'Bekijk het profiel', points: ['Je verkent rustig of dit profiel bij je past.', 'Een profiel is geen diagnose.', 'Je kan later altijd begeleiding toevoegen.'] };
-      if (route) route.textContent = guidance.route;
-      if (title) title.textContent = guidance.title;
-      if (copy) copy.textContent = guidance.copy;
-      if (points) points.replaceChildren(...guidance.points.map((item) => { const node = document.createElement('li'); node.textContent = item; return node; }));
-      if (link instanceof HTMLAnchorElement) { link.href = guidance.link; link.textContent = guidance.label; }
+        : { route: 'Op je eigen tempo', title: 'Eerst ruimte om te begrijpen.', copy: 'Een persoonlijk profiel kan nu een passend vertrekpunt zijn als je zicht wil krijgen op stress, emoties en draagkracht.', link: '/profielen/stress-en-emotieprofiel', label: 'Ontdek het stress- en emotieprofiel', points: ['Je verkent rustig of dit profiel bij je past.', 'Een profiel is geen diagnose.', 'Je kan later altijd begeleiding toevoegen.'] };
+      const setText = (selector: string, text: string) => { const element = result?.querySelector(selector); if (element) element.textContent = text; };
+      setText('[data-result-route]', guidance.route);
+      setText('[data-result-title]', guidance.title);
+      setText('[data-result-copy]', guidance.copy);
+      setText('[data-result-link-label]', guidance.label);
+      result?.querySelector('[data-result-points]')?.replaceChildren(...guidance.points.map(item => { const node = document.createElement('li'); node.textContent = item; return node; }));
+      const link = result?.querySelector<HTMLAnchorElement>('[data-result-link]');
+      if (link) link.href = guidance.link;
       chooser.hidden = true;
-      if (result instanceof HTMLElement) { result.hidden = false; result.focus?.(); }
+      if (result) result.hidden = false;
+      updateProgress(true);
+      focusQuestion(result?.querySelector('[data-result-title]') ?? null);
     };
-    next?.addEventListener('click', () => {
-      const answered = questions[step]?.querySelector('input:checked');
-      if (!answered) { const first = questions[step]?.querySelector('input'); if (first instanceof HTMLInputElement) first.focus(); return; }
-      if (step === questions.length - 1) renderResult(); else { step += 1; showStep(); }
+    chooser.addEventListener('submit', event => event.preventDefault());
+    chooser.querySelectorAll<HTMLButtonElement>('[data-answer]').forEach(button => {
+      button.addEventListener('click', () => {
+        if (!questions[step].contains(button)) return;
+        answers[button.dataset.name!] = button.value;
+        if (step === questions.length - 1) renderResult();
+        else { step += 1; showStep(); }
+      });
     });
     back?.addEventListener('click', () => { if (step > 0) { step -= 1; showStep(); } });
-    document.querySelector('[data-restart]')?.addEventListener('click', () => { chooser.reset(); step = 0; if (result instanceof HTMLElement) result.hidden = true; chooser.hidden = false; showStep(); });
-    showStep();
+    document.querySelector('[data-restart]')?.addEventListener('click', () => {
+      Object.keys(answers).forEach(key => delete answers[key]);
+      step = 0;
+      showStep();
+    });
+    document.querySelector('[data-edit]')?.addEventListener('click', () => { step = questions.length - 1; showStep(); });
+    showStep(false);
   }
 </script>
