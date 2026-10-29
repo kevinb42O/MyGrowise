@@ -277,7 +277,7 @@
   max-width: 1050px
 }
 
-.home-experience .recognition-lines p {
+.home-experience .recognition-lines li {
   font-family: 'DM Serif Display',Georgia,serif;
   font-size: clamp(19px,2.1vw,30px);
   line-height: 1.3;
@@ -1008,7 +1008,6 @@
   position: absolute;
   inset: 0;
   height: auto;
-  will-change: inset
 }
 
 .home-experience.enhanced .insight-paper {
@@ -1431,7 +1430,7 @@
   gap: 0
 }
 
-.home-experience .recognition-lines p {
+.home-experience .recognition-lines li {
   font-size: 20px;
   padding: 14px 0
 }
@@ -1733,7 +1732,7 @@
   margin-bottom: 18px
 }
 
-.home-experience.enhanced .recognition-lines p {
+.home-experience.enhanced .recognition-lines li {
   font-size: 18px;
   padding: 10px 0
 }
@@ -2372,7 +2371,7 @@
   min-height: 0;
   padding: clamp(3.5rem, 7vw, 6rem) 9%;
 }
-.home-experience .recognition-lines p { opacity: 1; transform: none; }
+.home-experience .recognition-lines li { opacity: 1; transform: none; }
 .home-experience .recognition-inner { opacity: 1; transform: none; }
 .home-experience.hero-enhanced .hero-track { position: relative; height: var(--opening-height); }
 .home-experience.hero-enhanced .hero-stage {
@@ -2383,29 +2382,17 @@
   isolation: isolate;
 }
 .home-experience.enhanced .experience { height: 700svh; }
-/* One native sticky viewport: no JS counter-scrolling between independent stages. */
-.home-experience.enhanced .journey-track { height: var(--journey-height); }
-.home-experience.enhanced .journey-stage {
-  position: sticky;
-  top: var(--top);
-  height: var(--stage);
-  overflow: clip;
-  isolation: isolate;
-}
-.home-experience.hero-enhanced.enhanced .hero-track,
-.home-experience.enhanced .experience { display: contents; }
+/* The intro, recognition and later chapters each occupy their own document space. */
+.home-experience.enhanced .journey-track { height: auto; }
+.home-experience.enhanced .journey-stage { position: relative; }
+.home-experience.hero-enhanced.enhanced .hero-track { display: block; }
+.home-experience.enhanced .experience { display: block; height: var(--journey-height); }
 .home-experience.hero-enhanced.enhanced .hero-stage,
 .home-experience.enhanced .experience-stage {
-  position: absolute;
-  inset: 0;
-  height: 100%;
-}
-.home-experience.enhanced .experience-stage { z-index: 1; will-change: opacity; }
-.home-experience.hero-enhanced.enhanced .recognition-inner { will-change: opacity; }
-@media (max-width: 600px) {
-  .home-experience .recognition { padding: 3.5rem 7%; }
-  .home-experience.enhanced .experience { height: 850svh; }
-  .home-experience.enhanced .journey-track { height: var(--journey-height); }
+  position: sticky;
+  inset: auto;
+  top: var(--top);
+  height: var(--stage);
 }
 /* A real 16:9 frame: width is constrained, never height-clamped or cover-cropped. */
 .home-experience .story-film,
@@ -2439,32 +2426,9 @@
   .home-experience .story-film,
   .home-experience.story-enhanced .story-film { grid-template-columns: minmax(0, 1fr); gap: 32px; }
 }
-/* The title remains the same element from the opening landscape to the product copy. */
+/* The product heading stays in its reading column. */
 .home-experience .insight-heading { position: relative; margin-bottom: 26px; }
 .home-experience .insight-heading h2 { margin: 0; }
-.home-experience .insight-heading-light,
-.home-experience .insight-image-shade { display: none; }
-.home-experience.enhanced .insight-heading {
-  transform-origin: 0 0;
-  will-change: transform;
-}
-.home-experience.enhanced .insight-heading .insight-heading-light {
-  display: block;
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  color: var(--white);
-  pointer-events: none;
-}
-.home-experience.enhanced .insight-heading-light em { color: #ffdce3; }
-.home-experience.enhanced .insight-image-shade {
-  display: block;
-  position: absolute;
-  inset: 0;
-  background: rgba(8, 32, 27, .52);
-  pointer-events: none;
-}
 @media (max-width: 600px) {
   .home-experience .insight-heading { margin-bottom: 12px; }
 }
@@ -2497,7 +2461,7 @@
   max-width: none;
   gap: clamp(14px, 1.8vw, 32px) 4.5%;
 }
-.home-experience.hero-enhanced .recognition-lines p {
+.home-experience.hero-enhanced .recognition-lines li {
   font-size: clamp(23px, 2.5vw, 50px);
   padding: clamp(14px, 1.5vw, 28px) 0;
   line-height: 1.3;
@@ -2513,7 +2477,7 @@
     margin-bottom: 24px;
   }
   .home-experience.hero-enhanced .recognition-lines { grid-template-columns: 1fr; gap: 0; }
-  .home-experience.hero-enhanced .recognition-lines p { font-size: 21px; padding: 14px 0; }
+  .home-experience.hero-enhanced .recognition-lines li { font-size: 21px; padding: 14px 0; }
   .home-experience.hero-enhanced .recognition-closing { margin-top: 24px; font-size: 13px; }
 }
 
@@ -2523,9 +2487,7 @@
 .home-experience.portal-enhanced .hero-track {
   height: var(--opening-height);
 }
-.home-experience.portal-enhanced.enhanced .journey-track {
-  height: var(--journey-height);
-}
+
 .home-experience.portal-enhanced .hero-portal {
   display: block;
   position: absolute;
@@ -2596,9 +2558,7 @@
     transform: translate(-45.8%, -48.8%);
     transform-origin: 45.8% 48.8%;
   }
-  .home-experience.portal-enhanced.enhanced .journey-track {
-    height: var(--journey-height);
-  }
+
 }
 
 /* Opening statement frames the portal; the explanation arrives after it opens. */
@@ -2890,8 +2850,8 @@
 .home-experience .recognition h2 em { color: #e4dcca; font-size: .84em; font-weight: 400; }
 .home-experience .recognition-lines,
 .home-experience.hero-enhanced .recognition-lines { display: block; max-width: 31ch; }
-.home-experience .recognition-lines p,
-.home-experience.hero-enhanced .recognition-lines p {
+.home-experience .recognition-lines li,
+.home-experience.hero-enhanced .recognition-lines li {
   margin: 0;
   padding: 20px 0;
   border: 0;
@@ -2910,14 +2870,14 @@
 .home-experience .recognition-closing svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 1.5; }
 .home-experience.hero-enhanced { --recognition-travel: calc(var(--stage) * 1.2); }
 .home-experience.hero-enhanced .hero-track { height: var(--opening-height); }
-.home-experience.hero-enhanced.enhanced .journey-track { height: var(--journey-height); }
+
 .home-experience.portal-enhanced .hero-track { height: var(--opening-height); }
-.home-experience.portal-enhanced.enhanced .journey-track { height: var(--journey-height); }
+
 .home-experience.hero-enhanced .recognition { padding: 0; background: transparent; }
 .home-experience.hero-enhanced .recognition-inner { position: absolute; inset: 10% auto 9% 7%; width: 54%; max-width: none; display: flex; flex-direction: column; }
 .home-experience.hero-enhanced .recognition h2 { flex: 0 0 auto; margin-bottom: 18px; }
 .home-experience.hero-enhanced .recognition-lines { position: relative; flex: 1; min-height: 210px; max-width: 32ch; width: 100%; overflow: hidden; mask-image: linear-gradient(transparent, #000 12%, #000 88%, transparent); }
-.home-experience.hero-enhanced .recognition-lines p { position: absolute; top: 50%; left: 0; right: 0; padding: 0; transform-origin: left center; }
+.home-experience.hero-enhanced .recognition-lines li { position: absolute; top: 50%; left: 0; right: 0; padding: 0; transform-origin: left center; }
 .home-experience.hero-enhanced .recognition-closing { flex: 0 0 auto; margin-top: 22px; }
 @media (max-width: 760px) {
   .home-experience .recognition { padding: 0 7% 48px; }
@@ -2925,19 +2885,15 @@
   .home-experience .recognition-inner { max-width: none; }
   .home-experience .recognition h2,
   .home-experience.hero-enhanced .recognition h2 { font-size: clamp(30px, 7.8vw, 44px); margin-bottom: 20px; }
-  .home-experience .recognition-lines p,
-  .home-experience.hero-enhanced .recognition-lines p { font-size: 17px; padding: 12px 0; line-height: 1.45; }
+  .home-experience .recognition-lines li,
+  .home-experience.hero-enhanced .recognition-lines li { font-size: 17px; padding: 12px 0; line-height: 1.45; }
   .home-experience .recognition-closing,
   .home-experience.hero-enhanced .recognition-closing { font-size: 12px; margin-top: 22px; }
   .home-experience .recognition-closing .text-link { font-size: 12px; margin-top: 8px; }
   .home-experience.hero-enhanced .recognition-landscape { position: absolute; inset: 0; height: auto; margin: 0; }
   .home-experience.hero-enhanced .recognition-inner { inset: 34% 7% 5%; width: auto; }
   .home-experience.hero-enhanced .recognition-lines { flex: 0 0 auto; min-height: 0; overflow: visible; mask-image: none; }
-  .home-experience.hero-enhanced .recognition-lines p { position: static; }
-}
-@media (max-width: 600px) {
-  .home-experience.hero-enhanced.enhanced .journey-track { height: var(--journey-height); }
-  .home-experience.portal-enhanced.enhanced .journey-track { height: var(--journey-height); }
+  .home-experience.hero-enhanced .recognition-lines li { position: static; }
 }
 @media (min-width: 761px) {
   .home-experience.hero-enhanced .recognition-lines { max-width: none; width: min(100%, 650px); }
@@ -3017,7 +2973,7 @@
   overflow: visible;
   mask-image: none;
 }
-.home-experience.hero-enhanced .recognition-lines p {
+.home-experience.hero-enhanced .recognition-lines li {
   transform-origin: left center;
   pointer-events: none;
 }
@@ -3026,8 +2982,8 @@
 @media (max-width: 760px) {
   .home-experience .recognition-lead { font-size: 15px; margin-bottom: 5px; }
   .home-experience .recognition-emphasis { font-size: clamp(26px, 6.8vw, 36px); }
-  .home-experience .recognition-lines p,
-  .home-experience.hero-enhanced .recognition-lines p { padding: 12px 0; }
+  .home-experience .recognition-lines li,
+  .home-experience.hero-enhanced .recognition-lines li { padding: 12px 0; }
 }
 
 /* Use the very same transparent lily as the navigation, behind the opening words. */
@@ -3065,7 +3021,7 @@
     margin-bottom: 20px;
   }
   .home-experience.hero-enhanced .recognition-lines { flex: 1; min-height: 150px; }
-  .home-experience.hero-enhanced .recognition-lines p { position: absolute; top: 50%; padding: 0; }
+  .home-experience.hero-enhanced .recognition-lines li { position: absolute; top: 50%; padding: 0; }
 }
 
 /* The opening landscape resolves into one uninterrupted photographic surface. */
@@ -3182,7 +3138,7 @@
   overflow: visible;
   mask-image: none;
 }
-.home-experience:not(.hero-enhanced) .recognition-lines p {
+.home-experience:not(.hero-enhanced) .recognition-lines li {
   position: static;
   padding: 20px 0;
   border-top: 1px solid rgb(197 208 199 / 24%);
@@ -3240,7 +3196,7 @@
   .home-experience:not(.hero-enhanced) .recognition-landscape figcaption { inset: auto 24px 24px; }
   .home-experience:not(.hero-enhanced) .recognition-inner { max-width: none; }
   .home-experience:not(.hero-enhanced) .recognition h2 { margin-bottom: 24px; font-size: clamp(32px, 6vw, 42px); }
-  .home-experience:not(.hero-enhanced) .recognition-lines p { padding: 18px 0; }
+  .home-experience:not(.hero-enhanced) .recognition-lines li { padding: 18px 0; }
 }
 
 /* Phone composition: keep the landscape, give content and controls their own space. */
@@ -3338,3 +3294,166 @@
   .home-experience.hero-enhanced .recognition-emphasis { max-width: none; font-size: clamp(30px, 8.8vw, 38px); line-height: 1.12; }
   .home-experience.hero-enhanced .recognition-closing { position: absolute; top: calc(50% + 24px); left: 0; right: 0; margin: 0; font-size: 13px; line-height: 1.6; }
 }
+
+
+/* Recognition is one complete reading surface, in motion and in calm mode. */
+.home-experience .recognition,
+.home-experience.hero-enhanced .recognition,
+.home-experience:not(.hero-enhanced) .recognition {
+  display: flex;
+  align-items: center;
+  padding: clamp(40px, 6vw, 88px) 7%;
+}
+.home-experience .recognition-landscape,
+.home-experience:not(.hero-enhanced) .recognition-landscape { display: none; }
+.home-experience.hero-enhanced .recognition-landscape { display: block; }
+.home-experience .recognition-inner,
+.home-experience.hero-enhanced .recognition-inner,
+.home-experience:not(.hero-enhanced) .recognition-inner {
+  position: relative;
+  inset: auto;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  align-content: center;
+  align-items: center;
+  column-gap: clamp(40px, 7vw, 112px);
+  width: 100%;
+  max-width: 1440px;
+  height: auto;
+  margin-inline: auto;
+  padding: 0;
+}
+.home-experience .recognition h2,
+.home-experience.hero-enhanced .recognition h2,
+.home-experience:not(.hero-enhanced) .recognition h2 {
+  grid-column: 1;
+  grid-row: 1 / 3;
+  margin: 0;
+  font-size: clamp(36px, 4.3vw, 68px);
+  line-height: 1.12;
+  text-wrap: initial;
+}
+.home-experience .recognition h2 em { display: inline-block; margin-top: 12px; }
+.home-experience .recognition-lines,
+.home-experience.hero-enhanced .recognition-lines,
+.home-experience:not(.hero-enhanced) .recognition-lines {
+  display: block;
+  grid-column: 2;
+  margin: 0;
+  padding: 0 0 0 1.15em;
+  list-style: disc;
+  flex: none;
+  width: 100%;
+  max-width: none;
+  height: auto;
+  min-height: 0;
+  overflow: visible;
+  mask-image: none;
+}
+.home-experience .recognition-lines li,
+.home-experience.hero-enhanced .recognition-lines li,
+.home-experience:not(.hero-enhanced) .recognition-lines li {
+  position: static;
+  margin: 0;
+  padding: 18px 0 18px 6px;
+  border: 0;
+  font-size: clamp(18px, 1.55vw, 24px);
+  line-height: 1.5;
+  letter-spacing: -.015em;
+  pointer-events: auto;
+}
+.home-experience .recognition-lead,
+.home-experience .recognition-emphasis,
+.home-experience.hero-enhanced .recognition-lead,
+.home-experience.hero-enhanced .recognition-emphasis {
+  display: inline;
+  max-width: none;
+  margin: 0;
+  color: var(--paper);
+  font-family: 'DM Sans', sans-serif;
+  font-size: inherit;
+  line-height: inherit;
+  letter-spacing: inherit;
+  transform: none;
+}
+.home-experience .recognition-emphasis { font-weight: 600; font-style: normal; }
+.home-experience .recognition-closing,
+.home-experience.hero-enhanced .recognition-closing,
+.home-experience:not(.hero-enhanced) .recognition-closing {
+  position: static;
+  grid-column: 2;
+  margin: 24px 0 0;
+  font-size: 14px;
+  line-height: 1.6;
+}
+.home-experience .recognition-closing .text-link {
+  min-height: 44px;
+  margin-top: 12px;
+  font-size: 14px;
+  line-height: 1.5;
+}
+.home-experience .recognition-logo,
+.home-experience.hero-enhanced .recognition-logo {
+  position: relative;
+  inset: auto;
+  z-index: 0;
+  width: min(34vw, calc(var(--stage) * .6), 600px);
+  margin: 24px 0 0;
+  transform: none;
+}
+.home-experience .recognition-heading-group { grid-column: 1; min-width: 0; }
+.home-experience .recognition-reading { grid-column: 2; min-width: 0; }
+.home-experience .recognition-lines li::marker { color: var(--pink); font-size: .85em; }
+@media (max-width: 760px) {
+  .home-experience .recognition,
+  .home-experience.hero-enhanced .recognition,
+  .home-experience:not(.hero-enhanced) .recognition { padding: 32px 7%; }
+  .home-experience .recognition-inner,
+  .home-experience.hero-enhanced .recognition-inner,
+  .home-experience:not(.hero-enhanced) .recognition-inner {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0;
+  }
+  .home-experience .recognition-heading-group,
+  .home-experience .recognition-reading { grid-column: 1; }
+  .home-experience .recognition h2,
+  .home-experience.hero-enhanced .recognition h2,
+  .home-experience:not(.hero-enhanced) .recognition h2 {
+    grid-column: 1;
+    grid-row: auto;
+    margin-bottom: 24px;
+    font-size: clamp(28px, 7.6vw, 40px);
+  }
+  .home-experience .recognition h2 em { margin-top: 6px; }
+  .home-experience .recognition-lines,
+  .home-experience.hero-enhanced .recognition-lines,
+  .home-experience:not(.hero-enhanced) .recognition-lines { grid-column: 1; }
+  .home-experience .recognition-lines li,
+  .home-experience.hero-enhanced .recognition-lines li,
+  .home-experience:not(.hero-enhanced) .recognition-lines li { padding: 13px 0 13px 4px; font-size: 16px; }
+  .home-experience .recognition-closing,
+  .home-experience.hero-enhanced .recognition-closing,
+  .home-experience:not(.hero-enhanced) .recognition-closing { grid-column: 1; margin-top: 18px; font-size: 13px; }
+  .home-experience .recognition-logo,
+  .home-experience.hero-enhanced .recognition-logo { display: none; }
+}
+
+/* Recognition follows the portrait through ordinary page scrolling, without a reveal. */
+.home-experience.hero-enhanced .recognition {
+  position: relative;
+  inset: auto;
+  min-height: var(--stage);
+  visibility: visible;
+  opacity: 1;
+  background: #102f29;
+}
+.home-experience.hero-enhanced .recognition-landscape {
+  position: absolute;
+  inset: 0;
+  height: 100%;
+  margin: 0;
+  clip-path: none;
+  opacity: .34;
+}
+.home-experience.hero-enhanced .recognition-logo { opacity: 1; }
+.home-experience .recognition { scroll-margin-top: var(--top); }

@@ -1,8 +1,10 @@
 ---
 // Bron: Virginies factuurscreenshot en bevestiging van het btw-nummer in Messenger.
+interface Props { variant?: 'default' | 'footer' }
+const { variant = 'default' } = Astro.props;
 ---
 
-<div class="business-details">
+<div class:list={['business-details', { 'business-details--footer': variant === 'footer' }]}>
   <strong>I-Transform SLU</strong>
   <address>
     Carrer de la Costa, num 20<br />
@@ -19,4 +21,7 @@
   .business-details address { font-style: normal; }
   .business-details p { margin: .5rem 0 0; }
   .business-details span { white-space: nowrap; }
+  .business-details--footer { color: inherit; font-size: inherit; line-height: inherit; }
+  .business-details--footer strong { margin-bottom: .5rem; color: rgba(255,255,255,.9); font-weight: 600; }
+  .business-details--footer p { margin-top: 1rem; }
 </style>

@@ -1,10 +1,93 @@
 ---
 import MainLayout from '../../layouts/MainLayout.astro';
-import {getPractitionerBySlug} from '../../lib/practiceStore';
-import {listOffers,bookingPath} from '../../lib/appointmentCatalog';
-import '../../styles/practice-management.css';
-let person:Awaited<ReturnType<typeof getPractitionerBySlug>>=null;let offers:Awaited<ReturnType<typeof listOffers>>=[];let unavailable=false;
-try{person=await getPractitionerBySlug(Astro.params.slug||'');if(!person?.active)return Astro.redirect('/begeleiding');offers=await listOffers({practitionerId:person.id,publicOnly:true});}catch{unavailable=true;Astro.response.status=503;}
+import { getPractitionerBySlug } from '../../lib/practiceStore';
+import { listOffers, bookingPath } from '../../lib/appointmentCatalog';
+import { practitioners } from '../../content/site';
+import { practitionerStories } from '../../content/practitionerProfiles';
+import '../../styles/practitioner-profile.css';
 
+let person: Awaited<ReturnType<typeof getPractitionerBySlug>> = null;
+let offers: Awaited<ReturnType<typeof listOffers>> = [];
+let profileUnavailable = false;
+let bookingUnavailable = false;
+try {
+  person = await getPractitionerBySlug(Astro.params.slug || '');
+} catch {
+  profileUnavailable = true;
+  Astro.response.status = 503;
+}
+if (!profileUnavailable && !person?.active) return Astro.redirect('/begeleiding');
+// Booking failures must never take the practitioner's introduction offline.
+if (person) {
+  try { offers = await listOffers({ practitionerId: person.id, publicOnly: true }); }
+  catch { bookingUnavailable = true; Astro.response.status = 503; }
+}
+const editorial = practitioners.find(p => p.slug === person?.slug);
+const story = person ? practitionerStories[person.slug] : undefined;
+const portrait = person?.imageUrl || editorial?.image;
+const role = person?.publicRole || editorial?.role;
+const bio = person?.bio || editorial?.focus;
+const firstName = person?.name.split(' ')[0] || '';
+const otherPractitioners = practitioners.filter(p => p.slug !== person?.slug);
+// Group real published offers by treatment; first visits always precede follow-ups.
+const groups = [...new Set(offers.map(o => o.groupId))].map(id => {
+  const items = offers.filter(o => o.groupId === id).sort((a, b) =>
+    Number(b.kind === 'intake') - Number(a.kind === 'intake') || a.name.localeCompare(b.name, 'nl'));
+  return { id, name: items[0].groupName, items };
+});
 ---
-<MainLayout activeNav="begeleiding" title={`Begeleiding${person?` bij ${person.name}`:''} — MyGrowise`} description={person?.bio}><section class="section"><div class="container practice-stack" style="max-width:1000px"><a href="/begeleiding">← Alle therapeuten</a>{person&&<header><span class="eyebrow">{person.publicRole}</span><h1>{person.name}</h1><p class="lead">{person.bio}</p><p>{person.expertise.join(' · ')}</p></header>}{unavailable&&<p role="alert">De afspraken zijn tijdelijk niet bereikbaar. Probeer later opnieuw of <a href="/contact">neem contact op</a>. Er is geen afspraak vastgelegd.</p>}<h2>Kies je afspraaktype</h2><div class="practice-grid">{offers.map(o=><article class="practice-card" style={`--treatment-color:${o.color}`}><span class="practice-dot"></span><span>{o.kind==='intake'?'Intake':o.kind==='follow_up'?'Vervolgsessie':'Afspraak'}</span><h2>{o.name}</h2><p>{o.duration} minuten · {o.channel==='online'?'Online':o.location}</p><a class="practice-button" href={bookingPath(o)}>Kies een vrij moment</a></article>)}</div>{!offers.length&&<p>Er zijn momenteel geen afspraaktypes beschikbaar. Neem contact op met de praktijk.</p>}</div></section></MainLayout>
+
+<MainLayout activeNav="begeleiding" title={`Begeleiding${person ? ` bij ${person.name}` : ''} — MyGrowise`} description={bio} footerCta={false}>
+  <div class="therapist-page">
+    <div class="container therapist-breadcrumb"><a href="/begeleiding#professionals"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m14 6-6 6 6 6M8 12h13" /></svg> Alle therapeuten</a><span aria-hidden="true">/</span><span>{person?.name || 'Begeleiding'}</span></div>
+    {person && <>
+      <section class="therapist-hero" aria-labelledby="therapist-name">
+        <div class="container therapist-hero-grid" data-no-motion>
+          <div class:list={['therapist-portrait', `therapist-portrait--${person.slug}`]}>
+            {portrait ? <img src={portrait} alt={`Portret van ${person.name}`} width="1067" height="1600" fetchpriority="high" /> : <div class="therapist-initial" aria-label={person.name}>{firstName.charAt(0)}</div>}
+            <span class="portrait-caption">Een mens tegenover je.</span>
+          </div>
+          <div class="therapist-intro">
+            <h1 id="therapist-name">{person.name}<span aria-hidden="true">.</span></h1>
+            <p class="therapist-role">{role}</p>
+            {story && <p class="therapist-opening">{story.introduction}</p>}
+            <p class="therapist-bio">{bio}</p>
+            {person.expertise.length > 0 && <ul class="therapist-tags" aria-label="Expertise">{person.expertise.map(item => <li>{item}</li>)}</ul>}
+            <div class="therapist-hero-actions">
+              <a class="button button-primary" href="#afspraken">{offers.length ? `Plan een gesprek met ${firstName}` : 'Bekijk de afspraakmogelijkheden'}<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v16m-6-6 6 6 6-6" /></svg></a>
+              {story && <a class="therapist-inline-link" href="#kennismaken">Leer {firstName} kennen</a>}
+            </div>
+            {person.languages.length > 0 && <p class="therapist-language">Gesprekken in het {person.languages.join(' · ')}</p>}
+          </div>
+        </div>
+      </section>
+
+      <nav class="therapist-section-nav" aria-label="Op deze profielpagina"><div class="container">
+        {story && <a href="#kennismaken">De aanpak van {firstName}</a>}
+        <a href="#afspraken">Afspraak plannen<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 17 10-10M7 7h10v10" /></svg></a>
+        <a href="/contact">Een vraag stellen</a>
+      </div></nav>
+
+      {story && <section class="therapist-story" id="kennismaken" aria-labelledby="approach-title">
+        <div class="container therapist-story-grid" data-no-motion>
+          <div class="therapist-story-heading"><h2 id="approach-title">Zo werkt<br /><em>{firstName}.</em></h2><p>Een eerste kennismaking met de persoon achter de begeleiding.</p></div>
+          <div class="therapist-story-copy">{story.approach.map(paragraph => <p>{paragraph}</p>)}
+            <dl class="therapist-details"><div><dt>Voor wie</dt><dd>{story.audience}</dd></div>{person.languages.length > 0 && <div><dt>Talen</dt><dd>{person.languages.join(', ')}</dd></div>}</dl>
+          </div>
+        </div>
+      </section>}
+
+      <section class="therapist-appointments" id="afspraken" aria-labelledby="appointments-title">
+        <div class="container therapist-appointment-layout" data-no-motion>
+          <div class="therapist-booking-intro"><h2 id="appointments-title">Een gesprek.<br /><em>Jouw volgende stap.</em></h2><p>Kies de begeleiding die bij je past en bekijk de vrije momenten bij {firstName}.</p><div class="therapist-first-visit"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 8v4m0 4h.01M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" /></svg><p><strong>Voor het eerst bij {firstName}?</strong> Kies een intake als die beschikbaar is. Je hoeft je verhaal vooraf niet perfect te ordenen.</p></div><a class="therapist-inline-link" href="/contact">Twijfel je? Stel gerust je vraag</a></div>
+          <div class="therapist-offers">
+            {bookingUnavailable ? <div class="therapist-booking-state" role="alert"><h3>De agenda is even niet bereikbaar.</h3><p>Je kan het profiel gewoon bekijken. Probeer later opnieuw om een afspraak te plannen, of neem contact met ons op.</p><a class="button button-primary" href="/contact">Neem contact op</a></div> : groups.length ? groups.map(group => <div class="therapist-offer-group"><h3>{group.name}</h3><div>{group.items.map(offer => <article class="therapist-offer"><div class="therapist-offer-copy"><span class="therapist-session-kind">{offer.kind === 'intake' ? 'Eerste gesprek' : offer.kind === 'follow_up' ? 'Vervolggesprek' : 'Afspraak'}</span><h4>{offer.name}</h4><p>{offer.duration} minuten<span aria-hidden="true"> · </span>{offer.channel === 'online' ? 'Online' : offer.location || 'Op locatie'}</p></div><a href={bookingPath(offer)} class="therapist-slot-link" aria-label={`Bekijk vrije momenten voor ${offer.name}`}>Vrije momenten<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h16m-6-6 6 6-6 6" /></svg></a></article>)}</div></div>) : <div class="therapist-booking-state"><h3>Even afstemmen?</h3><p>Er staan momenteel geen afspraaktypes open bij {firstName}. Neem contact op met de praktijk om de mogelijkheden te bespreken.</p><a class="button button-primary" href="/contact">Neem contact op</a></div>}
+            {offers.length > 0 && !bookingUnavailable && <p class="therapist-booking-note">Je kiest je datum en uur in de volgende stap. Na een geslaagde boeking ontvang je de bevestiging en praktische informatie per e-mail.</p>}
+          </div>
+        </div>
+      </section>
+      <section class="therapist-others" aria-labelledby="others-title"><div class="container" data-no-motion><div class="therapist-others-heading"><h2 id="others-title">Liever even verder kijken?</h2><p>Ontmoet ook de andere mensen achter MyGrowise.</p></div><div class="therapist-other-list">{otherPractitioners.map(other => <a class="therapist-other" href={`/begeleiding/${other.slug}`}><img src={other.image} alt={`Portret van ${other.name}`} width="100" height="120" loading="lazy" /><div><h3>{other.name}</h3><p>{other.role}</p><span>Maak kennis<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h16m-6-6 6 6-6 6" /></svg></span></div></a>)}</div></div></section>
+    </>}
+    {profileUnavailable && <section class="therapist-error container" role="alert"><h1>Even geen verbinding.</h1><p>Het profiel is tijdelijk niet bereikbaar. Probeer later opnieuw of neem contact met ons op.</p><a class="button button-primary" href="/contact">Neem contact op</a><a class="therapist-inline-link" href="/begeleiding">Terug naar begeleiding</a></section>}
+  </div>
+</MainLayout>

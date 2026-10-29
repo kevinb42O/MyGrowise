@@ -16,25 +16,28 @@ const year = new Date().getFullYear();
       </div>
     </div>}
     <div class="footer-nav">
-      <div>
-        <strong>Aanbod</strong>
+      <div class="footer-group">
+        <h3>Aanbod</h3>
         <a href="/profielen">Profielen</a><a href="/vragenlijsten">Vragenlijsten</a><a href="/samenstellen">Zelf samenstellen</a>
         <a href="/modules">Online modules</a>
         <a href="/community">Community</a>
         <a href="/begeleiding">Begeleiding</a>
       </div>
-      <div>
-        <strong>MyGrowise</strong>
+      <div class="footer-group">
+        <h3>MyGrowise</h3>
         <a href="/over-ons">Over ons</a>
         <a href="/contact">Contact</a>
         <a href="/prijzen">Prijzen</a>
       </div>
-      <div>
-        <strong>Praktisch</strong>
+      <div class="footer-group">
+        <h3>Praktisch</h3>
         <a href="mailto:info@mygrowise.be">info@mygrowise.be</a>
         <a href="/privacy">Privacy</a>
         <a href="/voorwaarden">Voorwaarden</a>
-        <BusinessDetails />
+      </div>
+      <div class="footer-group footer-company">
+        <h3>Bedrijfsgegevens</h3>
+        <BusinessDetails variant="footer" />
       </div>
     </div>
   </div>
@@ -65,11 +68,12 @@ const year = new Date().getFullYear();
   .footer-actions { display: flex; flex-wrap: wrap; gap: 0.8rem; }
   .footer-button { border-color: white; background: white; color: var(--ink-deep); }
   .footer-button.ghost { background: transparent; color: white; }
-  .footer-nav { display: grid; grid-template-columns: repeat(2, 1fr); gap: 2.5rem 1rem; }
-  .footer-nav div { display: flex; flex-direction: column; align-items: flex-start; gap: 0.75rem; }
-  .footer-nav strong { margin-bottom: 0.35rem; color: var(--pink); font-size: 0.75rem; letter-spacing: 0.1em; text-transform: uppercase; }
-  .footer-nav a { color: rgba(255,255,255,.72); font-size: 0.9rem; text-decoration: none; }
+  .footer-nav { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 2.5rem 1.5rem; color: rgba(255,255,255,.76); font-size: .9rem; line-height: 1.65; text-align: left; }
+  .footer-group { display: flex; min-width: 0; flex-direction: column; align-items: flex-start; gap: .75rem; }
+  .footer-group h3 { margin: 0 0 .35rem; color: var(--pink); font-family: inherit; font-size: .75rem; font-weight: 700; line-height: 1.65; letter-spacing: .1em; text-transform: uppercase; }
+  .footer-nav a { max-width: 100%; color: inherit; overflow-wrap: anywhere; text-decoration: none; }
   .footer-nav a:hover { color: white; text-decoration: underline; text-underline-offset: 4px; }
+  .footer-company { grid-column: 1 / -1; padding-top: 2rem; border-top: 1px solid rgba(255,255,255,.15); }
   .footer-bottom { display: flex; flex-direction: column; gap: 1.2rem; justify-content: space-between; padding-block: 1.5rem; border-top: 1px solid rgba(255,255,255,.15); }
   .footer-wordmark { display: inline-flex; align-items: center; gap: .7rem; font-family: 'DM Serif Display', Georgia, serif; font-size: 1.6rem; text-decoration: none; }
   .footer-mark { display: block; width: 2.8rem; max-width: 2.8rem; height: auto; flex: 0 0 2.8rem; object-fit: contain; }
@@ -78,6 +82,9 @@ const year = new Date().getFullYear();
   .footer-credit img { display: block; width: 148px; height: auto; }
   .footer-credit:hover { color: white; }
   .footer-credit:focus-visible { outline: 2px solid var(--yellow); outline-offset: 6px; border-radius: 2px; }
-  @media (min-width: 700px) { .footer-nav { grid-template-columns: repeat(3, 1fr); } .footer-bottom { flex-direction: row; flex-wrap: wrap; align-items: center; gap: 1.5rem 2rem; } .footer-bottom p { flex: 1 1 18rem; } .footer-credit { align-self: center; margin-left: auto; } }
-  @media (min-width: 960px) { .footer-main { grid-template-columns: 1.35fr .9fr; align-items: end; } }
+  @media (min-width: 700px) { .footer-nav { grid-template-columns: repeat(3, minmax(0, 1fr)); } .footer-bottom { flex-direction: row; flex-wrap: wrap; align-items: center; gap: 1.5rem 2rem; } .footer-bottom p { flex: 1 1 18rem; } .footer-credit { align-self: center; margin-left: auto; } }
+  @media (min-width: 960px) {
+    .footer-nav { grid-template-columns: 1fr .85fr 1.1fr 1.65fr; column-gap: 2rem; }
+    .footer-company { grid-column: auto; padding-top: 0; border-top: 0; }
+  }
 </style>

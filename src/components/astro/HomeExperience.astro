@@ -38,24 +38,25 @@ const recognitionHighlights = ['je lichaam moe is.', 'sneller of intenser binnen
    </div>
    <button class="hero-skip" type="button" data-hero-skip hidden>Intro overslaan <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v16m-6-6 6 6 6-6" /></svg></button>
   </section>
+</div></div>
   <section class="recognition" id="herkenning" aria-labelledby="recognition-title">
    <div class="recognition-surface" aria-hidden="true"></div>
    <figure class="recognition-landscape"><picture class="responsive-photo"><source media="(max-width: 760px)" srcset="/images/responsive/landscape-640.webp 640w, /images/responsive/landscape-960.webp 960w" sizes="100vw" /><img src="/images/hero/inner-world-lake-beyond-portal-v3.webp" width="1586" height="992" alt="Een stil bergmeer met de weerspiegeling van de bergen" loading="eager" /></picture><figcaption>Even stilstaan is ook een stap.</figcaption></figure>
-   <div class="recognition-logo" aria-hidden="true"><picture class="responsive-photo"><source media="(max-width: 760px)" srcset="/images/responsive/landscape-640.webp 640w, /images/responsive/landscape-960.webp 960w" sizes="100vw" /><img src="/images/hero/inner-world-lake-beyond-portal-v3.webp" width="1586" height="992" alt="" loading="eager" /></picture></div>
    <div class="recognition-inner">
-    <h2 id="recognition-title">Je houdt veel vol.<br /><em>Maar wat kost het je?</em></h2>
-    <div class="recognition-lines">{recognitionItems.slice(0, 3).map((item, index) => {
+    <div class="recognition-heading-group"><h2 id="recognition-title">Je houdt veel vol.<br /><em>Maar wat kost het je?</em></h2><div class="recognition-logo" aria-hidden="true"><picture class="responsive-photo"><source media="(max-width: 760px)" srcset="/images/responsive/landscape-640.webp 640w, /images/responsive/landscape-960.webp 960w" sizes="100vw" /><img src="/images/hero/inner-world-lake-beyond-portal-v3.webp" width="1586" height="992" alt="" loading="eager" /></picture></div></div>
+    <div class="recognition-reading">
+    <ul class="recognition-lines">{recognitionItems.slice(0, 3).map((item, index) => {
       const highlight = recognitionHighlights[index];
       const split = item.indexOf(highlight);
-      return <p><span class="recognition-lead">{item.slice(0, split)}</span><em class="recognition-emphasis">{highlight}</em></p>;
-    })}</div>
+      return <li><span class="recognition-lead">{item.slice(0, split)}</span><em class="recognition-emphasis">{highlight}</em></li>;
+    })}</ul>
     <div class="recognition-closing"><p>Je hoeft nog niet precies te weten wat je nodig hebt.</p><p>Eerst begrijpen wat er gebeurt.</p><a class="text-link" href="#inzicht">Ontdek wat inzicht je kan brengen <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 18 18 6M6 6h12v12" /></svg></a></div>
+    </div>
    </div>
   </section>
-</div></div>
 
 <div class="experience" data-experience><div class="experience-stage">
-  <section class="chapter insight" id="inzicht" data-layer="insight" aria-labelledby="insight-title"><div class="insight-image"><picture class="responsive-photo"><source media="(max-width: 760px)" srcset="/images/responsive/insight-640.webp 640w, /images/responsive/insight-960.webp 960w" sizes="100vw" /><img loading="lazy" decoding="async" src="/images/hero/insight-alpine-lake-hd-v2.webp" width="1672" height="941" alt="Uitzicht over een bergmeer, met wolken tussen de bergen in warm ochtendlicht"></picture><div class="insight-image-shade" aria-hidden="true"></div><div class="insight-paper" aria-hidden="true"><div class="insight-paper-caption"><p>Het innerlijke<br />landschap.</p><small>Herkennen · begrijpen · verdergaan</small></div></div></div><div class="insight-copy"><div class="insight-heading"><h2 id="insight-title"><span data-insight-line>Inzicht dat</span><br /> <em data-insight-line>ergens naartoe leidt.</em></h2></div>
+  <section class="chapter insight" id="inzicht" data-layer="insight" aria-labelledby="insight-title"><div class="insight-image"><picture class="responsive-photo"><source media="(max-width: 760px)" srcset="/images/responsive/insight-640.webp 640w, /images/responsive/insight-960.webp 960w" sizes="100vw" /><img loading="lazy" decoding="async" src="/images/hero/insight-alpine-lake-hd-v2.webp" width="1672" height="941" alt="Uitzicht over een bergmeer, met wolken tussen de bergen in warm ochtendlicht"></picture><div class="insight-paper" aria-hidden="true"><div class="insight-paper-caption"><p>Het innerlijke<br />landschap.</p><small>Herkennen · begrijpen · verdergaan</small></div></div></div><div class="insight-copy"><div class="insight-heading"><h2 id="insight-title"><span data-insight-line>Inzicht dat</span><br /> <em data-insight-line>ergens naartoe leidt.</em></h2></div>
     <p>{featured ? featured.summary : 'MyGrowise helpt je patronen rond stress en emoties te begrijpen. Je vindt er persoonlijke profielen, zelfstandige modules en online begeleiding.'}</p>
     {featured && <p class="featured-product">{featured.title}<strong>{formatPublicPrice(featured)}</strong></p>}
     <a class="text-link dark-link" href={featured ? profileUrl(featured.slug) : '/profielen'}>{featured ? 'Bekijk wat je ontvangt' : 'Ontdek de profielen'} <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 18 18 6M6 6h12v12" /></svg></a>

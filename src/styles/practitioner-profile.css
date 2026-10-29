@@ -1,0 +1,119 @@
+/* Public profiles inherit MyGrowise's forest, paper and editorial type system.
+   Content is server rendered and visible without animation or JavaScript. */
+.therapist-page { background: var(--paper); }
+.therapist-page svg { width: 1.2rem; height: 1.2rem; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
+.therapist-page a { text-underline-offset: .25em; }
+.therapist-page :is(h1,h2,h3,h4,p,a,dd) { overflow-wrap: anywhere; }
+.therapist-page :is(h1,h2,h3) { text-wrap: balance; }
+.therapist-breadcrumb { display: flex; align-items: center; flex-wrap: wrap; gap: .9rem; padding-block: 1.6rem; font-size: .78rem; color: var(--muted); }
+.therapist-breadcrumb a { display: inline-flex; align-items: center; gap: .65rem; text-decoration: none; color: var(--ink); min-height: 2rem; }
+.therapist-breadcrumb a:hover { text-decoration: underline; }
+.therapist-hero { padding: .6rem 0 4.5rem; }
+.therapist-hero-grid { display: grid; grid-template-columns: .95fr 1.05fr; align-items: center; gap: clamp(2.5rem, 6vw, 6rem); }
+.therapist-portrait { position: relative; overflow: hidden; background: var(--cream); aspect-ratio: 4/5; border-radius: 12px 12px 100px 12px; }
+.therapist-portrait img { width: 100%; height: 100%; object-fit: cover; object-position: 50% 46%; }
+.therapist-portrait--virginie img { object-position: 50% 40%; }
+.therapist-portrait--amy img { object-position: 50% 38%; }
+.portrait-caption { position: absolute; left: 1.35rem; bottom: 1.35rem; padding: .65rem 1rem; border-radius: 6px; background: var(--paper); color: var(--ink); font-size: .78rem; font-weight: 500; }
+.therapist-initial { display: grid; place-items: center; height: 100%; font: 10rem 'DM Serif Display', Georgia, serif; }
+.therapist-intro { padding-block: 1.25rem; min-width: 0; }
+.therapist-intro h1 { margin: 0 0 .65rem; font-size: clamp(3.5rem, 7vw, 6rem); line-height: 1.02; }
+.therapist-intro h1 > span { color: #ad5963; }
+.therapist-role { margin: 0 0 2rem; font-size: .9rem; font-weight: 600; color: var(--muted); }
+.therapist-opening { max-width: 26ch; margin-bottom: 1.25rem; font: clamp(1.6rem, 2.55vw, 2.25rem)/1.25 'DM Serif Display', Georgia, serif; letter-spacing: -.02em; }
+.therapist-bio { max-width: 55ch; margin: 0 0 1.5rem; font-size: 1rem; line-height: 1.8; color: var(--muted); white-space: pre-line; }
+.therapist-tags { display: flex; flex-wrap: wrap; gap: .45rem; padding: 0; margin: 0 0 2rem; list-style: none; }
+.therapist-tags li { padding: .5rem .8rem; border: 1px solid var(--line); border-radius: 6px; font-size: .75rem; line-height: 1.4; }
+.therapist-hero-actions { display: flex; align-items: flex-start; flex-direction: column; gap: 1.1rem; }
+.therapist-hero-actions .button { gap: 1rem; box-shadow: none; line-height: 1.4; text-align: center; }
+.therapist-inline-link { display: inline-block; font-size: .84rem; font-weight: 600; line-height: 1.6; }
+.therapist-inline-link:hover { color: var(--ink-deep); text-decoration-thickness: 2px; }
+.therapist-language { margin: 1.4rem 0 0; color: var(--muted); font-size: .75rem; line-height: 1.6; }
+.therapist-section-nav { border-block: 1px solid var(--line); }
+.therapist-section-nav > div { display: flex; gap: 2.5rem; flex-wrap: wrap; }
+.therapist-section-nav a { display: inline-flex; align-items: center; gap: .75rem; padding-block: 1.3rem; text-decoration: none; font-size: .85rem; font-weight: 500; }
+.therapist-section-nav a:hover { text-decoration: underline; }
+.therapist-section-nav a:last-child { margin-left: auto; color: var(--muted); }
+.therapist-story, .therapist-appointments, .therapist-others { padding-block: clamp(3.5rem, 7vw, 6.5rem); scroll-margin-top: 7rem; }
+.therapist-story-grid, .therapist-appointment-layout { display: grid; grid-template-columns: .85fr 1.15fr; gap: clamp(2rem, 7vw, 7rem); }
+.therapist-page h2 { margin-bottom: 1.5rem; font-size: clamp(2.6rem, 4.2vw, 4rem); line-height: 1.08; }
+.therapist-page h2 em { color: #49634f; font-weight: 400; }
+.therapist-story-heading > p, .therapist-booking-intro > p { max-width: 32ch; font-size: .95rem; line-height: 1.8; color: var(--muted); }
+.therapist-story-copy > p { margin-bottom: 1.4rem; font-size: 1.05rem; line-height: 1.95; }
+.therapist-story-copy > p:first-child { font-size: 1.2rem; line-height: 1.8; }
+.therapist-details { display: flex; flex-wrap: wrap; gap: 1.5rem 3.5rem; padding-top: 1.5rem; margin: 2rem 0 0; border-top: 1px solid var(--line); }
+.therapist-details dt { margin-bottom: .5rem; font-size: .75rem; color: var(--muted); }
+.therapist-details dd { margin: 0; font-size: .9rem; font-weight: 500; }
+.therapist-appointments { background: var(--cream); }
+.therapist-first-visit { display: flex; align-items: flex-start; gap: .8rem; padding-block: 1.2rem; margin: 1.5rem 0 .75rem; border-block: 1px solid var(--line); }
+.therapist-first-visit svg { margin-top: .15rem; }
+.therapist-first-visit p { margin: 0; font-size: .85rem; color: var(--muted); line-height: 1.8; }
+.therapist-first-visit strong { display: block; margin-bottom: .3rem; color: var(--ink); font-weight: 600; }
+.therapist-offers { min-width: 0; }
+.therapist-offer-group + .therapist-offer-group { margin-top: 2.5rem; }
+.therapist-offer-group > h3 { font-size: 1.8rem; margin: 0 0 1rem; }
+.therapist-offer-group > div { padding-inline: 1.5rem; background: var(--white); border-radius: 12px; }
+.therapist-offer { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 1.2rem; padding-block: 1.6rem; }
+.therapist-offer + .therapist-offer { border-top: 1px solid var(--line); }
+.therapist-offer-copy { flex: 1 1 15rem; }
+.therapist-session-kind { font-size: .72rem; font-weight: 600; color: #59694e; }
+.therapist-offer h4 { margin: .45rem 0 .6rem; font: 400 1.35rem/1.3 'DM Serif Display', Georgia, serif; letter-spacing: -.02em; }
+.therapist-offer p { margin: 0; font-size: .8rem; line-height: 1.5; color: var(--muted); }
+.therapist-slot-link { display: inline-flex; align-items: center; justify-content: space-between; gap: .8rem; min-height: 2.8rem; padding: .7rem .95rem; border: 1px solid var(--line); border-radius: 6px; font-size: .76rem; font-weight: 600; text-decoration: none; transition: background 180ms ease, color 180ms ease; }
+.therapist-slot-link:hover { background: var(--ink); color: var(--white); }
+.therapist-booking-note { margin: 1.2rem 0 0; max-width: 65ch; color: var(--muted); font-size: .78rem; line-height: 1.8; }
+.therapist-booking-state { padding: 2rem; border-radius: 12px; background: var(--white); }
+.therapist-booking-state h3 { font-size: 2rem; }
+.therapist-booking-state p { color: var(--muted); line-height: 1.8; }
+.therapist-others-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem 3rem; margin-bottom: 1.5rem; }
+.therapist-others-heading h2 { margin: 0; font-size: clamp(2rem, 3vw, 2.7rem); }
+.therapist-others-heading p { margin: 0; color: var(--muted); font-size: .85rem; line-height: 1.7; }
+.therapist-other-list { display: grid; grid-template-columns: 1fr 1fr; gap: 3rem; }
+.therapist-other { display: flex; align-items: center; gap: 1.5rem; padding-block: 1.8rem; border-block: 1px solid var(--line); text-decoration: none; }
+.therapist-other img { width: 100px; height: 120px; object-fit: cover; object-position: center 42%; border-radius: 6px; }
+.therapist-other h3 { font-size: 2rem; margin: 0 0 .3rem; }
+.therapist-other p { color: var(--muted); font-size: .78rem; line-height: 1.6; margin-bottom: .65rem; }
+.therapist-other span { display: flex; align-items: center; gap: .8rem; font-size: .8rem; font-weight: 600; }
+.therapist-other:hover span { text-decoration: underline; text-underline-offset: .3em; }
+.therapist-error { padding-block: 5rem; }
+.therapist-error h1 { font-size: clamp(2.5rem, 5vw, 4rem); }
+.therapist-error p { line-height: 1.8; }
+.therapist-error .therapist-inline-link { margin: 1rem; }
+@media (max-width: 900px) {
+  .therapist-hero-grid { gap: 2rem; }
+  .therapist-role { margin-bottom: 1.3rem; }
+  .therapist-portrait { aspect-ratio: 3/4; }
+  .therapist-other-list { gap: 1.5rem; }
+  .therapist-other { gap: 1rem; }
+  .therapist-other img { width: 80px; height: 105px; }
+}
+@media (max-width: 680px) {
+  .therapist-breadcrumb { padding-block: 1rem; }
+  .therapist-hero { padding-top: 0; padding-bottom: 2.5rem; }
+  .therapist-hero-grid { grid-template-columns: 1fr; gap: 1.8rem; }
+  .therapist-portrait { aspect-ratio: 5/4; border-radius: 10px 10px 64px 10px; }
+  .therapist-portrait img { object-position: 50% 38%; }
+  .therapist-portrait--virginie img { object-position: 50% 12%; }
+  .therapist-portrait--amy img { object-position: 50% 30%; }
+  .portrait-caption { bottom: 1rem; left: 1rem; font-size: .7rem; }
+  .therapist-intro { padding: 0; }
+  .therapist-intro h1 { font-size: 3.8rem; }
+  .therapist-opening { max-width: 28ch; font-size: 1.7rem; }
+  .therapist-bio { font-size: .95rem; }
+  .therapist-tags { margin-bottom: 1.5rem; }
+  .therapist-hero-actions .button { width: 100%; }
+  .therapist-section-nav > div { gap: 0 1.4rem; }
+  .therapist-section-nav a { padding-block: 1rem; font-size: .75rem; }
+  .therapist-section-nav a:last-child { margin-left: 0; }
+  .therapist-story-grid, .therapist-appointment-layout { grid-template-columns: 1fr; gap: 1.8rem; }
+  .therapist-story-heading > p, .therapist-booking-intro > p { max-width: 45ch; margin-bottom: 0; }
+  .therapist-page h2 { font-size: 2.6rem; }
+  .therapist-story-copy > p { font-size: 1rem; line-height: 1.85; }
+  .therapist-story-copy > p:first-child { font-size: 1.1rem; }
+  .therapist-offer-group > div { padding-inline: 1.2rem; }
+  .therapist-slot-link { width: 100%; }
+  .therapist-others-heading { display: block; }
+  .therapist-others-heading h2 { font-size: 2rem; margin-bottom: .8rem; }
+  .therapist-other-list { grid-template-columns: 1fr; gap: 0; }
+  .therapist-other + .therapist-other { border-top: 0; }
+}

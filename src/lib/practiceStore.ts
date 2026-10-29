@@ -8,7 +8,7 @@ export type PracticeBooking = { appointmentName: string; id: string; practitione
 export type BookableSlot = { practitionerId: string; practitionerSlug: string; startsAt: string; endsAt: string; dateLabel: string; timeLabel: string };
 export type AvailabilityException = { id: string; practitionerId: string; startsAt: string; endsAt: string; kind: 'available' | 'unavailable'; privateReason: string | null; createdAt: string };
 export type PractitionerProfile = {
-  id: string; slug: string; name: string; email: string; active: boolean; publicRole: string; bio: string;
+  id: string; slug: string; name: string; email: string; active: boolean; publicRole: string; bio: string; imageUrl: string;
   expertise: string[]; languages: string[]; appointmentDurationMinutes: number; minimumNoticeHours: number;
   bookingHorizonDays: number; requestsEnabled: boolean; profileUpdatedAt: string | null;
 };
@@ -30,7 +30,7 @@ const profileFromRow = (row: Row): PractitionerProfile => {
   const settings = settingsOf(row);
   return {
     id: String(row.id), slug: String(row.slug), name: String(row.name), email: '', active: Boolean(row.active),
-    publicRole: String(row.public_role || ''), bio: String(row.bio || ''), expertise: list(row.expertise), languages: list(row.languages),
+    publicRole: String(row.public_role || ''), bio: String(row.bio || ''), imageUrl: String(row.image_url || ''), expertise: list(row.expertise), languages: list(row.languages),
     appointmentDurationMinutes: Number(settings.appointment_duration_minutes ?? 50), minimumNoticeHours: Number(settings.minimum_notice_hours ?? 2),
     bookingHorizonDays: Number(settings.booking_horizon_days ?? 30), requestsEnabled: Boolean(settings.requests_enabled ?? true),
     profileUpdatedAt: row.updated_at ? String(row.updated_at) : null,
@@ -46,7 +46,7 @@ const bookingFromRow = (row: Row): PracticeBooking => ({
 // identity before every data operation, so no booking or availability data returns to SQLite.
 const resolvePractitioner = async (idOrSlug: string): Promise<PractitionerProfile | null> => {
   const slug = legacyPractitionerSlugs[idOrSlug] || (!uuidPattern.test(idOrSlug) ? idOrSlug : '');
-  const query = getSupabaseAdmin().from('practitioners').select('id,slug,name,active,public_role,bio,expertise,languages,updated_at,practitioner_settings(appointment_duration_minutes,minimum_notice_hours,booking_horizon_days,requests_enabled)');
+  const query = getSupabaseAdmin().from('practitioners').select('id,slug,name,active,public_role,bio,image_url,expertise,languages,updated_at,practitioner_settings(appointment_duration_minutes,minimum_notice_hours,booking_horizon_days,requests_enabled)');
   const { data, error } = slug ? await query.eq('slug', slug).maybeSingle() : await query.eq('id', idOrSlug).maybeSingle();
   fail(error);
   return data ? profileFromRow(data as Row) : null;

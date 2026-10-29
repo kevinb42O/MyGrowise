@@ -4,7 +4,7 @@
  if (!root) return;
  const $=s=>root.querySelector(s), $$=s=>[...root.querySelectorAll(s)];
  const heroTrack=$('[data-hero-track]'), heroStage=$('.hero-stage');
- const journey=$('.journey-track');
+ const experience=$('.experience');
  const stage=$('.experience-stage'), story=$('.story-track'), storyStage=$('.story-stage');
  const layer=Object.fromEntries($$('[data-layer]').map(e=>[e.dataset.layer,e]));
  const heroPortrait=$('.hero-introduction');
@@ -19,36 +19,12 @@
  let portalEnabled=false, portalLayout;
  let initialized=false;
  const hero=$('[data-hero]'), recognition=$('.recognition'), recognitionInner=$('.recognition-inner'), heroCue=$('.scroll-cue');
- const recognitionSurface=$('.recognition-surface'), recognitionLandscape=$('.recognition-landscape'), recognitionCaption=recognitionLandscape.querySelector('figcaption'), recognitionScenery=recognitionLandscape.querySelector('img'), recognitionLines=$$('.recognition-lines p'), recognitionClosing=$('.recognition-closing');
+ const recognitionSurface=$('.recognition-surface'), recognitionLandscape=$('.recognition-landscape'), recognitionCaption=recognitionLandscape.querySelector('figcaption'), recognitionScenery=recognitionLandscape.querySelector('img'), recognitionLines=$$('.recognition-lines li'), recognitionClosing=$('.recognition-closing');
  const recognitionLogo=$('.recognition-logo'), recognitionTitle=$('#recognition-title');
- let recognitionTitleOffset=0;
- let recognitionEntry=0;
  const insightImage=$('.insight-image'), insightPaper=$('.insight-paper'), insightCopy=$('.insight-copy');
- const insightHeading=$('.insight-heading'), insightShade=$('.insight-image-shade');
- const insightTitle=$('#insight-title'), lightTitle=insightTitle.cloneNode(true);
- lightTitle.removeAttribute('id');lightTitle.classList.add('insight-heading-light');lightTitle.setAttribute('aria-hidden','true');
- insightHeading.append(lightTitle);
+ const insightHeading=$('.insight-heading');
  const insightTitleLines=[...insightHeading.querySelectorAll('[data-insight-line]')];
  const insightDetails=[...insightCopy.children].filter(child=>child!==insightHeading);
- let titleLayout;
- // Two paint layers share one position: white over the photograph, brand ink over paper.
- function positionInsightTitle(material, mobile) {
-  const scaleStart=mobile?1.08:1.45;
-  const {finalX,finalY,width,height,stageWidth,stageHeight}=titleLayout;
-  const startX=(stageWidth-width*scaleStart)/2;
-  const startY=stageHeight*.5-height*scaleStart/2;
-  const x=(startX-finalX)*(1-material),y=(startY-finalY)*(1-material),scale=1+(scaleStart-1)*(1-material);
-  insightHeading.style.transform=`translate3d(${x}px,${y}px,0) scale(${scale})`;
-  titleLayout.lines.forEach(({element,width:lineWidth})=>{element.style.transform=`translateX(${(width-lineWidth)/2*(1-material)}px)`;});
-  const inset=mobile?[10,8,46,8]:[18,54,13,8];
-  const left=stageWidth*inset[3]*material/100,top=stageHeight*inset[0]*material/100;
-  const right=stageWidth*(1-inset[1]*material/100),bottom=stageHeight*(1-inset[2]*material/100);
-  const titleX=finalX+x,titleY=finalY+y;
-  // Clip at the photograph, allowing glyphs (descenders and italic overhangs)
-  // to paint outside the heading's line box while they are still over the image.
-  const clip=[(top-titleY)/scale,(titleX+width*scale-right)/scale,(titleY+height*scale-bottom)/scale,(left-titleX)/scale];
-  lightTitle.style.clipPath=`inset(${clip.map(value=>`${value}px`).join(' ')})`;
- }
 
  const modulePapers=$$('.module-paper'), moduleCopies=$$('.module-copy'), moduleButtons=$$('.module-nav button');
  const routeSelf=$('.route-self'), routeCare=$('.route-care'), storyCurtain=$('.story-curtain'), storyPortrait=$('.story-portrait'), storyFilm=$('.story-film');
@@ -73,31 +49,91 @@
  function composeScore(){
   let cursor=0;
   const beat=length=>{const start=cursor;cursor+=length;return {start,end:cursor};};
-  const intro=beat(portalEnabled?1.2:0),heroRead=beat(.65),recognitionEnter=beat(.35);
-  const recognitionRead=beat(.25),recognitionLift=beat(.3);
-  const thoughts=beat(1.35),recognitionClose=beat(.3);
+  const intro=beat(portalEnabled?1.2:0);
+  // Native sections need no reading holds or invisible handoff distance.
   const openingEnd=cursor;
-  const handoff=beat(.4),insightTitle=beat(.3),material=beat(.6),insightRead=beat(.8);
+  // Insight is already readable while entering through the native document.
+  // Once it reaches the stage, the very next scroll must move modules.
+  const insightRead=beat(0);
   const modulesEnter=beat(.4),modules=[];
   for(let i=0;i<Math.max(1,modulePapers.length);i++){
    const read=beat(.65),change=i<modulePapers.length-1?beat(.3):null;
    modules.push({read,change});
   }
   const routesEnter=beat(.45),routesRead=beat(.75);
-  return {intro,heroRead,recognitionEnter,recognitionRead,recognitionLift,thoughts,recognitionClose,openingEnd,handoff,insightTitle,material,insightRead,modulesEnter,modules,routesEnter,routesRead,total:cursor};
+  return {intro,openingEnd,insightRead,modulesEnter,modules,routesEnter,routesRead,total:cursor};
  }
  const progress=(position,beat)=>phase(position,beat.start,beat.end);
  const portalTravel=()=>score.intro.end*stageSize;
- const journeyOrigin=()=> (enabled?journey:heroTrack).getBoundingClientRect().top+scrollY-parseFloat(root.style.getPropertyValue('--top'));
- function frameRecognition(entry,release=0){
-  const frame=entry*(1-release);
-  // Keep the landscape softly visible over the gradient; the lily reveals it at full opacity.
-  set(recognitionLandscape,{clipPath:'none',opacity:1-.66*frame});
-  set(recognitionLogo,{opacity:frame});
-  set(recognitionCaption,{opacity:entry*(1-release)});
-  const landscapeScale=portalLayout?8/(8-(1-1/portalLayout.endScale)):1.12;
-  // Scaling keeps the photograph covering the stage, including on phones.
-  set(recognitionScenery,{transform:`scale(${landscapeScale})`});
+ const journeyOrigin=()=>heroTrack.getBoundingClientRect().top+scrollY-parseFloat(root.style.getPropertyValue('--top'));
+ const experienceOrigin=()=>experience.getBoundingClientRect().top+scrollY-parseFloat(root.style.getPropertyValue('--top'));
+ // Only the portal intro can autoplay, ending at the hero copy and portrait.
+ // Input never extends the release deadline; later chapters have no lock state.
+ let heroPlayback=null,heroAnimation=0,heroDeadline=0,touchStart=null;
+ function releaseHero(commit=true){
+  if(!heroPlayback)return;
+  const position=heroPlayback.position;
+  heroPlayback=null;
+  cancelAnimationFrame(heroAnimation);clearTimeout(heroDeadline);
+  if(commit)scrollTo({top:position,behavior:'instant'});
+  schedule();
+ }
+ function startHero(direction){
+  if(!initialized||!portalEnabled||reduced.matches||manualOff||document.documentElement.classList.contains('home-booting'))return false;
+  const origin=journeyOrigin(),position=(scrollY-origin)/stageSize,tolerance=1/stageSize;
+  const segments=[{start:0,end:score.intro.end,visualStart:0,duration:4000}];
+  const segment=(direction>0?segments:[...segments].reverse()).find(({start,end})=>direction>0
+   ?position>=start-tolerance&&position<end-tolerance
+   :position>start+tolerance&&position<=end+tolerance);
+  if(!segment)return false;
+  const {start,end,visualStart,duration}=segment;
+  const from=Math.max(visualStart,Math.min(end,position)),to=direction>0?end:visualStart;
+  const destination=origin+(direction>0?end:start)*stageSize;
+  const started=performance.now();
+  heroPlayback={anchor:scrollY,position:scrollY,destination};
+  const finish=()=>{
+   if(!heroPlayback)return;
+   heroPlayback.position=destination;releaseHero();
+  };
+  // A separate deadline also releases control when frames are delayed.
+  heroDeadline=setTimeout(finish,duration);
+  const tick=now=>{
+   if(!heroPlayback)return;
+   const elapsed=clamp((now-started)/duration);
+   heroPlayback.position=origin+(from+(to-from)*ease(elapsed))*stageSize;
+   update();
+   if(elapsed>=1)finish();else heroAnimation=requestAnimationFrame(tick);
+  };
+  heroAnimation=requestAnimationFrame(tick);
+  return true;
+ }
+ const nativeScrollControl=target=>target instanceof Element&&!!target.closest('input,textarea,select,[contenteditable],dialog,[role="dialog"]');
+ window.addEventListener('wheel',event=>{
+  if(event.ctrlKey||nativeScrollControl(event.target))return;
+  if(heroPlayback||(event.deltaY!==0&&startHero(Math.sign(event.deltaY))))event.preventDefault();
+ },{passive:false});
+ window.addEventListener('touchstart',event=>{touchStart=event.touches.length===1?event.touches[0].clientY:null;},{passive:true});
+ window.addEventListener('touchmove',event=>{
+  if(event.touches.length!==1||nativeScrollControl(event.target))return;
+  const delta=touchStart===null?0:touchStart-event.touches[0].clientY;
+  if(heroPlayback||(delta!==0&&startHero(Math.sign(delta))))event.preventDefault();
+ },{passive:false});
+ window.addEventListener('touchend',()=>{touchStart=null;},{passive:true});
+ window.addEventListener('touchcancel',()=>{touchStart=null;releaseHero();},{passive:true});
+ window.addEventListener('keydown',event=>{
+  if(event.key==='Escape'){releaseHero();return;}
+  if(nativeScrollControl(event.target)||event.target instanceof Element&&event.target.closest('a,button')||event.ctrlKey||event.metaKey||event.altKey)return;
+  const down=['ArrowDown','PageDown'].includes(event.key)||(event.key===' '&&!event.shiftKey);
+  const up=['ArrowUp','PageUp'].includes(event.key)||(event.key===' '&&event.shiftKey);
+  if((down||up)&&(heroPlayback||startHero(down?1:-1)))event.preventDefault();
+ });
+ window.addEventListener('pagehide',()=>releaseHero(false));
+ document.addEventListener('visibilitychange',()=>{if(document.hidden)releaseHero();});
+ function frameRecognition(){
+  // Recognition is a normal document section; its full composition is always visible.
+  set(recognitionLandscape,{clipPath:'none',opacity:.34});
+  set(recognitionLogo,{opacity:1});
+  set(recognitionScenery,{transform:'none'});
  }
  function measure(){
   if(!initialized)return;
@@ -135,11 +171,9 @@
   portalEnabled=heroEnabled&&portalImage.complete&&portalImage.naturalWidth>0;
   root.classList.toggle('portal-enhanced',portalEnabled);
   stageSize=available;
-  // Measure the untransformed heading so its opening position is centered in the stage.
-  recognitionTitleOffset=innerWidth<=760?0:available*.5-(recognitionInner.offsetTop+recognitionTitle.offsetTop+recognitionTitle.offsetHeight/2);
   score=composeScore();
-  root.style.setProperty('--journey-height',`${stageSize*(1+score.total)}px`);
-  root.style.setProperty('--opening-height',`${stageSize*(1+score.openingEnd)}px`);
+  root.style.setProperty('--journey-height',`${stageSize*(1+score.total-score.openingEnd)}px`);
+  root.style.setProperty('--opening-height',`${stageSize*(1+score.intro.end)}px`);
   root.style.setProperty('--story-height',`${stageSize*(1+storyScore.total)}px`);
   heroSkip.hidden=!portalEnabled;
   button.hidden=false;
@@ -156,7 +190,7 @@
    layer.modules.style.removeProperty('--module-background');
    [heroStage,stage,recognitionInner].forEach(e=>e.removeAttribute('style'));
    Object.values(layer).forEach(e=>{e.removeAttribute('style');e.inert=false;e.removeAttribute('aria-hidden');});
-   [insightImage,insightPaper,insightCopy,insightHeading,insightShade,lightTitle,...insightTitleLines,...insightDetails,routeSelf,routeCare,...modulePapers,...moduleCopies].forEach(e=>e.removeAttribute('style'));
+   [insightImage,insightPaper,insightCopy,insightHeading,...insightTitleLines,...insightDetails,routeSelf,routeCare,...modulePapers,...moduleCopies].forEach(e=>e.removeAttribute('style'));
    [...moduleCopies,...modulePapers].forEach(e=>{e.inert=false;e.removeAttribute('aria-hidden');});
    insightDetails.forEach(e=>{e.inert=false;e.removeAttribute('aria-hidden');});
    [storyPortrait,storyFilm,storyCurtain].forEach(e=>{e.removeAttribute('style');e.inert=false;e.removeAttribute('aria-hidden');});
@@ -182,7 +216,6 @@
    heroTitle.style.transformOrigin=`${centerX}px ${centerY}px`;
   }
   if (!storyEnabled) [storyPortrait,storyFilm,storyCurtain].forEach(e=>{e.removeAttribute('style');e.inert=false;e.removeAttribute('aria-hidden');});
-  if(enabled) titleLayout={finalX:insightCopy.offsetLeft+insightHeading.offsetLeft,finalY:insightCopy.offsetTop+insightHeading.offsetTop,width:insightHeading.offsetWidth,height:insightHeading.offsetHeight,lines:insightTitleLines.map(element=>({element,width:element.offsetWidth})),stageWidth:stage.clientWidth,stageHeight:stage.clientHeight};
   update();
  }
  function update(){
@@ -190,14 +223,13 @@
   if(!initialized)return;
   const top=parseFloat(getComputedStyle(root).getPropertyValue('--top'));
   const mobile=innerWidth<=600;
-  // Pure scroll position: stopping and reversing never starts a second clock.
-  const position=heroEnabled?(scrollY-journeyOrigin())/stageSize:0;
+  // Autoplay owns only the hero; every later scene uses native scroll position.
+  const heroPosition=heroEnabled?((heroPlayback?.position??scrollY)-journeyOrigin())/stageSize:0;
+  const position=enabled?(scrollY-experienceOrigin())/stageSize+score.openingEnd:0;
   const storyBounds=storyEnabled?story.getBoundingClientRect():null;
   if(heroEnabled){
-   const intro=portalEnabled?clamp(position/score.intro.end):1;
-   const enter=progress(position,score.recognitionEnter);
-   const exit=phase(position,score.recognitionEnter.start,score.recognitionEnter.start+.24);
-   const reading=clamp(position-score.thoughts.start,0,score.thoughts.end-score.thoughts.start);
+   const intro=portalEnabled?clamp(heroPosition/score.intro.end):1;
+   const exit=0;
    if(portalEnabled){
     const camera=phase(intro,.1,.80),land=phase(intro,.65,1);
     const scale=Math.exp(Math.log(portalLayout.endScale)*camera);
@@ -252,54 +284,35 @@
    const cueOpacity=(1-exit)*(portalEnabled?phase(intro,.90,1):1);
    set(heroCue,{opacity:cueOpacity});
    semantic(heroCue,cueOpacity>.98);
-   recognitionEntry=enter;
-   set(recognition,{opacity:phase(position,score.recognitionEnter.start,score.recognitionEnter.start+.20),visibility:enter>.001?'visible':'hidden',transform:'none'});
-   set(recognitionSurface,{clipPath:'none'});
-   frameRecognition(enter);
-   set(recognitionInner,{opacity:phase(position,score.recognitionEnter.start+.10,score.recognitionEnter.end),transform:'none',clipPath:innerWidth<=760?'none':`inset(0 ${clamp((61-67*enter)/54)*100}% 0 0)`});
-   const lift=progress(position,score.recognitionLift);
-   set(recognitionTitle,{transform:`translateY(${recognitionTitleOffset*(1-lift)}px)`});
-   const firstThought=innerWidth<=760
-    ?phase(position,score.recognitionEnter.start+.10,score.recognitionEnter.end)
-    :phase(position,score.recognitionLift.start+.06,score.recognitionLift.end);
-   const thoughtPosition=phase(reading,.32,.45)+phase(reading,.77,.90);
-   const closing=phase(position,score.thoughts.end-.15,score.thoughts.end);
-   const closingOpacity=innerWidth<=760?phase(closing,.5,1):closing;
-   recognitionLines.forEach((line,i)=>{
-    const distance=i-thoughtPosition,focus=1-phase(Math.abs(distance),.05,.95);
-    const opacity=focus*firstThought*(innerWidth<=760?1-phase(closing,0,.5):1);
-    // One thought takes the stage at a time; its colored phrase follows the lead.
-    line.style.setProperty('--phrase-offset',innerWidth<=760?'0px':`${(1-focus)*22}px`);
-    set(line,{opacity,transform:`translateY(calc(-50% + ${distance*(innerWidth<=760?40:64)+(1-firstThought)*24}px))`,filter:'none'});
-    semantic(line,opacity>.5);
+   frameRecognition();
+   // One composition: title, three recognisable experiences and next step.
+   // Visibility follows the whole section, so every sentence is readable together.
+   set(recognitionTitle,{transform:'none'});
+   recognitionLines.forEach(line=>{
+    set(line,{opacity:1,transform:'none',filter:'none'});
+    semantic(line,true);
    });
-   set(recognitionClosing,{opacity:closingOpacity,transform:`translateY(${12*(1-closing)}px)`});
-   semantic(recognitionClosing,closingOpacity>.98);
-   semantic(hero,exit<.98);semantic(recognition,enter>.01);
-   current=enter<.5?'hero':'recognition';
+   set(recognitionClosing,{opacity:1,transform:'none'});
+   semantic(recognitionClosing,true);
+   semantic(hero,true);semantic(recognition,true);
+   current=recognition.getBoundingClientRect().top<innerHeight*.5?'recognition':'hero';
   }
   if(enabled){
-   const handoff=progress(position,score.handoff);
-   const recognitionFade=1-phase(handoff,0,.75);
-   const landscapeReveal=phase(handoff,0,1);
-   const titleReveal=phase(handoff,.25,1);
-   set(recognitionInner,{opacity:recognitionFade*progress(position,score.recognitionEnter)});
-   frameRecognition(recognitionEntry,landscapeReveal);
-   set(stage,{opacity:landscapeReveal,pointerEvents:landscapeReveal>.98?'auto':'none'});
-   semantic(recognition,recognitionFade>.05&&position>=score.recognitionEnter.start);
-   const material=progress(position,score.material);
-   const moduleEnter=progress(position,score.modulesEnter),routeEnter=progress(position,score.routesEnter);
+   // The next photograph and heading are already painted as they enter the viewport.
+   const titleReveal=1;
+   set(stage,{opacity:1,pointerEvents:'auto'});
+   // Follow the input directly: an eased start would feel like another hold.
+   const moduleEnter=clamp((position-score.modulesEnter.start)/(score.modulesEnter.end-score.modulesEnter.start)),routeEnter=progress(position,score.routesEnter);
    set(layer.insight,{visibility:position<score.modulesEnter.end?'visible':'hidden'});
    const inset=mobile?[10,8,46,8]:[18,54,13,8];
-   set(insightImage,{inset:inset.map(n=>`${n*material}%`).join(' '),transform:`scale(${1-moduleEnter*.045})`,boxShadow:'none'});
-   const captionOpacity=phase(material,.65,1);
+   set(insightImage,{inset:inset.map(n=>`${n}%`).join(' '),transform:`scale(${1-moduleEnter*.045})`,boxShadow:'none'});
+   const captionOpacity=1;
    insightImage.style.setProperty('--insight-caption-opacity',String(captionOpacity));
    set(insightPaper,{opacity:captionOpacity,transform:'none'});
    set(insightCopy,{opacity:1-moduleEnter,transform:'none'});
-   positionInsightTitle(material,mobile);
+   set(insightHeading,{transform:'none'});
    set(insightHeading,{opacity:titleReveal});
-   set(insightShade,{opacity:1-phase(material,.72,1)});
-   const detailOpacity=phase(material,.58,.94);
+   const detailOpacity=1;
    insightDetails.forEach(detail=>{set(detail,{opacity:detailOpacity,transform:`translateY(${(1-detailOpacity)*18}px)`});semantic(detail,detailOpacity>.98&&moduleEnter<.98);});
    set(layer.modules,{visibility:position>=score.modulesEnter.start&&routeEnter<1?'visible':'hidden',transform:`translateY(${(1-moduleEnter)*100}%) scale(${1-routeEnter*.04})`,transformOrigin:'50% 50%'});
    let paperPhase=0;
@@ -332,7 +345,7 @@
    if(mobile){set(routeSelf,{inset:`0 0 ${routeEnter*50}% 0`});set(routeCare,{inset:`${100-routeEnter*50}% 0 0`});}
    else {set(routeSelf,{inset:`0 ${routeEnter*50}% 0 0`});set(routeCare,{inset:`0 0 0 ${100-routeEnter*50}%`});}
    const active=routeEnter>=1?'routes':moduleEnter>=1?'modules':'insight';
-   if(titleReveal>.1)current=active;
+   if(position>=score.openingEnd)current=active;
    semantic(layer.insight,titleReveal>.1&&moduleEnter<1);
    semantic(layer.modules,moduleEnter>=1&&routeEnter<1);
    semantic(layer.routes,routeEnter>=1);
@@ -352,9 +365,11 @@
  function go(id,immediate=false){
   if(!initialized)return;
   const target=document.getElementById(id);if(!target)return;
-  const anchors={welkom:0,herkenning:score.recognitionRead.start,inzicht:score.insightRead.start+.15,modules:score.modules[0].read.start+.15,routes:score.routesRead.start+.1};
-  if(heroEnabled&&(enabled||id==='welkom'||id==='herkenning')&&Object.hasOwn(anchors,id)){
-   scrollTo({top:journeyOrigin()+anchors[id]*stageSize,behavior:immediate||reduced.matches?'instant':'smooth'});
+  releaseHero();
+  const anchors={welkom:0,inzicht:score.insightRead.start,modules:score.modules[0].read.start+.15,routes:score.routesRead.start+.1};
+  if((id==='welkom'&&heroEnabled)||(enabled&&id!=='herkenning'&&Object.hasOwn(anchors,id))){
+   const top=id==='welkom'?journeyOrigin():experienceOrigin()+(anchors[id]-score.openingEnd)*stageSize;
+   scrollTo({top,behavior:immediate||reduced.matches?'instant':'smooth'});
   } else target.scrollIntoView({behavior:immediate||reduced.matches?'instant':'smooth',block:'start'});
  }
 
@@ -364,7 +379,7 @@
  }));
  moduleButtons.forEach((e,i)=>e.addEventListener('click',()=>{
   if(!enabled)return;
-  scrollTo({top:journeyOrigin()+(score.modules[i].read.start+.15)*stageSize,behavior:'smooth'});
+  scrollTo({top:experienceOrigin()+(score.modules[i].read.start+.15-score.openingEnd)*stageSize,behavior:'smooth'});
  }));
  // Keep the view control above the privacy notice, including wrapped mobile copy.
  const consent=document.querySelector('[data-analytics-consent]');
@@ -378,24 +393,29 @@
  }
  window.addEventListener('resize',positionViewControl,{passive:true});
  positionViewControl();
- button.addEventListener('click',()=>{const anchor={hero:'welkom',recognition:'herkenning',insight:'inzicht',modules:'modules',routes:'routes'}[current];manualOff=!manualOff;measure();go(anchor,true);});
+ button.addEventListener('click',()=>{const anchor={hero:'welkom',recognition:'herkenning',insight:'inzicht',modules:'modules',routes:'routes'}[current];releaseHero();manualOff=!manualOff;measure();go(anchor,true);});
  heroSkip.addEventListener('click',()=>{
+  releaseHero();
   scrollTo({top:journeyOrigin()+portalTravel(),behavior:'instant'});
   schedule();
   requestAnimationFrame(()=>{heroCopy.querySelector('.actions a').focus({preventScroll:true});});
  });
  portalImage.addEventListener('load',measure);
  portalImage.addEventListener('error',measure);
- window.addEventListener('scroll',schedule,{passive:true});
+ window.addEventListener('scroll',()=>{
+  if(heroPlayback&&scrollY!==heroPlayback.anchor)scrollTo({top:heroPlayback.anchor,behavior:'instant'});
+  schedule();
+ },{passive:true});
  let measuredWidth=innerWidth,measuredHeight=viewportMeasure.clientHeight;
  window.addEventListener('resize',()=>{
   const width=innerWidth,height=viewportMeasure.clientHeight;
   // Browser chrome and the soft keyboard do not change the CSS small viewport.
   if(width===measuredWidth&&height===measuredHeight)return;
+  releaseHero();
   const previousSize=stageSize,origin=journeyOrigin();
   const position=(scrollY-origin)/previousSize;
   const wasHero=heroEnabled,wasEnabled=enabled;
-  const inJourney=wasHero&&position>=0&&position<=(wasEnabled?score.total:score.openingEnd);
+  const inJourney=wasHero&&position>=0&&position<=score.intro.end;
   const animatedAnchor={hero:'welkom',recognition:'herkenning',insight:'inzicht',modules:'modules',routes:'routes'}[current];
   const readingLine=document.querySelector('.site-header').getBoundingClientRect().bottom+24;
   const documentAnchor=[['welkom',hero],['herkenning',recognition],['inzicht',layer.insight],['modules',layer.modules],['routes',layer.routes]].find(([,element])=>{
@@ -410,7 +430,7 @@
    go(readAnchor,true);
   }
  },{passive:true});
- reduced.addEventListener('change',measure);
+ reduced.addEventListener('change',()=>{releaseHero();measure();});
  window.addEventListener('popstate',()=>go(location.hash.slice(1)||'welkom',true));
  window.addEventListener('hashchange',()=>go(location.hash.slice(1),true));
  $('.video-play').addEventListener('click',()=>{
