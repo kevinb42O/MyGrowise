@@ -129,7 +129,9 @@ const socialImage = new URL(ogImage, siteOrigin);
             entry.target.classList.add('is-motion-visible');
             observer.unobserve(entry.target);
           });
-        }, { threshold: .12, rootMargin: '0px 0px -7% 0px' });
+        // Long text sections can never fit 12% of their height in the viewport.
+        // Reveal as soon as the section enters the visible area instead.
+        }, { threshold: 0, rootMargin: '0px 0px -7% 0px' });
         targets.forEach((target) => observer.observe(target));
       })();
     </script>
