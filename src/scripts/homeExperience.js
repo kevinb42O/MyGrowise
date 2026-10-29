@@ -263,16 +263,18 @@
     ?phase(position,score.recognitionEnter.start+.10,score.recognitionEnter.end)
     :phase(position,score.recognitionLift.start+.06,score.recognitionLift.end);
    const thoughtPosition=phase(reading,.32,.45)+phase(reading,.77,.90);
+   const closing=phase(position,score.thoughts.end-.15,score.thoughts.end);
+   const closingOpacity=innerWidth<=760?phase(closing,.5,1):closing;
    recognitionLines.forEach((line,i)=>{
     const distance=i-thoughtPosition,focus=1-phase(Math.abs(distance),.05,.95);
+    const opacity=focus*firstThought*(innerWidth<=760?1-phase(closing,0,.5):1);
     // One thought takes the stage at a time; its colored phrase follows the lead.
     line.style.setProperty('--phrase-offset',innerWidth<=760?'0px':`${(1-focus)*22}px`);
-    set(line,{opacity:focus*firstThought,transform:`translateY(calc(-50% + ${distance*(innerWidth<=760?40:64)+(1-firstThought)*24}px))`,filter:'none'});
-    semantic(line,focus*firstThought>.5);
+    set(line,{opacity,transform:`translateY(calc(-50% + ${distance*(innerWidth<=760?40:64)+(1-firstThought)*24}px))`,filter:'none'});
+    semantic(line,opacity>.5);
    });
-   const closing=phase(position,score.thoughts.end-.15,score.thoughts.end);
-   set(recognitionClosing,{opacity:closing,transform:`translateY(${12*(1-closing)}px)`});
-   semantic(recognitionClosing,closing>.98);
+   set(recognitionClosing,{opacity:closingOpacity,transform:`translateY(${12*(1-closing)}px)`});
+   semantic(recognitionClosing,closingOpacity>.98);
    semantic(hero,exit<.98);semantic(recognition,enter>.01);
    current=enter<.5?'hero':'recognition';
   }

@@ -3322,3 +3322,19 @@
   .home-experience.enhanced .module-copy > p { font-size: 14px; line-height: 1.55; }
   .home-experience.enhanced .module-copy .availability { font-size: 11px; }
 }
+
+/* A single reading column on phones: a quiet mark, heading, then the thought. */
+@media (max-width: 760px) {
+  .home-experience.hero-enhanced .recognition-logo {
+    top: calc(50% - 162px);
+    left: 7%;
+    width: 64px;
+    transform: none;
+  }
+  .home-experience.hero-enhanced .recognition-inner { inset: 0 7%; padding-top: 48px; justify-content: center; }
+  .home-experience.hero-enhanced .recognition h2 { margin-bottom: 24px; }
+  .home-experience.hero-enhanced .recognition-lines { flex: 0 0 auto; height: 144px; min-height: 144px; }
+  .home-experience.hero-enhanced .recognition-lead { max-width: 30ch; margin-bottom: 8px; font-size: 16px; line-height: 1.5; }
+  .home-experience.hero-enhanced .recognition-emphasis { max-width: none; font-size: clamp(30px, 8.8vw, 38px); line-height: 1.12; }
+  .home-experience.hero-enhanced .recognition-closing { position: absolute; top: calc(50% + 24px); left: 0; right: 0; margin: 0; font-size: 13px; line-height: 1.6; }
+}

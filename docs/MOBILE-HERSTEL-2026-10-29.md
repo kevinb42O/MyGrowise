@@ -82,3 +82,13 @@ De eerste compacte compositie maakte het portret te klein en liet de naam er sma
 Op zes viewporthoogtes van 601–724 px bleef het portret onder de tekst/acties, de naam naast het beeld en de vervolgactie onder beide. Er was geen horizontale overflow. Zie [nieuwe landing](audits/mobile-2026-10-29/after/iphone-mini-landing.png) en [landingsmetingen](audits/mobile-2026-10-29/after/iphone-mini-landing-checks.json).
 
 De tweede fysieke screenshot liet zien dat de titel tijdens de zoom werd afgesneden. De oorzaak was de extra 65% groei ná de eerste breedtepassing. Die groei wordt nu op telefoonbreedtes begrensd op 88% van de stagebreedte; desktop behoudt zijn bestaande groei. In achttien echte Chromium-scrollstappen van 0 tot 680 px bleven beide tekstregels binnen de 375px-viewport. Een aanvullende regressietest controleert de titelmaat op 101 animatieposities voor vier telefoonbreedtes en bewaakt de ongewijzigde desktopgroei. Zie [titel op zijn grootste mobiele schaal](audits/mobile-2026-10-29/after/iphone-mini-title-fit.png) en [scrollmetingen](audits/mobile-2026-10-29/after/iphone-mini-title-checks.json).
+
+## Mobiele balans van de herkenningssectie
+
+De herkenningssectie heeft op maximaal 760 px breed een centrale leesgroep: een kleiner, links uitgelijnd leliemerk, de bestaande titel en een sterker benadrukte wisselende zin. De afsluiting gebruikt op mobiel hetzelfde leesvlak als de laatste zin; zij reserveert niet langer een onzichtbare extra tekststrook onderaan. De laatste zin verdwijnt voordat de afsluitende tekst verschijnt, zodat teksten elkaar niet overlappen. Boven 760 px blijven de bestaande layout en het bestaande afsluitgedrag behouden.
+
+De drie gedachten en de afsluiting zijn op 375×664 volledig zichtbaar gecontroleerd. Formaatcontroles op 320×640, 360×664, 375×601, 375×724, 390×844 en 430×932 toonden geen horizontale overflow of te hoge herkenningscontainer. Op 1440×813 waren de gemeten positie en afmetingen van leliemerk en tekstkolom, en de titelgrootte, exact gelijk aan de referentie van vóór deze aanpassing.
+
+Twee regressietests bewaken de mobiele tekstwissel en het ongewijzigde desktopgedrag. Alle 71 tests en `npm run check` slagen. De broncontrole gaf geen detectorbevindingen. Deze controles zijn uitgevoerd in Chromium-emulatie; Kevin beoordeelt het visuele resultaat op zijn eigen iPhone.
+
+Bewijs: [eerste gedachte](audits/mobile-2026-10-29/after/recognition-first-375.png), [langste gedachte](audits/mobile-2026-10-29/after/recognition-second-375.png), [derde gedachte](audits/mobile-2026-10-29/after/recognition-third-375.png), [afsluiting](audits/mobile-2026-10-29/after/recognition-closing-375.png) en [metingen inclusief desktopvergelijking](audits/mobile-2026-10-29/after/recognition-checks.json).

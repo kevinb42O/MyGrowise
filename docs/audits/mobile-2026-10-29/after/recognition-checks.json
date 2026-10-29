@@ -1,0 +1,414 @@
+{
+  "steps": [
+    {
+      "name": "first",
+      "c": "home-experience hero-enhanced portal-enhanced compact-opening",
+      "h": 664,
+      "logo": {
+        "bottom": 258.9140625,
+        "height": 48.4140625,
+        "left": 26.25,
+        "right": 90.25,
+        "top": 210.5,
+        "width": 64,
+        "x": 26.25,
+        "y": 210.5
+      },
+      "overflow": false,
+      "title": {
+        "bottom": 342.734375,
+        "height": 60.46875,
+        "left": 26.25,
+        "right": 348.75,
+        "top": 282.265625,
+        "width": 322.5,
+        "x": 26.25,
+        "y": 282.265625
+      },
+      "visible": [
+        {
+          "hidden": "false",
+          "rect": {
+            "bottom": 473.2109375,
+            "height": 68.953125,
+            "left": 26.25,
+            "right": 348.75,
+            "top": 404.2578125,
+            "width": 322.5,
+            "x": 26.25,
+            "y": 404.2578125
+          },
+          "t": "Je hoofd blijft doorgaan, ook wanneer je lichaam moe is."
+        }
+      ],
+      "w": 375,
+      "y": 1282.5
+    },
+    {
+      "name": "second",
+      "c": "home-experience hero-enhanced portal-enhanced compact-opening",
+      "h": 664,
+      "logo": {
+        "bottom": 258.9140625,
+        "height": 48.4140625,
+        "left": 26.25,
+        "right": 90.25,
+        "top": 210.5,
+        "width": 64,
+        "x": 26.25,
+        "y": 210.5
+      },
+      "overflow": false,
+      "title": {
+        "bottom": 342.734375,
+        "height": 60.46875,
+        "left": 26.25,
+        "right": 348.75,
+        "top": 282.265625,
+        "width": 322.5,
+        "x": 26.25,
+        "y": 282.265625
+      },
+      "visible": [
+        {
+          "hidden": "false",
+          "rect": {
+            "bottom": 491.6875,
+            "height": 105.90625,
+            "left": 26.25,
+            "right": 348.75,
+            "top": 385.78125,
+            "width": 322.5,
+            "x": 26.25,
+            "y": 385.78125
+          },
+          "t": "Je merkt dat emoties sneller of intenser binnenkomen."
+        }
+      ],
+      "w": 375,
+      "y": 1924
+    },
+    {
+      "name": "third",
+      "c": "home-experience hero-enhanced portal-enhanced compact-opening",
+      "h": 664,
+      "logo": {
+        "bottom": 258.9140625,
+        "height": 48.4140625,
+        "left": 26.25,
+        "right": 90.25,
+        "top": 210.5,
+        "width": 64,
+        "x": 26.25,
+        "y": 210.5
+      },
+      "overflow": false,
+      "title": {
+        "bottom": 342.734375,
+        "height": 60.46875,
+        "left": 26.25,
+        "right": 348.75,
+        "top": 282.265625,
+        "width": 322.5,
+        "x": 26.25,
+        "y": 282.265625
+      },
+      "visible": [
+        {
+          "hidden": "false",
+          "rect": {
+            "bottom": 473.2109375,
+            "height": 68.953125,
+            "left": 26.25,
+            "right": 348.75,
+            "top": 404.2578125,
+            "width": 322.5,
+            "x": 26.25,
+            "y": 404.2578125
+          },
+          "t": "Je functioneert nog, maar het kost steeds meer energie."
+        }
+      ],
+      "w": 375,
+      "y": 2215
+    },
+    {
+      "name": "closing",
+      "c": "home-experience hero-enhanced portal-enhanced compact-opening",
+      "h": 664,
+      "logo": {
+        "bottom": 258.9140625,
+        "height": 48.4140625,
+        "left": 26.25,
+        "right": 90.25,
+        "top": 210.5,
+        "width": 64,
+        "x": 26.25,
+        "y": 210.5
+      },
+      "overflow": false,
+      "title": {
+        "bottom": 342.734375,
+        "height": 60.46875,
+        "left": 26.25,
+        "right": 348.75,
+        "top": 282.265625,
+        "width": 322.5,
+        "x": 26.25,
+        "y": 282.265625
+      },
+      "visible": [
+        {
+          "hidden": "false",
+          "rect": {
+            "bottom": 510.890625,
+            "height": 114.390625,
+            "left": 26.25,
+            "right": 293.0078125,
+            "top": 396.5,
+            "width": 266.7578125,
+            "x": 26.25,
+            "y": 396.5
+          },
+          "t": "Je hoeft nog niet precies te weten wat je nodig hebt.Eerst begrijpen wat er gebeurt.Ontdek wat inzicht je kan brengen "
+        }
+      ],
+      "w": 375,
+      "y": 2402
+    }
+  ],
+  "sizes": [
+    {
+      "c": "home-experience hero-enhanced portal-enhanced compact-opening",
+      "closing": {
+        "bottom": 510.890625,
+        "height": 114.390625,
+        "left": 22.3984375,
+        "right": 289.15625,
+        "top": 396.5,
+        "width": 266.7578125,
+        "x": 22.3984375,
+        "y": 396.5
+      },
+      "h": 640,
+      "inner": {
+        "client": 559,
+        "scroll": 559
+      },
+      "sw": 320,
+      "title": {
+        "bottom": 330.734375,
+        "height": 60.46875,
+        "left": 22.3984375,
+        "right": 297.6015625,
+        "top": 270.265625,
+        "width": 275.203125,
+        "x": 22.3984375,
+        "y": 270.265625
+      },
+      "w": 320
+    },
+    {
+      "c": "home-experience hero-enhanced portal-enhanced compact-opening",
+      "closing": {
+        "bottom": 522.890625,
+        "height": 114.390625,
+        "left": 25.1953125,
+        "right": 291.953125,
+        "top": 408.5,
+        "width": 266.7578125,
+        "x": 25.1953125,
+        "y": 408.5
+      },
+      "h": 664,
+      "inner": {
+        "client": 583,
+        "scroll": 583
+      },
+      "sw": 360,
+      "title": {
+        "bottom": 342.734375,
+        "height": 60.46875,
+        "left": 25.1953125,
+        "right": 334.8046875,
+        "top": 282.265625,
+        "width": 309.609375,
+        "x": 25.1953125,
+        "y": 282.265625
+      },
+      "w": 360
+    },
+    {
+      "c": "home-experience hero-enhanced portal-enhanced compact-opening",
+      "closing": {
+        "bottom": 491.390625,
+        "height": 114.390625,
+        "left": 26.25,
+        "right": 293.0078125,
+        "top": 377,
+        "width": 266.7578125,
+        "x": 26.25,
+        "y": 377
+      },
+      "h": 601,
+      "inner": {
+        "client": 520,
+        "scroll": 520
+      },
+      "sw": 375,
+      "title": {
+        "bottom": 311.234375,
+        "height": 60.46875,
+        "left": 26.25,
+        "right": 348.75,
+        "top": 250.765625,
+        "width": 322.5,
+        "x": 26.25,
+        "y": 250.765625
+      },
+      "w": 375
+    },
+    {
+      "c": "home-experience hero-enhanced portal-enhanced compact-opening",
+      "closing": {
+        "bottom": 552.890625,
+        "height": 114.390625,
+        "left": 26.25,
+        "right": 293.0078125,
+        "top": 438.5,
+        "width": 266.7578125,
+        "x": 26.25,
+        "y": 438.5
+      },
+      "h": 724,
+      "inner": {
+        "client": 643,
+        "scroll": 643
+      },
+      "sw": 375,
+      "title": {
+        "bottom": 372.734375,
+        "height": 60.46875,
+        "left": 26.25,
+        "right": 348.75,
+        "top": 312.265625,
+        "width": 322.5,
+        "x": 26.25,
+        "y": 312.265625
+      },
+      "w": 375
+    },
+    {
+      "c": "home-experience hero-enhanced portal-enhanced enhanced story-enhanced",
+      "closing": {
+        "bottom": 612.890625,
+        "height": 114.390625,
+        "left": 27.296875,
+        "right": 294.0546875,
+        "top": 498.5,
+        "width": 266.7578125,
+        "x": 27.296875,
+        "y": 498.5
+      },
+      "h": 844,
+      "inner": {
+        "client": 763,
+        "scroll": 763
+      },
+      "sw": 390,
+      "title": {
+        "bottom": 433.6640625,
+        "height": 62.328125,
+        "left": 27.296875,
+        "right": 362.703125,
+        "top": 371.3359375,
+        "width": 335.40625,
+        "x": 27.296875,
+        "y": 371.3359375
+      },
+      "w": 390
+    },
+    {
+      "c": "home-experience hero-enhanced portal-enhanced enhanced story-enhanced",
+      "closing": {
+        "bottom": 656.890625,
+        "height": 114.390625,
+        "left": 30.09375,
+        "right": 296.8515625,
+        "top": 542.5,
+        "width": 266.7578125,
+        "x": 30.09375,
+        "y": 542.5
+      },
+      "h": 932,
+      "inner": {
+        "client": 851,
+        "scroll": 851
+      },
+      "sw": 430,
+      "title": {
+        "bottom": 480.859375,
+        "height": 68.71875,
+        "left": 30.09375,
+        "right": 399.90625,
+        "top": 412.140625,
+        "width": 369.8125,
+        "x": 30.09375,
+        "y": 412.140625
+      },
+      "w": 430
+    }
+  ],
+  "desktopViewport": {
+    "width": 1440,
+    "height": 813
+  },
+  "desktopBefore": {
+    "inner": {
+      "bottom": 747.125,
+      "height": 592.9296875,
+      "left": 100.796875,
+      "right": 878.390625,
+      "top": 154.1953125,
+      "width": 777.59375,
+      "x": 100.796875,
+      "y": 154.1953125
+    },
+    "logo": {
+      "bottom": 648.5390625,
+      "height": 403.078125,
+      "left": 864.0078125,
+      "right": 1396.8046875,
+      "top": 245.4609375,
+      "width": 532.796875,
+      "x": 864.0078125,
+      "y": 245.4609375
+    },
+    "title": "64.8px",
+    "w": 1440
+  },
+  "desktopAfter": {
+    "inner": {
+      "bottom": 747.125,
+      "height": 592.9296875,
+      "left": 100.796875,
+      "right": 878.390625,
+      "top": 154.1953125,
+      "width": 777.59375,
+      "x": 100.796875,
+      "y": 154.1953125
+    },
+    "logo": {
+      "bottom": 648.5390625,
+      "height": 403.078125,
+      "left": 864.0078125,
+      "right": 1396.8046875,
+      "top": 245.4609375,
+      "width": 532.796875,
+      "x": 864.0078125,
+      "y": 245.4609375
+    },
+    "title": "64.8px",
+    "w": 1440
+  }
+}
