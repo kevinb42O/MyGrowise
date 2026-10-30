@@ -4,7 +4,7 @@ Uitgewerkt en gecontroleerd op 30 oktober 2026.
 
 ## Vormgeving en inhoud
 
-`src/lib/emailTemplate.ts` is de gedeelde HTML-basis voor alle applicatiemails. Opmaak: bestaand lelie-logo, donkergroen, warm papier, roze afsluitvlak, duidelijke titel, relevante gegevens en één primaire actie. Dynamische tekst en attributen worden ge-escaped; actieknoppen accepteren uitsluitend HTTPS, lokale HTTP-testlinks of de expliciete Supabase-providerplaceholder. Er zijn geen trackingpixels, externe webfonts of scripts.
+`src/lib/emailTemplate.ts` is de gedeelde HTML-basis voor alle applicatiemails. Opmaak: bestaand lelie-logo, donkergroen, warm papier, gebroken witte footer met een dunne scheidingslijn en donkergroene tekst, duidelijke titel, relevante gegevens en één primaire actie. Dynamische tekst en attributen worden ge-escaped; actieknoppen accepteren uitsluitend HTTPS, lokale HTTP-testlinks of de expliciete Supabase-providerplaceholder. Er zijn geen trackingpixels, externe webfonts of scripts.
 
 De opmaak gebruikt presentatietabellen en inline stijlen, met een vaste Outlook-breedte en mobiele aanpassingen. Arial/Helvetica voor leestekst en Georgia voor titels zijn bewust gekozen voor e-mailcompatibiliteit. De mechanische Impeccable-controle vergelijkt ook met de uitsluitend voor `/startpunt` geschreven DESIGN.md en meldt daarom onder meer afwijkende e-maillettergroottes, Arial en de bestaande warme kleurkeuze. Deze meldingen zijn beoordeeld als contextgebonden ontwerpkeuzes, niet als bewijs van een defecte mail.
 
@@ -41,3 +41,6 @@ Databasecontrole: de migratieregistratie is rechtstreeks met alle lokale SQL-bes
 De zes Supabase-accounttemplates zijn live opgeslagen. De applicatieaanpassingen voor afspraken, aankopen, contact en support zijn op verzoek van Kevin samen met de gedeelde renderer vastgelegd in fixcommit `29d4b87` en naar `main` gepusht. De consolidatieronde bevestigde opnieuw 99 tests, TypeScript, build, nul dependencykwetsbaarheden en een schoon release-artifact (1685 bestanden). De Vercel-uitrol en echte aflevering van deze nieuwe HTML-versie zijn in die ronde niet afzonderlijk geverifieerd. De mailwijziging voegt geen dependency, GitHub Actions-workflow of scheduler toe.
 
 Lokale voorbeelden staan onder `output/email-preview/`. Deze map wordt niet meegecommit of gepubliceerd. De voorbeelden bevatten uitsluitend fictieve gegevens.
+
+
+30 oktober 2026 — Op verzoek van Kevin is het roze afsluitvlak verwijderd uit de gedeelde renderer en de zes Auth-templates. De live accounttemplates zijn via de bestaande Supabase-beheersessie bijgewerkt; de laatste template is na herladen in Preview gecontroleerd. Mailtests (5), TypeScript, productiebuild en artifactcontrole (1685 bestanden) slagen. Er zijn voor deze kleurwijziging geen nieuwe mails verstuurd.

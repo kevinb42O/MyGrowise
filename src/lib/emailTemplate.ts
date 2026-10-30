@@ -40,7 +40,7 @@ ${actionUrl?`<table role="presentation" cellpadding="0" cellspacing="0" border="
 ${content.sections?.map(section=>`<h2 style="margin:30px 0 12px;font-size:17px;line-height:1.4;color:#173d35;">${escapeEmailHtml(section.title)}</h2>${paragraph(section.body)}`).join('')||''}
 ${content.note?`<p style="margin:28px 0 0;padding-top:22px;border-top:1px solid #e5e4d9;font-size:13px;line-height:1.7;color:#526d63;">${escapeEmailHtml(content.note)}</p>`:''}
 <p style="margin:28px 0 0;font-size:15px;line-height:1.7;color:#173d35;">Met warme groet,<br><strong>Het MyGrowise-team</strong></p></td></tr>
-<tr><td style="padding:22px 40px;background:#f3c9c8;color:#523c3d;font-size:13px;line-height:1.7;">Een helder vertrekpunt. Ruimte om te groeien.<br><a href="https://mygrowise.be" style="color:#173d35;text-decoration:underline;">mygrowise.be</a> &nbsp;·&nbsp; <a href="mailto:info@mygrowise.be" style="color:#173d35;text-decoration:underline;">info@mygrowise.be</a></td></tr></table>
+<tr><td style="padding:22px 40px;background:#fffdf9;border-top:1px solid #e5e4d9;color:#405c53;font-size:13px;line-height:1.7;">Een helder vertrekpunt. Ruimte om te groeien.<br><a href="https://mygrowise.be" style="color:#173d35;text-decoration:underline;">mygrowise.be</a> &nbsp;·&nbsp; <a href="mailto:info@mygrowise.be" style="color:#173d35;text-decoration:underline;">info@mygrowise.be</a></td></tr></table>
 <!--[if mso]></td></tr></table><![endif]-->
 <p style="max-width:540px;margin:20px auto 0;font-size:11px;line-height:1.7;color:#526d63;">MyGrowise · I-Transform SLU<br>Deel geen diagnoses, vragenlijstantwoorden of sessieverslagen via gewone e-mail.</p>
 </td></tr></table></body></html>`;
