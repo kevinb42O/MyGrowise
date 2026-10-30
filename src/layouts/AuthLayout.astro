@@ -1,0 +1,32 @@
+---
+import PurchaseLayout from './PurchaseLayout.astro';
+import '../styles/auth.css';
+interface Props { title: string; heading: string; intro: string; compact?: boolean }
+const {title,heading,intro,compact=false}=Astro.props;
+---
+<PurchaseLayout title={title.replace(/ — (Mijn )?MyGrowise$/,'')} access>
+  <div class:list={['auth-shell',{'auth-shell--compact':compact}]}>
+    <aside class="auth-welcome" aria-label="Mijn MyGrowise"><div><p class="auth-welcome-title">Een plek om <br /><em>verder te groeien.</em></p><p>Je eigen rustige omgeving voor je aankopen, afspraken en volgende stappen.</p><a href="/aankopen/toegang">Alleen je aankopen openen? <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h16m-6-6 6 6-6 6"/></svg></a><small>Dat kan ook zonder account.</small></div><img src="/images/modules/zelfreflectie-hero-v2.webp" alt="" width="1120" height="1400" /></aside>
+    <section class="auth-panel" aria-labelledby="auth-title"><div class="auth-inner"><header><h1 id="auth-title">{heading}</h1><p>{intro}</p></header><slot /></div></section>
+  </div>
+</PurchaseLayout>
+<script>
+  document.querySelectorAll<HTMLButtonElement>('[data-auth-toggle]').forEach(button=>{
+    button.addEventListener('click',()=>{
+      const input=document.getElementById(button.dataset.authToggle!) as HTMLInputElement;
+      const visible=input.type==='password';input.type=visible?'text':'password';
+      button.textContent=visible?'Verberg':'Toon';button.setAttribute('aria-pressed',String(visible));
+      button.setAttribute('aria-label',`${visible?'Verberg':'Toon'} ${input.id.includes('confirm')?'herhaald wachtwoord':'wachtwoord'}`);
+    });
+  });
+  document.querySelectorAll<HTMLFormElement>('[data-auth-form]').forEach(form=>{
+    const password=form.querySelector<HTMLInputElement>('[name="password"]');
+    const confirm=form.querySelector<HTMLInputElement>('[name="confirm_password"]');
+    const validate=()=>{if(confirm)confirm.setCustomValidity(confirm.value&&password?.value!==confirm.value?'Vul twee gelijke wachtwoorden in.':'');};
+    password?.addEventListener('input',validate);confirm?.addEventListener('input',validate);
+    const button=form.querySelector<HTMLButtonElement>('button[type="submit"]');
+    if(!button)return;const label=button.innerHTML;
+    form.addEventListener('submit',()=>{button.disabled=true;button.textContent='Even geduld…';});
+    window.addEventListener('pageshow',()=>{button.disabled=false;button.innerHTML=label;});
+  });
+</script>

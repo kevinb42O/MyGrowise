@@ -52,3 +52,7 @@
 - [Releaserunbook](RELEASE-RUNBOOK.md), [besluiten](DECISIONS.md) en [modulebeheer](MODULES-RUNBOOK.md) — operationele procedure en open keuzes.
 
 Deze controle actualiseert het masterplan en de direct gekoppelde statusverwijzingen. Oudere onderwerpplannen blijven gedateerde specificaties; zij vormen geen nieuwe volledige productieaudit.
+
+## Aanvullende lokale afwerking — 30 oktober 2026
+
+Na de bovenstaande consolidatie zijn de vijf accounttoegangspagina's gelijkgetrokken met Mijn aankopen en zijn Contact, Prijzen en Over ons afgewerkt. De lopende checkoutvernieuwing is behouden. Wachtwoordherstel bewaart nu de oorspronkelijke vervolgroute. 102 unit-/regressietests, 78 commerce-HTTP-controles, 65 teruggedraaide databasecontroles en 30 gerichte account-/publieke HTTP-controles slagen. Kevin bevestigde ontvangst van de echte wachtwoordherstel- en aankooptoegangsmail. Registratie/invitatie met een nieuw adres, echte bankontvangst en uitrol van deze nieuwe lokale code blijven afzonderlijke grenzen. Modules zijn op verzoek niet aangepakt. Zie [uitvoering en bewijsgrenzen](AFWERKING-ACCOUNT-EN-PUBLIEKE-PAGINAS.md).

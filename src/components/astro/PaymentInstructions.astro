@@ -1,0 +1,64 @@
+---
+import type { WiseManualDetails } from '../../lib/wiseCheckout';
+import { money } from '../../lib/catalog/pricing';
+interface Props { details: WiseManualDetails; total: number; reference: string; qr: string | null }
+const { details, total, reference, qr } = Astro.props;
+const fields = [
+  { label: 'Ontvanger', value: details.accountName },
+  { label: 'IBAN', value: details.iban.match(/.{1,4}/g)?.join(' ') || details.iban, copy: details.iban },
+  ...(details.bic ? [{ label: 'BIC', value: details.bic }] : []),
+  { label: 'Bedrag', value: money(total), copy: (total / 100).toFixed(2).replace('.', ',') },
+  { label: 'Mededeling', value: reference, copy: reference },
+];
+---
+<section class="payment-panel" aria-labelledby="payment-heading">
+  <div class="payment-heading"><h2 id="payment-heading">Betaal via overschrijving</h2><p>Neem deze gegevens over in je bankapp.</p></div>
+  <dl class="payment-fields">
+    {fields.map(field => <div class="payment-field"><dt>{field.label}</dt><dd><span>{field.value}</span>{field.copy && <button type="button" data-payment-copy={field.copy} aria-label={`${field.label} kopiëren`} hidden><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><rect x="8" y="8" width="12" height="13" rx="2"/><path d="M15 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3"/></svg><span>Kopieer</span></button>}</dd></div>)}
+  </dl>
+  <p class="payment-reference-note">Vermeld de mededeling precies zoals hierboven. Zo kunnen we je betaling aan je bestelling koppelen.</p>
+  {details.accountName === 'iTransform SLU' && <p class="payment-recipient-note">Je betaalt aan <strong>iTransform SLU</strong>, de onderneming achter MyGrowise. Daarom zie je deze naam als ontvanger.</p>}
+  {qr && <details class="payment-qr"><summary>Liever scannen met je bankapp?</summary><div class="payment-qr-content"><img src={qr} alt="SEPA QR-code met de hierboven getoonde overschrijvingsgegevens" width="180" height="180"/><div><h3>Scan de overschrijvingsgegevens</h3><p>Open de scanner in je bankapp. De QR-code vult de ontvanger, het bedrag en de mededeling in. Controleer alles voordat je de overschrijving bevestigt.</p><p>Ondersteunt je bankapp deze SEPA QR-code niet? Neem dan de gegevens hierboven over.</p></div></div></details>}
+  <p class="payment-copy-status" role="status" aria-live="polite" aria-atomic="true"></p>
+</section>
+<script>
+  const feedback = document.querySelector<HTMLElement>('.payment-copy-status');
+  if (navigator.clipboard?.writeText) {
+    document.querySelectorAll<HTMLButtonElement>('[data-payment-copy]').forEach(button => {
+      button.hidden = false;
+      button.addEventListener('click', async () => {
+        try {
+          await navigator.clipboard.writeText(button.dataset.paymentCopy || '');
+          if (feedback) feedback.textContent = `${button.getAttribute('aria-label')?.replace(' kopiëren', '')} gekopieerd.`;
+        } catch {
+          if (feedback) feedback.textContent = 'Kopiëren lukt niet. Selecteer de gegevens en kopieer ze handmatig.';
+        }
+      });
+    });
+  }
+</script>
+<style>
+  .payment-panel{background:var(--white);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+  .payment-heading{padding:1.5rem 1.75rem 1.25rem}
+  .payment-heading h2{font:600 1.2rem/1.4 'DM Sans',sans-serif;letter-spacing:0;margin:0 0 .4rem}
+  .payment-heading p,.payment-reference-note,.payment-recipient-note,.payment-qr-content p{font-size:.875rem;line-height:1.7;color:var(--muted);margin:0}
+  .payment-fields{margin:0;padding:0 1.75rem}
+  .payment-field{display:grid;grid-template-columns:7rem minmax(0,1fr);gap:1rem;align-items:center;border-top:1px solid var(--line);padding:.65rem 0;min-height:3.6rem;font-size:.9375rem}
+  .payment-field dt{color:var(--muted)}
+  .payment-field dd{display:flex;align-items:center;justify-content:space-between;gap:.75rem;margin:0;min-width:0;font-weight:600;font-variant-numeric:tabular-nums}
+  .payment-field dd>span{overflow-wrap:anywhere;user-select:all}
+  button{display:inline-flex;align-items:center;justify-content:center;gap:.4rem;min-height:44px;flex-shrink:0;padding:.4rem .6rem;background:transparent;border:1px solid var(--line);border-radius:6px;color:var(--ink);font-size:.75rem;cursor:pointer}
+  button[hidden]{display:none}button:hover{background:var(--cream)}button:active{background:var(--pink-soft)}
+  .payment-reference-note{padding:.75rem 1.75rem 1.25rem}
+  .payment-recipient-note{padding:1rem 1.75rem;background:var(--purchase-sage, #e8eee7);color:var(--ink)}
+  .payment-qr{border-top:1px solid var(--line);padding:0 1.75rem}
+  summary{padding:1.1rem 0;cursor:pointer;font-size:.875rem;font-weight:600;min-height:48px;text-underline-offset:4px}
+  summary:hover{text-decoration:underline}
+  .payment-qr-content{display:grid;grid-template-columns:180px minmax(0,1fr);gap:1.25rem;align-items:start;padding:.25rem 0 1.5rem}
+  .payment-qr-content img{background:#fff;width:180px;height:180px}
+  .payment-qr-content h3{font:600 .9375rem/1.5 'DM Sans',sans-serif;letter-spacing:0;margin:0 0 .5rem}
+  .payment-qr-content p+p{margin-top:.75rem}
+  .payment-copy-status{margin:0;padding:0 1.75rem;font-size:.8125rem;line-height:1.5;color:var(--ink)}
+  .payment-copy-status:not(:empty){padding-block:.75rem;border-top:1px solid var(--line)}
+  @media(max-width:600px){.payment-heading{padding:1.25rem}.payment-fields{padding:0 1.25rem}.payment-field{grid-template-columns:1fr;gap:.3rem;padding:.8rem 0}.payment-field dt{font-size:.8125rem}.payment-reference-note,.payment-recipient-note{padding:1rem 1.25rem}.payment-qr{padding:0 1.25rem}.payment-qr-content{grid-template-columns:1fr}.payment-qr-content img{margin-inline:auto}.payment-copy-status{padding-inline:1.25rem}}
+</style>
