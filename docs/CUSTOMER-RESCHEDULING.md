@@ -43,3 +43,6 @@ Uitgevoerde controles:
 Lokaal bewijs staat onder `output/appointments-review/`: `environment-verification.json` en `browser-notifications.png`. De outputmap wordt niet gepubliceerd of meegecommit.
 
  De applicatiewijzigingen moeten via de bestaande Vercel-integratie worden uitgerold; geen GitHub Actions of extra scheduler.
+
+
+Aanvullende volledige dossier- en productieacceptatie van 30 oktober, met de daadwerkelijke deployment-SHA en bevestigde mailontvangst: [APPOINTMENT-FLOW-ACCEPTANCE.md](APPOINTMENT-FLOW-ACCEPTANCE.md). Dit aanvullende verslag vervangt de bovenstaande oudere aantallen voor de uitgebreide acceptatieronde.

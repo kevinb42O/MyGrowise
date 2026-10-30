@@ -32,10 +32,11 @@ De bestaande lokale uitbreiding voor zelf verplaatsen en lifecyclemeldingen is m
 | Unit-/regressietests | 87 geslaagd, inclusief drie tests voor directe mail en SMTP-falen |
 | Afspraakdatabase, rollback-only | 78 geslaagd |
 | Volledige lokale HTTP-keten | 53 geslaagd, inclusief drie SMTP-geaccepteerde testmails |
+| Volledige HTTP-keten op productie | 50 geslaagd zonder mail; daarna 53 geslaagd met drie SMTP-geaccepteerde mails vanaf de deployment |
 | MijnDiAd on-demand databaseproef | 27 geslaagd, inclusief echte bronverversing; alle testwijzigingen teruggedraaid |
 | TypeScript en productiebuild | Geslaagd |
-| Release-artifact | Gecontroleerd op lokale testdata/geheimen en dagelijks cronbeleid |
-| Ontvangst echte mail | Eigenaar bevestigde expliciet: alle drie ontvangen |
+| Release-artifact | Afgebakende releasekopie: 1668 bestanden; geen lokale testdata/geheimen en dagelijks cronbeleid behouden |
+| Ontvangst echte mail | Eigenaar bevestigde beide reeksen expliciet: alle drie ontvangen, ook de drie vanaf productie |
 
 De SMTP-proef gebruikte uitsluitend het door de eigenaar opgegeven testadres. De drie normale mailsoorten — bevestiging, verplaatsing en annulering — zijn vanuit de eigen synthetische mailtaken via het afspraakverzendlogboek verstuurd. Andere testmails bleven onderdrukt. Dit bewijst de mailinhoud/verzendroute en daadwerkelijke ontvangst; een aparte regressietest bewijst de directe verzendpoging na een statuswijziging en behoud van de wijziging bij SMTP-falen. Er is geen Auth-uitnodigings- of wachtwoordherstelproef geclaimd.
 
@@ -49,7 +50,15 @@ Op 30 oktober rechtstreeks in `supabase_migrations.schema_migrations` geverifiee
 
 Deze migraties waren vóór deze acceptatieronde al toegepast. In deze ronde is geen nieuwe permanente schemamigratie uitgevoerd.
 
-Voor aanvang was de daadwerkelijke Vercel-productieversie `cb2fa3db2e6fac624fe8ddd47dcb79dbdf2fbfbc`, deployment `dpl_5pKYbVGbufwz2fskQr3DCQ5ZehL1`, status `READY`, gecontroleerd via de Vercel-API en CLI. De definitieve nieuwe applicatie-SHA, deployment-ID en productieproef worden na uitrol vastgelegd; dit verslag alleen bewijst nog geen nieuwe productie-uitrol.
+Voor aanvang was de daadwerkelijke Vercel-productieversie `cb2fa3db2e6fac624fe8ddd47dcb79dbdf2fbfbc`, deployment `dpl_5pKYbVGbufwz2fskQr3DCQ5ZehL1`, status `READY`, gecontroleerd via de Vercel-API en CLI. De afgebakende applicatierelease is daarna via `main` en de bestaande Vercel-integratie uitgerold:
+
+- Applicatiecode: `ba806152ad823df1f548a2f55aee920237e38935`.
+- Gecontroleerde productie-deployment: `dpl_CnAgrv5XgPMnpYB2sCac6Gj99btj`, status `READY`.
+- Deployment: https://mygrowise-mzxcz4ivc-lanternnetworks-projects.vercel.app.
+- Geteste publieke alias: https://mygrowise.vercel.app.
+- De Vercel-project-API bevestigde deze deployment als de actieve productietarget met dezelfde SHA.
+- Beide volledige productieproeven zijn tegen deze versie uitgevoerd. De tweede proef verstuurde bevestiging, verplaatsing en annulering via de productie-mailconfiguratie; alle drie kregen `sent` na één poging. De eigenaar heeft ontvangst van alle drie de productiemails afzonderlijk bevestigd: “Alle drie opnieuw ontvangen”.
+- Dit bewijsverslag wordt afzonderlijk vastgelegd; die latere documentatiecommit wijzigt de geteste applicatiecode niet.
 
 Uitrol gaat uitsluitend via Git en de bestaande Vercel-integratie. Geen GitHub Actions, betaalde scheduler of wijziging aan de verkoopvrijgave.
 
