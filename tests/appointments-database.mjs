@@ -8,7 +8,7 @@ const c=new pg.Client({connectionString:process.env.SUPABASE_DB_URL,connectionTi
 await c.connect();let checks=0;
 const q=(sql,params=[])=>c.query(sql,params);
 const expectFailure=async(fn,pattern)=>{await q('savepoint expected_failure');try{await fn();assert.fail('Expected database rejection');}catch(e){if(e.code==='ERR_ASSERTION')throw e;assert.match(e.message,pattern);}finally{await q('rollback to savepoint expected_failure');}checks++;};
-const migrations=fs.readdirSync('supabase/migrations').filter(n=>n.endsWith('_practice_appointment_management.sql')||n.endsWith('_remove_patient_national_number.sql')).sort();
+const migrations=fs.readdirSync('supabase/migrations').filter(n=>n.endsWith('_practice_appointment_management.sql')||n.endsWith('_remove_patient_national_number.sql')||n.endsWith('_customer_appointment_rescheduling.sql')||n.endsWith('_customer_reschedule_conflict_response.sql')||n.endsWith('_customer_booking_lifecycle_notifications.sql')).sort();
 try{
  await q('begin');await q("set local lock_timeout='3s';set local statement_timeout='25s'");
  for(const migration of migrations){
@@ -110,6 +110,41 @@ try{
  // Creation-time snapshots also protect later duration changes.
  await q('update public.practitioner_appointment_types set duration_minutes=30 where id=$1',[offer]);
  assert.equal(Number((await q('select extract(epoch from (ends_at-starts_at))/60 minutes from public.bookings where id=$1',[second])).rows[0].minutes),75);checks++;
+ // Customer rescheduling updates the same row, retains the purchased duration,
+ // and rolls back every side effect when availability/ownership checks fail.
+ const original=(await q('select * from public.bookings where id=$1',[second])).rows[0];
+ assert.equal((await q('select * from public.get_customer_reschedule_slots($1,$2,14)',[customer2,second])).rowCount,0);checks++;
+ const customerSlots=(await q('select * from public.get_customer_reschedule_slots($1,$2,14)',[customer,second])).rows;
+ assert.ok(customerSlots.length);assert.equal(+new Date(customerSlots[0].ends_at)-new Date(customerSlots[0].starts_at),75*60000);checks++;
+ // The current booking alone must not hide partially overlapping alternatives.
+ const overlap=customerSlots.find(slot=>+new Date(slot.starts_at)>+new Date(original.starts_at)&&+new Date(slot.starts_at)<+new Date(original.ends_at));
+ assert.ok(overlap);checks++;
+ const moveCustomer=(actor,start,previous=original.starts_at)=>q('select public.reschedule_customer_appointment($1,$2,$3,$4,null)',[actor,second,start,previous]);
+ await expectFailure(()=>moveCustomer(customer2,overlap.starts_at),/booking_not_found/);
+ await expectFailure(()=>moveCustomer(therapist,overlap.starts_at),/customer_required/);
+ await expectFailure(()=>moveCustomer(customer,blockedStart),/slot_unavailable/);
+ await expectFailure(()=>moveCustomer(customer,new Date(+new Date(next)+15*60000)),/slot_unavailable/);
+ assert.equal(+(await q('select starts_at from public.bookings where id=$1',[second])).rows[0].starts_at,+new Date(original.starts_at));checks++;
+ await moveCustomer(customer,overlap.starts_at);
+ const moved=(await q('select * from public.bookings where id=$1',[second])).rows[0];
+ assert.equal(moved.status,'confirmed');assert.equal(moved.id,second);assert.equal(+moved.ends_at-moved.starts_at,75*60000);checks++;
+ assert.equal((await q('select count(*)::int n from public.bookings where submission_key=$1',[original.submission_key])).rows[0].n,1);checks++;
+ assert.equal((await q('select count(*)::int n from public.booking_schedule_events where booking_id=$1',[second])).rows[0].n,1);checks++;
+ assert.equal((await q("select count(*)::int n from public.booking_mail_jobs where booking_id=$1 and kind='rescheduled'",[second])).rows[0].n,1);checks++;
+ assert.equal((await q('select count(*)::int n from public.customer_notifications where booking_id=$1 and schedule_event_id is not null',[second])).rows[0].n,1);checks++;
+ await moveCustomer(customer,overlap.starts_at);
+ assert.equal((await q('select count(*)::int n from public.booking_schedule_events where booking_id=$1',[second])).rows[0].n,1);checks++;
+ const another=(await q('select * from public.get_customer_reschedule_slots($1,$2,14)',[customer,second])).rows.find(slot=>+new Date(slot.starts_at)>+new Date(moved.ends_at));
+ await expectFailure(()=>moveCustomer(customer,another.starts_at),/booking_changed/);
+ await q('update public.practitioner_settings set minimum_notice_hours=72 where practitioner_id=$1',[practitioner]);
+ await expectFailure(()=>moveCustomer(customer,another.starts_at,moved.starts_at),/reschedule_too_late/);
+ await q('update public.practitioner_settings set minimum_notice_hours=0 where practitioner_id=$1',[practitioner]);
+ await q('update public.practitioner_appointment_types set bookable=false where id=$1',[offer]);
+ assert.equal((await q('select * from public.get_customer_reschedule_slots($1,$2,14)',[customer,second])).rowCount,0);checks++;
+ await expectFailure(()=>moveCustomer(customer,another.starts_at,moved.starts_at),/slot_unavailable/);
+ await q('update public.practitioner_appointment_types set bookable=true where id=$1',[offer]);
+ assert.equal((await q("select has_function_privilege('authenticated','public.reschedule_customer_appointment(uuid,uuid,timestamptz,timestamptz,uuid)','execute') allowed")).rows[0].allowed,false);checks++;
+ assert.equal((await q("select has_function_privilege('anon','public.get_customer_reschedule_slots(uuid,uuid,integer)','execute') allowed")).rows[0].allowed,false);checks++;
  for(const table of ['practice_managers','treatment_groups','appointment_types','practitioner_appointment_types','booking_mail_jobs']){
  const row=(await q('select relrowsecurity from pg_class where oid=$1::regclass',[`public.${table}`])).rows[0];assert.equal(row.relrowsecurity,true);checks++;
  }

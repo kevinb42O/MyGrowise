@@ -11,7 +11,7 @@ const active = all
   .sort((a, b) => a.startsAt.localeCompare(b.startsAt));
 const past = all.filter((booking) => !active.some((item) => item.id === booking.id)).sort((a, b) => b.startsAt.localeCompare(a.startsAt));
 const status: Record<string, string> = {
-  pending: 'Aanvraag in behandeling', confirmed: 'Bevestigd', declined: 'Niet bevestigd',
+  pending: 'Oudere aanvraag in behandeling', confirmed: 'Bevestigd', declined: 'Niet bevestigd',
   cancelled: 'Geannuleerd', completed: 'Afgerond', no_show: 'Niet doorgegaan',
 };
 const date = (value: string) => new Intl.DateTimeFormat('nl-BE', {
@@ -26,7 +26,7 @@ const eventDate = (value: string) => new Intl.DateTimeFormat('nl-BE', {
 const cancelled = Astro.url.searchParams.get('cancelled') === '1';
 const cancelError = Astro.url.searchParams.get('cancel_error');
 const confirmed = Astro.url.searchParams.get('confirmed') === '1';
-const requested = Astro.url.searchParams.get('requested') === '1';
+const rescheduled = Astro.url.searchParams.get('rescheduled') === '1';
 const rateLimited = Astro.url.searchParams.get('error') === 'rate_limited';
 ---
 
@@ -34,20 +34,20 @@ const rateLimited = Astro.url.searchParams.get('error') === 'rate_limited';
   <section class="account-heading">
     <span class="eyebrow">Mijn begeleiding</span>
     <h1>Praktisch, wanneer jij het nodig hebt.</h1>
-    <p>Volg hier je aanvragen en afspraken. Verslagen of inhoud uit gesprekken verschijnen niet in dit praktische overzicht.</p>
+    <p>Bekijk hier je afspraken. Een online boeking is meteen bevestigd. Verslagen of inhoud uit gesprekken verschijnen niet in dit praktische overzicht.</p>
   </section>
 
   {confirmed && <div class="account-message success" role="status">Je afspraak is bevestigd. Je vindt de afspraakgegevens hieronder.</div>}
-  {requested && <div class="account-message success" role="status">Je aanvraag is verstuurd. Je vindt de actuele status hieronder.</div>}
-  {cancelled && <div class="account-message success" role="status">Je aanvraag of afspraak is geannuleerd.</div>}
+  {rescheduled && <div class="account-message success" role="status">Je afspraak is verplaatst en meteen bevestigd. Het oude tijdstip is vrijgegeven.</div>}
+  {cancelled && <div class="account-message success" role="status">Je afspraak is geannuleerd.</div>}
   {cancelError === 'late' && <div class="account-message" role="alert">Deze afspraak kan niet meer online worden geannuleerd omdat ze te dichtbij is. Neem contact op met je professional.</div>}
-  {cancelError && cancelError !== 'late' && <div class="account-message" role="alert">Deze aanvraag of afspraak kon niet worden geannuleerd. Herlaad de pagina en probeer opnieuw.</div>}
-  {rateLimited && <div class="account-message" role="alert">Er zijn te veel aanvragen kort na elkaar verstuurd. Wacht even en probeer opnieuw.</div>}
+  {cancelError && cancelError !== 'late' && <div class="account-message" role="alert">Deze afspraak kon niet worden geannuleerd. Herlaad de pagina en probeer opnieuw.</div>}
+  {rateLimited && <div class="account-message" role="alert">Er zijn te veel boekingen kort na elkaar verstuurd. Wacht even en probeer opnieuw.</div>}
 
   <section class="care-section" aria-labelledby="care-active-title">
     <div class="care-section__top">
       <div>
-        <span class="account-label">Aanvragen en komende afspraken</span>
+        <span class="account-label">Komende afspraken</span>
         <h2 id="care-active-title">{active.length ? 'Wat er gepland staat' : 'Nog niets gepland'}</h2>
       </div>
       <a class="button button-primary" href="/begeleiding">Plan een afspraak</a>
@@ -65,25 +65,25 @@ const rateLimited = Astro.url.searchParams.get('error') === 'rate_limited';
           <span class:list={{ 'appointment-status': true, pending: booking.status === 'pending' }} role="status">{status[booking.status] || 'Status wordt bijgewerkt'}</span>
           {booking.statusHistory.length > 0 && <ol class="appointment-history" aria-label="Statusgeschiedenis">
             {booking.statusHistory.map((event) => <li>
-              <span>{event.fromStatus ? `Status bijgewerkt: ${status[event.status] || event.status}` : booking.origin === 'staff' ? 'Afspraak ingepland' : 'Aanvraag verzonden'}</span>
+              <span>{event.fromStatus ? `Status bijgewerkt: ${status[event.status] || event.status}` : event.status === 'pending' ? 'Oudere aanvraag verzonden' : 'Afspraak ingepland'}</span>
               <time datetime={event.occurredAt}>{eventDate(event.occurredAt)}</time>
             </li>)}
           </ol>}
         </div>
         <div class="appointment-actions">
-          <a href={`/begeleiding/${booking.practitionerSlug}`}>Ander moment aanvragen</a>
-          <form action={`/api/account/begeleiding/${booking.id}/annuleren`} method="post" onsubmit="return confirm('Wil je deze aanvraag of afspraak annuleren?')">
+          {booking.status === 'confirmed' ? <a href={`/account/begeleiding/${booking.id}/verplaatsen`}>Afspraak verplaatsen</a> : <a href="/contact">Oudere aanvraag bespreken</a>}
+          <form action={`/api/account/begeleiding/${booking.id}/annuleren`} method="post" onsubmit="return confirm('Wil je deze afspraak annuleren?')">
             <button type="submit">{booking.status === 'pending' ? 'Aanvraag intrekken' : 'Annuleren'}</button>
           </form>
         </div>
       </article>)}
     </div> : <div class="care-empty">
-      <p>Wanneer je een aanvraag verstuurt, verschijnt die hier automatisch. De therapeut moet je gekozen moment eerst bevestigen.</p>
+      <p>Zodra je een vrij moment boekt, is je afspraak bevestigd en verschijnt ze hier. Je hoeft niet te wachten op goedkeuring van je professional.</p>
     </div>}
   </section>
 
   {past.length > 0 && <section class="care-history" aria-labelledby="care-history-title">
-    <span class="account-label">Eerder aangevraagd of afgesproken</span>
+    <span class="account-label">Eerdere afspraken</span>
     <h2 id="care-history-title">Overzicht</h2>
     {past.map((booking) => <article id={`booking-${booking.id}`}>
       <span>{new Intl.DateTimeFormat('nl-BE', { timeZone: 'Europe/Brussels', day: 'numeric', month: 'short', year: 'numeric' }).format(new Date(booking.startsAt))}</span>
@@ -91,7 +91,7 @@ const rateLimited = Astro.url.searchParams.get('error') === 'rate_limited';
       <small>{status[booking.status] || 'Status bijgewerkt'}</small>
       {booking.statusHistory.length > 0 && <ol class="care-history__events" aria-label="Statusgeschiedenis">
         {booking.statusHistory.map((event) => <li>
-          <span>{event.fromStatus ? `Status bijgewerkt: ${status[event.status] || event.status}` : booking.origin === 'staff' ? 'Afspraak ingepland' : event.status === 'pending' ? 'Aanvraag verzonden' : `Status: ${status[event.status] || event.status}`}</span>
+          <span>{event.fromStatus ? `Status bijgewerkt: ${status[event.status] || event.status}` : booking.origin === 'staff' ? 'Afspraak ingepland' : event.status === 'pending' ? 'Oudere aanvraag verzonden' : `Status: ${status[event.status] || event.status}`}</span>
           <time datetime={event.occurredAt}>{eventDate(event.occurredAt)}</time>
         </li>)}
       </ol>}

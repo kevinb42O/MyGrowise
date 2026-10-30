@@ -1,4 +1,5 @@
 import {test} from 'node:test';
+import {bookingNotificationStartsAt} from '../src/lib/bookingNotificationTime.ts';
 import assert from 'node:assert/strict';
 import {parsePatientDetails} from '../src/lib/patientDetails.ts';
 import {bookingMailContent} from '../src/lib/bookingMailContent.ts';
@@ -38,4 +39,11 @@ test('practice management routes are registered and denied to ordinary client/su
  }
  assert.equal(requiredAdminPermission('/api/admin/clienten/id/sessiedata'),'client_records.read');
  assert.equal(requiredAdminPermission('/api/admin/unknown','POST'),null);
+});
+
+test('status notifications retain their historical appointment time after multiple moves',()=>{
+ const changes=[{oldStartsAt:'2026-11-01T09:00:00Z',occurredAt:'2026-10-30T10:00:00Z'},{oldStartsAt:'2026-11-02T10:00:00Z',occurredAt:'2026-10-30T12:00:00Z'}];
+ assert.equal(bookingNotificationStartsAt('2026-11-03T11:00:00Z','2026-10-30T09:00:00Z',changes),'2026-11-01T09:00:00Z');
+ assert.equal(bookingNotificationStartsAt('2026-11-03T11:00:00Z','2026-10-30T11:00:00Z',changes),'2026-11-02T10:00:00Z');
+ assert.equal(bookingNotificationStartsAt('2026-11-03T11:00:00Z','2026-10-30T13:00:00Z',changes),'2026-11-03T11:00:00Z');
 });

@@ -1,4 +1,5 @@
 import { getSupabaseAdmin } from './server';
+import { bookingNotificationStartsAt } from '../bookingNotificationTime';
 
 type Row = Record<string, unknown>;
 const fail = (error: { message?: string } | null) => { if (error) throw new Error(error.message || 'Supabase query failed.'); };
@@ -61,12 +62,11 @@ export const listCustomerBookingNotifications = async (userId: string): Promise<
   if (!notifications.length) return [];
 
   const eventIds = notifications.filter((row) => row.status_event_id != null).map((row) => Number(row.status_event_id));
-  const scheduleIds = notifications.filter((row) => row.schedule_event_id != null).map((row) => Number(row.schedule_event_id));
   const bookingIds = [...new Set(notifications.map((row) => String(row.booking_id)))];
   const [{ data: eventRows, error: eventError }, { data: bookingRows, error: bookingError }, { data: scheduleRows, error: scheduleError }] = await Promise.all([
     eventIds.length ? client.from('booking_status_events').select('id,to_status,from_status').in('id', eventIds).eq('customer_visible', true) : Promise.resolve({ data: [], error: null }),
     client.from('bookings').select('id,starts_at,origin,practitioners(name)').in('id', bookingIds).eq('customer_user_id', userId),
-    scheduleIds.length ? client.from('booking_schedule_events').select('id,new_starts_at').in('id', scheduleIds) : Promise.resolve({ data: [], error: null }),
+    client.from('booking_schedule_events').select('id,booking_id,old_starts_at,new_starts_at,occurred_at').in('booking_id', bookingIds).order('occurred_at', { ascending: true }).order('id', { ascending: true }),
   ]);
   fail(eventError);
   fail(bookingError);
@@ -90,7 +90,7 @@ export const listCustomerBookingNotifications = async (userId: string): Promise<
       readAt: row.read_at ? String(row.read_at) : null,
       status,
       practitionerName: booking.practitionerName,
-      startsAt: row.schedule_event_id != null ? scheduleTimes.get(String(row.schedule_event_id)) || booking.startsAt : booking.startsAt,
+      startsAt: row.schedule_event_id != null ? scheduleTimes.get(String(row.schedule_event_id)) || booking.startsAt : bookingNotificationStartsAt(booking.startsAt, String(row.created_at), ((scheduleRows || []) as Row[]).filter(change => String(change.booking_id) === String(row.booking_id)).map(change => ({oldStartsAt: String(change.old_starts_at), occurredAt: String(change.occurred_at)}))),
     }];
   });
 };

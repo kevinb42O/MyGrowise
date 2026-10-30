@@ -1,0 +1,54 @@
+---
+import AccountLayout from '../../../../layouts/AccountLayout.astro';
+import BookingSlots from '../../../../components/practice/BookingSlots';
+import FormProtection from '../../../../components/practice/FormProtection.astro';
+import {isTrustedFormOrigin} from '../../../../lib/adminAuth';
+import {customerRescheduleBooking,customerRescheduleSlots,rescheduleCustomerAppointment} from '../../../../lib/customerRescheduling';
+import {deliverBookingMail} from '../../../../lib/bookingMail';
+import '../../../../styles/practice-management.css';
+import '../../../../styles/booking-slots.css';
+
+const user=Astro.locals.currentUser!;
+const id=Astro.params.id||'';
+Astro.response.headers.set('Cache-Control','private, no-store');
+Astro.response.headers.set('Referrer-Policy','no-referrer');
+let error='',selected='';
+if(Astro.request.method==='POST'){
+  if(!isTrustedFormOrigin(Astro.request)) return new Response('Ongeldige aanvraag.',{status:403});
+  try{
+    const form=await Astro.request.formData();
+    selected=String(form.get('starts_at')||'');
+    await rescheduleCustomerAppointment(user,id,form,Astro.locals.requestId);
+    try{await deliverBookingMail(1,id);}catch{console.error('[booking.mail] reschedule queued for retry',{bookingId:id});}
+    return Astro.redirect(`/account/begeleiding?rescheduled=1#booking-${id}`,303);
+  }catch(cause){error=cause instanceof Error?cause.message:'Verplaatsen is niet gelukt. Je bestaande afspraak blijft behouden.';Astro.response.status=400;}
+}
+let booking:Awaited<ReturnType<typeof customerRescheduleBooking>>=null;
+let slots:Awaited<ReturnType<typeof customerRescheduleSlots>>=[];
+let unavailable=false;
+try{
+  booking=await customerRescheduleBooking(user,id);
+  if(booking?.status==='confirmed'&&Date.parse(booking.starts_at)>Date.now()) slots=await customerRescheduleSlots(user,booking);
+}catch{unavailable=true;Astro.response.status=503;}
+if(!booking&&!unavailable) Astro.response.status=404;
+const date=(value:string)=>new Intl.DateTimeFormat('nl-BE',{timeZone:'Europe/Brussels',dateStyle:'full',timeStyle:'short'}).format(new Date(value));
+---
+<AccountLayout title="Afspraak verplaatsen">
+  <div class="reschedule practice-stack">
+    <a class="reschedule-back" href="/account/begeleiding">← Mijn begeleiding</a>
+    <header><h1>Kies een ander moment.</h1><p>Je huidige afspraak blijft staan totdat je de verplaatsing opslaat. Je nieuwe moment is dan meteen bevestigd.</p></header>
+    {error&&<div class="practice-alert is-error" role="alert">{error}</div>}
+    {unavailable?<section class="practice-card" role="alert"><h2>Je afspraak kan nu niet worden verplaatst.</h2><p>De agenda is tijdelijk niet bereikbaar. Je bestaande afspraak blijft behouden. Probeer later opnieuw of neem contact op met je professional.</p></section>:booking?<>
+      <section class="practice-card"><h2>Je huidige afspraak</h2><strong>{booking.appointment_name||'Afspraak'} · {booking.practitionerName}</strong><p>{date(booking.starts_at)} (Belgische tijd)</p><p>{Math.round((Date.parse(booking.ends_at)-Date.parse(booking.starts_at))/60000)} minuten · {booking.channel==='online'?'Online':booking.location||'In de praktijk'}</p></section>
+      {booking.status==='confirmed'&&slots.length>0?<form method="post" class="practice-stack" data-unsaved-form>
+        <input type="hidden" name="previous_starts_at" value={booking.starts_at}/>
+        <BookingSlots slots={slots} selected={selected} client:load/>
+        <section class="practice-card"><h2>Verplaats je afspraak</h2><p>Je behoudt dezelfde professional en hetzelfde afspraaktype. Na het opslaan komt je oude tijdstip vrij. Je ontvangt de wijziging per e-mail volgens je meldingsvoorkeur.</p><div class="practice-actions"><button class="practice-button" type="submit">Afspraak verplaatsen</button><a class="reschedule-back" href="/account/begeleiding">Huidige afspraak behouden</a></div></section>
+      </form>:<section class="practice-card"><h2>Geen andere momenten beschikbaar.</h2><p>Online verplaatsen is momenteel niet mogelijk. Je kunt hier alleen een toekomstige, bevestigde afspraak verplaatsen, binnen de wijzigingstermijn van je professional. Neem contact op met je professional om de mogelijkheden te bespreken.</p><a href="/contact">Neem contact op →</a></section>}
+    </>:<section class="practice-card"><h2>Deze afspraak is niet beschikbaar.</h2><p>Ga terug naar Mijn begeleiding om je eigen afspraken te bekijken.</p></section>}
+  </div>
+  <FormProtection/>
+</AccountLayout>
+<style>
+  .reschedule{max-width:800px}.reschedule header h1{font-size:clamp(2.4rem,5vw,4rem);line-height:1.08;margin:1rem 0}.reschedule header p,.reschedule .practice-card p{color:var(--muted);line-height:1.75}.reschedule h2{font-size:1.7rem;margin:0 0 1rem}.reschedule-back{display:inline-flex;align-items:center;min-height:44px;font-size:.88rem}.reschedule .practice-actions{gap:1rem}.reschedule .practice-card{min-width:0}.reschedule strong{overflow-wrap:anywhere}
+</style>

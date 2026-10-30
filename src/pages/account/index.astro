@@ -20,12 +20,12 @@ const demoStartsAt = new Date(now + 1000 * 60 * 60 * 24 * 6).toISOString();
 const displayUpcoming = upcoming || (demoMode ? { id: 'demo-appointment', practitionerName: 'Margot', practitionerSlug: 'margot', startsAt: demoStartsAt, endsAt: demoStartsAt, status: 'confirmed' } : undefined);
 const activeEntitlements=entitlements.filter(item=>item.status==='active');
 const displayEntitlements = activeEntitlements.length ? activeEntitlements : demoMode ? [{ id: 'demo-library', productTitle: 'Stress- en emotieprofiel', productSlug: 'stress-en-emotieprofiel', productType: 'Profiel', status: 'active', grantedAt: new Date(now - 1000 * 60 * 60 * 24 * 4).toISOString() }] : [];
-const status: Record<string, string> = { pending: 'Aanvraag in behandeling', confirmed: 'Bevestigd' };
+const status: Record<string, string> = { pending: 'Oudere aanvraag in behandeling', confirmed: 'Bevestigd' };
 
 const primary = displayUpcoming ? {
   eyebrow: 'Je volgende afspraak',
   title: `Je afspraak met ${displayUpcoming.practitionerName} staat klaar.`,
-  description: `${displayDate(displayUpcoming.startsAt)} · online begeleiding. ${displayUpcoming.status === 'pending' ? 'Je aanvraag wacht nog op bevestiging.' : 'Alles wat je praktisch nodig hebt, vind je hier terug.'}`,
+  description: `${displayDate(displayUpcoming.startsAt)} · online begeleiding. ${displayUpcoming.status === 'pending' ? 'Dit is een oudere aanvraag. Neem contact op met je professional voor de actuele status.' : 'Alles wat je praktisch nodig hebt, vind je hier terug.'}`,
   href: '/account/begeleiding',
   label: 'Bekijk afspraak',
   status: status[displayUpcoming.status],
@@ -61,7 +61,7 @@ const summaries = [
   { label: 'Transacties', value: `${transactions.length} ${transactions.length === 1 ? 'aankoop' : 'aankopen'}`, detail: transactions.length ? 'Status en overzicht op één plek.' : 'Een helder overzicht, zodra je iets kiest.', href: '/account/transacties', icon: 'receipt' as const, tone: 'mint' as const },
 ];
 const activity = [
-  ...appointments.map((booking) => ({ occurredAt: booking.startsAt, label: booking.status === 'confirmed' ? 'Afspraak bevestigd' : booking.status === 'pending' ? 'Afspraak aangevraagd' : 'Afspraak in je overzicht', title: `${booking.practitionerName}`, detail: `${shortDate(booking.startsAt)} · praktische afspraakgegevens`, time: shortDate(booking.startsAt), tone: booking.status === 'confirmed' ? 'mint' as const : 'sun' as const })),
+  ...appointments.map((booking) => ({ occurredAt: booking.startsAt, label: booking.status === 'confirmed' ? 'Afspraak bevestigd' : booking.status === 'pending' ? 'Oudere aanvraag' : 'Afspraak in je overzicht', title: `${booking.practitionerName}`, detail: `${shortDate(booking.startsAt)} · praktische afspraakgegevens`, time: shortDate(booking.startsAt), tone: booking.status === 'confirmed' ? 'mint' as const : 'sun' as const })),
   ...entitlements.map((item) => ({ occurredAt: item.grantedAt, label: 'Toegevoegd aan je bibliotheek', title: item.productTitle, detail: 'Veilig beschikbaar in jouw persoonlijke bibliotheek.', time: shortDate(item.grantedAt), tone: 'rose' as const })),
   ...transactions.map((transaction) => ({ occurredAt: transaction.createdAt, label: 'Transactie bijgewerkt', title: 'MyGrowise bestelling', detail: 'Bekijk betaalstatus en bedrag in je transacties.', time: shortDate(transaction.createdAt), tone: 'mint' as const })),
 ].sort((a, b) => b.occurredAt.localeCompare(a.occurredAt)).slice(0, 3);

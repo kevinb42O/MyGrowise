@@ -1,6 +1,7 @@
 import type { APIRoute } from 'astro';
 import { isTrustedFormOrigin } from '../../../../lib/adminAuth';
 import { updateBookingStatus, type BookingStatus } from '../../../../lib/practiceStore';
+import { deliverBookingMail } from '../../../../lib/bookingMail';
 
 export const prerender = false;
 export const POST: APIRoute = async ({ request, locals, params }) => {
@@ -10,6 +11,7 @@ export const POST: APIRoute = async ({ request, locals, params }) => {
   const status = String(form.get('status') || '') as BookingStatus;
   try {
     await updateBookingStatus(params.id || '', user.practitionerId!, user.sub, status, locals.requestId, `/api/praktijk/boekingen/${params.id || ''}`);
+    try { await deliverBookingMail(1, params.id); } catch { /* The durable queue retains the mail for retry. */ }
     return new Response(null, { status: 303, headers: { location: '/praktijk/boekingen?updated=1' } });
   } catch (error) {
     const code = error instanceof Error && error.message === 'not_found' ? 404 : error instanceof Error && error.message === 'not_allowed' ? 403 : 409;

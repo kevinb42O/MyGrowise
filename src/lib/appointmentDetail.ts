@@ -4,6 +4,8 @@ import {isTrustedFormOrigin,type UserSession} from './adminAuth';
 import {listPatientRecords, getPatientReference} from './clientRecords';
 import {fromBrusselsLocalInput} from './brusselsTime';
 import {deliverBookingMail} from './bookingMail';
+import {createStaffBooking,rescheduleStaffBooking,updateBookingStatus,type BookingStatus} from './practiceStore';
+import {ExternalCalendarUnavailableError} from './mijndiadSync';
 export async function loadAppointmentPage(context:{request:Request;locals:{currentUser?:UserSession;requestId?:string};params:Record<string,string|undefined>;url:URL;redirect:(url:string,status?:number)=>Response}){
  const user=context.locals.currentUser!,db=getSupabaseAdmin(),id=context.params.id||'';
  const manager=user.roles.includes('super_admin')||user.practiceManager===true;
@@ -21,21 +23,21 @@ export async function loadAppointmentPage(context:{request:Request;locals:{curre
  try{const form=await context.request.formData(),operation=String(form.get('operation')||'');
  if(id==='nieuw'){
  const offer=offers.find(o=>o.id===form.get('offer_id'));if(!offer)throw new Error('Kies een geldig afspraaktype.');
- const {data,error:be}=await db.rpc('create_typed_staff_booking',{p_actor:user.sub,p_patient:String(form.get('patient_id')||''),p_offer:offer.id,p_starts:fromBrusselsLocalInput(String(form.get('starts_at')||'')),p_request:context.locals.requestId||null});fail(be);
+ const data=await createStaffBooking(offer.practitionerId,user.sub,String(form.get('patient_id')||''),fromBrusselsLocalInput(String(form.get('starts_at')||'')),offer.id,context.locals.requestId);
  try{await deliverBookingMail(1,String(data));}catch{}
  return context.redirect(`${base}/${data}?opgeslagen=1`,303);
  }
  if(operation==='reschedule'){
- const {error:se}=await db.rpc('reschedule_practice_appointment',{p_actor:user.sub,p_booking:id,p_starts:fromBrusselsLocalInput(String(form.get('starts_at')||'')),p_request:context.locals.requestId||null});fail(se);
+ await rescheduleStaffBooking(id,user.sub,fromBrusselsLocalInput(String(form.get('starts_at')||'')),booking!.ends_at,context.locals.requestId);
  }else if(operation==='mail'){
  const {error:me}=await db.rpc('retry_booking_mail',{p_actor:user.sub,p_job:String(form.get('job_id')||'')});fail(me);
  }else if(operation==='status'){
  const status=String(form.get('status')||'');if(!['confirmed','declined','cancelled','completed','no_show'].includes(status))throw new Error('Ongeldige status.');
- const {error:se}=await db.rpc('transition_booking_status',{p_booking_id:id,p_actor_user_id:user.sub,p_next_status:status,p_request_id:context.locals.requestId||null,p_request_path:context.url.pathname});fail(se);
+ await updateBookingStatus(id,booking!.practitioner_id,user.sub,status as BookingStatus,context.locals.requestId,context.url.pathname);
  }else throw new Error('Onbekende actie.');
  try{await deliverBookingMail(2,id);}catch{}
  return context.redirect(`${base}/${id}?opgeslagen=1`,303);
- }catch(cause){const message=cause instanceof Error?cause.message:'';error=/23P01|conflict|slot_unavailable/i.test(message)?'Dit tijdstip overlapt met een andere afspraak of blokkade.':'Opslaan is niet gelukt. Controleer je invoer en de huidige status van de afspraak.';}
+ }catch(cause){const message=cause instanceof Error?cause.message:'';error=cause instanceof ExternalCalendarUnavailableError?'De externe agenda kan nu niet worden gecontroleerd. Er is niets gewijzigd; een bestaande afspraak blijft behouden. Probeer later opnieuw.':/23P01|conflict|slot_unavailable/i.test(message)?'Dit tijdstip overlapt met een andere afspraak of blokkade.':'Opslaan is niet gelukt. Controleer je invoer en de huidige status van de afspraak.';}
  }
  const patients=id==='nieuw'?await listPatientRecords(user):[];
  const canViewPatient=booking?.patient_id?Boolean(await getPatientReference(user,booking.patient_id,context.locals.requestId)):false;

@@ -6,7 +6,7 @@ const profile = await getPractitionerProfile(Astro.locals.currentUser!.practitio
 const canUseItransform = profile?.slug === 'virginie';
 ---
 
-<PracticeLayout title="Mijn agenda" description="Beheer je afspraken, aanvragen en beschikbaarheid in één agenda.">
+<PracticeLayout title="Mijn agenda" description="Beheer je afspraken en beschikbaarheid in één agenda.">
   <div class="admin-page agenda-page">
     <h1 class="sr-only" id="practice-agenda-title">Mijn agenda</h1>
     <UnifiedAgenda mode="practice" allowItransform={canUseItransform} client:only="react" />
