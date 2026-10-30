@@ -4,12 +4,12 @@ const { compact = false } = Astro.props;
 const explanation = 'Met jouw toestemming meten we bezochte pagina’s en enkele website-interacties met een anonieme browser-ID en een geschat land. We bewaren geen IP-adres of gezondheidsgegevens in analytics.';
 ---
 <aside class:list={['analytics-consent', { 'analytics-consent--compact': compact }]} hidden data-analytics-consent aria-labelledby="consent-title">
-  <h2 id="consent-title">Ook je privacy verdient aandacht.</h2>
-  {compact ? <p class="analytics-consent__intro">Met jouw toestemming helpen bezoekgegevens ons MyGrowise te verbeteren.</p> : <p class="analytics-consent__intro">{explanation}</p>}
+  <h2 id="consent-title">Jouw privacy</h2>
+  <p class="analytics-consent__intro">Mogen we anonieme bezoekgegevens gebruiken om MyGrowise te verbeteren?</p>
   <details class="analytics-consent__details">
     <summary>Welke gegevens meten we?<svg viewBox="0 0 16 16" aria-hidden="true"><path d="m5 6 3 3 3-3" /></svg></summary>
     <div class="analytics-consent__explanation">
-      {compact && <p>{explanation}</p>}
+      <p>{explanation}</p>
       <a href="/privacy">Lees hoe we meten</a>
     </div>
   </details>
@@ -25,43 +25,32 @@ const explanation = 'Met jouw toestemming meten we bezochte pagina’s en enkele
   .analytics-consent {
     position: fixed;
     z-index: 50;
-    left: clamp(1.25rem, 3.2vw, 3rem);
-    bottom: max(1.5rem, env(safe-area-inset-bottom));
-    width: min(26rem, calc(100% - 2.5rem));
+    left: 1rem;
+    bottom: max(1rem, env(safe-area-inset-bottom));
+    width: min(21rem, calc(100% - 2rem));
     max-height: calc(100svh - 7rem);
     overflow-y: auto;
-    padding: 1.5rem;
-    border: 1px solid rgb(239 218 188 / 30%);
-    border-radius: 12px;
-    background: #342e27;
-    color: #faf0df;
-    color-scheme: dark;
-    scrollbar-color: #a18a70 #342e27;
+    padding: .875rem 1rem;
+    border: 1px solid #b3c3ac;
+    border-radius: 10px;
+    background: #dde6d9;
+    color: #173d35;
+    color-scheme: light;
+    scrollbar-color: #48614d #dde6d9;
     scrollbar-width: thin;
     font-family: 'DM Sans', system-ui, sans-serif;
-    font-size: .8125rem;
-    line-height: 1.6;
-  }
-  @supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
-    .analytics-consent {
-      background: linear-gradient(135deg, rgb(74 57 42 / 88%), rgb(35 33 29 / 92%));
-      -webkit-backdrop-filter: blur(24px) saturate(.75);
-      backdrop-filter: blur(24px) saturate(.75);
-    }
+    font-size: .75rem;
+    line-height: 1.5;
   }
   .analytics-consent[hidden] { display: none; }
   .analytics-consent h2 {
-    margin: 0 0 .6rem;
-    font-family: 'DM Serif Display', Georgia, serif;
-    font-size: 1.5rem;
-    font-weight: 400;
-    line-height: 1.2;
-    letter-spacing: -.02em;
-    text-wrap: balance;
+    margin: 0 0 .25rem;
+    font: 700 .8125rem/1.4 'DM Sans', system-ui, sans-serif;
+    letter-spacing: 0;
   }
   .analytics-consent p { margin: 0; }
-  .analytics-consent__intro { color: #ded0bf; }
-  .analytics-consent__details { margin-top: .25rem; }
+  .analytics-consent__intro { color: #284b43; }
+  .analytics-consent__details { margin-top: 0; }
   .analytics-consent__details summary {
     display: flex;
     align-items: center;
@@ -72,7 +61,7 @@ const explanation = 'Met jouw toestemming meten we bezochte pagina’s en enkele
     list-style: none;
     font-size: .75rem;
     text-decoration: underline;
-    text-decoration-color: rgb(239 218 188 / 45%);
+    text-decoration-color: #48614d;
     text-underline-offset: .25em;
   }
   .analytics-consent__details summary::-webkit-details-marker { display: none; }
@@ -84,49 +73,45 @@ const explanation = 'Met jouw toestemming meten we bezochte pagina’s en enkele
     stroke-width: 1.4;
   }
   .analytics-consent__details[open] svg { transform: rotate(180deg); }
-  .analytics-consent__explanation { padding: 0 0 1rem; color: #ded0bf; }
+  .analytics-consent__explanation { padding: 0 0 .5rem; color: #284b43; }
   .analytics-consent__explanation a {
     display: inline-flex;
     align-items: center;
     min-height: 44px;
-    color: #faf0df;
+    color: #173d35;
     text-underline-offset: .25em;
   }
   .analytics-consent__actions {
     display: grid;
-    grid-template-columns: .8fr 1.2fr;
-    gap: .625rem;
-    padding-top: 1rem;
-    border-top: 1px solid rgb(239 218 188 / 19%);
+    grid-template-columns: .7fr 1.3fr;
+    gap: .5rem;
+    padding-top: .125rem;
   }
   .analytics-consent button {
     min-height: 44px;
-    padding: .65rem .75rem;
-    border: 1px solid rgb(239 218 188 / 52%);
+    padding: .5rem;
+    border: 1px solid #71847b;
     border-radius: 6px;
     background: transparent;
-    color: #faf0df;
+    color: #173d35;
     font: inherit;
     font-size: .75rem;
     font-weight: 600;
     cursor: pointer;
     transition: background-color 160ms ease, border-color 160ms ease;
   }
-  .analytics-consent button[data-analytics-accept] { background: #e8d2b1; border-color: #e8d2b1; color: #342c23; }
-  .analytics-consent button:hover { background: rgb(239 218 188 / 12%); border-color: #e8d2b1; }
-  .analytics-consent button[data-analytics-accept]:hover { background: #f4e3c9; border-color: #f4e3c9; }
+  .analytics-consent button[data-analytics-accept] { background: #c7d6bf; border-color: #71847b; }
+  .analytics-consent button:hover { background: #bfd0b7; border-color: #173d35; }
   .analytics-consent button:active { transform: translateY(1px); }
   .analytics-consent summary:hover { text-decoration-color: currentColor; }
-  .analytics-consent :focus-visible { outline: 2px solid #e8d2b1; outline-offset: 4px; }
-  .analytics-consent ::selection { background: #e8d2b1; color: #342c23; }
+  .analytics-consent :focus-visible { outline: 2px solid #173d35; outline-offset: 3px; }
+  .analytics-consent ::selection { background: #173d35; color: #dde6d9; }
   @media (max-width: 699px) {
     .analytics-consent {
       left: 1rem;
       bottom: max(1rem, env(safe-area-inset-bottom));
-      width: calc(100% - 2rem);
-      padding: 1.2rem;
+      width: min(21rem, calc(100% - 2rem));
     }
-    .analytics-consent h2 { font-size: 1.375rem; }
   }
   /* Keep the opening controls above the consent panel on smaller screens. */
   @media (max-width: 999px) {
@@ -138,12 +123,6 @@ const explanation = 'Met jouw toestemming meten we bezochte pagina’s en enkele
     :global(body:has([data-analytics-consent]:not([hidden])) .home-experience.portal-enhanced .hero-title-right) {
       top: min(72%, calc(100% - var(--analytics-consent-height, 15rem) - 8rem));
     }
-  }
-  @media (max-width: 359px) {
-    .analytics-consent__actions { grid-template-columns: 1fr; }
-  }
-  @media (prefers-reduced-transparency: reduce) {
-    .analytics-consent { background: #342e27; backdrop-filter: none; -webkit-backdrop-filter: none; }
   }
   @media (forced-colors: active) {
     .analytics-consent { background: Canvas; color: CanvasText; border-color: CanvasText; }
