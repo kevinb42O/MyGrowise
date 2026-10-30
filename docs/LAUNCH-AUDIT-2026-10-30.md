@@ -95,7 +95,22 @@ De publieke auditscript voert alleen leesverzoeken uit, gebruikt maximaal drie p
 
 - [Productie vóór herstel](audits/launch-2026-10-30/before.json).
 - [Lokale nacontrole](audits/launch-2026-10-30/local.json).
-- Productie na uitrol wordt afzonderlijk gecontroleerd en aan dit rapport toegevoegd.
+- [Productie na herstel](audits/launch-2026-10-30/production.json).
+- [Alle oude URL's, daadwerkelijke JPEG-downloads en private pagina's](audits/launch-2026-10-30/production-detail.json).
+
+## Gecontroleerde productie-uitrol
+
+Applicatiecommit: `8729fcb70501af7c1bd1aa7632c886ef431187f5`, gepusht naar `main` via de bestaande Git/Vercel-integratie. Vercel-deployment `dpl_VXPRean1pkHPJZLCZ3CbEBnc3aDb`, `mygrowise-pj4zrj15j-lanternnetworks-projects.vercel.app`, meldde `READY` voor productie. De controles hieronder zijn daarna uitgevoerd op het echte www-domein, niet alleen op de deployment-URL.
+
+- **55/55 publieke pagina's en 61/61 direct verwezen assets bereikbaar.** Canonical, Open Graph en Twitter gebruiken consequent www; geen ontbrekende deelmetadata, onverwachte noindex, ontbrekende alt-attributen of h1-afwijkingen.
+- **55 sitemap-URL's op de juiste host.** Geen doorsturende host meer in de sitemap.
+- **35/35 oude URL's correct:** alle 28 bekende equivalenten geven 301 naar hun bedoelde bestemming; alle zeven afgeschafte demo's geven 410. Een onbekende pagina geeft nog steeds 404.
+- **Vier crawler-user-agents succesvol:** Facebook, X/Twitter, LinkedIn en WhatsApp krijgen op de pagina een 200 en kunnen de nieuwe JPEG direct met 200 ophalen, zonder redirect. De daadwerkelijk gedownloade bestanden zijn 1200 × 630 pixels, 219.090 bytes en hebben dezelfde SHA-256 als het gecommitte bestand. Dit bewijst bereikbaarheid met die user-agents; het bewijst niet dat externe platformcaches al vernieuwd zijn.
+- **Beveiligingsheaders actief** op de live homepage. Accountlogin, bestellen en aankopen behouden `private, no-store`, noindex en `no-referrer`.
+- **Negatieve autorisatieprobes slagen:** admin-API, praktijkagenda en cron zonder geheim geven 401. `/api/health` geeft 200 met `ok: true`.
+- **103 lokale tests geslaagd**, typecheck en productiebuild geslaagd, productie-dependency-audit nul bekende kwetsbaarheden, releaseartifactcontrole geslaagd inclusief de nieuwe routeringsregressiecontrole.
+- **TLS geldig en vertrouwd:** TLS 1.3, Let's Encrypt-certificaat geldig tot 28 januari 2027 op het controlemoment.
+- De nieuwe metadata en de reeds aanwezige privacycomponentwijziging zijn ook in de live browser teruggezien. De verkoopblokkade blijft actief.
 
 Platformgrenzen: geen aangemelde Facebook-/LinkedIn-kaart, geen geauthenticeerde cliëntsessies, geen nieuwe betaling, geen destructieve beveiligingstest, geen historische secretscan en geen bewezen back-uprestore. Een nieuw gedeeld bericht kan pas de nieuwe metadata gebruiken nadat het deelplatform de pagina opnieuw heeft opgehaald.
 

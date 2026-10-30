@@ -4,6 +4,8 @@
 
 ## Begin hier
 
+De [lanceringsaudit van 30 oktober](LAUNCH-AUDIT-2026-10-30.md) beschrijft de actuele www-migratie, herstelde social sharing, productiecontrole van 55 pagina's en 35 oude URL's, en resterende lanceringspunten. De afzonderlijke [beveiligingsaudit](SECURITY-AUDIT-2026-10-30.md) bevat urgente, nog open punten rond beheerrechten en authenticatie.
+
 1. [MASTERPLAN.md](MASTERPLAN.md) — actuele functies, vaste keuzes en resterende volgorde.
 2. [RELEASE-RUNBOOK.md](RELEASE-RUNBOOK.md) — Vercel Free, verkoopvrijgave, migraties, tests en herstel.
 3. [DECISIONS.md](DECISIONS.md) — bevestigde en nog open bedrijfsbesluiten.

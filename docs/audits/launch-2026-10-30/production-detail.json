@@ -1,0 +1,329 @@
+{
+  "checkedAt": "2026-10-30T06:28:06.243Z",
+  "legacy": [
+    {
+      "path": "/nl",
+      "status": 301,
+      "expected": 301,
+      "location": "/",
+      "ok": true
+    },
+    {
+      "path": "/onlinetherapie",
+      "status": 301,
+      "expected": 301,
+      "location": "/begeleiding",
+      "ok": true
+    },
+    {
+      "path": "/over-mygrowise",
+      "status": 301,
+      "expected": 301,
+      "location": "/over-ons",
+      "ok": true
+    },
+    {
+      "path": "/persoonlijkheidsprofiel",
+      "status": 301,
+      "expected": 301,
+      "location": "/profielen",
+      "ok": true
+    },
+    {
+      "path": "/stress-en-emotieprofiel",
+      "status": 301,
+      "expected": 301,
+      "location": "/profielen/stress-en-emotieprofiel",
+      "ok": true
+    },
+    {
+      "path": "/aanbod",
+      "status": 301,
+      "expected": 301,
+      "location": "/zelf-aan-de-slag",
+      "ok": true
+    },
+    {
+      "path": "/terminos-y-condiciones",
+      "status": 301,
+      "expected": 301,
+      "location": "/voorwaarden",
+      "ok": true
+    },
+    {
+      "path": "/politica-de-privacidad",
+      "status": 301,
+      "expected": 301,
+      "location": "/privacy",
+      "ok": true
+    },
+    {
+      "path": "/nl/algemene-voorwaarden",
+      "status": 301,
+      "expected": 301,
+      "location": "/voorwaarden",
+      "ok": true
+    },
+    {
+      "path": "/nl/privacybeleid",
+      "status": 301,
+      "expected": 301,
+      "location": "/privacy",
+      "ok": true
+    },
+    {
+      "path": "/nl/persoonlijkheidsprofiel",
+      "status": 301,
+      "expected": 301,
+      "location": "/profielen",
+      "ok": true
+    },
+    {
+      "path": "/nl/onlinemodules",
+      "status": 301,
+      "expected": 301,
+      "location": "/modules",
+      "ok": true
+    },
+    {
+      "path": "/nl/onlinebegeleiding",
+      "status": 301,
+      "expected": 301,
+      "location": "/begeleiding",
+      "ok": true
+    },
+    {
+      "path": "/nl/onlinecommunity",
+      "status": 301,
+      "expected": 301,
+      "location": "/community",
+      "ok": true
+    },
+    {
+      "path": "/nl/over-mygrowise",
+      "status": 301,
+      "expected": 301,
+      "location": "/over-ons",
+      "ok": true
+    },
+    {
+      "path": "/nl/contact",
+      "status": 301,
+      "expected": 301,
+      "location": "/contact",
+      "ok": true
+    },
+    {
+      "path": "/nl/prijzen",
+      "status": 301,
+      "expected": 301,
+      "location": "/prijzen",
+      "ok": true
+    },
+    {
+      "path": "/nl/aanbod",
+      "status": 301,
+      "expected": 301,
+      "location": "/zelf-aan-de-slag",
+      "ok": true
+    },
+    {
+      "path": "/nl/stress-en-emotieprofiel",
+      "status": 301,
+      "expected": 301,
+      "location": "/profielen/stress-en-emotieprofiel",
+      "ok": true
+    },
+    {
+      "path": "/nl-online-emdr-therapie",
+      "status": 301,
+      "expected": 301,
+      "location": "/begeleiding/virginie",
+      "ok": true
+    },
+    {
+      "path": "/nl/online-psycholoog",
+      "status": 301,
+      "expected": 301,
+      "location": "/begeleiding",
+      "ok": true
+    },
+    {
+      "path": "/nl/onlinepsycholoog",
+      "status": 301,
+      "expected": 301,
+      "location": "/begeleiding",
+      "ok": true
+    },
+    {
+      "path": "/nl/psycholoog-online",
+      "status": 301,
+      "expected": 301,
+      "location": "/begeleiding",
+      "ok": true
+    },
+    {
+      "path": "/nl/online-seksuoloog",
+      "status": 301,
+      "expected": 301,
+      "location": "/begeleiding",
+      "ok": true
+    },
+    {
+      "path": "/nl-persoonlijkheidsprofiel",
+      "status": 301,
+      "expected": 301,
+      "location": "/profielen",
+      "ok": true
+    },
+    {
+      "path": "/nl/nieuws",
+      "status": 301,
+      "expected": 301,
+      "location": "/inspiratie",
+      "ok": true
+    },
+    {
+      "path": "/nl/onze-psychologen/virginie",
+      "status": 301,
+      "expected": 301,
+      "location": "/begeleiding/virginie",
+      "ok": true
+    },
+    {
+      "path": "/p/stress-en-emotieprofiel",
+      "status": 301,
+      "expected": 301,
+      "location": "/profielen/stress-en-emotieprofiel",
+      "ok": true
+    },
+    {
+      "path": "/p/botella-de-felicidad",
+      "status": 410,
+      "expected": 410,
+      "location": null,
+      "ok": true
+    },
+    {
+      "path": "/p/fraaie-fles",
+      "status": 410,
+      "expected": 410,
+      "location": null,
+      "ok": true
+    },
+    {
+      "path": "/p/gran-enciclopedia",
+      "status": 410,
+      "expected": 410,
+      "location": null,
+      "ok": true
+    },
+    {
+      "path": "/p/eenvoudige-encyclopedie",
+      "status": 410,
+      "expected": 410,
+      "location": null,
+      "ok": true
+    },
+    {
+      "path": "/p/el-libro-de-la-vida",
+      "status": 410,
+      "expected": 410,
+      "location": null,
+      "ok": true
+    },
+    {
+      "path": "/p/bewegende-boek",
+      "status": 410,
+      "expected": 410,
+      "location": null,
+      "ok": true
+    },
+    {
+      "path": "/p/liter-van-langdurigheid",
+      "status": 410,
+      "expected": 410,
+      "location": null,
+      "ok": true
+    }
+  ],
+  "social": [
+    {
+      "agent": "facebookexternalhit/1.1",
+      "pageStatus": 200,
+      "imageUrl": "https://www.mygrowise.be/images/social/mygrowise-social-share-v2.jpg",
+      "imageStatus": 200,
+      "type": "image/jpeg",
+      "bytes": 219090,
+      "width": 1200,
+      "height": 630,
+      "matchesCommittedAsset": true
+    },
+    {
+      "agent": "Twitterbot/1.0",
+      "pageStatus": 200,
+      "imageUrl": "https://www.mygrowise.be/images/social/mygrowise-social-share-v2.jpg",
+      "imageStatus": 200,
+      "type": "image/jpeg",
+      "bytes": 219090,
+      "width": 1200,
+      "height": 630,
+      "matchesCommittedAsset": true
+    },
+    {
+      "agent": "LinkedInBot/1.0",
+      "pageStatus": 200,
+      "imageUrl": "https://www.mygrowise.be/images/social/mygrowise-social-share-v2.jpg",
+      "imageStatus": 200,
+      "type": "image/jpeg",
+      "bytes": 219090,
+      "width": 1200,
+      "height": 630,
+      "matchesCommittedAsset": true
+    },
+    {
+      "agent": "WhatsApp/2.24.0",
+      "pageStatus": 200,
+      "imageUrl": "https://www.mygrowise.be/images/social/mygrowise-social-share-v2.jpg",
+      "imageStatus": 200,
+      "type": "image/jpeg",
+      "bytes": 219090,
+      "width": 1200,
+      "height": 630,
+      "matchesCommittedAsset": true
+    }
+  ],
+  "privatePages": [
+    {
+      "path": "/account/inloggen",
+      "status": 200,
+      "cache": "private, no-store",
+      "referrer": "no-referrer",
+      "noindex": true,
+      "salesPaused": false
+    },
+    {
+      "path": "/bestellen",
+      "status": 200,
+      "cache": "private, no-store",
+      "referrer": "no-referrer",
+      "noindex": true,
+      "salesPaused": true
+    },
+    {
+      "path": "/aankopen",
+      "status": 200,
+      "cache": "private, no-store",
+      "referrer": "no-referrer",
+      "noindex": true,
+      "salesPaused": false
+    }
+  ],
+  "health": {
+    "status": 200,
+    "body": {
+      "ok": true,
+      "service": "mygrowise-api"
+    }
+  }
+}
