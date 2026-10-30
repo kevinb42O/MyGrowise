@@ -1,6 +1,8 @@
 # Release en verkoopvrijgave op Vercel Free
 
-**Stand: 18 oktober 2026.** Bronbasis `b2cfabd` plus de wijzigingsset van deze release. Kevin vraagt expliciet naar `main` te pushen zodra het technische werk gecontroleerd is en bevestigt Vercel Free als vaste keuze. Hij verwacht de ontbrekende klantgegevens op 19 oktober. Een push of deployment is niet automatisch toestemming om conceptvoorwaarden als definitief te behandelen.
+**Actuele verwijzing: 30 oktober 2026.** [MASTERPLAN.md](MASTERPLAN.md) beschrijft de huidige status op codebasis `29d4b87`. Alle fixes zijn lokaal gecontroleerd en naar `main` gepusht; de nieuwe Vercel-status is in deze ronde niet afzonderlijk geverifieerd. De ondernemingsgegevens, privacy en volledige voorwaarden zijn inmiddels verwerkt. De [afspraakacceptatie](APPOINTMENT-FLOW-ACCEPTANCE.md) bewijst de eerdere productieketen en mailontvangst; [transactionele mails](TRANSACTIONELE-MAILS.md) beschrijft de nieuwe opmaak en opgeslagen Auth-templates.
+
+De releasebeschrijving en testtellingen hieronder bewaren de uitvoering van **18 oktober 2026** (`b2cfabd` plus toenmalige releasewijzigingen). De toen ontbrekende bedrijfsgegevens zijn op 29 oktober toegevoegd; behandel de ontvangst daarvan niet meer als open taak. Juridische/fiscale beoordeling, bewuste verkoopvrijgave, Auth-mailproef, bank-/leverproef en herstelacceptatie behouden hun eigen bewijsgrens.
 
 ## Gedrag van deze release
 
@@ -36,7 +38,7 @@ GitHub Actions is op uitdrukkelijk verzoek van Kevin verboden. Voer `npm ci`, un
 
 1. Controleer de volledige commit en `git diff --check`. Push de geteste wijzigingsset naar `main`; controleer daarna remote SHA en Vercel-status. Gebruik geen force-push.
 2. Controleer de productievariabelen: juiste Supabase URL/public key/server key, `PUBLIC_SITE_URL`, `CRON_SECRET`, SMTP en geverifieerde afzender. Behoud `COMMERCE_SALES_ENABLED=false` totdat stap 3–5 zijn afgerond. Er wordt geen betaald plan of externe scheduler aangemaakt.
-3. Ontvang officiële naam, ondernemings-/btw-nummer, postadres en bevestiging van de verkoper/verwerkingsverantwoordelijke. Werk privacy en voorwaarden bij, inclusief concrete levering, fiscale aanduiding, annulering/terugbetaling en contact. Maak conceptstatus pas na inhoudelijke bevestiging definitief.
+3. Controleer de op 29 oktober ingevulde gegevens van I-Transform SLU, privacy en voorwaarden op resterende inhoudelijke/juridische en fiscale punten. Volledige bestelvoorwaarden en afzonderlijke digitale-leveringstoestemming zijn al geïmplementeerd; bevestig concrete productlevering en operationele refundafspraken vóór verkoopvrijgave.
 4. Test Auth-mail afzonderlijk, daarna echte SMTP-aflevering en links met een afgesproken ontvanger. Controleer bankbegunstigde/IBAN/QR. Loop met de eigenaar afname/rapport en afspraak/dossier/mail/wijziging door. Test een echte bankbetaling uitsluitend met een expliciet afgesproken bedrag en ontvanger.
 5. Controleer rollen, monitoring, back-up/herstel, incidentverantwoordelijkheid en domeinredirects. Bevestig de uiteindelijke publieke oorsprong in `PUBLIC_SITE_URL` en canonicals. Laat de eigenaar de dagelijkse beheertaken uitvoeren.
 6. Zet verkoop bewust aan en voer een nacontrole uit. Houd alle zes modules in ontwikkeling tot hun eigen materiaal en praktische informatie compleet zijn.

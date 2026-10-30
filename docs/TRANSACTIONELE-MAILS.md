@@ -38,6 +38,6 @@ Databasecontrole: de migratieregistratie is rechtstreeks met alle lokale SQL-bes
 - Afspraakmail daadwerkelijk in de browser bekeken op desktop en 375 px breed; geen horizontale overflow.
 - Geen echte mails of nieuwe Auth-uitnodigingen verstuurd voor deze vormgevingscontrole. MIME is lokaal opgevangen met synthetische gegevens.
 
-De zes Supabase-accounttemplates zijn live opgeslagen. De applicatieaanpassingen voor afspraken, aankopen, contact en support zijn lokaal gebouwd en getest; deze side-conversation heeft geen Git-commit, push of Vercel-uitrol uitgevoerd, om lopend werk in de hoofdchat niet te doorkruisen. Deze mailbestanden moeten samen met hun gedeelde renderer in de volgende applicatie-uitrol worden meegenomen. De mailwijziging voegt geen dependency, GitHub Actions-workflow of scheduler toe.
+De zes Supabase-accounttemplates zijn live opgeslagen. De applicatieaanpassingen voor afspraken, aankopen, contact en support zijn op verzoek van Kevin samen met de gedeelde renderer vastgelegd in fixcommit `29d4b87` en naar `main` gepusht. De consolidatieronde bevestigde opnieuw 99 tests, TypeScript, build, nul dependencykwetsbaarheden en een schoon release-artifact (1685 bestanden). De Vercel-uitrol en echte aflevering van deze nieuwe HTML-versie zijn in die ronde niet afzonderlijk geverifieerd. De mailwijziging voegt geen dependency, GitHub Actions-workflow of scheduler toe.
 
 Lokale voorbeelden staan onder `output/email-preview/`. Deze map wordt niet meegecommit of gepubliceerd. De voorbeelden bevatten uitsluitend fictieve gegevens.

@@ -1,6 +1,6 @@
 # Mijn aankopen — visuele afwerking
 
-30 oktober 2026. Lokaal geïmplementeerd; geen deployment uitgevoerd.
+30 oktober 2026. Geïmplementeerd en lokaal gecontroleerd; op verzoek van Kevin meegenomen in fixcommit `29d4b87` en gepusht naar `main`. Vercel-uitrol van deze commit is in de consolidatieronde niet afzonderlijk geverifieerd.
 
 De vijf routes onder `/aankopen` gebruiken een gedeelde `PurchaseLayout` met compacte navigatie, dezelfde typografie, kleuren en knoppen. De publieke marketingfooter en automatische inhoudsanimaties zijn hier vervangen door een rustige werkruimte.
 

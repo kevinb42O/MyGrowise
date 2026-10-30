@@ -1,6 +1,6 @@
 # MyGrowise kennisbank
 
-**Laatste controle: 18 oktober 2026**, tegen `b2cfabd` plus de huidige releasewijzigingen. De voortgang is opnieuw vergeleken met code, GitHub, migratiehistorie, database en gerichte tests. Gebruik het masterplan en releaserunbook als actuele ingang; de oorspronkelijke plannen bewaren de specificatie en oudere uitvoering. Externe mail, bankontvangst en eigenaaracceptatie hebben een eigen bewijsgrens.
+**Laatste statusactualisatie: 30 oktober 2026**, tegen lokaal geteste en naar `origin/main` gepushte code `29d4b87`. Het masterplan vergelijkt code, Git-historie en bestaande acceptatieverslagen. In deze ronde zijn 99 tests, TypeScript, build, dependency-audit en artifactcontrole lokaal uitgevoerd; productie en database zijn niet opnieuw integraal getest. Oudere onderwerpplannen behouden hun eigen controledatum.
 
 ## Begin hier
 
@@ -15,6 +15,10 @@ De [MijnDiAd-agendakoppeling](MIJNDIAD-AGENDA-IMPORT.md) beschrijft de 262 overg
 
 | Document | Doel en actualiteit |
 |---|---|
+| [APPOINTMENT-FLOW-ACCEPTANCE.md](APPOINTMENT-FLOW-ACCEPTANCE.md) | Productieacceptatie van afspraken/dossiers op 30 oktober, inclusief bevestigde ontvangst van drie afspraakmails. |
+| [AANKOPEN-ERVARING.md](AANKOPEN-ERVARING.md) | Nieuwe aankoopwerkruimte, lokale visuele controles en grenzen van het bewijs. |
+| [TRANSACTIONELE-MAILS.md](TRANSACTIONELE-MAILS.md) | HTML/plain text, zes opgeslagen Auth-templates, migratieregistratie en lokale mailcontroles. |
+| [MOBILE-HERSTEL-2026-10-29.md](MOBILE-HERSTEL-2026-10-29.md) | Mobiel herstel, nacorrecties en nog open fysieke toestelproeven. |
 | [HOMEPAGE-VISUEEL-PLAN.md](HOMEPAGE-VISUEEL-PLAN.md) | Goedgekeurde homepageproef lokaal geïntegreerd op 29 oktober, met alle hoofdstukken, scrolltransities en Virginies foto in de hero; lokale browsercontroles en bewijsgrenzen vastgelegd. |
 | [PROFILES-RUNBOOK.md](PROFILES-RUNBOOK.md) | Acht volledige profielpagina’s, filters, inhoudsbeheer en broncontrole. |
 | [PROFIELEN-LANDINGSPAGINA-PLAN.md](PROFIELEN-LANDINGSPAGINA-PLAN.md) | Uitgevoerde profielspecificatie; actuele uitvoering in het profielrunbook. |
