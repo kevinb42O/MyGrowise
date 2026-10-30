@@ -3,12 +3,13 @@ import {join} from 'node:path';
 import { defineConfig } from 'astro/config';
 import vercel from '@astrojs/vercel';
 import react from '@astrojs/react';
+import { SITE_ORIGIN } from './src/lib/site.ts';
 
 // The adapter excludes exact paths; expand local directories rather than passing globs.
 const localFiles=dir=>existsSync(dir)?readdirSync(dir,{withFileTypes:true}).flatMap(e=>e.isDirectory()?localFiles(join(dir,e.name)):[join(dir,e.name)]):[];
 // https://astro.build/config
 export default defineConfig({
-  site: 'https://mygrowise.be',
+  site: SITE_ORIGIN,
   output: 'server',
   adapter: vercel({excludeFiles: [...localFiles('output'),...localFiles('tests'),...readdirSync('.').filter(name=>name.startsWith('.env'))]}),
   integrations: [react()],

@@ -8,7 +8,7 @@ export async function deliverCommerceMail(limit=4,orderId?:string){
  if(!websiteMailReady())return {sent:0,failed:0,configured:false};
  const db=getSupabaseAdmin();const {data:jobs,error}=await db.rpc('claim_commerce_mail',{p_limit:limit,p_order_id:orderId||null});if(error)throw new Error('mail_claim_failed');
 
- const origin=(import.meta.env.PUBLIC_SITE_URL||(import.meta.env.PROD?'https://mygrowise.vercel.app':'http://localhost:4321')).replace(/\/$/,'');let sent=0,failed=0;
+ const origin=(import.meta.env.PUBLIC_SITE_URL||(import.meta.env.PROD?'https://www.mygrowise.be':'http://localhost:4321')).replace(/\/$/,'');let sent=0,failed=0;
  for(const job of jobs||[]){try{
   const {data:order,error:oe}=await db.from('orders').select('customer_user_id,contact_snapshot,provider_reference,total_cents,status,commerce_buyers!orders_buyer_id_fkey(email,first_name,last_name),order_items(product_type,product_title)').eq('id',job.order_id).single();if(oe||!order)throw new Error('order_missing');
   if(job.event==='delivery'&&!['paid','fulfilled'].includes(order.status)){await db.from('commerce_mail_jobs').update({status:'sent',sent_at:new Date().toISOString(),lease_until:null,last_error:'delivery_access_inactive'}).eq('id',job.id).eq('lease_token',job.lease_token);continue;}

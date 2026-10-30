@@ -22,6 +22,15 @@ test('appointment mail has Belgian time, matching end time and a real account ac
  assert.match(bookingMailContent('rescheduled',p).html,/eerdere tijdstip is vervallen/);
  const cancelled=bookingMailContent('cancelled',p);assert.ok(!cancelled.html.includes(p.instructions));assert.ok(!cancelled.text.includes(p.instructions));assert.match(cancelled.html,/geannuleerd/);
 });
+test('appointment mail uses the public domain when configuration is missing or unsafe',()=>{
+ const p={name:'Test',appointment:'Sessie',practitioner:'Test',startsAt:'2026-11-12T09:00Z',endsAt:'2026-11-12T09:50Z',channel:'online'};
+ for(const origin of [undefined,'javascript:alert(1)']){
+  const mail=bookingMailContent('confirmation',p,origin);
+  assert.ok(mail.text.includes('https://www.mygrowise.be/account/begeleiding'));
+  assert.ok(mail.html.includes('src="https://www.mygrowise.be/images/logo-lelie.png"'));
+  assert.ok(!mail.html.includes('mygrowise.vercel.app'));
+ }
+});
 test('Supabase templates retain executable provider placeholders and have no injected browser markup',()=>{
  for(const name of ['confirmation','recovery','invite','magic_link','email_change','reauthentication']){
   const html=readFileSync(new URL(`../supabase/templates/${name}.html`,import.meta.url),'utf8');

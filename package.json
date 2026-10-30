@@ -11,6 +11,7 @@
     "typecheck": "tsc --noEmit",
     "check": "npm run typecheck && npm run build",
     "security:audit": "npm audit --omit=dev",
+    "audit:public": "node scripts/audit-public-site.mjs",
     "supabase:link": "supabase link --project-ref bwkqkehumzpfodmcesab",
     "supabase:push": "dotenv -e .env -- sh -c 'supabase db push --db-url \"$SUPABASE_DB_URL\" \"$@\"' --",
     "supabase:push:dry-run": "dotenv -e .env -- sh -c 'supabase db push --dry-run --db-url \"$SUPABASE_DB_URL\"'",

@@ -8,4 +8,9 @@ const secrets=['SUPABASE_SECRET_KEY','SUPABASE_DB_URL','SUPPORT_SMTP_PASSWORD','
 for(const file of files.filter(f=>f.startsWith('.vercel/output/static/')&&/\.(?:js|html|json|css)$/.test(f))){const body=readFileSync(file,'utf8');assert.ok(!secrets.some(value=>body.includes(value)),`Private configuration present in public artifact: ${file}`);}
 const crons=JSON.parse(readFileSync('vercel.json','utf8')).crons;
 for(const cron of crons)assert.match(cron.schedule,/^\d{1,2} \d{1,2} \* \* \*$/,'Vercel Hobby cron must run at most once per day.');
-console.log(`Release artifact checked: ${files.length} files, no local mailbox/environment data, no configured secrets in public assets, daily-only cron.`);
+const routes=JSON.parse(readFileSync('.vercel/output/config.json','utf8')).routes;
+for(const path of ['/nl/onlinebegeleiding/','/nl/onze-psychologen/virginie/','/p/fraaie-fles/']){
+ const route=routes.find(r=>r.src&&r.dest&&new RegExp(r.src).test(path));
+ assert.ok(route&&route.status!==404,`${path}: Vercel must not force 404 over middleware's 301/410 response.`);
+}
+console.log(`Release artifact checked: ${files.length} files, no local mailbox/environment data, no configured secrets in public assets, daily-only cron, legacy routes preserve middleware status.`);
