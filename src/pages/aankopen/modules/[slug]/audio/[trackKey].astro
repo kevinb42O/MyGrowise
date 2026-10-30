@@ -1,15 +1,23 @@
 ---
-import MainLayout from '../../../../../layouts/MainLayout.astro';
+import PurchaseUnavailable from '../../../../../components/purchases/PurchaseUnavailable.astro';
+import PurchaseLayout from '../../../../../layouts/PurchaseLayout.astro';
+import Icon from '../../../../../components/purchases/PurchaseIcon.astro';
 import AudioPlayer from '../../../../../components/modules/AudioPlayer.astro';
 import {purchaseOwner,hasPurchase,privateHeaders} from '../../../../../lib/commerce/purchases';
 import {findModule,publishedModuleAsset} from '../../../../../lib/modules/server';
 import {trackKeyValid} from '../../../../../lib/modules/validation';
-import '../../../../../styles/modules.css';
 Object.entries(privateHeaders).forEach(([k,v])=>Astro.response.headers.set(k,v));
 const owner=await purchaseOwner(Astro.cookies,Astro.locals.currentUser);if(!owner)return Astro.redirect(`/aankopen/toegang?next=${encodeURIComponent(Astro.url.pathname)}`,303);
 const m=await findModule(Astro.params.slug||''),key=Astro.params.trackKey||'';
-if(!m||!trackKeyValid(key)||!await hasPurchase(owner,m.product.id))return new Response('Audio niet beschikbaar.',{status:404,headers:privateHeaders});
-if(!m.canonical)return Astro.redirect(`/aankopen/modules/${m.product.slug}/audio/${key}`,301);
-const a=await publishedModuleAsset(m.product.id,key);if(!a)Astro.response.status=404;
+const available=m&&trackKeyValid(key)&&await hasPurchase(owner,m.product.id);if(!available)Astro.response.status=404;
+if(m&&available&&!m.canonical)return Astro.redirect(`/aankopen/modules/${m.product.slug}/audio/${key}`,301);
+const a=m&&available?await publishedModuleAsset(m.product.id,key):null;if(!a)Astro.response.status=404;
 ---
-<MainLayout title={a?.title||'Audio niet beschikbaar'} noindex><section class="section"><div class="container"><a href={`/aankopen/modules/${m.product.slug}`}>← {m.product.title}</a><section class="module-material"><h1>{a?.title||'Audio niet beschikbaar'}</h1>{a?<AudioPlayer endpoint={`/api/aankopen/material/${m.product.id}?audio=${key}`}/>:<p>Deze oefening is momenteel niet beschikbaar. <a href="/contact">Neem contact op</a>.</p>}</section></div></section></MainLayout>
+{m && available ? <PurchaseLayout title={a?.title||'Audio niet beschikbaar'}>
+  <div class="purchase-detail">
+    <a class="purchase-text-link purchase-back" href={`/aankopen/modules/${m.product.slug}`}><Icon name="back" /> Terug naar je werkboek en audio</a>
+    <header class="purchase-heading"><p>{m.product.title}</p><h1>{a?.title||'Audio niet beschikbaar'}</h1></header>
+    {a?<section class="purchase-listening" aria-label="Audiobegeleiding"><AudioPlayer endpoint={`/api/aankopen/material/${m.product.id}?audio=${key}`}/></section>:<div class="purchase-notice"><p>Deze oefening is momenteel niet beschikbaar.</p><a class="purchase-text-link" href="/contact">Neem contact op <Icon name="arrow" /></a></div>}
+    <p class="purchase-access-note">Voor luisteren via de website heb je internet nodig.</p>
+  </div>
+</PurchaseLayout> : <PurchaseUnavailable />}

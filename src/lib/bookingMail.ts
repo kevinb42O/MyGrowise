@@ -8,8 +8,8 @@ export async function deliverBookingMail(limit=4,bookingId?:string){
  if(error)throw new Error('mail_claim_failed');
  let sent=0,failed=0;
  for(const job of jobs||[]){try{
-   const mail=bookingMailContent(job.kind,job.payload as BookingMailPayload);
-   await sendWebsiteEmail(job.recipient,mail.subject,mail.text,import.meta.env.SUPPORT_FROM_EMAIL,`<booking-${job.id}@mygrowise.be>`);
+   const mail=bookingMailContent(job.kind,job.payload as BookingMailPayload,import.meta.env.PUBLIC_SITE_URL);
+   await sendWebsiteEmail(job.recipient,mail.subject,mail.text,import.meta.env.SUPPORT_FROM_EMAIL,`<booking-${job.id}@mygrowise.be>`,mail.html);
    const {error}=await db.from('booking_mail_jobs').update({status:'sent',sent_at:new Date().toISOString(),lease_until:null,last_error:null}).eq('id',job.id).eq('lease_token',job.lease_token);
    if(error)throw new Error('mail_status_failed');sent++;
  }catch{

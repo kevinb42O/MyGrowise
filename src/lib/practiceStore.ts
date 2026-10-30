@@ -191,8 +191,8 @@ export const updatePractitionerProfile = async (idOrSlug: string, actorUserId: s
   return getPractitionerProfile(practitioner.id);
 };
 
-export const getPracticeSummary = async (idOrSlug: string) => {
-  const [bookings, rules, nextSlots] = await Promise.all([listBookings(idOrSlug), getAvailabilityRules(idOrSlug), getBookableSlots(idOrSlug, 14)]);
+export const getPracticeSummary = async (idOrSlug: string, existingBookings?: PracticeBooking[]) => {
+  const [bookings, rules, nextSlots] = await Promise.all([existingBookings ?? listBookings(idOrSlug), getAvailabilityRules(idOrSlug), getBookableSlots(idOrSlug, 14)]);
   const now = new Date().toISOString();
-  return { pending: bookings.filter((booking) => booking.status === 'pending').length, upcoming: bookings.filter((booking) => booking.status === 'confirmed' && booking.startsAt >= now).length, availabilityDays: new Set(rules.map((rule) => rule.weekday)).size, nextSlots: nextSlots.slice(0, 4) };
+  return { pending: bookings.filter((booking) => booking.status === 'pending').length, upcoming: bookings.filter((booking) => booking.status === 'confirmed' && booking.startsAt >= now).length, availabilityDays: new Set(rules.map((rule) => rule.weekday)).size, freeSlotCount: nextSlots.length, nextSlots: nextSlots.slice(0, 4) };
 };

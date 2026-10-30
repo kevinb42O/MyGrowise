@@ -1,0 +1,8 @@
+---
+import ClientRecord from '../../../components/records/ClientRecord.astro';
+import { loadClientDetailPage } from '../../../lib/clientDetailPage';
+Astro.response.headers.set('Cache-Control', 'private, no-store');
+const data = await loadClientDetailPage(Astro);
+if (data instanceof Response) return data;
+---
+<ClientRecord data={data} />

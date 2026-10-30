@@ -1,0 +1,35 @@
+---
+import PracticeLayout from '../../layouts/PracticeLayout.astro';
+import AdminIcon from '../admin/AdminIcon.astro';
+import '../../styles/practice-workday.css';
+import type { PracticeWorkdayData } from '../../lib/practiceWorkdayPage';
+interface Props { data: PracticeWorkdayData }
+const { user, canWrite, summary, now, day, tasks, forbidden, formatDate, time, labels, todayLabel } = Astro.props.data;
+---
+
+<PracticeLayout title="Vandaag">
+  <div class="admin-page workday">
+    <section class="admin-page-heading"><div><h1>Vandaag</h1><p>{todayLabel} · {user.name}</p></div><div class="admin-page-actions"><a class="admin-button" href="/praktijk/agenda"><AdminIcon name="calendar" size={16} /> Agenda openen</a><a class="admin-button admin-button--primary" href="/praktijk/afspraken/nieuw"><AdminIcon name="plus" size={16} /> Afspraak plannen</a></div></section>
+    {forbidden && <div class="admin-preview-notice" role="alert"><AdminIcon name="warning" size={18} /><div><strong>Geen toegang tot organisatiebeheer</strong>Je account heeft alleen toegang tot je eigen praktijkomgeving.</div></div>}
+    <p class="workday-route">Open een afspraak, bekijk het dossier, schrijf je verslag en plan het vervolg.</p>
+    <div class="admin-dashboard-grid">
+      <section class="admin-panel" aria-labelledby="today-appointments"><header class="admin-panel__header"><div><h2 id="today-appointments">Afspraken vandaag <span class="workday-count">{day.today.length}</span></h2><p>Ook lopende en afgelopen gesprekken blijven hier staan.</p></div></header>
+        {day.today.length ? <ol class="workday-appointments">{day.today.map(booking => <li><a href={`/praktijk/afspraken/${booking.id}`}>
+          <span class="workday-time"><strong>{time(booking.startsAt)}</strong><small>{time(booking.endsAt)}</small></span>
+          <span class="workday-person"><strong>{booking.clientName}</strong><small>{booking.appointmentName}</small><span>{labels[booking.status as keyof typeof labels]}{booking.status === 'confirmed' && Date.parse(booking.endsAt) <= now.getTime() ? ' · Uitvoering nog registreren' : ''}</span></span>
+          <span class="workday-open">Open afspraak <AdminIcon name="arrow" size={15}/></span>
+        </a></li>)}</ol> : <div class="admin-empty-row"><div><span><AdminIcon name="calendar" size={17}/></span><strong>Geen afspraken vandaag</strong><p>Werk je verslagen bij of plan een volgende cliëntafspraak.</p><a class="admin-text-link" href="/praktijk/afspraken/nieuw">Afspraak plannen →</a></div></div>}
+      </section>
+      <section class="admin-panel" aria-labelledby="workday-tasks"><header class="admin-panel__header"><div><h2 id="workday-tasks">Nog op te volgen {canWrite && <span class="workday-count">{tasks.length + summary.pending}</span>}</h2><p>Verslagen en bestaande aanvragen</p></div></header>
+        {summary.pending > 0 && <a class="workday-task" href="/praktijk/boekingen?status=pending"><span><strong>{summary.pending} bestaande {summary.pending === 1 ? 'aanvraag' : 'aanvragen'}</strong><small>Bevestigen of weigeren</small></span><AdminIcon name="arrow" size={15}/></a>}
+        {canWrite && tasks.slice(0, 8).map(task => <a class="workday-task" href={task.href}><span><strong>{task.name}</strong><small>{task.label}</small></span><AdminIcon name="arrow" size={15}/></a>)}
+        {canWrite && tasks.length > 8 && <details class="workday-more"><summary>Bekijk de overige {tasks.length - 8} taken</summary>{tasks.slice(8).map(task => <a class="workday-task" href={task.href}><span><strong>{task.name}</strong><small>{task.label}</small></span><AdminIcon name="arrow" size={15}/></a>)}</details>}
+        {!tasks.length && !summary.pending && <div class="admin-empty-row"><div><span><AdminIcon name="check" size={17}/></span><strong>Alles opgevolgd</strong><p>Na een gesprek vind je hier de verslagen die nog aandacht vragen.</p></div></div>}
+      </section>
+    </div>
+    <section class="admin-panel"><header class="admin-panel__header"><div><h2>Volgende werkdagen</h2><p>De eerstvolgende bevestigde afspraken na vandaag</p></div><a class="admin-text-link" href="/praktijk/boekingen">Alle afspraken <AdminIcon name="arrow" size={13}/></a></header>
+      {day.upcoming.length ? <div class="practice-list">{day.upcoming.map(booking => <a class="practice-list-row workday-upcoming" href={`/praktijk/afspraken/${booking.id}`}><span class="admin-avatar">{booking.clientName.charAt(0).toUpperCase()}</span><span><strong>{booking.clientName}</strong><small>{booking.appointmentName} · {formatDate(booking.startsAt)}</small></span><AdminIcon name="arrow" size={15}/></a>)}</div> : <div class="client-inline-empty">Geen volgende afspraken gepland. <a class="admin-text-link" href="/praktijk/afspraken/nieuw">Plan een afspraak</a></div>}
+    </section>
+    <details class="admin-panel workday-availability"><summary>Beschikbaarheid · {summary.freeSlotCount} vrije momenten in de komende 14 dagen</summary><div class="admin-panel__header"><p>De eerstvolgende vier boekbare momenten. Totaal: {summary.freeSlotCount}.</p><a class="admin-text-link" href="/praktijk/beschikbaarheid">Beschikbaarheid beheren →</a></div>{summary.nextSlots.length ? <div class="practice-slots">{summary.nextSlots.map(slot => <div><span>{slot.dateLabel}</span><strong>{slot.timeLabel}</strong></div>)}</div> : <p class="client-inline-empty">Er zijn momenteel geen boekbare momenten. Controleer je beschikbaarheid en boekingsinstellingen.</p>}</details>
+  </div>
+</PracticeLayout>

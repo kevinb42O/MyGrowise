@@ -1,0 +1,11 @@
+---
+import PurchaseLayout from '../../layouts/PurchaseLayout.astro';
+import Icon from './PurchaseIcon.astro';
+---
+<PurchaseLayout title="Inhoud niet beschikbaar">
+  <div class="purchase-detail">
+    <a class="purchase-text-link purchase-back" href="/aankopen"><Icon name="back" /> Mijn aankopen</a>
+    <header class="purchase-heading"><h1>Deze inhoud is niet beschikbaar.</h1><p>Open je aankoopoverzicht om te zien welke inhoud je kunt gebruiken. Denk je dat er iets ontbreekt? We helpen je graag.</p></header>
+    <div class="purchase-actions"><a class="purchase-button" href="/aankopen">Naar mijn aankopen <Icon name="arrow" /></a><a class="purchase-text-link" href="/contact">Vraag hulp <Icon name="arrow" /></a></div>
+  </div>
+</PurchaseLayout>

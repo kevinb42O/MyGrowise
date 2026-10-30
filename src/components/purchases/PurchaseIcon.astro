@@ -1,0 +1,14 @@
+---
+interface Props { name: 'arrow' | 'mail' | 'book' | 'file' | 'check' | 'back' | 'headphones' }
+const { name } = Astro.props;
+const paths = {
+  arrow: 'M4 12h16m-6-6 6 6-6 6',
+  back: 'M20 12H4m6-6-6 6 6 6',
+  mail: 'M3 5h18v14H3V5Zm0 1 9 7 9-7',
+  book: 'M12 6v15m0-15C9 4 6 3 2 4v15c4-1 7 0 10 2 3-2 6-3 10-2V4c-4-1-7 0-10 2Z',
+  file: 'M14 2H5v20h14V7l-5-5Zm0 0v5h5M8 12h8m-8 4h6',
+  check: 'm5 12 4 4L19 6',
+  headphones: 'M4 14v-3a8 8 0 0 1 16 0v3M4 12H2v8h4v-8H4Zm16 0h2v8h-4v-8h2Z',
+};
+---
+<svg class="purchase-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d={paths[name]} /></svg>

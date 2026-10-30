@@ -192,7 +192,7 @@ const questions = [
     };
     const renderResult = () => {
       const guidance = answers.need === 'talk' || answers.pace === 'together' || answers.focus === 'other'
-        ? { route: 'Samen met iemand', title: 'Je hoeft dit niet alleen te ordenen.', copy: 'Een gesprek met een professional lijkt nu een passende eerste stap. Kies rustig wie aansluit bij jouw vraag en tempo.', link: '/begeleiding', label: 'Bekijk begeleiding', points: ['Je kiest zelf welke professional je aanspreekt.', 'Een tijdstip kiezen is eerst een aanvraag.', 'Je hoeft je hulpvraag niet perfect te kunnen uitleggen.'] }
+        ? { route: 'Samen met iemand', title: 'Je hoeft dit niet alleen te ordenen.', copy: 'Een gesprek met een professional lijkt nu een passende eerste stap. Kies rustig wie aansluit bij jouw vraag en tempo.', link: '/begeleiding', label: 'Bekijk begeleiding', points: ['Je kiest zelf welke professional je aanspreekt.', 'Je afspraak is meteen bevestigd zodra je boekt.', 'Je hoeft je hulpvraag niet perfect te kunnen uitleggen.'] }
         : { route: 'Op je eigen tempo', title: 'Eerst ruimte om te begrijpen.', copy: 'Een persoonlijk profiel kan nu een passend vertrekpunt zijn als je zicht wil krijgen op stress, emoties en draagkracht.', link: '/profielen/stress-en-emotieprofiel', label: 'Ontdek het stress- en emotieprofiel', points: ['Je verkent rustig of dit profiel bij je past.', 'Een profiel is geen diagnose.', 'Je kan later altijd begeleiding toevoegen.'] };
       const setText = (selector: string, text: string) => { const element = result?.querySelector(selector); if (element) element.textContent = text; };
       setText('[data-result-route]', guidance.route);

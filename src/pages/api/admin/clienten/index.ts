@@ -1,3 +1,4 @@
+import { clientRecordsBaseForRequest } from '../../../../lib/clientRecordNavigation';
 import type { APIRoute } from 'astro';
 import { isTrustedFormOrigin } from '../../../../lib/adminAuth';
 import { auditActor } from '../../../../lib/securityAudit';
@@ -22,6 +23,7 @@ const friendlyError = (error: unknown) => {
 };
 
 export const POST: APIRoute = async ({ request, locals, redirect }) => {
+  const recordsBase = clientRecordsBaseForRequest(request);
   if (!isTrustedFormOrigin(request)) return new Response('Ongeldige aanvraag.', { status: 403 });
   const user = locals.currentUser!; const form = await request.formData();
   const actor = auditActor(user, locals.requestId, '/api/admin/clienten');
@@ -33,10 +35,12 @@ export const POST: APIRoute = async ({ request, locals, redirect }) => {
         ? await createPatientFromCustomerAccount(String(form.get('customer_user_id') || ''), String(form.get('assignee_user_id') || '') || null, user, actor)
         : await createPatient({ fullName: form.get('full_name'), email: form.get('email'), assigneeUserId: form.get('assignee_user_id') }, user, actor);
     const destination = new URLSearchParams({ melding: operation === 'from_booking' ? 'afspraak' : operation === 'from_customer' ? 'account_gekoppeld' : 'aangemaakt' });
-    return redirect(`/admin/clienten/${encodeURIComponent(patientId)}?${destination}`, 303);
+    if (operation === 'from_booking') destination.set('boeking', String(form.get('booking_id') || ''));
+    return redirect(`${recordsBase}/${encodeURIComponent(patientId)}?${destination}${operation === 'from_booking' ? '#nieuw-verslag' : ''}`, 303);
   } catch (error) {
     const destination = new URLSearchParams({ fout: friendlyError(error) });
-    return redirect(`/admin/clienten?${destination}`, 303);
+    if (form.get('booking_id')) destination.set('boeking', String(form.get('booking_id')));
+    return redirect(`${recordsBase}?${destination}`, 303);
   }
 };
 

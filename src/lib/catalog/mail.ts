@@ -3,6 +3,7 @@ import {makePurchaseLink} from '../commerce/purchases';
 import {getSupabaseAdmin} from '../supabase/server';
 import {money} from './pricing';
 import {legacyTerms20261029} from '../commerce/termsArchive';
+import {renderEmail} from '../emailTemplate';
 export async function deliverCommerceMail(limit=4,orderId?:string){
  if(!websiteMailReady())return {sent:0,failed:0,configured:false};
  const db=getSupabaseAdmin();const {data:jobs,error}=await db.rpc('claim_commerce_mail',{p_limit:limit,p_order_id:orderId||null});if(error)throw new Error('mail_claim_failed');
@@ -22,7 +23,14 @@ export async function deliverCommerceMail(limit=4,orderId?:string){
   const confirmation=consent&&typeof consent.statement==='string'?`\n\nBevestiging directe digitale levering:\n${consent.statement}\nGeregistreerd bij bestelling ${order.provider_reference}. De toestemming geldt uitsluitend voor de digitale inhoud waarvoor je deze afzonderlijk gaf.`:'';
   const agreedTerms=typeof order.contact_snapshot?.terms_text==='string'?order.contact_snapshot.terms_text:legacyTerms20261029;
   const message=!team&&event==='created'?`${text}${confirmation}\n\n${agreedTerms}`:text;
-  await sendWebsiteEmail(recipient,subject,message);
+  const title=team?(event==='created'?'Een nieuwe bestelling.':'Een betaling is bevestigd.'):event==='created'?'Je bestelling is ontvangen.':event==='paid'?'Je betaling is bevestigd.':'Er staat iets voor je klaar.';
+  const name=String(order.contact_snapshot?.first_name||buyer?.first_name||'').trim();
+  const details:[string,string][]=[['Referentie',order.provider_reference]];
+  if(event!=='delivery')details.push(['Bedrag',money(order.total_cents)]);
+  if(team){details.push(['Producten',order.order_items.map((i:any)=>i.product_title).join(' · ')]);details.push(['Contact',String(email)]);}
+  const sections=!team&&event==='created'?[...(confirmation?[{title:'Je keuze voor directe digitale levering',body:confirmation.trim()}]:[]),{title:'De voorwaarden bij je bestelling',body:agreedTerms}]:[];
+  const html=renderEmail({title,preheader:intro,greeting:!team&&name?`Beste ${name},`:undefined,paragraphs:[intro],details,action:{label:team?'Open in beheer':event==='created'?'Bekijk bestelling en betaalgegevens':event==='paid'?'Open mijn aankopen':'Bekijk mijn update',url:link},sections,note:team?'Volg betaling en levering op in beheer.':event==='created'?'Je bestelling is geregistreerd. De betaalinstructies vind je via de knop hierboven. Toegang wordt verleend nadat je betaling is gecontroleerd.':'De link geeft persoonlijke toegang tot je aankopen. Deel hem niet met anderen.'});
+  await sendWebsiteEmail(recipient,subject,message,undefined,undefined,html);
   const {error}=await db.from('commerce_mail_jobs').update({status:'sent',sent_at:new Date().toISOString(),lease_until:null,last_error:null}).eq('id',job.id).eq('lease_token',job.lease_token);if(error)throw new Error('mail_status_failed');sent++;
  }catch{await db.from('commerce_mail_jobs').update({status:job.attempts>=6?'failed':'pending',next_attempt_at:new Date(Date.now()+Math.min(2**job.attempts*60000,21600000)).toISOString(),lease_until:null,last_error:'delivery_failed'}).eq('id',job.id).eq('lease_token',job.lease_token);failed++;}}
  return {sent,failed,configured:true};

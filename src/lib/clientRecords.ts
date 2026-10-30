@@ -254,7 +254,7 @@ const loadAssignments = async (patientId: string, showHistory: boolean): Promise
   return rows.map((row) => ({ id: String(row.id), userId: String(row.user_id), name: names.get(String(row.user_id)) || 'Medewerker', assignedAt: String(row.assigned_at), endedAt: row.ended_at ? String(row.ended_at) : null }));
 };
 
-export const getPatientDetail = async (user: UserSession, patientId: string, historyNoteId = '', requestId?: string, requestedNotePage = 1, requestedBookingPage = 1, bookingStatus = '', bookingFrom = '', bookingTo = ''): Promise<PatientDetail | null> => {
+export const getPatientDetail = async (user: UserSession, patientId: string, historyNoteId = '', requestId?: string, requestedNotePage = 1, requestedBookingPage = 1, bookingStatus = '', bookingFrom = '', bookingTo = '', focusedDraftId = ''): Promise<PatientDetail | null> => {
   assertRecordRole(user);
   if (!uuidPattern.test(patientId) || !(await hasPatientAccess(user, patientId))) return null;
   const client = getSupabaseAdmin();
@@ -284,6 +284,13 @@ export const getPatientDetail = async (user: UserSession, patientId: string, his
   ]);
   fail(noteError); fail(bookingError); fail(bookingCountResult.error);
   const rawNotes = (noteRows || []) as Row[];
+  // A workday task must remain reachable even when its draft is on an older page.
+  if (uuidPattern.test(focusedDraftId) && !rawNotes.some(note => note.id === focusedDraftId)) {
+    const query = client.from('patient_notes_current').select('id,booking_id,note_type,occurred_at,status,current_version,created_by,created_at,updated_at,finalized_at,corrects_note_id,title,body,version_created_at').eq('patient_id', patientId).eq('id', focusedDraftId);
+    const { data, error } = await query.maybeSingle();
+    fail(error);
+    if (data) rawNotes.unshift(data);
+  }
   const noteIds = rawNotes.map((row) => String(row.id));
   let versionRows: Row[] = [];
   if (historyNoteId && noteIds.includes(historyNoteId)) {
@@ -452,3 +459,40 @@ export const getPatientByNote = async (noteId: string, user: UserSession) => {
 };
 
 export const noteTypeLabels: Record<NoteType, string> = { intake: 'Intake', session: 'Sessieverslag', follow_up: 'Opvolging', other: 'Overig', correction: 'Aanvulling/correctie' };
+
+// Resolve the selected appointment independently of the paginated history.
+export const getBookingForNote = async (user: UserSession, patientId: string, bookingId: string): Promise<PatientBooking | null> => {
+  assertRecordRole(user);
+  await assertPatientAccess(user, patientId);
+  if (!uuidPattern.test(bookingId)) return null;
+  const { data, error } = await getSupabaseAdmin().from('bookings').select('id,starts_at,ends_at,status,appointment_name').eq('id', bookingId).eq('patient_id', patientId).maybeSingle();
+  fail(error);
+  return data ? { id: data.id, startsAt: data.starts_at, endsAt: data.ends_at, status: data.status, appointmentName: data.appointment_name, practitionerName: '' } : null;
+};
+
+// The work queue reads metadata only, within the same assigned-patient scope as dossiers.
+export const getPracticeNoteTasks = async (user: UserSession, requestId?: string) => {
+  await auditPatientDirectoryAccess(user, requestId);
+  const scope = await accessiblePatientIds(user);
+  const patients: { id: string; fullName: string }[] = [];
+  for (let page = 0; ; page += 1) {
+    if (scope && !scope.length) break;
+    let query = getSupabaseAdmin().from('patients').select('id,full_name').eq('status', 'active').order('id').range(page * 1000, (page + 1) * 1000 - 1);
+    if (scope) query = query.in('id', scope);
+    const { data, error } = await query;
+    fail(error);
+    patients.push(...(data || []).map(patient => ({ id: patient.id, fullName: patient.full_name })));
+    if (!data || data.length < 1000) break;
+  }
+  const notes: { id: string; patient_id: string; booking_id: string | null; status: string; created_by: string | null }[] = [];
+  for (let offset = 0; offset < patients.length; offset += 100) {
+    const ids = patients.slice(offset, offset + 100).map(patient => patient.id);
+    for (let page = 0; ; page += 1) {
+      const { data, error } = await getSupabaseAdmin().from('patient_notes').select('id,patient_id,booking_id,status,created_by').in('patient_id', ids).order('id').range(page * 1000, (page + 1) * 1000 - 1);
+      fail(error);
+      notes.push(...(data || []));
+      if (!data || data.length < 1000) break;
+    }
+  }
+  return { patients, notes };
+};

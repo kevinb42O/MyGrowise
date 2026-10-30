@@ -1,12 +1,23 @@
 ---
-import MainLayout from '../../../../layouts/MainLayout.astro';
+import PurchaseUnavailable from '../../../../components/purchases/PurchaseUnavailable.astro';
+import PurchaseLayout from '../../../../layouts/PurchaseLayout.astro';
+import Icon from '../../../../components/purchases/PurchaseIcon.astro';
 import {purchaseOwner,hasPurchase,privateHeaders} from '../../../../lib/commerce/purchases';
 import {findModule,moduleAssets} from '../../../../lib/modules/server';
-import '../../../../styles/modules.css';
 Object.entries(privateHeaders).forEach(([k,v])=>Astro.response.headers.set(k,v));
 const owner=await purchaseOwner(Astro.cookies,Astro.locals.currentUser);if(!owner)return Astro.redirect(`/aankopen/toegang?next=${encodeURIComponent(Astro.url.pathname)}`,303);
-const m=await findModule(Astro.params.slug||'');if(!m||!await hasPurchase(owner,m.product.id))return new Response('Deze inhoud is niet beschikbaar voor jouw aankopen.',{status:404,headers:privateHeaders});
-if(!m.canonical)return Astro.redirect(`/aankopen/modules/${m.product.slug}`,301);
-const assets=m.details.current_release_id?await moduleAssets(m.details.current_release_id):[];const pdf=assets.find(a=>a.kind==='pdf'&&a.status==='verified');const tracks=assets.filter(a=>a.kind==='audio'&&a.status==='verified');
+const m=await findModule(Astro.params.slug||'');const available=m&&await hasPurchase(owner,m.product.id);if(!available)Astro.response.status=404;
+if(m&&available&&!m.canonical)return Astro.redirect(`/aankopen/modules/${m.product.slug}`,301);
+const assets=m&&available&&m.details.current_release_id?await moduleAssets(m.details.current_release_id):[];const pdf=assets.find(a=>a.kind==='pdf'&&a.status==='verified');const tracks=assets.filter(a=>a.kind==='audio'&&a.status==='verified');
 ---
-<MainLayout title={`${m.product.title} — Mijn aankopen`} noindex><section class="section"><div class="container"><a href="/aankopen">← Mijn aankopen</a><h1>{m.product.title}</h1><p>{m.details.subtitle}</p>{pdf&&<section class="module-material"><h2>Jouw werkboek</h2><div class="module-actions"><a class="button button-primary" href={`/api/aankopen/material/${m.product.id}`} target="_blank" rel="noopener noreferrer">Open PDF ↗</a><a href={`/api/aankopen/material/${m.product.id}?download=1`}>Download PDF ↓</a></div></section>}{tracks.length>0&&<section class="module-material"><h2>Audio</h2><ol class="module-audio-list">{tracks.map((a,i)=><li><span>{String(i+1).padStart(2,'0')} · {a.title}</span><a href={`/aankopen/modules/${m.product.slug}/audio/${a.module_tracks!.key}`}>Beluisteren →</a></li>)}</ol></section>}{!pdf&&!tracks.length&&<p>Het materiaal is tijdelijk niet beschikbaar. <a href="/contact">Neem contact op</a>.</p>}</div></section></MainLayout>
+{m && available ? <PurchaseLayout title={`${m.product.title} — Mijn aankopen`}>
+  <div class="purchase-detail">
+    <a class="purchase-text-link purchase-back" href="/aankopen"><Icon name="back" /> Mijn aankopen</a>
+    <header class="purchase-heading"><h1>{m.product.title}</h1><p>{m.details.subtitle}</p></header>
+    <div class="purchase-detail-layout"><div class="purchase-detail-body">
+      {pdf&&<section class="purchase-material"><h2>Jouw werkboek</h2><p>Open het werkboek in een nieuw tabblad of bewaar de PDF op je apparaat.</p><div class="purchase-actions"><a class="purchase-button" href={`/api/aankopen/material/${m.product.id}`} target="_blank" rel="noopener noreferrer">Open werkboek <Icon name="book" /></a><a class="purchase-text-link" href={`/api/aankopen/material/${m.product.id}?download=1`}>Download PDF <Icon name="file" /></a></div></section>}
+      {tracks.length>0&&<section class="purchase-material"><h2>Jouw audio</h2><p>Kies een oefening om te beluisteren. Voor luisteren via de website heb je internet nodig.</p><ol class="purchase-audio-list">{tracks.map(a=><li><span>{a.title}</span><a class="purchase-text-link" href={`/aankopen/modules/${m.product.slug}/audio/${a.module_tracks!.key}`} aria-label={`Beluister ${a.title}`}>Beluisteren <Icon name="headphones" /></a></li>)}</ol></section>}
+      {!pdf&&!tracks.length&&<div class="purchase-notice"><strong>Het materiaal is tijdelijk niet beschikbaar.</strong><p>Neem contact op zodat we je verder kunnen helpen.</p><a class="purchase-text-link" href="/contact">Vraag hulp <Icon name="arrow" /></a></div>}
+    </div><aside class="purchase-help"><h2>Op jouw tempo.</h2><p>Je kunt je werkboek en beschikbare audio steeds opnieuw openen via Mijn aankopen.</p><a class="purchase-text-link" href="/contact">Hulp bij je inhoud <Icon name="arrow" /></a></aside></div>
+  </div>
+</PurchaseLayout> : <PurchaseUnavailable />}

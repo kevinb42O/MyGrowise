@@ -1,6 +1,7 @@
 import { createHash, randomBytes } from 'node:crypto';
 import nodemailer from 'nodemailer';
 import { getSupabaseAdmin } from './supabase/server';
+import { renderEmail } from './emailTemplate';
 
 type Row = Record<string, any>;
 const digest = (value: string) => createHash('sha256').update(value).digest('hex');
@@ -23,14 +24,15 @@ const makeGuestLink = async (conversationId: string) => {
   return `${siteOrigin()}/berichten/toegang?token=${encodeURIComponent(token)}`;
 };
 
-const sendEmail = async (to: string, subject: string, text: string) => {
+const sendEmail = async (to: string, subject: string, text: string, html: string) => {
   if (!supportMailReady()) throw new Error('mail_not_configured');
   const transport = nodemailer.createTransport({
     host: 'smtp.mail.webnode.com', port: 465, secure: true,
     auth: { user: import.meta.env.SUPPORT_SMTP_USER, pass: import.meta.env.SUPPORT_SMTP_PASSWORD },
     connectionTimeout: 10_000, greetingTimeout: 10_000, socketTimeout: 10_000,
   });
-  await transport.sendMail({ from: `MyGrowise <${import.meta.env.SUPPORT_FROM_EMAIL}>`, to, replyTo: 'info@mygrowise.be', subject, text });
+  try { await transport.sendMail({ from: `MyGrowise <${import.meta.env.SUPPORT_FROM_EMAIL}>`, to, replyTo: 'info@mygrowise.be', subject, text, html }); }
+  finally { transport.close(); }
 };
 
 export const queueGuestAccessEmail = async (conversationId: string) => {
@@ -69,7 +71,7 @@ export const deliverSupportMail = async (limit = 10) => {
       const body = isReply
         ? `Er staat een antwoord van MyGrowise voor je klaar.\n\n${reference}Lees het antwoord en reageer veilig via:\n${link}\n\nEen antwoord op deze e-mail wordt niet automatisch aan je gesprek toegevoegd. Gebruik de link om in hetzelfde gesprek te reageren. Deel geen medische gegevens via gewone e-mail.\n\nMyGrowise`
         : `Je vraag aan MyGrowise is ontvangen.\n\n${reference}Bekijk je gesprek en onze antwoorden via:\n${link}\n\nEen antwoord op deze e-mail wordt niet automatisch aan je gesprek toegevoegd. Gebruik de link om in hetzelfde gesprek te reageren. Deel geen medische gegevens via gewone e-mail.\n\nMyGrowise`;
-      await sendEmail(recipient, isReply ? 'Er staat een antwoord voor je klaar — MyGrowise' : 'Je vraag is ontvangen — MyGrowise', body);
+      await sendEmail(recipient, isReply ? 'Er staat een antwoord voor je klaar — MyGrowise' : 'Je vraag is ontvangen — MyGrowise', body, renderEmail({title:isReply?'Er staat een antwoord voor je klaar.':'Je vraag is ontvangen.',preheader:isReply?'Lees het antwoord in je beveiligde gesprek.':'Bekijk je vraag en volg het gesprek veilig op.',paragraphs:[isReply?'We hebben een antwoord voor je klaargezet. Open je gesprek om het te lezen en eventueel te reageren.':'Bedankt voor je bericht. Je vraag is ontvangen. Via de knop hieronder kun je het gesprek en eventuele antwoorden bekijken.'],details:conversation.public_reference?[['Referentie',String(conversation.public_reference)]]:undefined,action:{label:isReply?'Lees mijn antwoord':'Open mijn gesprek',url:link},note:'Reageer via het beveiligde gesprek. Een antwoord op deze e-mail wordt niet automatisch aan je gesprek toegevoegd. Deel je persoonlijke toegangslink niet met anderen.'}));
       const { error: updateError } = await client.from('support_mail_jobs').update({ status: 'sent', sent_at: new Date().toISOString(), lease_until: null, last_error: null }).eq('id', job.id);
       if (updateError) throw new Error('mail_status_failed');
       sent++;

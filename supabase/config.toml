@@ -233,8 +233,28 @@ otp_length = 6
 otp_expiry = 3600
 
 [auth.email.template.confirmation]
-subject = "Bevestig je e-mailadres | MyGrowise"
+subject = "Bevestig je e-mailadres — MyGrowise"
 content_path = "./supabase/templates/confirmation.html"
+
+[auth.email.template.recovery]
+subject = "Stel je nieuwe wachtwoord in — MyGrowise"
+content_path = "./supabase/templates/recovery.html"
+
+[auth.email.template.invite]
+subject = "Je uitnodiging voor MyGrowise"
+content_path = "./supabase/templates/invite.html"
+
+[auth.email.template.magic_link]
+subject = "Je veilige inloglink — MyGrowise"
+content_path = "./supabase/templates/magic_link.html"
+
+[auth.email.template.email_change]
+subject = "Bevestig je e-mailwijziging — MyGrowise"
+content_path = "./supabase/templates/email_change.html"
+
+[auth.email.template.reauthentication]
+subject = "Je beveiligingscode — MyGrowise"
+content_path = "./supabase/templates/reauthentication.html"
 
 # Use a production-ready SMTP server
 # [auth.email.smtp]

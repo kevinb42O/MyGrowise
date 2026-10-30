@@ -1,0 +1,8 @@
+---
+import ClientDirectory from '../../components/records/ClientDirectory.astro';
+import { loadClientDirectoryPage } from '../../lib/clientDirectoryPage';
+Astro.response.headers.set('Cache-Control', 'private, no-store');
+const data = await loadClientDirectoryPage(Astro);
+if (data instanceof Response) return data;
+---
+<ClientDirectory data={data} />

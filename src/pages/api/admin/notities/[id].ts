@@ -1,3 +1,4 @@
+import { clientRecordsBaseForRequest } from '../../../../lib/clientRecordNavigation';
 import type { APIRoute } from 'astro';
 import { isTrustedFormOrigin } from '../../../../lib/adminAuth';
 import { auditActor } from '../../../../lib/securityAudit';
@@ -5,6 +6,7 @@ import { getPatientByNote, savePatientNoteVersion } from '../../../../lib/client
 
 export const prerender = false;
 export const POST: APIRoute = async ({ request, params, locals, redirect }) => {
+  const recordsBase = clientRecordsBaseForRequest(request);
   if (!isTrustedFormOrigin(request)) return new Response('Ongeldige aanvraag.', { status: 403 });
   const user = locals.currentUser!; const noteId = params.id || '';
   const requestedPage = Number(new URL(request.url).searchParams.get('pagina') || '1');
@@ -17,14 +19,15 @@ export const POST: APIRoute = async ({ request, params, locals, redirect }) => {
     const form = await request.formData();
     const finalize = String(form.get('submit_status') || 'draft') === 'final';
     const result = await savePatientNoteVersion({ noteId, patientId: note.patientId, expectedVersion: Number(form.get('expected_version')), title: form.get('title'), body: form.get('body'), finalize }, user, auditActor(user, locals.requestId, `/api/admin/notities/${noteId}`));
-    const destination = new URLSearchParams({ melding: finalize ? 'definitief' : 'concept' });
+    const destination = new URLSearchParams({ melding: finalize ? 'definitief' : 'concept', concept: noteId });
     if (returnPage > 1) destination.set('pagina', String(returnPage));
-    return redirect(`/admin/clienten/${encodeURIComponent(result.patientId)}?${destination}`, 303);
+    return redirect(`${recordsBase}/${encodeURIComponent(result.patientId)}?${destination}#verslag-${encodeURIComponent(noteId)}`, 303);
   } catch (error) {
     const code = error instanceof Error ? error.message : '';
     const destination = new URLSearchParams({ fout: code.includes('version_conflict') ? 'versieconflict' : code.includes('patient_archived') ? 'dossier_gearchiveerd' : code.includes('not_found') ? 'dossier_niet_gevonden' : code.includes('note_locked') ? 'concept_niet_bewerkbaar' : 'verslag_niet_opgeslagen' });
+    destination.set('concept', noteId);
     if (parentPatientId && returnPage > 1) destination.set('pagina', String(returnPage));
-    return redirect(`${parentPatientId ? `/admin/clienten/${encodeURIComponent(parentPatientId)}` : '/admin/clienten'}?${destination}`, 303);
+    return redirect(`${parentPatientId ? `${recordsBase}/${encodeURIComponent(parentPatientId)}` : recordsBase}?${destination}#verslag-${encodeURIComponent(noteId)}`, 303);
   }
 };
 export const ALL: APIRoute = () => new Response('Methode niet toegestaan.', { status: 405 });

@@ -1,0 +1,29 @@
+.workday { --workday-ink: var(--admin-text); display: grid; gap: 20px; }
+.workday .admin-page-heading { margin-bottom: 0; }
+.workday-route { margin: -6px 0 0; color: var(--admin-muted); font-size: 13px; }
+.workday-count { display: inline-block; margin-inline-start: 6px; color: var(--admin-muted); font-size: 13px; font-variant-numeric: tabular-nums; }
+.workday-appointments { margin: 0; padding: 0; list-style: none; }
+.workday-appointments li + li, .workday-task + .workday-task { border-top: 1px solid var(--admin-border); }
+.workday-appointments a { display: grid; grid-template-columns: 60px minmax(0, 1fr) auto; align-items: center; gap: 16px; padding: 20px; color: var(--workday-ink); text-decoration: none; }
+.workday-time, .workday-person, .workday-task > span { display: flex; min-width: 0; flex-direction: column; gap: 5px; }
+.workday-time { font-variant-numeric: tabular-nums; }
+.workday-time strong, .workday-person strong { font-size: 15px; }
+.workday-time small, .workday-person small, .workday-task small { color: var(--admin-muted); font-size: 12px; overflow-wrap: anywhere; }
+.workday-person > span { font-size: 11px; color: var(--admin-muted); }
+.workday-open { display: flex; align-items: center; gap: 8px; font-size: 12px; }
+.workday-task { display: flex; justify-content: space-between; align-items: center; gap: 14px; padding: 16px 20px; color: var(--workday-ink); text-decoration: none; }
+.workday-task strong { font-size: 13px; overflow-wrap: anywhere; }
+.workday a:is(.workday-task, .workday-upcoming):hover, .workday-appointments a:hover { background: var(--admin-bg, #f5f7f6); }
+.workday a:focus-visible, .workday summary:focus-visible { outline: 2px solid var(--admin-text); outline-offset: -3px; }
+.workday-upcoming strong { font-size: 13px; }
+.workday-upcoming small { font-size: 12px; }
+.workday-availability > summary, .workday-more > summary { padding: 18px 20px; font-size: 13px; cursor: pointer; }
+.workday .admin-empty-row p { max-width: 42ch; }
+.workday .admin-panel { overflow: hidden; }
+@media (max-width: 600px) {
+  .workday-appointments a { grid-template-columns: 52px minmax(0, 1fr); gap: 12px; padding: 16px; }
+  .workday-open { grid-column: 2; }
+  .workday .admin-page-actions { flex-wrap: wrap; }
+  .workday-route { line-height: 1.6; }
+  .workday-upcoming > svg { display: none; }
+}

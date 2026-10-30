@@ -1,0 +1,36 @@
+---
+import Icon from './PurchaseIcon.astro';
+import {money} from '../../lib/catalog/pricing';
+import {deliveryStatusLabel} from '../../lib/catalog/server';
+import type {purchaseOrders,purchasedProducts,purchaseDeliveries} from '../../lib/commerce/purchases';
+interface Props {
+  orders: Awaited<ReturnType<typeof purchaseOrders>>;
+  products: Awaited<ReturnType<typeof purchasedProducts>>;
+  deliveries: Awaited<ReturnType<typeof purchaseDeliveries>>;
+  linkedAccount: boolean;
+  verifiedGuest: string | null;
+  linkError?: boolean;
+}
+const {orders,products,deliveries,linkedAccount,verifiedGuest,linkError=false}=Astro.props;
+const materials=[...new Map(products.filter(p=>['module','guide'].includes(p.product_type)).map(p=>[p.product_id,p])).values()];
+const hasContent=materials.length>0||deliveries.length>0;
+const pending=orders.filter(o=>o.status==='pending_payment');
+const labels: Record<string,string>={pending_payment:'Wacht op betaling',paid:'Betaald',fulfilled:'Geleverd',cancelled:'Geannuleerd',refunded:'Terugbetaald'};
+const date=(value:string)=>new Intl.DateTimeFormat('nl-BE',{day:'numeric',month:'long',year:'numeric',timeZone:'Europe/Brussels'}).format(new Date(value));
+---
+<header class="purchase-heading"><h1>Mijn aankopen<span>.</span></h1><p>Alles wat je bij MyGrowise hebt gestart. Kies hieronder waarmee je verder wilt.</p></header>
+{linkError&&<div class="purchase-notice purchase-notice--error" role="alert"><strong>Koppelen is niet gelukt.</strong><p>Controleer of je aankoop en je bevestigde account hetzelfde e-mailadres gebruiken.</p></div>}
+{pending.length>0&&<div class="purchase-notice purchase-payment-note"><div><strong>{pending.length===1?'Er wacht nog een bestelling op betaling.':`${pending.length} bestellingen wachten op betaling.`}</strong><p>Na bevestiging van je betaling verschijnt je inhoud hier.</p></div><a class="purchase-text-link" href={pending.length===1?`/bestellen?order=${pending[0].id}`:'#bestellingen'}>{pending.length===1?'Bekijk betaalgegevens':'Bekijk bestellingen'} <Icon name="arrow" /></a></div>}
+<div class="purchase-overview-layout">
+  <div class="purchase-content">
+    {hasContent&&<nav class="purchase-section-links" aria-label="Op deze pagina">{materials.length>0&&<a href="#materiaal">Werkboeken en audio</a>}{deliveries.length>0&&<a href="#afnames">Vragenlijsten en rapporten</a>}<a href="#bestellingen">Bestellingen</a></nav>}
+    {materials.length>0&&<section class="purchase-section" id="materiaal" aria-labelledby="materials-title"><div class="purchase-section-heading"><h2 id="materials-title">Werkboeken en audio</h2><p>Neem de tijd. Je kunt altijd terugkomen.</p></div><div class="purchase-resource-list">{materials.map(p=><article class="purchase-resource"><span class="purchase-resource-icon"><Icon name="book" /></span><div><h3>{p.product_title}</h3><p>Jouw digitale inhoud</p></div><a class="purchase-button purchase-button--small" href={`/aankopen/modules/${p.product_slug}`} aria-label={`Open ${p.product_title}`}>Open inhoud <Icon name="arrow" /></a></article>)}</div></section>}
+    {deliveries.length>0&&<section class="purchase-section" id="afnames" aria-labelledby="deliveries-title"><div class="purchase-section-heading"><h2 id="deliveries-title">Vragenlijsten en rapporten</h2><p>Je instructies, voortgang en beschikbare resultaten.</p></div><div class="purchase-resource-list">{deliveries.map(d=><article class="purchase-resource"><span class="purchase-resource-icon"><Icon name="file" /></span><div><h3>{d.title}</h3><p>{deliveryStatusLabel[d.status]||'In behandeling'}</p>{d.report_path&&<span class="purchase-status purchase-status--ready">Rapport beschikbaar</span>}</div><a class="purchase-text-link" href={`/aankopen/afnames/${d.id}`} aria-label={`Bekijk ${d.title}`}>{d.report_path?'Bekijk rapport':d.external_url?'Bekijk vragenlijst':'Bekijk instructies'} <Icon name="arrow" /></a></article>)}</div></section>}
+    {!hasContent&&<section class="purchase-empty" aria-labelledby="empty-title"><span class="purchase-resource-icon"><Icon name="book" /></span><h2 id="empty-title">{orders.length?'Je inhoud krijgt hier een plek.':'Nog geen aankopen.'}</h2><p>{orders.length?(pending.length?'Werkboeken, audio en vragenlijsten verschijnen hier zodra de betaling is bevestigd en de inhoud beschikbaar is. Bekijk hieronder de status van je bestelling.':'Er is op dit moment geen digitale inhoud beschikbaar. Bekijk hieronder je bestellingen of neem contact op als je iets mist.'):'Bij een aankoop vind je hier je werkboeken, audio of persoonlijke resultaten. Ontdek rustig wat bij je past.'}</p>{!orders.length&&<a class="purchase-button" href="/zelf-aan-de-slag">Ontdek het aanbod <Icon name="arrow" /></a>}</section>}
+    {orders.length>0&&<section class="purchase-section" id="bestellingen" aria-labelledby="orders-title"><div class="purchase-section-heading"><h2 id="orders-title">Bestellingen</h2><p>Je besteloverzicht en betaalgegevens.</p></div><div class="purchase-orders">{orders.map(o=><article class="purchase-order"><div class="purchase-order-meta"><span>{date(o.created_at)}</span><span class:list={['purchase-status', {'purchase-status--waiting':o.status==='pending_payment','purchase-status--ready':['paid','fulfilled'].includes(o.status)}]}>{labels[o.status]||'In behandeling'}</span></div><h3>{o.order_items.map(i=>i.product_title).join(' · ')}</h3><div class="purchase-order-bottom"><span class="purchase-price">{money(o.total_cents)}</span><a class="purchase-text-link" href={`/bestellen?order=${o.id}`} aria-label={`Bekijk bestelling ${o.provider_reference || date(o.created_at)}`}>{o.status==='pending_payment'?'Bekijk betaalgegevens':'Bekijk bestelling'} <Icon name="arrow" /></a></div>{o.provider_reference&&<small>Referentie: {o.provider_reference}</small>}</article>)}</div></section>}
+  </div>
+  <aside class="purchase-sidebar" aria-label="Hulp en aankooptoegang">
+    <section class="purchase-help"><h2>Even hulp nodig?</h2><p>Een vraag over je bestelling, toegang of inhoud? We helpen je graag verder.</p><a class="purchase-text-link" href="/contact">Stel je vraag <Icon name="arrow" /></a></section>
+    <section class="purchase-account"><h2>{linkedAccount&&!verifiedGuest?'In je account':'Ook zonder account'}</h2>{linkedAccount&&verifiedGuest?<form method="post" action="/api/aankopen/koppelen"><p>Bewaar deze aankopen ook in je bevestigde klantaccount met hetzelfde e-mailadres.</p><button class="purchase-button purchase-button--secondary" type="submit">Koppel mijn aankopen <Icon name="arrow" /></button></form>:linkedAccount?<p>Je bekijkt de aankopen die aan je klantaccount zijn gekoppeld.</p>:<><p>Je aankoopmail geeft je toegang. Wil je je aankopen ook in een account bewaren?</p><a class="purchase-text-link" href="/account/inloggen?next=%2Faankopen">Log in op je account <Icon name="arrow" /></a><a class="purchase-secondary-link" href="/account/aanmaken?next=%2Faankopen">Maak vrijwillig een account aan</a></>}{verifiedGuest&&<form class="purchase-signout" method="post" action="/api/aankopen/afsluiten"><p>Klaar op dit apparaat?</p><button class="purchase-text-link" type="submit">Aankooptoegang afsluiten <Icon name="arrow" /></button></form>}</section>
+  </aside>
+</div>
