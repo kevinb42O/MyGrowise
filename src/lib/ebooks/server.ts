@@ -27,6 +27,18 @@ export async function ebookProduct(){
  const {data,error}=await getSupabaseAdmin().from('products').select('id,slug,title').eq('slug',BOOK_SLUG).eq('type','guide').maybeSingle();
  if(error)throw new Error('ebook_unavailable');return data;
 }
+export async function isBookPublic(): Promise<boolean> {
+ try {
+  const {data,error}=await getSupabaseAdmin().from('products')
+   .select('id,catalog_details!inner(product_id)')
+   .eq('slug',BOOK_SLUG).eq('type','guide').eq('status','published').maybeSingle();
+  if(error)throw new Error('ebook_unavailable');
+  return Boolean(data);
+ } catch {
+  console.warn('public_book_link_unavailable');
+  return false;
+ }
+}
 export async function ebookActivated(owner:PurchaseOwner,productId:string){
  if(!await hasPurchase(owner,productId))return false;
  const orders=(await purchaseOrders(owner)).filter(o=>['paid','fulfilled'].includes(o.status)).map(o=>o.id);

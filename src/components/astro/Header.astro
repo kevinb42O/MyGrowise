@@ -1,10 +1,12 @@
 ---
 import { isCustomerAccount } from '../../lib/adminAuth';
-interface Props { activeNav?: string }
-const { activeNav = '' } = Astro.props;
+import { BOOK_PATH } from '../../lib/ebooks/book';
+interface Props { activeNav?: string; showBook?: boolean }
+const { activeNav = '', showBook = false } = Astro.props;
 const customerSignedIn = isCustomerAccount(Astro.locals.currentUser);
 const nav = [
   { href: '/zelf-aan-de-slag', label: 'Zelf aan de slag', id: 'zelf' },
+  ...(showBook ? [{ href: BOOK_PATH, label: 'E-book Fien', id: 'fien' }] : []),
   { href: '/begeleiding', label: 'Begeleiding', id: 'begeleiding' },
   { href: '/over-ons', label: 'Over MyGrowise', id: 'over' },
   { href: '/contact', label: 'Contact', id: 'contact' },
@@ -149,4 +151,9 @@ const nav = [
     .mobile-menu__inner { padding-bottom: max(1.5rem, env(safe-area-inset-bottom)); }
   }
   @media (min-width: 1100px) { .desktop-nav,.header-actions { display: flex; } .header-cta { display: inline-flex; } .menu-toggle { display: none; } .desktop-nav a,.header-login,.header-cta { white-space: nowrap; } }
+  @media (1100px <= width < 1240px) {
+    .header-inner { gap: .75rem; }
+    .desktop-nav { gap: .75rem; }
+    .header-actions { gap: .625rem; }
+  }
 </style>

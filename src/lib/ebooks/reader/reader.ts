@@ -1,6 +1,9 @@
 import {makePaper} from './paper';
+import {makeColoring} from './coloring';
+import {makeWriting} from './writing';
 
-import {moments,paintIllustration,type Moment} from './illustration';
+import {balloonDuration,chestDuration,heartCycle,moments,paintIllustration,type Moment} from './illustration';
+import {paintStar,starDuration} from './star';
 
 const clamp=(n:number,min:number,max:number)=>Math.max(min,Math.min(max,n));
 
@@ -12,6 +15,9 @@ export function startBookReader(root:HTMLElement){
   let page=get<HTMLImageElement>('[data-page]');
   const canvas=get<HTMLCanvasElement>('[data-paper]');
   const audio=get<HTMLAudioElement>('[data-page-audio]');
+  const effectSounds=new Map(Array.from(root.querySelectorAll<HTMLAudioElement>('[data-effect-audio]'),
+    clip=>[clip.dataset.effectAudio,clip]));
+  let effectAudio:HTMLAudioElement|undefined;
   const soundButton=get<HTMLButtonElement>('[data-page-sound]');
   const shadow=get('[data-shadow]'),hint=get('[data-hint]'),error=get('[data-error]'),status=get('[data-status]');
   const menu=get<HTMLDialogElement>('[data-menu]');
@@ -31,13 +37,30 @@ export function startBookReader(root:HTMLElement){
   let effectFrame=0, effectTimer=0;
   let scene:{moment:Moment; start:number; released:number; x:number; y:number; vx:number; vy:number}|null=null;
   let grip:{id:number; x:number; y:number; t:number; moved:boolean}|null=null;
-  const seen=new Set<Moment>();
   let hasInteracted=false;
   let renderer:ReturnType<typeof makePaper>|undefined;
   let turn:{sounded?:boolean; target:number; side:number; grip:number; value:number; image:HTMLImageElement; previous:HTMLImageElement; gpu:boolean}|null=null;
   let pointer:{id:number;x:number;y:number;lastX:number;lastTime:number;velocity:number;dragged:boolean;initial:number}|null=null;
   const touches=new Map<number,{x:number;y:number}>();
   let pinch:{distance:number;scale:number;x:number;y:number;panX:number;panY:number}|null=null;
+
+  const writing=makeWriting(root,()=>{
+    ++navigation;
+    if(turn)complete(false);
+    coloring.close();
+    clearEffect();
+    interact();
+    showControls(false);
+  });
+  const coloring=makeColoring(root,()=>{
+    writing.close();
+    ++navigation;
+    if(turn)complete(false);
+    clearEffect();
+    interact();
+    showControls(false);
+  });
+  const bookPage=(number=index)=>preview?[1,5,10][number]:number+1;
 
   const prefs=(key:string,value?:string)=>{
     try{if(value!==undefined)localStorage.setItem(key,value);else return localStorage.getItem(key);}catch{}
@@ -49,12 +72,23 @@ export function startBookReader(root:HTMLElement){
     sound=!sound;
     prefs(soundKey,sound?'yes':'no');
     soundButton.setAttribute('aria-pressed',String(sound));
-    if(!sound)audio.pause();
+    if(!sound){audio.pause();effectAudio?.pause();}
   });
   function playTurn(){
     if(!sound)return;
     audio.currentTime=0;
     void audio.play().catch(()=>{});
+  }
+
+  function playEffectSound(name:string,loop=false){
+    if(!sound)return;
+    const clip=effectSounds.get(name);
+    if(!clip)return;
+    effectAudio?.pause();
+    effectAudio=clip;
+    clip.loop=loop;
+    clip.currentTime=0;
+    void clip.play().catch(()=>{});
   }
 
   calm=prefs(storageKey+'-calm')==='yes';
@@ -64,13 +98,13 @@ export function startBookReader(root:HTMLElement){
     calmButton.setAttribute('aria-pressed',String(quiet));
   }
   applyCalm();
-  media.addEventListener('change',()=>{applyCalm();if(media.matches){if(turn)complete(false);clearEffect();}});
+  media.addEventListener('change',()=>{applyCalm();if(media.matches){if(turn)complete(false);if(scene)finishEffect();}});
 
   function showControls(autohide=true){
     root.dataset.quiet='no';
     clearTimeout(chromeTimer);
     if(autohide&&hasInteracted)chromeTimer=window.setTimeout(()=>{
-      if(!menu.open&&!pointer)root.dataset.quiet='yes';
+      if(!menu.open&&!pointer&&root.dataset.coloring!=='yes'&&root.dataset.writing!=='yes')root.dataset.quiet='yes';
     },2800);
   }
   function interact(){
@@ -102,12 +136,14 @@ export function startBookReader(root:HTMLElement){
     image.draggable=false;
     if(image!==page){page.replaceWith(image);page=image;}
   }
-  function getMoment():Moment|undefined{return (moments as Partial<Record<number,Moment>>)[preview?[1,5,10][index]:index+1];}
+  function getMoment():Moment|undefined{return (moments as Partial<Record<number,Moment>>)[bookPage()];}
   function update(){
     get('[data-count]').replaceChildren(String(index+1),Object.assign(document.createElement('span'),{textContent:'/'}),String(urls.length));
     prev.disabled=index===0;
     next.disabled=index===urls.length-1;
     pageNumber.value=String(index+1);
+    coloring.setPage(bookPage());
+    writing.setPage(bookPage());
     status.textContent=`Pagina ${index+1} van ${urls.length}`;
     const spot=getMoment();
     clearEffect();
@@ -119,7 +155,6 @@ export function startBookReader(root:HTMLElement){
       hotspot.setAttribute('aria-label',spot.label);
       hotspot.querySelector('span')!.textContent=spot.label;
       hotspot.dataset.kind=spot.kind;
-      hotspot.toggleAttribute('data-seen',seen.has(spot));
     }
     if(!preview)prefs(storageKey+'-page',String(index));
     for(const neighbor of [index-1,index+1]){
@@ -150,12 +185,25 @@ export function startBookReader(root:HTMLElement){
   function clearEffect(){
     clearTimeout(effectTimer);
     cancelAnimationFrame(effectFrame);
-    if(grip&&hotspot.hasPointerCapture(grip.id))hotspot.releasePointerCapture(grip.id);
+    const pointerId=grip?.id;
     grip=null;
+    if(pointerId!==undefined&&hotspot.hasPointerCapture(pointerId))hotspot.releasePointerCapture(pointerId);
+    effectAudio?.pause();
+    effectAudio=undefined;
     scene=null;
     effects.getContext('2d')?.clearRect(0,0,effects.width,effects.height);
     hotspot.removeAttribute('data-playing');
     whisper.hidden=true;
+  }
+
+  function finishEffect(){
+    clearEffect();
+    showControls(false);
+  }
+
+  function showMomentText(text:string){
+    if(whisper.textContent!==text)whisper.textContent=text;
+    if(status.textContent!==text)status.textContent=text;
   }
 
   function startEffect(moment:Moment, held:boolean){
@@ -164,46 +212,54 @@ export function startBookReader(root:HTMLElement){
     hint.hidden=true;
     hasInteracted=true;
     root.dataset.quiet='yes';
-    seen.add(moment);
-    hotspot.setAttribute('data-seen','');
     hotspot.setAttribute('data-playing','');
-    whisper.textContent=moment.text;
+    showMomentText(moment.kind==='balloon'&&!held?'Kijk hoe je ballon wegzweeft.':moment.text);
+    whisper.dataset.kind=moment.kind;
     whisper.hidden=false;
-    status.textContent=moment.text;
     const start=performance.now();
     const state={moment,start,released:held?0:start,x:0,y:0,vx:0,vy:0};
     scene=state;
-    if(root.dataset.calm==='yes'){
-      paintIllustration(effects,moment,.66,.85,0,0);
-      effectTimer=window.setTimeout(clearEffect,3800);
+    const quiet=root.dataset.calm==='yes';
+    if(moment.kind==='star'){
+      playEffectSound('star');
+      const animateStar=(now:number)=>{
+        const elapsed=Math.max(0,(now-start)/1000);
+        paintStar(effects,moment.x,moment.y,elapsed,quiet);
+        if(elapsed<(quiet?1.28:2.35))effectFrame=requestAnimationFrame(animateStar);
+      };
+      animateStar(start);
+      effectTimer=window.setTimeout(finishEffect,(quiet?3.8:starDuration)*1000);
       return;
     }
+    if(moment.kind==='balloon')playEffectSound(held?'balloon-grab':'balloon-fly');
+    else playEffectSound(moment.kind,moment.kind==='heart'&&held);
 
     let last=start;
-    function animate(now:number){
-      const elapsed=(now-start)/1000,dt=clamp((now-last)/1000,.001,.032);
+    const animate=(now:number)=>{
+      const elapsed=Math.max(0,(now-start)/1000);
+      const dt=clamp((now-last)/1000,0,.032);
       last=now;
-      const free=state.released?(now-state.released)/1000:0;
-      let progress=1-Math.pow(1-Math.min(elapsed/1.9,1),2);
-      let fade=1-Math.max(0,free-1.35)/1.3;
+      const free=state.released?Math.max(0,(now-state.released)/1000):null;
+      if(moment.kind==='chest'&&elapsed>=chestDuration){finishEffect();return;}
       if(moment.kind==='heart'){
-        progress=.5-.5*Math.cos(elapsed*Math.PI/2.5);
-        fade=Math.min(1,.4+elapsed*3)*Math.max(0,1-(held?free:Math.max(0,free-3))/.65);
+        const cycleEnd=heartCycle*Math.max(1,Math.ceil((state.released-start)/1000/heartCycle));
+        if(free!==null&&elapsed>=cycleEnd){finishEffect();return;}
+        showMomentText(elapsed%heartCycle<heartCycle/2?'Adem rustig in…':'Adem rustig uit…');
       }
-      if(moment.kind==='balloon'&&state.released){
-        if(!held){state.y=-180*(1-Math.exp(-3*free));}
-        else{
-          state.vx+=(-180*state.x-19*state.vx)*dt;
-          state.vy+=(-180*state.y-19*state.vy)*dt;
+      if(moment.kind==='balloon'&&free!==null){
+        if(free>=balloonDuration){finishEffect();return;}
+        if(!quiet){
+          const lift=-65-440*clamp(free/.96,0,1)**2;
+          state.vx+=(90-state.vx)*(1-Math.exp(-2.5*dt));
+          state.vy+=(lift-state.vy)*dt*3.5;
           state.x+=state.vx*dt;
           state.y+=state.vy*dt;
         }
       }
-      if(fade<=0){clearEffect();return;}
-      paintIllustration(effects,moment,progress,fade,state.x,state.y);
+      paintIllustration(effects,moment,elapsed,quiet,free,state.x,state.y,state.vx);
       effectFrame=requestAnimationFrame(animate);
-    }
-    effectFrame=requestAnimationFrame(animate);
+    };
+    animate(start);
   }
 
   function draw(value:number){
@@ -226,9 +282,11 @@ export function startBookReader(root:HTMLElement){
     if(renderer===undefined&&root.dataset.calm!=='yes'){
       try{renderer=makePaper(canvas);}catch{renderer=null;}
     }
-    const gpu=root.dataset.calm!=='yes'&&!!renderer?.use(previous);
+    const gpu=root.dataset.calm!=='yes'&&!!renderer?.use(writing.snapshot(coloring.snapshot(previous)));
     turn={target,side:Math.sign(target-index),grip,value:0,image,previous,gpu};
     renderPage(image,target);
+    coloring.setPage(bookPage(target));
+    writing.setPage(bookPage(target));
     if(gpu)canvas.hidden=false;
     else if(root.dataset.calm!=='yes'){page.after(previous);}
     clearEffect();
@@ -271,6 +329,7 @@ export function startBookReader(root:HTMLElement){
   async function go(target:number,animated=true){
     if(target<0||target>=urls.length||target===index)return;
     const ticket=++navigation;
+    coloring.close();
     interact();error.hidden=true;
     if(turn)complete(false);
     resetZoom();
@@ -289,7 +348,7 @@ export function startBookReader(root:HTMLElement){
   }
 
   stage.addEventListener('pointerdown',event=>{
-    if(event.button!==0||event.target===hotspot||hotspot.contains(event.target as Node))return;
+    if(root.dataset.coloring==='yes'||(event.target as HTMLElement).closest('[data-writing-fields]')||event.button!==0||event.target===hotspot||hotspot.contains(event.target as Node))return;
     ++navigation;
     interact();
     stage.setPointerCapture(event.pointerId);
@@ -373,6 +432,8 @@ export function startBookReader(root:HTMLElement){
       if(document.fullscreenElement===root)await document.exitFullscreen();
       else await root.requestFullscreen();
     }catch{
+      if(scene)finishEffect();
+      delete whisper.dataset.kind;
       whisper.textContent='Je browser kon volledig scherm niet openen.';
       whisper.hidden=false;
       clearTimeout(effectTimer);
@@ -390,7 +451,7 @@ export function startBookReader(root:HTMLElement){
       else advance(['ArrowLeft','PageUp'].includes(event.key)?-1:1);
     }
   });
-  const openMenu=()=>{interact();menu.showModal();};
+  const openMenu=()=>{coloring.close();interact();menu.showModal();};
   get('[data-open-menu]').addEventListener('click',openMenu);
   get('[data-count]').addEventListener('click',openMenu);
   prev.addEventListener('click',()=>advance(-1));
@@ -398,14 +459,18 @@ export function startBookReader(root:HTMLElement){
   root.querySelectorAll<HTMLButtonElement>('[data-go]').forEach(button=>button.addEventListener('click',()=>{menu.close();void go(Number(button.dataset.go)-1,false);}));
   get<HTMLFormElement>('[data-jump]').addEventListener('submit',event=>{event.preventDefault();menu.close();void go(Number(pageNumber.value)-1,false);});
   zoomButton.addEventListener('click',()=>{menu.close();fill=!fill;resetZoom();showControls();});
-  calmButton.addEventListener('click',()=>{calm=!calm;prefs(storageKey+'-calm',calm?'yes':'no');applyCalm();});
+  calmButton.addEventListener('click',()=>{
+    calm=!calm;prefs(storageKey+'-calm',calm?'yes':'no');applyCalm();
+    if(scene)finishEffect();
+  });
+  document.addEventListener('visibilitychange',()=>{if(document.hidden&&scene)finishEffect();});
   get('[data-retry]').addEventListener('click',()=>{
     const target=Number(error.dataset.retry);
     if(target===index)location.reload();else void go(target,false);
   });
   hotspot.addEventListener('pointerdown',event=>{
     const moment=getMoment();
-    if(event.button!==0||grip||!moment||root.dataset.calm==='yes'||(moment.kind!=='heart'&&moment.kind!=='balloon'))return;
+    if(event.button!==0||!event.isPrimary||grip||!moment||(moment.kind!=='heart'&&moment.kind!=='balloon'))return;
     startEffect(moment,true);
     hotspot.setPointerCapture(event.pointerId);
     grip={id:event.pointerId,x:event.clientX,y:event.clientY,t:event.timeStamp,moved:false};
@@ -413,8 +478,8 @@ export function startBookReader(root:HTMLElement){
   hotspot.addEventListener('pointermove',event=>{
     if(grip?.id!==event.pointerId||scene?.moment.kind!=='balloon')return;
     const bounds=book.getBoundingClientRect();
-    const x=clamp((event.clientX-grip.x)*effects.width/bounds.width,-390,390);
-    const y=clamp((event.clientY-grip.y)*effects.height/bounds.height,-45,440);
+    const x=clamp((event.clientX-grip.x)*effects.width/bounds.width,-485,485);
+    const y=clamp((event.clientY-grip.y)*effects.height/bounds.height,-40,580);
     if(!grip.moved&&Math.hypot(event.clientX-grip.x,event.clientY-grip.y)<4)return;
     grip.moved=true;
     const dt=Math.max(.012,(event.timeStamp-grip.t)/1000);
@@ -424,15 +489,24 @@ export function startBookReader(root:HTMLElement){
   });
   function releaseEffect(event:PointerEvent){
     if(grip?.id!==event.pointerId||!scene)return;
-    if(scene.moment.kind==='balloon'&&!grip.moved&&event.type==='pointerup'){startEffect(scene.moment,false);return;}
-    if(event.timeStamp-grip.t>85){scene.vx=0;scene.vy=0;}
-    scene.released=performance.now();
+    const released=grip;
     grip=null;
+    if(event.type!=='pointerup'){finishEffect();return;}
+    scene.released=performance.now();
+    if(scene.moment.kind==='heart'){
+      if(effectAudio)effectAudio.loop=false;
+    }else if(scene.moment.kind==='balloon'){
+      if(!released.moved||event.timeStamp-released.t>85){scene.vx=0;scene.vy=0;}
+      scene.vx=clamp(scene.vx,-420,420);
+      scene.vy=clamp(scene.vy,-320,160);
+      showMomentText('Daar gaat je ballon!');
+      playEffectSound('balloon-fly');
+    }
   }
   for(const name of ['pointerup','pointercancel','lostpointercapture'] as const)hotspot.addEventListener(name,releaseEffect);
   hotspot.addEventListener('click',event=>{
     const moment=getMoment();
-    if(moment&&(event.detail===0||root.dataset.calm==='yes'||(moment.kind!=='heart'&&moment.kind!=='balloon')))startEffect(moment,false);
+    if(moment&&(event.detail===0||(moment.kind!=='heart'&&moment.kind!=='balloon')))startEffect(moment,false);
   });
   menu.addEventListener('close',()=>showControls());
 

@@ -2,6 +2,7 @@
 import {BOOK_TITLE} from '../../lib/ebooks/book';
 interface Props { pages:string[]; back:string; preview?:boolean }
 const {pages,back,preview=false}=Astro.props;
+const soundEffects=preview?['star','chest']:['star','chest','heart','balloon-grab','balloon-fly'];
 const controls=[
  ['cover','Omslag',1],['start','Het verhaal van Fien',5],
  ['chest','De toverkist',10],['heart','Het hart',21],['balloon','De ballon',25],['powers','De vijf krachten',27],
@@ -30,10 +31,20 @@ const controls=[
    <div class="reader-stage" data-stage tabindex="0" aria-label="Boekpagina. Gebruik de pijltjestoetsen om te bladeren.">
     <div class="reader-book" data-book>
      <img class="reader-page" data-page src={pages[0]} alt="De originele geïllustreerde omslag van het boek" crossorigin="anonymous" fetchpriority="high" draggable="false" width="2048" height="1448"/>
+     <canvas data-color-canvas width="1600" height="1132" aria-label="Kleurblad. Kies een kleur en teken met je vinger, muis of pen."></canvas>
+     <div class="reader-writing-fields" data-writing-fields role="group" aria-label="Schrijfplekken op deze pagina"></div>
      <div class="reader-shadow" data-shadow aria-hidden="true"></div>
      <canvas data-paper aria-hidden="true" hidden></canvas>
      <canvas data-effects width="1200" height="849" aria-hidden="true"></canvas>
-     <button type="button" class="reader-hotspot" data-hotspot hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2c0 6-4 10-10 10 6 0 10 4 10 10 0-6 4-10 10-10-6 0-10-4-10-10Z"/></svg><span class="reader-spot-label" aria-hidden="true"></span></button>
+     <button type="button" class="reader-hotspot" data-hotspot hidden>
+      <span class="reader-spot-label" aria-hidden="true"></span>
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+       <path data-icon="star" d="M12 2c0 6-4 10-10 10 6 0 10 4 10 10 0-6 4-10 10-10-6 0-10-4-10-10Z"/>
+       <path data-icon="chest" d="M7.5 11V8a4.5 4.5 0 0 1 9 0v3M6 11h12v9H6zM12 14.5v2"/>
+       <path data-icon="heart" d="M12 20s-8.5-5.2-8.5-10.4a4.5 4.5 0 0 1 8.5-2 4.5 4.5 0 0 1 8.5 2C20.5 14.8 12 20 12 20Z"/>
+       <path data-icon="balloon" d="M12 3c-3.6 0-6 2.8-6 6s2.4 6 6 6 6-2.8 6-6-2.4-6-6-6Zm0 12c-3 2 3.5 2.2 0 6"/>
+      </svg>
+     </button>
     </div>
    </div>
    <div class="reader-hint" data-hint>Veeg om te bladeren</div>
@@ -45,16 +56,42 @@ const controls=[
    <button type="button" class="reader-count" data-count aria-label="Ga naar een pagina">1 <span>/</span> {pages.length}</button>
    <button type="button" data-next aria-label="Volgende pagina"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m10 6 6 6-6 6"/></svg></button>
   </nav>
+  <div class="reader-work-tools">
+  <button type="button" class="reader-write-open" data-write-open aria-haspopup="dialog" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 20 1.5-6L16 3.5a2.1 2.1 0 0 1 3 0L20.5 5a2.1 2.1 0 0 1 0 3L10 18.5 4 20Zm1.5-6 4.5 4.5M14.5 5l4.5 4.5"/></svg><span>Schrijf in je boek</span></button>
+  <button type="button" class="reader-color-open" data-color-open aria-expanded="false" aria-controls="reader-color-panel"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 20 1.5-6L16 3.5a2.1 2.1 0 0 1 3 0L20.5 5a2.1 2.1 0 0 1 0 3L10 18.5 4 20Zm1.5-6 4.5 4.5M14.5 5l4.5 4.5"/></svg><span>Kleuren</span></button>
+  </div>
+  <section id="reader-color-panel" class="reader-color-panel" data-color-panel aria-label="Je kleurpotloden" hidden>
+   <div class="reader-color-heading"><strong>Kies je potlood</strong><button type="button" data-color-close>Klaar <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg></button></div>
+   <div class="reader-color-swatches" data-color-swatches role="group" aria-label="Kleuren"></div>
+   <div class="reader-color-tools"><button type="button" data-color-size aria-label="Potlooddikte. Nu normaal">Normaal</button><button type="button" data-color-eraser aria-pressed="false">Gum</button><button type="button" data-color-undo disabled>Ongedaan</button></div>
+   <div class="reader-color-fills" data-color-fills role="group" aria-label="Vul een vakje"></div>
+   <p data-color-message role="status">Kleur met je vinger, muis of pen.</p>
+  </section>
   <!-- Page Turn (1) by OwlStorm, CC0. https://freesound.org/people/OwlStorm/sounds/151220/ -->
   <audio data-page-audio src="/audio/books/fien-page-turn.m4a" preload="auto"></audio>
+  {soundEffects.map(name=><audio data-effect-audio={name} src={`/audio/books/fien-${name}.m4a`} preload="auto"></audio>)}
   <p class="reader-sr" data-status aria-live="polite"></p>
   <dialog class="reader-dialog" data-menu aria-labelledby="reader-menu-title">
    <form method="dialog"><button aria-label="Sluiten" class="reader-close"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg></button></form>
    <h2 id="reader-menu-title">Waar waren we?</h2>
    <div class="reader-chapters">{(preview?[['cover','Omslag',1],['start','Ontmoet Fien',2],['chest','Op avontuur',3]]:controls).map(([,label,page])=><button type="button" data-go={page}><span>{label}</span><small>{page}</small></button>)}</div>
    <form class="reader-jump" data-jump><label for="reader-page-number">Naar pagina</label><input id="reader-page-number" name="page" type="number" min="1" max={pages.length} required/><button>Ga</button></form>
-   <div class="reader-settings"><button type="button" data-zoom aria-pressed="false">Vul het scherm</button><button type="button" data-motion aria-pressed="false">Rustig bladeren</button><button type="button" data-page-sound aria-pressed="true">Omslaggeluid</button></div>
+   <div class="reader-settings"><button type="button" data-zoom aria-pressed="false">Vul het scherm</button><button type="button" data-motion aria-pressed="false">Rustig bladeren</button><button type="button" data-page-sound aria-pressed="true">Boekgeluid</button></div>
    <p>Veeg om te bladeren of gebruik de pijltjes. Met schermvulling kun je de illustratie verschuiven en met de knoppen bladeren.</p>
+  </dialog>
+  <dialog class="reader-write-dialog" data-write-dialog aria-labelledby="reader-write-title" aria-describedby="reader-write-hint">
+   <button type="button" class="reader-write-close" data-write-dismiss aria-label="Terug naar mijn boek"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg></button>
+   <h2 id="reader-write-title" data-write-title>Jouw eigen woorden</h2>
+   <p id="reader-write-hint" data-write-hint></p>
+   <label class="reader-sr" for="reader-write-answer">Jouw antwoord</label>
+   <textarea id="reader-write-answer" data-write-input rows="3" spellcheck="true" autocomplete="off" autocapitalize="sentences" enterkeyhint="done" placeholder="Schrijf maar…"></textarea>
+   <label class="reader-sr" for="reader-write-number">Jouw droomgetal, van 0 tot 100</label>
+   <input id="reader-write-number" data-write-number type="number" inputmode="numeric" min="0" max="100" step="1" hidden/>
+   <div class="reader-write-options"><div class="reader-write-inks" data-write-inks role="group" aria-label="Kies je inkt"><button type="button" data-ink="#174e44" aria-label="Groene inkt" aria-pressed="true"></button><button type="button" data-ink="#28528c" aria-label="Blauwe inkt" aria-pressed="false"></button><button type="button" data-ink="#8a3e66" aria-label="Paarse inkt" aria-pressed="false"></button></div><span data-write-count></span></div>
+   <p class="reader-write-message" data-write-message role="status"></p>
+   <button type="button" class="reader-write-lower" data-write-lower hidden>Wis en schrijf één lager</button>
+   <div class="reader-write-actions"><button type="button" data-write-next>Volgende vraag</button><button type="button" class="reader-write-done" data-write-done>In mijn boek <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg></button></div>
+   <details class="reader-write-picker" data-write-picker><summary>Alle schrijfplekken op deze pagina</summary><div data-write-list></div></details>
   </dialog>
   <noscript><p class="reader-noscript">Zet JavaScript aan om interactief te bladeren, of <a href={back}>ga terug naar het boek</a>.</p></noscript>
  </main>
@@ -94,6 +131,7 @@ const controls=[
  .reader-hint,.reader-whisper{position:absolute;left:50%;transform:translateX(-50%);pointer-events:none;background:#132920f5;color:#fff4de;border-radius:2rem;padding:.65rem 1rem;font-size:.85rem;box-shadow:0 4px 14px #10251a45;margin:0;text-align:center}
  .reader-hint{bottom:calc(max(12px,env(safe-area-inset-bottom)) + 56px);white-space:nowrap}
  .reader-whisper{top:calc(max(10px,env(safe-area-inset-top)) + 50px);width:max-content;max-width:calc(100% - 24px);font-family:Georgia,serif;font-size:clamp(.9rem,2vw,1.15rem)}
+ .reader-whisper:is([data-kind='heart'],[data-kind='balloon']){top:auto;bottom:max(16px,calc((100cqh - 100cqw * 1448 / 2048) / 2 + 16px))}
  .reader-bottom{left:50%;bottom:max(10px,env(safe-area-inset-bottom));transform:translateX(-50%);border-radius:2rem;padding:2px;gap:2px;font-variant-numeric:tabular-nums}
  .reader-bottom button:disabled{opacity:.4;cursor:default}
  .reader-bottom .reader-count{display:block;width:auto;min-width:58px;border-radius:1.5rem;font-size:.8rem}
@@ -109,14 +147,102 @@ const controls=[
  .reader-count span{opacity:.7;margin-inline:.2rem}
  .reader[data-quiet='yes'] :is(.reader-top,.reader-bottom):not(:has(:focus-visible)){opacity:0;pointer-events:none}
  .reader[data-quiet='yes'] .reader-top:not(:has(:focus-visible)) :is(button,a){pointer-events:none}
- .reader .reader-hotspot{position:absolute;left:var(--spot-x);top:var(--spot-y);transform:translate(-50%,-50%);width:max(48px, var(--spot-size));aspect-ratio:1;display:grid;place-items:center;border-radius:50%;touch-action:none;color:#fff1bb;cursor:pointer;-webkit-tap-highlight-color:transparent}
- .reader-hotspot[data-kind='balloon']{cursor:grab}
- .reader-hotspot[data-kind='balloon']:active{cursor:grabbing}
- .reader-hotspot svg{width:19px;height:19px;fill:#fff1bb;stroke:#514329;stroke-width:1;filter:drop-shadow(0 0 6px #ffe1a2);transition:opacity .18s}
- .reader-hotspot[data-playing] svg{opacity:0}
- .reader-spot-label{position:absolute;top:calc(50% + 15px);left:50%;transform:translateX(-50%);white-space:nowrap;padding:.35rem .55rem;background:#132920f5;border-radius:1rem;color:#fff4de;font-size:.75rem;pointer-events:none}
- .reader-hotspot[data-seen] .reader-spot-label{opacity:0}
- .reader-hotspot:not([data-playing]):is(:hover,:focus-visible) .reader-spot-label{opacity:1}
+ .reader .reader-hotspot{position:absolute;left:var(--spot-x);top:var(--spot-y);transform:translate(-50%,-50%);width:max(50px,var(--spot-size));aspect-ratio:1;display:grid;place-items:center;border-radius:50%;touch-action:none;cursor:pointer;-webkit-tap-highlight-color:transparent}
+ .reader-hotspot::before,.reader-hotspot::after{content:'';position:absolute;inset:50% auto auto 50%;width:clamp(33px,6cqw,49px);aspect-ratio:1;border:1.5px solid #fff1a8;border-radius:50%;translate:-50% -50%;pointer-events:none}
+ .reader-hotspot::before{box-shadow:0 0 0 2px #51382785,inset 0 0 12px #ffd1667a}
+ .reader-hotspot::after{opacity:0}
+ .reader[data-calm='no'] .reader-hotspot:not([data-playing])::after{animation:reader-spot-beacon 1.6s ease-out 2}
+ @keyframes reader-spot-beacon{0%{transform:scale(.87);opacity:.9}85%,100%{transform:scale(1.67);opacity:0}}
+ .reader-hotspot[data-kind='balloon'],.reader-hotspot[data-kind='balloon'] .reader-spot-label{cursor:grab}
+ .reader-hotspot[data-kind='balloon']:active,.reader-hotspot[data-kind='balloon']:active .reader-spot-label{cursor:grabbing}
+ .reader-hotspot svg{box-sizing:content-box;width:16px;height:16px;padding:4px;z-index:1;border-radius:50%;background:#fff0b6;color:#53351c;box-shadow:0 2px 5px #392b2663;pointer-events:none}
+ .reader-hotspot [data-icon]{display:none}
+ .reader-hotspot[data-kind='star'] [data-icon='star'],.reader-hotspot[data-kind='chest'] [data-icon='chest'],.reader-hotspot[data-kind='heart'] [data-icon='heart'],.reader-hotspot[data-kind='balloon'] [data-icon='balloon']{display:block}
+ .reader-spot-label{position:absolute;z-index:2;top:calc(50% + clamp(21px,3.4cqw,29px));left:50%;transform:translateX(-50%);white-space:nowrap;padding:.5rem .65rem;background:#26392d;border:1px solid #fbe18a;border-radius:1rem;color:#fff5d5;font-size:clamp(.72rem,2.8cqw,.88rem);line-height:1.15;font-weight:700;box-shadow:0 3px 10px #211b256b;touch-action:none}
+ .reader-spot-label::before{content:'';position:absolute;bottom:100%;left:50%;translate:-50%;border:5px solid transparent;border-top:0;border-bottom-color:#fbe18a;pointer-events:none}
+ .reader-hotspot[data-kind='star'] .reader-spot-label{margin-inline-start:-5px}
+ .reader-hotspot:is(:hover,:focus-visible) .reader-spot-label{background:#3b513b}
+ .reader[data-calm='no'] .reader-hotspot:active svg{transform:scale(.87)}
+ .reader-hotspot[data-playing] :is(svg,.reader-spot-label),.reader-hotspot[data-playing]::before{opacity:0;pointer-events:none}
+ .reader .reader-color-open{position:absolute;z-index:3;left:max(12px,env(safe-area-inset-left));bottom:max(12px,env(safe-area-inset-bottom));display:flex;align-items:center;gap:.5rem;min-height:46px;padding:.5rem .85rem;background:#fff0b6;color:#422e23;border-radius:1.5rem;font-size:.85rem;font-weight:700;box-shadow:0 4px 18px #101d1766}
+ .reader .reader-color-open[data-boxes='yes']{background:#ffda7b}
+ .reader .reader-color-open:focus-visible{outline:3px solid #fff5db;outline-offset:3px}
+ .reader .reader-color-panel{position:absolute;z-index:4;right:max(12px,env(safe-area-inset-right));bottom:max(12px,env(safe-area-inset-bottom));width:min(360px,calc(100vw - 24px));max-height:calc(100dvh - 24px);overflow:auto;padding:1rem;background:#fff7e8;color:#273d32;border-radius:15px;box-shadow:0 8px 32px #101d1775;color-scheme:light}
+ .reader-color-heading{display:flex;align-items:center;justify-content:space-between;gap:1rem;margin-bottom:.6rem}
+ .reader-color-heading strong{font-size:1rem}
+ .reader-color-heading button{min-height:44px;display:flex;align-items:center;gap:.3rem;font-size:.9rem;font-weight:700}
+ .reader-color-swatches{display:grid;grid-template-columns:repeat(8,1fr);gap:2px}
+ .reader .reader-color-swatches button{min-height:44px;min-width:0;position:relative;border-radius:8px}
+ .reader-color-swatches button::before{content:'';position:absolute;top:3px;bottom:3px;left:50%;width:24px;translate:-50%;border-radius:2px;clip-path:polygon(50% 0,100% 28%,100% 100%,0 100%,0 28%);background:linear-gradient(90deg,#ffffff38,transparent 45%,#34251c20),var(--swatch)}
+ .reader-color-swatches button[aria-pressed='true']::after{content:'';position:absolute;width:7px;height:12px;border:solid #273d32;border-width:0 2px 2px 0;transform:rotate(45deg);top:13px;left:calc(50% - 4px)}
+ .reader-color-swatches button[aria-pressed='true']{outline:2px solid #273d32;outline-offset:-2px}
+ .reader-color-tools{display:flex;gap:6px;margin-top:.5rem}
+ .reader .reader-color-tools button{min-height:44px;flex:1;padding:.3rem;border:1px solid #cabb9c;border-radius:8px;font-size:.85rem}
+ .reader .reader-color-tools [aria-pressed='true']{background:#273d32;color:#fff7e8}
+ .reader-color-tools button:disabled{opacity:.45;cursor:default}
+ .reader-color-fills{display:flex;flex-wrap:wrap;gap:6px;margin-top:.6rem}
+ .reader .reader-color-fills button{flex:1;min-height:44px;padding:.4rem .5rem;border-radius:8px;background:#eddfc5;font-size:.8rem}
+ .reader-color-panel button:focus-visible{outline:2px solid #273d32;outline-offset:2px}
+ .reader-color-panel p{font-size:.78rem;line-height:1.5;margin:.65rem 0 0;min-height:2.3em}
+ .reader[data-coloring='yes'] [data-color-canvas]{pointer-events:auto;touch-action:none}
+ .reader [data-color-canvas]{mix-blend-mode:multiply}
+ .reader[data-coloring='yes'] .reader-hotspot{visibility:hidden}
+ .reader[data-coloring='yes'] .reader-bottom{visibility:hidden}
+ @media(min-aspect-ratio:4/3){.reader .reader-color-panel{bottom:auto;top:70px;width:min(400px,38vw);max-height:calc(100dvh - 82px)}.reader[data-coloring='yes'] .reader-main{right:min(424px,41vw)}}
+ @media(max-aspect-ratio:4/3){.reader .reader-color-panel{max-height:45dvh}.reader[data-coloring='yes'] .reader-main{bottom:min(300px,46dvh)}}
+ @media(max-width:1100px){.reader-color-swatches{grid-template-columns:repeat(4,1fr)}}
+ @media(max-width:480px){.reader .reader-color-panel{max-height:50dvh}.reader[data-coloring='yes'] .reader-main{bottom:min(350px,51dvh)}.reader .reader-color-open{bottom:calc(max(12px,env(safe-area-inset-bottom)) + 56px)}}
+
+ @font-face{font-family:'Fien Pencil';font-style:normal;font-weight:500;font-display:swap;src:url('/fonts/caveat/caveat-medium.ttf') format('truetype')}
+ .reader-work-tools{position:absolute;z-index:3;left:max(12px,env(safe-area-inset-left));bottom:max(12px,env(safe-area-inset-bottom));display:flex;align-items:center;gap:8px}
+ .reader .reader-work-tools button{position:static;min-height:46px;display:flex;align-items:center;gap:.4rem;padding:.5rem .8rem;border-radius:1.5rem;font-size:.85rem;font-weight:700;box-shadow:0 4px 18px #101d1766}
+ .reader .reader-write-open{background:#fff7e8;color:#273d32}
+ .reader-work-tools button:focus-visible{outline:3px solid #fff5db;outline-offset:3px}
+ .reader-writing-fields{position:absolute;inset:0;pointer-events:none;container-type:inline-size}
+ .reader .reader-write-field{position:absolute;display:flex;align-items:center;gap:2px;padding:0 3px;border:1px dashed #a57220;border-radius:4px;background:#fff7e8e8;color:var(--writing-ink,#174e44);pointer-events:auto;touch-action:manipulation;overflow:hidden}
+ .reader-write-field svg{flex-shrink:0;width:1.3cqw;height:1.3cqw;min-width:6px;min-height:6px;stroke-width:2}
+ .reader-write-field span{font:500 clamp(6px,1.5cqw,18px)/1 'Fien Pencil',cursive;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+ .reader-write-field[data-filled='no'] span{font:600 clamp(5px,1cqw,12px)/1 system-ui,sans-serif;color:#654915}
+ .reader .reader-write-field:is(:hover,:focus-visible){background:#fff0b6;outline:2px solid #d6a23b;outline-offset:2px}
+ .reader .reader-write-field[data-chalk='yes']{background:#9d9c8d;border-color:#fff9df;color:#fff9df;border-radius:30%;transform:rotate(11deg)}
+ .reader-write-field[data-chalk='yes'] svg{display:none}
+ .reader-write-field[data-chalk='yes'] span,.reader-write-field[data-chalk='yes'][data-filled='no'] span{width:100%;text-align:center;font:500 4.2cqw/1 'Fien Pencil',cursive;color:#fff9df}
+ .reader[data-coloring='yes'] .reader-writing-fields{visibility:hidden}
+ .reader[data-coloring='yes'] .reader-work-tools{display:none}
+ .reader-write-dialog{position:fixed;left:0;right:0;bottom:auto;margin:0 auto;width:min(520px,calc(100vw - 24px));padding:clamp(1.2rem,4vw,2rem);overflow:auto;border:0;border-radius:16px;background:#fff7e8;color:#273d32;color-scheme:light;box-shadow:0 16px 64px #071f1880;caret-color:currentColor}
+ .reader-write-dialog::backdrop{background:#0e241ca3}
+ .reader-write-dialog h2{font:500 clamp(1.8rem,5vw,2.5rem)/1.1 'Fien Pencil',cursive;margin:0 1.5rem .6rem 0;text-wrap:balance}
+ .reader-write-dialog>p{font-size:.9rem;line-height:1.6;margin:.5rem 0 1rem}
+ .reader .reader-write-close{position:absolute;right:.6rem;top:.6rem;width:44px;height:44px;display:grid;place-items:center;border-radius:50%}
+ .reader-write-dialog textarea{display:block;width:100%;min-height:120px;max-height:35dvh;resize:vertical;border:1px solid #c2aa77;border-radius:8px;padding:.75rem;background:#fffdf6;font:500 clamp(1.5rem,5vw,2rem)/1.45 'Fien Pencil',cursive;caret-color:currentColor;scrollbar-color:#c2aa77 #fff7e8}
+ .reader-write-dialog textarea::placeholder{color:#6f7354;opacity:1}
+ .reader-write-dialog textarea:focus-visible,.reader-write-dialog input:focus-visible{outline:2px solid #a57220;outline-offset:3px}
+ .reader-write-dialog input[type='number']{width:100%;border:0;border-radius:8px;padding:.4rem 1rem;background:#384f42;color:#fff9df;font:500 4.5rem/1.2 'Fien Pencil',cursive;text-align:center;appearance:textfield}
+ .reader-write-options{display:flex;align-items:center;justify-content:space-between;gap:1rem;margin-top:.5rem}
+ .reader-write-options>span{font-size:.75rem;color:#5e684c;font-variant-numeric:tabular-nums}
+ .reader-write-inks{display:flex;gap:6px}
+ .reader .reader-write-inks button{position:relative;width:44px;height:44px;border-radius:50%}
+ .reader-write-inks button::before{content:'';position:absolute;inset:8px;border-radius:50%;background:#174e44}
+ .reader-write-inks [data-ink='#28528c']::before{background:#28528c}.reader-write-inks [data-ink='#8a3e66']::before{background:#8a3e66}
+ .reader-write-inks [aria-pressed='true']{outline:2px solid #273d32;outline-offset:-3px}
+ .reader .reader-write-message{min-height:1.5em;font-size:.78rem;color:#526046;margin:.5rem 0}
+ .reader-write-actions{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:.75rem;margin-top:.9rem}
+ .reader-write-actions button{min-height:44px;font-size:.9rem;font-weight:600}
+ .reader .reader-write-done,.reader .reader-write-lower{min-height:46px;padding:.7rem 1rem;background:#284538;color:#fff7e8;border-radius:8px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;gap:.5rem}
+ .reader .reader-write-lower{width:100%;background:#384f42;font-size:1rem}
+ .reader-write-lower:disabled{opacity:.55;cursor:default}
+ .reader-write-picker{margin-top:1rem;border-top:1px solid #d9c9aa;font-size:.85rem}
+ .reader-write-picker summary{min-height:44px;align-content:center;cursor:pointer;padding:.4rem 0}
+ .reader-write-picker div{display:grid;gap:4px}
+ .reader .reader-write-picker button{min-height:44px;text-align:left;padding:.5rem;border-radius:6px;font-size:.85rem}
+ .reader-write-picker [aria-current='true']{background:#eddfc5;font-weight:700}
+ .reader-write-dialog button{-webkit-tap-highlight-color:transparent}
+ .reader-write-dialog button:active{opacity:.78}
+ .reader-write-dialog button:focus-visible{outline:2px solid #a57220;outline-offset:2px}
+ .reader-write-dialog ::selection{background:#ffdf8f;color:#173d35}
+ @media(max-width:600px){.reader-write-field[data-filled='no']:not([data-chalk]) span{display:none}}
+ @media(max-width:480px){.reader-work-tools{bottom:calc(max(12px,env(safe-area-inset-bottom)) + 56px);gap:6px}.reader .reader-work-tools button{font-size:.75rem;padding:.5rem .65rem}.reader .reader-work-tools svg{width:18px;height:18px}}
+
  .reader-dialog{background:#fff7e8;color:#273d32;border:1px solid #dbcdb5;border-radius:15px;padding:clamp(1.3rem,5vw,2rem);width:min(420px,calc(100vw - 24px));max-height:85dvh;box-shadow:0 18px 72px #101d17aa}
  .reader-dialog::backdrop{background:#0e1e19b8}
  .reader-dialog h2{margin:0 2rem 1rem 0;font:normal clamp(1.7rem,5vw,2.4rem)/1.12 Georgia,serif}

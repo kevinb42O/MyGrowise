@@ -1,0 +1,229 @@
+---
+import { BOOK_COVER, BOOK_PATH, BOOK_PREVIEW_PATH } from '../../lib/ebooks/book';
+---
+
+<section class="home-fien" id="fien" aria-labelledby="home-fien-title">
+  <div class="container home-fien__grid">
+    <div class="home-fien__intro">
+      <h2 id="home-fien-title">Jij, <em>Fien</em> en een toverkist vol <em>superkrachten</em></h2>
+      <p>Een geïllustreerd e-book om samen te lezen met kinderen van 7 tot 12 jaar. Fien piekert, is soms zenuwachtig en ontdekt onderweg vijf superkrachten die haar helpen.</p>
+    </div>
+
+    <figure class="home-fien__art">
+      <div class="home-fien__book" data-fien-book>
+        <img src={BOOK_COVER} alt="Omslag van Jij, Fien en een toverkist vol superkrachten" width="2200" height="1556" loading="lazy" decoding="async" />
+      </div>
+      <div class="home-fien__controls" data-fien-controls hidden>
+        <button type="button" data-fien-previous aria-label="Vorige afbeelding">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M20 12H5m6-6-6 6 6 6" /></svg>
+        </button>
+        <span data-fien-caption aria-live="polite">De omslag · 1 / 3</span>
+        <button type="button" data-fien-next aria-label="Volgende afbeelding">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M4 12h15m-6-6 6 6-6 6" /></svg>
+        </button>
+      </div>
+    </figure>
+
+    <div class="home-fien__reading">
+      <h3>Ontdek de interactieve editie</h3>
+      <p>Lees samen op je iPad of pc. Blader door het boek in je browser en ontdek illustraties die bewegen en reageren terwijl je leest.</p>
+      <div class="home-fien__links">
+        <a class="button home-fien__preview" href={BOOK_PREVIEW_PATH}>
+          Probeer de interactieve inkijk
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M4 12h15m-6-6 6 6-6 6" /></svg>
+        </a>
+        <a class="home-fien__details" href={BOOK_PATH}>Bekijk het e-book</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<script>
+  const book = document.querySelector<HTMLElement>('[data-fien-book]');
+  const controls = document.querySelector<HTMLElement>('[data-fien-controls]');
+  const image = book?.querySelector('img');
+  const caption = controls?.querySelector('[data-fien-caption]');
+  const previous = controls?.querySelector<HTMLButtonElement>('[data-fien-previous]');
+  const next = controls?.querySelector<HTMLButtonElement>('[data-fien-next]');
+
+  if (book && controls && image && caption && previous && next) {
+    const pages = [
+      { src: image.src, alt: image.alt, title: 'De omslag' },
+      { src: '/images/books/jij-fien-voorbeeld-1.webp', alt: 'Fien stelt zich voor en vertelt over haar gedachten', title: 'Ontmoet Fien' },
+      { src: '/images/books/jij-fien-voorbeeld-2.webp', alt: 'Fien wijst naar haar toverkist in een groen berglandschap', title: 'De toverkist' },
+    ];
+    let current = 0;
+    let turning = false;
+    controls.hidden = false;
+
+    const turn = async (direction: number) => {
+      if (turning) return;
+      turning = true;
+      previous.disabled = next.disabled = true;
+      const index = (current + direction + pages.length) % pages.length;
+      const page = pages[index];
+      try {
+        const preload = new Image();
+        preload.src = page.src;
+        await preload.decode();
+        const animate = book.closest('.hero-enhanced')
+          && matchMedia('(prefers-reduced-motion: no-preference)').matches;
+        if (animate) {
+          await image.animate([
+            { transform: 'rotateY(0deg)', opacity: 1 },
+            { transform: `rotateY(${-direction * 65}deg)`, opacity: 0 },
+          ], { duration: 240, easing: 'ease-in', fill: 'forwards' }).finished;
+        }
+        image.src = page.src;
+        image.alt = page.alt;
+        await image.decode();
+        image.getAnimations().forEach(animation => animation.cancel());
+        if (animate) {
+          await image.animate([
+            { transform: `rotateY(${direction * 65}deg)`, opacity: 0 },
+            { transform: 'rotateY(0deg)', opacity: 1 },
+          ], { duration: 460, easing: 'cubic-bezier(.16, 1, .3, 1)' }).finished;
+        }
+        current = index;
+        caption.textContent = `${page.title} · ${current + 1} / ${pages.length}`;
+      } catch {
+        image.getAnimations().forEach(animation => animation.cancel());
+      } finally {
+        turning = false;
+        previous.disabled = next.disabled = false;
+      }
+    };
+
+    previous.addEventListener('click', () => { void turn(-1); });
+    next.addEventListener('click', () => { void turn(1); });
+  }
+</script>
+
+<style>
+  .home-fien {
+    --fien-rose: #f2a6ba;
+    --fien-gold: #f8d48b;
+    padding-block: clamp(4rem, 9vw, 8rem);
+    background:
+      radial-gradient(ellipse at 78% 36%, #615067 0%, transparent 57%),
+      linear-gradient(120deg, #172d2a 12%, #202834 57%, #312a40);
+    color: var(--white);
+    scroll-margin-top: 5rem;
+  }
+  .home-fien__grid {
+    width: min(1480px, calc(100% - 4rem));
+    display: grid;
+    grid-template-columns: minmax(0, .8fr) minmax(0, 1.45fr);
+    grid-template-areas: "intro art" "reading art";
+    align-items: center;
+    column-gap: clamp(1.75rem, 4vw, 4.25rem);
+    row-gap: 2rem;
+  }
+  .home-fien__intro { grid-area: intro; align-self: end; }
+  .home-fien__reading {
+    grid-area: reading;
+    align-self: start;
+    padding-top: 1.5rem;
+    border-top: 1px solid rgb(255 253 249 / 26%);
+  }
+  .home-fien h2 {
+    margin: 0 0 1.35rem;
+    font-size: clamp(2.25rem, 4.8vw, 4.5rem);
+    line-height: .99;
+    text-wrap: balance;
+  }
+  .home-fien h2 em { color: var(--fien-rose); }
+  .home-fien h2 em:last-child { color: var(--fien-gold); }
+  .home-fien h3 {
+    margin: 0 0 .75rem;
+    color: var(--fien-gold);
+    font-size: clamp(1.4rem, 2.15vw, 1.85rem);
+    line-height: 1.15;
+    text-wrap: pretty;
+  }
+  .home-fien p {
+    max-width: 49ch;
+    margin: 0;
+    color: #f0e5ec;
+    line-height: 1.7;
+  }
+  .home-fien__art {
+    grid-area: art;
+    min-width: 0;
+    margin: 0;
+    text-align: center;
+  }
+  .home-fien__book {
+    perspective: 1400px;
+  }
+  .home-fien__book img {
+    display: block;
+    width: 100%;
+    height: auto;
+    aspect-ratio: 2200 / 1556;
+    object-fit: contain;
+    border-radius: .375rem;
+    box-shadow: 0 24px 48px rgb(14 17 26 / 38%);
+  }
+  .home-fien__controls {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 1rem;
+    margin-top: 1.25rem;
+    color: var(--fien-gold);
+    font-size: .875rem;
+  }
+  .home-fien__controls[hidden] { display: none; }
+  .home-fien__controls button {
+    display: grid;
+    place-items: center;
+    width: 48px;
+    height: 48px;
+    padding: 0;
+    border: 1px solid rgb(248 212 139 / 45%);
+    border-radius: 50%;
+    background: transparent;
+    color: inherit;
+  }
+  .home-fien__controls button:hover { background: rgb(248 212 139 / 12%); }
+  .home-fien__controls button:disabled { opacity: .5; }
+  .home-fien__controls svg { width: 22px; height: 22px; }
+  .home-fien__links {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: .625rem 1.25rem;
+    margin-top: 1.5rem;
+  }
+  .home-fien__links .home-fien__preview {
+    gap: .625rem;
+    background: var(--fien-gold);
+    color: var(--ink-deep);
+    font-size: .9rem;
+  }
+  .home-fien__preview svg { flex: 0 0 1rem; }
+  .home-fien__preview:hover { background: var(--white); }
+  .home-fien__details {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    font-weight: 700;
+  }
+
+  @media (max-width: 800px) {
+    .home-fien__grid {
+      width: calc(100% - 2rem);
+      grid-template-columns: minmax(0, 1fr);
+      grid-template-areas: "intro" "art" "reading";
+    }
+    .home-fien__intro { max-width: 34rem; }
+    .home-fien__art { width: 100%; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .home-fien__links .home-fien__preview {
+      transform: none;
+      transition: none;
+    }
+  }
+</style>

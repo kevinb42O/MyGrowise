@@ -81,7 +81,7 @@ export function makePaper(canvas:HTMLCanvasElement) {
   gl.enable(gl.DEPTH_TEST);
   gl.clearColor(0,0,0,0);
   return {
-    use(image:HTMLImageElement) {
+    use(image:HTMLImageElement|HTMLCanvasElement) {
       if(gl.isContextLost())return false;
       try{
         gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,image);

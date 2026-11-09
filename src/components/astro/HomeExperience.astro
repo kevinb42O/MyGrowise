@@ -5,6 +5,10 @@ import { publicModules } from '../../lib/modules/server';
 import { money } from '../../lib/catalog/pricing';
 import '../../styles/homeExperience.css';
 import HomeLoading from './HomeLoading.astro';
+import HomeFien from './HomeFien.astro';
+
+interface Props { showBook: boolean }
+const { showBook } = Astro.props;
 
 const [profiles, moduleProducts] = await Promise.all([
   listPublishedProfiles(),
@@ -71,6 +75,7 @@ const recognitionHighlights = ['je lichaam moe is.', 'sneller of intenser binnen
  </div>
 </div>
  </div></div>
+{showBook && <HomeFien />}
 <section class="people section" id="mensen"><div class="section-heading"><h2>Een mens tegenover je.<br> <em>Niet nóg een systeem.</em></h2><p>Je hoeft het niet alleen uit te zoeken.<br> Maak kennis met de mensen achter MyGrowise.</p></div><div class="people-grid">{practitioners.map(person => <article class={`person person--${person.slug}`}>
   <a class="person-portrait" href={`/begeleiding/${person.slug}`} aria-label={`Leer ${person.name} kennen`}>
     <figure class="person-print">

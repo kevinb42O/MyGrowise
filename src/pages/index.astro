@@ -2,9 +2,12 @@
 import MainLayout from '../layouts/MainLayout.astro';
 import HomeExperience from '../components/astro/HomeExperience.astro';
 import HomeClosing from '../components/astro/HomeClosing.astro';
+import { isBookPublic } from '../lib/ebooks/server';
+
+const showBook = await isBookPublic();
 ---
 
-<MainLayout activeNav="home" footerCta={false} title="MyGrowise — psychologisch inzicht en online begeleiding" description="Begrijp wat er bij jou gebeurt en kies ondersteuning die past: zelfstandig met een persoonlijk profiel of samen met een professional.">
-  <HomeExperience />
+<MainLayout activeNav="home" showBook={showBook} footerCta={false} title="MyGrowise — psychologisch inzicht en online begeleiding" description="Begrijp wat er bij jou gebeurt en kies ondersteuning die past: zelfstandig met een persoonlijk profiel of samen met een professional.">
+  <HomeExperience showBook={showBook} />
   <HomeClosing slot="closing" />
 </MainLayout>

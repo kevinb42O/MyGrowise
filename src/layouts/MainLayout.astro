@@ -5,6 +5,7 @@ import Footer from '../components/astro/Footer.astro';
 import AnalyticsConsent from '../components/astro/AnalyticsConsent.astro';
 import '../styles/global.css';
 import HomeLoadingHead from '../components/astro/HomeLoadingHead.astro';
+import { isBookPublic } from '../lib/ebooks/server';
 import { SITE_ORIGIN, SOCIAL_IMAGE_PATH } from '../lib/site';
 
 interface Props {
@@ -15,6 +16,7 @@ interface Props {
   ogImage?: string;
   ogImageAlt?: string;
   footerCta?: boolean;
+  showBook?: boolean;
 }
 
 const {
@@ -31,6 +33,7 @@ const preventIndex = noindex || import.meta.env.VERCEL_ENV === 'preview';
 const siteOrigin = Astro.site ?? SITE_ORIGIN;
 const canonical = new URL(Astro.url.pathname, siteOrigin);
 const socialImage = new URL(ogImage, siteOrigin);
+const showBook = Astro.props.showBook ?? await isBookPublic();
 ---
 
 <!doctype html>
@@ -67,7 +70,7 @@ const socialImage = new URL(ogImage, siteOrigin);
   </head>
   <body>
     <a class="skip-link" href="#inhoud">Ga naar de inhoud</a>
-    <Header activeNav={activeNav} />
+    <Header activeNav={activeNav} showBook={showBook} />
     <main id="inhoud"><slot /></main>
     <div class:list={['site-ending', { 'site-ending--home': Astro.slots.has('closing') }]}>
       <slot name="closing" />

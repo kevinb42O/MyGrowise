@@ -1,0 +1,12 @@
+Generation mode: built-in image_gen.
+Reference 1: public/images/logo-lelie.png
+Reference 2: public/images/social/mygrowise-facebook-profile.png
+
+Use case: logo-brand.
+Asset type: finished square Facebook profile picture for the MyGrowise page, 1:1 aspect ratio, high resolution.
+Input image 1 is the exact existing MyGrowise lily logo and is the identity reference; input image 2 is the previous Facebook profile image, for the deep green brand background only.
+Create one beautiful polished brand avatar. Preserve the distinctive existing three outlined pointed lily petals and small purple circular center, with its pink-to-warm-gold petal coloring and original geometry recognizably intact.
+Build an art-directed unified lockup of the large lily and the exact word "MyGrowise". Position the name prominently in front of the lower third of the flower, integrating the two into one compact harmonious composition. The lily rises behind the name; its purple central dot nestles gracefully just above the central part of the wordmark. Use precise optical spacing and a beautifully drawn contemporary humanist wordmark, substantial and readable at small size. Color "My" soft blush pink, "Gro" warm golden yellow, and "wise" light lilac, coordinated with the existing lily. Keep the word exactly MyGrowise: M and G uppercase, all other letters lowercase. Ensure the word has strong contrast, elegant confident curves, no thin hairlines, and absolutely accurate spelling. Make it feel professional, warm and refined.
+Background: sumptuous very dark forest green, subtle smooth green tonal illumination behind the lockup, calm clean finish. Flat crisp logo edges with only a whisper of depth; no theatrical 3D effects.
+Composition: centered square image, balanced visual mass, generous breathing space; entire logo and all text must fit comfortably inside a centered circular crop, with the wordmark no wider than 72% of the square and its baseline above 68% image height. Make the logo and wordmark large and memorable within that safe area. Text overlaps lower petal area deliberately while preserving clear reading, not a separate disconnected title below a huge icon. All important contents within centered 80% diameter safe circle.
+Text (verbatim): "MyGrowise". No other text, no tagline, no URL, no mockup, no frames, no social platform symbol, no watermark, no extra leaves or petals, no decorations, no letter substitutions. Deliver only the final square image.
