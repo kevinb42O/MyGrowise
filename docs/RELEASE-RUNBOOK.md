@@ -1,5 +1,7 @@
 # Release en verkoopvrijgave op Vercel Free
 
+**Verkoopvrijgave 9 november 2026:** Kevin heeft overschrijving en handmatige opvolging door Virginie bevestigd. Zie [de uitvoering en verificatie](VERKOOPVRIJGAVE-2026-11-09.md). De eerdere gesloten verkoopstand hieronder is historische context.
+
 **Actuele verwijzing: 30 oktober 2026.** [MASTERPLAN.md](MASTERPLAN.md) beschrijft de huidige status op codebasis `29d4b87`. Alle fixes zijn lokaal gecontroleerd en naar `main` gepusht; de nieuwe Vercel-status is in deze ronde niet afzonderlijk geverifieerd. De ondernemingsgegevens, privacy en volledige voorwaarden zijn inmiddels verwerkt. De [afspraakacceptatie](APPOINTMENT-FLOW-ACCEPTANCE.md) bewijst de eerdere productieketen en mailontvangst; [transactionele mails](TRANSACTIONELE-MAILS.md) beschrijft de nieuwe opmaak en opgeslagen Auth-templates.
 
 De releasebeschrijving en testtellingen hieronder bewaren de uitvoering van **18 oktober 2026** (`b2cfabd` plus toenmalige releasewijzigingen). De toen ontbrekende bedrijfsgegevens zijn op 29 oktober toegevoegd; behandel de ontvangst daarvan niet meer als open taak. Juridische/fiscale beoordeling, bewuste verkoopvrijgave, Auth-mailproef, bank-/leverproef en herstelacceptatie behouden hun eigen bewijsgrens.

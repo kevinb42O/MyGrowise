@@ -65,9 +65,8 @@ const combine=`/samenstellen?voegtoe=${p.id}`;
         <span class="catalog-kicker">Na je bestelling</span>
         <h2 id="volgende-stap">Met duidelijke vervolgstappen.</h2>
         <p>{p.deliveryText}</p>
-        <p>Via een veilige e-maillink vind je de instructies, de voortgang van je afname en je beschikbare verslag. Een account is optioneel.</p>
+        <p>Virginie controleert je overschrijving en bereidt de afname handmatig voor. Je ontvangt de afnamelink en instructies per e-mail. Je bestelstatus en beschikbare updates kun je volgen via Mijn aankopen, zonder verplicht account.</p>
         <p>De versie en eventuele informanten worden afgestemd op de leeftijd en doelgroep.</p>
-        <a href="/contact">Hulp bij je keuze →</a>
       </aside>
     </div>
   </section>
@@ -76,7 +75,6 @@ const combine=`/samenstellen?voegtoe=${p.id}`;
       <div><span class="catalog-kicker">Jouw volgende stap</span><h2>Meer inzicht begint met jouw vraag.</h2><p>{content.formatLabel} · {content.reportLabel}</p></div>
       <div class="questionnaire-closing-actions">
         {available && <><span>{priceLabel}</span><strong class="questionnaire-price">{money(p.priceCents!)}</strong><a class="catalog-checkout" href={checkout}>Kies deze vragenlijst →</a><a class="questionnaire-combine" href={combine}>Voeg toe aan een combinatie</a></>}
-        <a class="questionnaire-contact" href="/contact">Twijfel je of dit past? We denken met je mee.</a>
       </div>
     </div>
   </section>

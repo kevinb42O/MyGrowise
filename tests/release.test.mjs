@@ -40,6 +40,13 @@ test('order confirmation sends a durable copy of the terms only to the buyer at 
  sent.length=0;order.contact_snapshot={email:'buyer@example.invalid'};await deliverCommerceMail();
  assert.ok(sent[0].text.endsWith(load('lib/commerce/termsArchive.ts').legacyTerms20261029));
  assert.ok(!sent[0].text.includes('Bevestiging directe digitale levering'));
+ // A questionnaire purchase confirms payment without claiming the assessment is ready.
+ sent.length=0;order.order_items=[{product_type:'questionnaire',product_title:'Testvragenlijst'}];await deliverCommerceMail();
+ assert.match(sent[2].text,/Virginie bereidt je afname handmatig voor/);
+ assert.match(sent[2].text,/afnamelink en instructies per e-mail/);
+ assert.ok(!sent[2].text.includes('inhoud staat klaar'));
+ assert.ok(sent[1].text.includes('Producten: Testvragenlijst'));
+ assert.ok(sent[1].text.includes('/admin/bestellingen/test-order'));
 });
 test('digital delivery consent is separately required and stored with agreed text for guest and account checkout',async()=>{
  const terms=load('lib/commerce/terms.ts');

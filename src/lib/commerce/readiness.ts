@@ -1,4 +1,4 @@
-/** New sales require the owner to finish the legal and delivery details.
+/** New sales are explicitly enabled by the owner through COMMERCE_SALES_ENABLED.
  * Existing orders, reconciliation and private purchase access remain available.
  * Local development stays usable for isolated, captured-mail acceptance tests.
  */
