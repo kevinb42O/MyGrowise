@@ -5,3 +5,7 @@ export const BOOK_PATH = `/boeken/${BOOK_SLUG}`;
 export const BOOK_LIBRARY_PATH = `/aankopen/boeken/${BOOK_SLUG}`;
 export const BOOK_COVER = '/images/books/jij-fien-omslag.webp';
 export const isEbook = (product: {slug?:string;product_slug?:string}) => (product.slug || product.product_slug) === BOOK_SLUG;
+
+export const BOOK_READER_PATH = '/aankopen/boeken/fien/lezen';
+export const BOOK_PREVIEW_PATH = '/boeken/fien/inkijk';
+export const BOOK_PAGE_COUNT = 29;

@@ -1,0 +1,10 @@
+---
+import BookReader from '../../../../components/books/BookReader.astro';
+import {BOOK_LIBRARY_PATH,BOOK_PAGE_COUNT} from '../../../../lib/ebooks/book';
+import {privateHeaders} from '../../../../lib/commerce/purchases';
+import {canReadBook} from '../../../../lib/ebooks/server';
+Object.entries(privateHeaders).forEach(([name,value])=>Astro.response.headers.set(name,value));
+if(!await canReadBook(Astro.cookies,Astro.locals.currentUser))return Astro.redirect(BOOK_LIBRARY_PATH,303);
+const pages=Array.from({length:BOOK_PAGE_COUNT},(_,i)=>`/api/boeken/pagina/${String(i+1).padStart(2,'0')}`);
+---
+<BookReader pages={pages} back={BOOK_LIBRARY_PATH} />

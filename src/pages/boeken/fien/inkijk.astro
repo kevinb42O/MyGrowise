@@ -1,0 +1,5 @@
+---
+import BookReader from '../../../components/books/BookReader.astro';
+import {BOOK_COVER,BOOK_PATH} from '../../../lib/ebooks/book';
+---
+<BookReader preview pages={[BOOK_COVER,'/images/books/jij-fien-voorbeeld-1.webp','/images/books/jij-fien-voorbeeld-2.webp']} back={BOOK_PATH} />

@@ -1,7 +1,8 @@
 import type {AstroCookies} from 'astro';
+import type {UserSession} from '../adminAuth';
 import {createHmac} from 'node:crypto';
 import {getSupabaseAdmin} from '../supabase/server';
-import {digest,tokenValid,hasPurchase,purchaseOrders,type PurchaseOwner} from '../commerce/purchases';
+import {digest,tokenValid,purchaseOwner,hasPurchase,purchaseOrders,type PurchaseOwner} from '../commerce/purchases';
 import {signR2BookUrl} from './r2';
 import {BOOK_SLUG,BOOK_LIBRARY_PATH} from './book';
 const alphabet='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -57,4 +58,12 @@ export async function hasBookSession(cookies:AstroCookies,productId:string){
   .in('order_items.orders.status',['paid','fulfilled']).limit(1);
  if(accessError)throw new Error('ebook_unavailable');
  return Boolean(right?.length);
+}
+
+export async function canReadBook(cookies:AstroCookies,user?:UserSession|null) {
+ const product=await ebookProduct();
+ if(!product)return false;
+ if(await hasBookSession(cookies,product.id))return true;
+ const owner=await purchaseOwner(cookies,user);
+ return !!owner&&await ebookActivated(owner,product.id);
 }

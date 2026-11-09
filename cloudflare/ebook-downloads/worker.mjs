@@ -30,8 +30,16 @@ export default {
   async fetch(request, env) {
     const url = new URL(request.url);
     const file = /^\/(jij-fien-en-een-toverkist-vol-superkrachten\.(pdf|epub))$/.exec(url.pathname);
-    if (!file || !['GET','HEAD'].includes(request.method) || !await authorized(url, env.EBOOK_R2_SIGNING_SECRET)) {
+    const page = /^\/(fien-reader-r1\/(?:0[1-9]|1[0-9]|2[0-9])\.webp)$/.exec(url.pathname);
+    if ((!file && !page) || !['GET','HEAD'].includes(request.method) || !await authorized(url, env.EBOOK_R2_SIGNING_SECRET)) {
       return new Response('Niet beschikbaar.', {status:404, headers});
+    }
+    if (page) {
+      if (url.searchParams.get('mode') !== 'open') return new Response(null,{status:404,headers});
+      const imageHeaders = {...headers,'Content-Type':'image/webp','Access-Control-Allow-Origin':'*'};
+      const image = request.method === 'HEAD' ? await env.BOOKS.head(page[1]) : await env.BOOKS.get(page[1]);
+      if (!image) return new Response(null,{status:404,headers:imageHeaders});
+      return new Response('body' in image ? image.body : null,{headers:imageHeaders});
     }
     const [, filename, format] = file;
     const metadata = await env.BOOKS.head(filename);
