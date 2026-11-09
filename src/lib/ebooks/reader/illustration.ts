@@ -1,3 +1,5 @@
+import type {ChestPainter} from './chest';
+export {chestDuration} from './chestMotion';
 export const moments = {
   5: { kind: 'star', x: .805, y: .474, size: '7%', label: 'Laat de ster oplichten', text: 'Volg het licht, het avontuur begint!' },
   10: { kind: 'chest', x: .518, y: .652, size: '10%', label: 'Tik op het slot', text: 'Welke superkracht zou jij in de kist stoppen?' },
@@ -7,7 +9,6 @@ export const moments = {
 } as const;
 export type Moment = typeof moments[keyof typeof moments];
 
-export const chestDuration = 2.65;
 export const heartCycle = 4.8;
 export const balloonDuration = 2.15;
 export const bellDuration = 3.68;
@@ -189,12 +190,18 @@ function paintBell(ctx: CanvasRenderingContext2D, elapsed: number, calm: boolean
 
 export function paintIllustration(
   canvas: HTMLCanvasElement, moment: Exclude<Moment, { kind: 'star' }>,
-  elapsed: number, calm: boolean, free: number | null, x: number, y: number, vx: number,
+  elapsed: number, calm: boolean, free: number | null, x: number, y: number, vx: number, chestPaint?: ChestPainter,
 ) {
   const ctx = canvas.getContext('2d');
   if (!ctx) return;
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   ctx.save();
+  if(moment.kind==='chest' && chestPaint){
+    ctx.scale(canvas.width/1200,canvas.height/849);
+    chestPaint(ctx,elapsed,calm);
+    ctx.restore();
+    return;
+  }
   ctx.translate(canvas.width * moment.x, canvas.height * moment.y);
   ctx.scale(canvas.width / 1200, canvas.height / 849);
   if (moment.kind === 'chest') paintChest(ctx, elapsed, calm);

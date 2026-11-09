@@ -1,39 +1,63 @@
 const vertex = `
 attribute vec2 paper;
-uniform float progress;
-uniform float direction;
-uniform float grip;
-varying vec2 ink;
-varying float curvature;
-varying float folded;
+uniform mediump float progress;
+uniform mediump float direction;
+uniform mediump float grip;
+uniform mediump float shadowPass;
+varying mediump vec2 ink;
+varying mediump float bend;
 void main() {
   ink = paper;
   float x = direction > 0.0 ? paper.x : 1.0 - paper.x;
-  float r = 0.067 + 0.061 * sin(progress * 3.14159);
-  float bias = (0.5 - grip) * 0.51 * sin(progress * 3.14159);
+  float lift = sin(progress * 3.14159);
+  float radius = 0.085 + 0.075 * lift;
+  float bias = (0.5 - grip) * 0.38 * lift;
   float fold = mix(1.005, -0.34, progress) + (paper.y - 0.5) * bias;
   float distanceFromFold = max(0.0, x - fold);
-  float angle = min(3.14159, distanceFromFold / r);
-  float height = r * (1.0 - cos(angle));
-  if (x > fold) x = fold + r * sin(angle) - max(0.0, distanceFromFold - r * 3.14159);
-  float y = paper.y + height * (0.55 * (grip - paper.y) + 0.15 * (grip - 0.5));
+  float angle = min(3.14159, distanceFromFold / radius);
+  float height = radius * (1.0 - cos(angle));
+  bend = angle;
+  if (shadowPass > 0.5) {
+    gl_Position = vec4(paper.x * 2.0 - 1.0, 1.0 - paper.y * 2.0, 0.0, 1.0);
+    return;
+  }
+  if (x > fold) x = fold + radius * sin(angle) - max(0.0, distanceFromFold - radius * 3.14159);
+  float y = paper.y + height * (0.38 * (grip - paper.y) + 0.10 * (grip - 0.5));
   if (direction < 0.0) x = 1.0 - x;
-  gl_Position = vec4(x * 2.0 - 1.0, 1.0 - y * 2.0, -height * 1.5, 1.0);
-  curvature = sin(angle);
-  folded = smoothstep(1.53, 1.68, angle);
+  // A small perspective lift gives the curled edge depth without moving the book.
+  float perspective = 1.0 + height * 0.16;
+  gl_Position = vec4((x * 2.0 - 1.0) * perspective, (1.0 - y * 2.0) * perspective, -height * 1.5, 1.0);
 }`;
 const fragment = `
 precision mediump float;
 uniform sampler2D page;
-varying vec2 ink;
-varying float curvature;
-varying float folded;
+uniform mediump float progress;
+uniform mediump float direction;
+uniform mediump float grip;
+uniform mediump float shadowPass;
+varying mediump vec2 ink;
+varying mediump float bend;
 void main() {
+  if (shadowPass > 0.5) {
+    float lift = sin(progress * 3.14159);
+    float radius = 0.085 + 0.075 * lift;
+    float fold = mix(1.005, -0.34, progress) + (ink.y - 0.5) * (0.5 - grip) * 0.38 * lift;
+    float x = direction > 0.0 ? ink.x : 1.0 - ink.x;
+    float distance = (x - fold - radius * 0.65) / (0.025 + radius * 0.55);
+    float shadow = exp(-distance * distance * 1.8) * 0.28 * lift;
+    gl_FragColor = vec4(0.13, 0.10, 0.07, shadow);
+    return;
+  }
   vec3 printed = texture2D(page, ink).rgb;
-  vec3 reverse = mix(vec3(0.985, 0.953, 0.881), printed, 0.12);
-  vec3 color = mix(printed, reverse, folded);
-  float light = 1.0 - curvature * 0.29 + pow(curvature, 7.0) * 0.18;
-  gl_FragColor = vec4(color * light, 1.0);
+  float reverseSide = smoothstep(1.48, 1.66, bend);
+  vec3 reverse = mix(vec3(0.985, 0.963, 0.910), printed, 0.055);
+  vec3 color = mix(printed, reverse, reverseSide);
+  // Broad soft shading across the bend, with a narrow highlight on its crest.
+  float curve = sin(bend);
+  float shade = 1.0 - curve * 0.22;
+  float highlight = exp(-pow((bend - 0.85) / 0.24, 2.0)) * 0.12;
+  color = color * shade + vec3(1.0, 0.97, 0.89) * highlight;
+  gl_FragColor = vec4(color, 1.0);
 }`;
 
 export function makePaper(canvas:HTMLCanvasElement) {
@@ -54,7 +78,7 @@ export function makePaper(canvas:HTMLCanvasElement) {
   if(!gl.getProgramParameter(program,gl.LINK_STATUS))return null;
   gl.useProgram(program);
   const vertices:number[]=[], indices:number[]=[];
-  const across=64,down=12;
+  const across=128,down=24;
   for(let y=0;y<=down;y++)for(let x=0;x<=across;x++)vertices.push(x/across,y/down);
   for(let y=0;y<down;y++)for(let x=0;x<across;x++){
     const a=y*(across+1)+x,b=a+across+1;
@@ -67,6 +91,7 @@ export function makePaper(canvas:HTMLCanvasElement) {
   const position=gl.getAttribLocation(program,'paper');
   gl.enableVertexAttribArray(position);
   gl.vertexAttribPointer(position,2,gl.FLOAT,false,0,0);
+  const shadowPass=gl.getUniformLocation(program,'shadowPass');
   const progress=gl.getUniformLocation(program,'progress');
   const direction=gl.getUniformLocation(program,'direction');
   const grip=gl.getUniformLocation(program,'grip');
@@ -79,6 +104,8 @@ export function makePaper(canvas:HTMLCanvasElement) {
   gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);
   gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
   gl.enable(gl.DEPTH_TEST);
+  gl.enable(gl.BLEND);
+  gl.blendFuncSeparate(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA,gl.ONE,gl.ONE_MINUS_SRC_ALPHA);
   gl.clearColor(0,0,0,0);
   return {
     use(image:HTMLImageElement|HTMLCanvasElement) {
@@ -98,6 +125,10 @@ export function makePaper(canvas:HTMLCanvasElement) {
       gl.uniform1f(progress,value);
       gl.uniform1f(direction,side);
       gl.uniform1f(grip,anchor);
+      gl.uniform1f(shadowPass,1);
+      gl.drawElements(gl.TRIANGLES,indices.length,gl.UNSIGNED_SHORT,0);
+      gl.clear(gl.DEPTH_BUFFER_BIT);
+      gl.uniform1f(shadowPass,0);
       gl.drawElements(gl.TRIANGLES,indices.length,gl.UNSIGNED_SHORT,0);
     },
   };

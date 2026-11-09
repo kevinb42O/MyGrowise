@@ -71,7 +71,8 @@ const controls=[
   <!-- Page Turn (1) by OwlStorm, CC0. https://freesound.org/people/OwlStorm/sounds/151220/ -->
   <audio data-page-audio src="/audio/books/fien-page-turn.m4a" preload="auto"></audio>
   <!-- fien-bell.m4a uses "School bell.wav" by deleted_user_7020630, CC0. https://freesound.org/s/378394/ — 3.68 s, volume reduced, short fades. -->
-  {soundEffects.map(name=><audio data-effect-audio={name} src={`/audio/books/fien-${name}.m4a`} preload="auto"></audio>)}
+  <!-- Chest Opening.wav by spookymodem, CC0. https://freesound.org/s/202092/ — public HQ MP3, unchanged. -->
+  {soundEffects.map(name=><audio data-effect-audio={name} src={`/audio/books/fien-${name}.${name==='chest'?'mp3':'m4a'}`} preload="auto"></audio>)}
   <p class="reader-sr" data-status aria-live="polite"></p>
   <dialog class="reader-dialog" data-menu aria-labelledby="reader-menu-title">
    <form method="dialog"><button aria-label="Sluiten" class="reader-close"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg></button></form>

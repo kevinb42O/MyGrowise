@@ -1,4 +1,6 @@
 import {makePaper} from './paper';
+import {stepPageSpring} from './pageMotion';
+import {makeChestPainter,chestPlateUrl,type ChestPainter} from './chest';
 import {makeColoring} from './coloring';
 import {makeWriting} from './writing';
 
@@ -34,12 +36,24 @@ export function startBookReader(root:HTMLElement){
   const ready=new Map<number,HTMLImageElement>();
   let index=0, frame=0, chromeTimer=0, hintTimer=0, navigation=0;
   let calm=false, fill=false, scale=1, panX=0, panY=0;
-  let effectFrame=0, effectTimer=0;
+  let effectFrame=0, effectTimer=0, effectRequest=0;
+  let chestReady:Promise<HTMLImageElement>|undefined;
+  function loadChest(){
+    if(!chestReady){
+      const image=new Image();
+      chestReady=new Promise<HTMLImageElement>((resolve,reject)=>{
+        image.onload=()=>resolve(image);
+        image.onerror=()=>{chestReady=undefined;reject(new Error('chest_artwork_unavailable'));};
+        image.src=chestPlateUrl;
+      });
+    }
+    return chestReady;
+  }
   let scene:{moment:Moment; start:number; released:number; x:number; y:number; vx:number; vy:number}|null=null;
   let grip:{id:number; x:number; y:number; t:number; moved:boolean}|null=null;
   let hasInteracted=false;
   let renderer:ReturnType<typeof makePaper>|undefined;
-  let turn:{sounded?:boolean; target:number; side:number; grip:number; value:number; image:HTMLImageElement; previous:HTMLImageElement; gpu:boolean}|null=null;
+  let turn:{velocity:number;sounded?:boolean; target:number; side:number; grip:number; value:number; image:HTMLImageElement; previous:HTMLImageElement; gpu:boolean}|null=null;
   let pointer:{id:number;x:number;y:number;lastX:number;lastTime:number;velocity:number;dragged:boolean;initial:number}|null=null;
   const touches=new Map<number,{x:number;y:number}>();
   let pinch:{distance:number;scale:number;x:number;y:number;panX:number;panY:number}|null=null;
@@ -146,6 +160,7 @@ export function startBookReader(root:HTMLElement){
     writing.setPage(bookPage());
     status.textContent=`Pagina ${index+1} van ${urls.length}`;
     const spot=getMoment();
+    if(spot?.kind==='chest')void loadChest().catch(()=>{});
     clearEffect();
     hotspot.hidden=!spot;
     if(spot){
@@ -183,6 +198,7 @@ export function startBookReader(root:HTMLElement){
   function resetZoom(){scale=fill?fillScale():1;panX=panY=0;transform();}
 
   function clearEffect(){
+    ++effectRequest;
     clearTimeout(effectTimer);
     cancelAnimationFrame(effectFrame);
     const pointerId=grip?.id;
@@ -206,8 +222,18 @@ export function startBookReader(root:HTMLElement){
     if(status.textContent!==text)status.textContent=text;
   }
 
-  function startEffect(moment:Moment, held:boolean){
+  async function startEffect(moment:Moment, held:boolean){
     clearEffect();
+    const request=effectRequest;
+    let chestPaint:ChestPainter|undefined;
+    if(moment.kind==='chest'){
+      try{
+        const plate=await loadChest();
+        if(request!==effectRequest)return;
+        chestPaint=makeChestPainter(page,plate);
+      }catch{ /* Keep the original light effect available if artwork cannot load. */ }
+      if(request!==effectRequest)return;
+    }
     clearTimeout(chromeTimer);
     hint.hidden=true;
     hasInteracted=true;
@@ -257,7 +283,7 @@ export function startBookReader(root:HTMLElement){
           state.y+=state.vy*dt;
         }
       }
-      paintIllustration(effects,moment,elapsed,quiet,free,state.x,state.y,state.vx);
+      paintIllustration(effects,moment,elapsed,quiet,free,state.x,state.y,state.vx,chestPaint);
       effectFrame=requestAnimationFrame(animate);
     };
     animate(start);
@@ -266,12 +292,8 @@ export function startBookReader(root:HTMLElement){
   function draw(value:number){
     if(!turn)return;
     turn.value=clamp(value,0,1);
-    const position=clamp(100-134*turn.value,0,100);
     if(turn.gpu){
       renderer!.draw(turn.value,turn.side,turn.grip);
-      const from=turn.side>0?'left':'right';
-      shadow.style.background=`linear-gradient(to ${from},transparent 0%, transparent ${100-position-6}%, #35271e55 ${100-position}%, transparent ${100-position+9}%)`;
-      shadow.style.opacity=String(Math.sin(turn.value*Math.PI));
     }else if(root.dataset.calm!=='yes'){
       turn.previous.style.opacity=String(1-turn.value);
     }
@@ -284,7 +306,7 @@ export function startBookReader(root:HTMLElement){
       try{renderer=makePaper(canvas);}catch{renderer=null;}
     }
     const gpu=root.dataset.calm!=='yes'&&!!renderer?.use(writing.snapshot(coloring.snapshot(previous)));
-    turn={target,side:Math.sign(target-index),grip,value:0,image,previous,gpu};
+    turn={velocity:0,target,side:Math.sign(target-index),grip,value:0,image,previous,gpu};
     renderPage(image,target);
     coloring.setPage(bookPage(target));
     writing.setPage(bookPage(target));
@@ -306,7 +328,7 @@ export function startBookReader(root:HTMLElement){
     else{old.previous.remove();renderPage(old.previous,index);}
     update();
   }
-  function settle(commit:boolean,velocity=0){
+  function settle(commit:boolean,velocity=turn?.velocity??0){
     if(!turn)return;
     if(commit&&!turn.sounded){playTurn();turn.sounded=true;}
     cancelAnimationFrame(frame);
@@ -318,8 +340,9 @@ export function startBookReader(root:HTMLElement){
       if(!turn)return;
       const dt=clamp((now-last)/1000,.001,.03);
       last=now;
-      speed+=((destination-value)*335-speed*35)*dt;
-      value+=speed*dt;
+      const next=stepPageSpring(value,speed,destination,dt);
+      value=next.value;speed=next.velocity;
+      turn.velocity=speed;
       draw(value);
       if(Math.abs(destination-value)<.004&&Math.abs(speed)<.04)complete(commit);
       else frame=requestAnimationFrame(spring);
@@ -338,13 +361,13 @@ export function startBookReader(root:HTMLElement){
     try{
       const image=ready.get(target)??await cachePage(target);
       if(ticket!==navigation)return;
-      if(adjacent&&root.dataset.calm!=='yes'&&begin(target,.72)){settle(true,2.4);return;}
+      if(adjacent&&root.dataset.calm!=='yes'&&begin(target,.72)){settle(true,1.4);return;}
       if(adjacent)playTurn();
       renderPage(image,target);index=target;update();
     }catch{if(ticket===navigation){error.hidden=false;error.dataset.retry=String(target);}}
   }
   function advance(side:number){
-    if(turn&&turn.side===side){settle(true,2);return;}
+    if(turn&&turn.side===side){settle(true);return;}
     void go(index+side);
   }
 
