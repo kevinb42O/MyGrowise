@@ -52,7 +52,7 @@ selectedPaid.forEach((order) => {
   if (bucket) { bucket.total += order.totalCents; bucket.count++; }
 });
 const maxRevenue = Math.max(1, ...buckets.map((bucket) => bucket.total));
-const claimedPayments = overview.orders.filter((order) => order.status === 'pending_payment' && order.paymentClaimedAt).length;
+const pendingTransfers = overview.orders.filter((order) => order.provider === 'wise_manual' && order.status === 'pending_payment').length;
 const pendingBookings = overview.bookings.filter((booking) => booking.status === 'pending').length;
 const openTasks = overview.tasks.filter((task) => task.status === 'open' || task.status === 'in_progress' || task.status === 'blocked');
 const upcomingBookings = overview.bookings.filter((booking) => ['pending', 'confirmed'].includes(booking.status) && new Date(booking.startsAt) >= now).slice(0, 4);
@@ -93,10 +93,10 @@ const periodLabel: Record<string, string> = { alles: 'Alle tijd', '30d': 'Laatst
       <section class="admin-panel dashboard-home__attention" aria-labelledby="attention-title">
         <header class="admin-panel__header"><div><h2 id="attention-title">Aandacht nodig</h2><p>Open acties uit verkoop en planning</p></div></header>
         <div class="dashboard-home__attention-list">
-          {claimedPayments > 0 && <a href="/admin/bestellingen"><span class="dashboard-home__attention-count">{claimedPayments}</span><span><strong>Betalingen te controleren</strong><small>Klanten hebben een betaling gemeld</small></span><AdminIcon name="arrow" size={14}/></a>}
+          {pendingTransfers > 0 && <a href="/admin/bestellingen?status=overschrijvingen"><span class="dashboard-home__attention-count">{pendingTransfers}</span><span><strong>Open overschrijvingen</strong><small>Bekijk de bestellingen en bevestig ontvangen betalingen</small></span><AdminIcon name="arrow" size={14}/></a>}
           {pendingBookings > 0 && <a href="/admin/boekingen"><span class="dashboard-home__attention-count">{pendingBookings}</span><span><strong>Boekingsaanvragen</strong><small>Wachten op bevestiging</small></span><AdminIcon name="arrow" size={14}/></a>}
           {openTasks.slice(0, 3).map((task) => <a href="/admin/instellingen#acties"><span class="dashboard-home__attention-dot"></span><span><strong>{task.title}</strong><small>{task.dueAt ? `Deadline ${date(task.dueAt)}` : task.category}</small></span><AdminIcon name="arrow" size={14}/></a>)}
-          {!claimedPayments && !pendingBookings && !openTasks.length && <p class="dashboard-home__calm">Alles bijgewerkt. Er staan geen directe acties open.</p>}
+          {!pendingTransfers && !pendingBookings && !openTasks.length && <p class="dashboard-home__calm">Alles bijgewerkt. Er staan geen directe acties open.</p>}
         </div>
       </section>
     </div>

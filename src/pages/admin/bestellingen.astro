@@ -18,6 +18,8 @@ const orders = (await listAdminOrderDetails()).sort((a, b) => {
 
 const canVerify = hasPermission(Astro.locals.adminUser, 'orders.verify');
 const message = Astro.url.searchParams.get('melding');
+const transfersOnly = Astro.url.searchParams.get('status') === 'overschrijvingen';
+Astro.response.headers.set('Cache-Control', 'private, no-store');
 const formatMoney = (value: number, currency: string) => new Intl.NumberFormat('nl-BE', { style: 'currency', currency }).format(value / 100);
 const formatDate = (value: string) => new Intl.DateTimeFormat('nl-BE', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Europe/Brussels' }).format(new Date(value));
 const isManualWise = (order: (typeof orders)[number]) => order.provider === 'wise_manual';
@@ -40,7 +42,7 @@ const statusTone = (order: (typeof orders)[number]) => {
   const category = filterStatus(order);
   return category === 'paid' ? 'paid' : category === 'reported' ? 'reported' : category === 'pending' ? 'pending' : 'other';
 };
-const paymentMethods: Record<string, string> = { wise_manual: 'Wise', wise_qr: 'Wise', stripe: 'Kaart', mollie: 'Mollie' };
+const paymentMethods: Record<string, string> = { wise_manual: 'Overschrijving', wise_qr: 'Wise', stripe: 'Kaart', mollie: 'Mollie' };
 const paymentMethod = (provider: string) => paymentMethods[provider] || '—';
 const awaitingReview = orders.filter((order) => isManualWise(order) && order.status === 'pending_payment');
 const paymentReported = awaitingReview.filter((order) => order.paymentClaimedAt).length;
@@ -50,7 +52,7 @@ const paidOrders = orders.filter((order) => order.status === 'paid' || order.sta
 <AdminLayout title="Bestellingen" description="Bestellingen, betalingen en toegang beheren">
   <div class="admin-page orders-page">
     <section class="admin-page-heading">
-      <div><p class="admin-eyebrow">Verkoop</p><h1>Bestellingen</h1><p>Bestellingen en betalingen op één plek.</p></div>
+      <div><p class="admin-eyebrow">Verkoop</p><h1>Bestellingen</h1><p>Bevestig een overschrijving zodra je die op je rekening ziet.</p></div>
     </section>
 
     {message === 'bevestigd' && <div class="orders-flash" role="status"><AdminIcon name="check" size={17}/> Betaling bevestigd. De bestelling is geactiveerd.</div>}
@@ -58,7 +60,7 @@ const paidOrders = orders.filter((order) => order.status === 'paid' || order.sta
 
     <section class="admin-catalog-stats orders-stats" aria-label="Bestellingsoverzicht">
       <article><span>Alle bestellingen</span><strong>{orders.length}</strong></article>
-      <article><span>Te controleren</span><strong>{awaitingReview.length}</strong></article>
+      <article><a class="admin-text-link" href="/admin/bestellingen?status=overschrijvingen">Open overschrijvingen <AdminIcon name="arrow" size={13}/></a><strong>{awaitingReview.length}</strong></article>
       <article><span>Betaling gemeld</span><strong>{paymentReported}</strong></article>
       <article><span>Betaald</span><strong>{paidOrders}</strong></article>
     </section>
@@ -67,7 +69,7 @@ const paidOrders = orders.filter((order) => order.status === 'paid' || order.sta
       {orders.length ? <>
         <div class="admin-filterbar orders-filterbar">
           <label class="admin-search"><AdminIcon name="search" size={16}/><span class="sr-only">Zoek bestellingen</span><input type="search" placeholder="Zoek op bestelling, klant of product" autocomplete="off" data-order-search /></label>
-          <label class="orders-status-filter"><span class="sr-only">Filter bestellingen op status</span><select data-order-status><option value="all">Alle statussen</option><option value="reported">Betaling gemeld</option><option value="pending">In afwachting</option><option value="paid">Betaald</option><option value="other">Overige statussen</option></select></label>
+          <label class="orders-status-filter"><span class="sr-only">Filter bestellingen op status</span><select data-order-status><option value="all" selected={!transfersOnly}>Alle statussen</option><option value="transfers" selected={transfersOnly}>Open overschrijvingen</option><option value="reported">Betaling gemeld</option><option value="pending">In afwachting</option><option value="paid">Betaald</option><option value="other">Overige statussen</option></select></label>
         </div>
         <div class="admin-table-wrap orders-table-wrap"><table class="admin-table orders-table">
           <thead><tr><th>Bestelling</th><th>Klant</th><th>Betaalmethode</th><th>Bedrag</th><th>Datum</th><th>Status</th><th><span class="sr-only">Actie</span></th></tr></thead>
@@ -75,7 +77,8 @@ const paidOrders = orders.filter((order) => order.status === 'paid' || order.sta
             {orders.map((order) => {
               const products = order.productTitles.length ? order.productTitles.join(', ') : 'Bestelling';
               const orderNumber = order.id.slice(-8).toUpperCase();
-              return <tr data-order-row data-status={filterStatus(order)} data-search={`${products} ${order.customerName} ${order.reference} ${order.id} ${orderNumber}`.toLocaleLowerCase()}>
+              const openTransfer = isManualWise(order) && order.status === 'pending_payment';
+              return <tr data-order-row data-transfer={openTransfer ? 'yes' : undefined} hidden={transfersOnly && !openTransfer} data-status={filterStatus(order)} data-search={`${products} ${order.customerName} ${order.reference} ${order.id} ${orderNumber}`.toLocaleLowerCase()}>
                 <td data-label="Bestelling"><a class="orders-product" href={`/admin/bestellingen/${order.id}`}>{products}</a><small class="orders-number">#{orderNumber}</small></td>
                 <td data-label="Klant"><strong class="orders-customer">{order.customerName}</strong></td>
                 <td data-label="Betaalmethode"><span class="orders-method">{paymentMethod(order.provider)}</span>{isWisePayment(order) && order.reference && <span class="orders-reference"><code>{order.reference}</code><button type="button" class="orders-copy" data-copy={order.reference} aria-label={`Kopieer referentie ${order.reference}`} title="Kopieer referentie"><AdminIcon name="copy" size={14}/></button></span>}</td>
@@ -87,7 +90,7 @@ const paidOrders = orders.filter((order) => order.status === 'paid' || order.sta
             })}
           </tbody>
         </table></div>
-        <p class="orders-empty-filter" data-order-empty hidden>Geen bestellingen gevonden.</p>
+        <p class="orders-empty-filter" data-order-empty hidden={!transfersOnly || awaitingReview.length > 0}>Geen bestellingen gevonden.</p>
       </> : <div class="admin-empty-row orders-empty"><div><span><AdminIcon name="cart" size={17}/></span><strong>Nog geen bestellingen</strong><p>Bestellingen verschijnen hier zodra ze zijn geplaatst.</p></div></div>}
     </section>
   </div>
@@ -105,7 +108,7 @@ const paidOrders = orders.filter((order) => order.status === 'paid' || order.sta
     let visible = 0;
     rows.forEach((row) => {
       const matchesText = (row.dataset.search || '').includes(query);
-      const matchesStatus = selectedStatus === 'all' || row.dataset.status === selectedStatus;
+      const matchesStatus = selectedStatus === 'transfers' ? row.dataset.transfer === 'yes' : selectedStatus === 'all' || row.dataset.status === selectedStatus;
       row.hidden = !matchesText || !matchesStatus;
       if (!row.hidden) visible += 1;
     });

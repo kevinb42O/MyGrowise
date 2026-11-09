@@ -11,6 +11,8 @@ export function startBookReader(root:HTMLElement){
   const stage=get('[data-stage]'),book=get('[data-book]');
   let page=get<HTMLImageElement>('[data-page]');
   const canvas=get<HTMLCanvasElement>('[data-paper]');
+  const audio=get<HTMLAudioElement>('[data-page-audio]');
+  const soundButton=get<HTMLButtonElement>('[data-page-sound]');
   const shadow=get('[data-shadow]'),hint=get('[data-hint]'),error=get('[data-error]'),status=get('[data-status]');
   const menu=get<HTMLDialogElement>('[data-menu]');
   const main=get('.reader-main'),whisper=get('[data-whisper]');
@@ -32,7 +34,7 @@ export function startBookReader(root:HTMLElement){
   const seen=new Set<Moment>();
   let hasInteracted=false;
   let renderer:ReturnType<typeof makePaper>|undefined;
-  let turn:{target:number; side:number; grip:number; value:number; image:HTMLImageElement; previous:HTMLImageElement; gpu:boolean}|null=null;
+  let turn:{sounded?:boolean; target:number; side:number; grip:number; value:number; image:HTMLImageElement; previous:HTMLImageElement; gpu:boolean}|null=null;
   let pointer:{id:number;x:number;y:number;lastX:number;lastTime:number;velocity:number;dragged:boolean;initial:number}|null=null;
   const touches=new Map<number,{x:number;y:number}>();
   let pinch:{distance:number;scale:number;x:number;y:number;panX:number;panY:number}|null=null;
@@ -40,6 +42,21 @@ export function startBookReader(root:HTMLElement){
   const prefs=(key:string,value?:string)=>{
     try{if(value!==undefined)localStorage.setItem(key,value);else return localStorage.getItem(key);}catch{}
   };
+  const soundKey='mygrowise-fien-page-sound';
+  let sound=prefs(soundKey)!=='no';
+  soundButton.setAttribute('aria-pressed',String(sound));
+  soundButton.addEventListener('click',()=>{
+    sound=!sound;
+    prefs(soundKey,sound?'yes':'no');
+    soundButton.setAttribute('aria-pressed',String(sound));
+    if(!sound)audio.pause();
+  });
+  function playTurn(){
+    if(!sound)return;
+    audio.currentTime=0;
+    void audio.play().catch(()=>{});
+  }
+
   calm=prefs(storageKey+'-calm')==='yes';
   function applyCalm(){
     const quiet=calm||media.matches;
@@ -120,6 +137,11 @@ export function startBookReader(root:HTMLElement){
     const cropY=Math.max(0,(stage.clientHeight*scale-main.clientHeight)/2);
     panX=clamp(panX,-cropX,cropX);panY=clamp(panY,-cropY,cropY);
     book.style.transform=scale===1?'':`translate(${panX}px,${panY}px) scale(${scale})`;
+    const rail=(main.clientWidth-stage.clientWidth*scale)/2;
+    const safeLeft=parseFloat(getComputedStyle(root).getPropertyValue('--reader-safe-left'))||0;
+    const safeRight=parseFloat(getComputedStyle(root).getPropertyValue('--reader-safe-right'))||0;
+    root.dataset.rails=rail>=64+2*Math.max(safeLeft,safeRight)?'yes':'no';
+    root.style.setProperty('--rail-width',rail+'px');
     zoomButton.setAttribute('aria-pressed',String(fill));
     zoomButton.textContent=fill?'Toon de hele pagina':'Vul het scherm';
   }
@@ -227,6 +249,7 @@ export function startBookReader(root:HTMLElement){
   }
   function settle(commit:boolean,velocity=0){
     if(!turn)return;
+    if(commit&&!turn.sounded){playTurn();turn.sounded=true;}
     cancelAnimationFrame(frame);
     if(root.dataset.calm==='yes'){complete(commit);return;}
     const destination=commit?1:0;
@@ -251,10 +274,12 @@ export function startBookReader(root:HTMLElement){
     interact();error.hidden=true;
     if(turn)complete(false);
     resetZoom();
+    const adjacent=animated&&Math.abs(target-index)===1;
     try{
-      const image=await cachePage(target);
+      const image=ready.get(target)??await cachePage(target);
       if(ticket!==navigation)return;
-      if(animated&&root.dataset.calm!=='yes'&&Math.abs(target-index)===1&&begin(target,.72)){settle(true,2.4);return;}
+      if(adjacent&&root.dataset.calm!=='yes'&&begin(target,.72)){settle(true,2.4);return;}
+      if(adjacent)playTurn();
       renderPage(image,target);index=target;update();
     }catch{if(ticket===navigation){error.hidden=false;error.dataset.retry=String(target);}}
   }
@@ -411,6 +436,7 @@ export function startBookReader(root:HTMLElement){
   });
   menu.addEventListener('close',()=>showControls());
 
+  transform();
   const saved=preview?0:Number(prefs(storageKey+'-page')||0);
   if(Number.isInteger(saved)&&saved>0&&saved<urls.length){
     const ticket=navigation;
