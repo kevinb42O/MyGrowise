@@ -1,3 +1,4 @@
+import {BOOK_SLUG,BOOK_PATH} from '../../../lib/ebooks/book';
 import {salesEnabled,salesPausedMessage} from '../../../lib/commerce/readiness';
 import type { APIRoute } from 'astro';
 import { isTrustedFormOrigin } from '../../../lib/adminAuth';

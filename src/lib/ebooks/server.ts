@@ -2,6 +2,7 @@ import type {AstroCookies} from 'astro';
 import {createHmac} from 'node:crypto';
 import {getSupabaseAdmin} from '../supabase/server';
 import {digest,tokenValid,hasPurchase,purchaseOrders,type PurchaseOwner} from '../commerce/purchases';
+import {signR2BookUrl} from './r2';
 import {BOOK_SLUG,BOOK_LIBRARY_PATH} from './book';
 const alphabet='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 export function normalizeBookCode(value:unknown):string|null {
@@ -33,8 +34,9 @@ export async function ebookActivated(owner:PurchaseOwner,productId:string){
  if(error)throw new Error('ebook_unavailable');return Boolean(data?.length);
 }
 export async function ebookDownload(productId:string,format:'pdf'|'epub',download=true){
- const db=getSupabaseAdmin();const {data:file,error}=await db.from('ebook_files').select('bucket,object_path,filename').eq('product_id',productId).eq('format',format).maybeSingle();
+ const db=getSupabaseAdmin();const {data:file,error}=await db.from('ebook_files').select('bucket,object_path,filename,storage_provider').eq('product_id',productId).eq('format',format).maybeSingle();
  if(error||!file)throw new Error('ebook_file_unavailable');
+ if(file.storage_provider==='r2')return signR2BookUrl(file.object_path,download);
  const {data,error:signError}=await db.storage.from(file.bucket).createSignedUrl(file.object_path,60,download?{download:file.filename}:undefined);
  if(signError||!data)throw new Error('ebook_file_unavailable');return data.signedUrl;
 }
