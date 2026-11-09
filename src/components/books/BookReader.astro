@@ -62,11 +62,11 @@ const controls=[
   <button type="button" class="reader-color-open" data-color-open aria-expanded="false" aria-controls="reader-color-panel"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 20 1.5-6L16 3.5a2.1 2.1 0 0 1 3 0L20.5 5a2.1 2.1 0 0 1 0 3L10 18.5 4 20Zm1.5-6 4.5 4.5M14.5 5l4.5 4.5"/></svg><span>Kleuren</span></button>
   </div>
   <section id="reader-color-panel" class="reader-color-panel" data-color-panel aria-label="Je kleurpotloden" hidden>
-   <div class="reader-color-heading"><strong>Kies je potlood</strong><button type="button" data-color-close>Klaar <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg></button></div>
-   <div class="reader-color-swatches" data-color-swatches role="group" aria-label="Kleuren"></div>
-   <div class="reader-color-tools"><button type="button" data-color-size aria-label="Potlooddikte. Nu normaal">Normaal</button><button type="button" data-color-eraser aria-pressed="false">Gum</button><button type="button" data-color-undo disabled>Ongedaan</button></div>
-   <div class="reader-color-fills" data-color-fills role="group" aria-label="Vul een vakje"></div>
-   <p data-color-message role="status">Kleur met je vinger, muis of pen.</p>
+   <div class="reader-color-swatches" data-color-swatches role="group" aria-label="Potloden en gom">
+    <button type="button" data-color-eraser aria-label="Gom" title="Gom" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 14 9-10a2 2 0 0 1 3 0l4 4a2 2 0 0 1 0 3l-8 9H8l-4-4a2 2 0 0 1 0-2Zm5-5 7 7M12 20h9"/></svg></button>
+   </div>
+   <button type="button" data-color-close aria-label="Klaar met kleuren" title="Klaar"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg></button>
+   <p class="reader-sr" data-color-message role="status"></p>
   </section>
   <!-- Page Turn (1) by OwlStorm, CC0. https://freesound.org/people/OwlStorm/sounds/151220/ -->
   <audio data-page-audio src="/audio/books/fien-page-turn.m4a" preload="auto"></audio>
@@ -172,31 +172,23 @@ const controls=[
  .reader .reader-color-open{position:absolute;z-index:3;left:max(12px,env(safe-area-inset-left));bottom:max(12px,env(safe-area-inset-bottom));display:flex;align-items:center;gap:.5rem;min-height:46px;padding:.5rem .85rem;background:#fff0b6;color:#422e23;border-radius:1.5rem;font-size:.85rem;font-weight:700;box-shadow:0 4px 18px #101d1766}
  .reader .reader-color-open[data-boxes='yes']{background:#ffda7b}
  .reader .reader-color-open:focus-visible{outline:3px solid #fff5db;outline-offset:3px}
- .reader .reader-color-panel{position:absolute;z-index:4;right:max(12px,env(safe-area-inset-right));bottom:max(12px,env(safe-area-inset-bottom));width:min(360px,calc(100vw - 24px));max-height:calc(100dvh - 24px);overflow:auto;padding:1rem;background:#fff7e8;color:#273d32;border-radius:15px;box-shadow:0 8px 32px #101d1775;color-scheme:light}
- .reader-color-heading{display:flex;align-items:center;justify-content:space-between;gap:1rem;margin-bottom:.6rem}
- .reader-color-heading strong{font-size:1rem}
- .reader-color-heading button{min-height:44px;display:flex;align-items:center;gap:.3rem;font-size:.9rem;font-weight:700}
- .reader-color-swatches{display:grid;grid-template-columns:repeat(8,1fr);gap:2px}
- .reader .reader-color-swatches button{min-height:44px;min-width:0;position:relative;border-radius:8px}
- .reader-color-swatches button::before{content:'';position:absolute;top:3px;bottom:3px;left:50%;width:24px;translate:-50%;border-radius:2px;clip-path:polygon(50% 0,100% 28%,100% 100%,0 100%,0 28%);background:linear-gradient(90deg,#ffffff38,transparent 45%,#34251c20),var(--swatch)}
- .reader-color-swatches button[aria-pressed='true']::after{content:'';position:absolute;width:7px;height:12px;border:solid #273d32;border-width:0 2px 2px 0;transform:rotate(45deg);top:13px;left:calc(50% - 4px)}
- .reader-color-swatches button[aria-pressed='true']{outline:2px solid #273d32;outline-offset:-2px}
- .reader-color-tools{display:flex;gap:6px;margin-top:.5rem}
- .reader .reader-color-tools button{min-height:44px;flex:1;padding:.3rem;border:1px solid #cabb9c;border-radius:8px;font-size:.85rem}
- .reader .reader-color-tools [aria-pressed='true']{background:#273d32;color:#fff7e8}
- .reader-color-tools button:disabled{opacity:.45;cursor:default}
- .reader-color-fills{display:flex;flex-wrap:wrap;gap:6px;margin-top:.6rem}
- .reader .reader-color-fills button{flex:1;min-height:44px;padding:.4rem .5rem;border-radius:8px;background:#eddfc5;font-size:.8rem}
- .reader-color-panel button:focus-visible{outline:2px solid #273d32;outline-offset:2px}
- .reader-color-panel p{font-size:.78rem;line-height:1.5;margin:.65rem 0 0;min-height:2.3em}
+ .reader .reader-color-panel{position:absolute;z-index:4;left:50%;translate:-50% 0;bottom:max(10px,env(safe-area-inset-bottom));display:flex;align-items:center;gap:4px;padding:4px;width:max-content;max-width:calc(100% - 16px);background:#fff7e8;color:#273d32;border-radius:12px;box-shadow:0 4px 18px #101d1766;color-scheme:light}
+ .reader-color-swatches{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));width:min(352px,calc(100vw - 68px));overflow:hidden}
+ .reader .reader-color-swatches button{height:44px;min-width:0;position:relative;border-radius:8px;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+ .reader-color-swatches [data-color]::before{content:'';position:absolute;top:10px;bottom:-8px;left:50%;width:22px;translate:-50%;clip-path:polygon(50% 0,100% 24%,100% 100%,0 100%,0 24%);background:linear-gradient(90deg,#ffffff38,transparent 45%,#34251c20),var(--swatch);transition:transform .18s ease-out}
+ .reader-color-swatches [data-color][aria-pressed='true']::before{transform:translateY(-8px)}
+ .reader-color-swatches [data-color][aria-pressed='true']::after{content:'';position:absolute;width:5px;height:9px;border:solid #273d32;border-width:0 2px 2px 0;transform:rotate(45deg);bottom:12px;left:calc(50% - 3px);background:#fff7e8}
+ .reader-color-swatches button[aria-pressed='true']{background:#e8dfcc;outline:2px solid #273d32;outline-offset:-2px}
+ .reader .reader-color-swatches [data-color-eraser]{display:grid;place-items:center;color:#6a4055}
+ .reader .reader-color-swatches [data-color-eraser][aria-pressed='true']{background:#efc9dc}
+ .reader [data-color-close]{width:40px;height:44px;flex-shrink:0;display:grid;place-items:center;border-radius:8px;background:#284538;color:#fff7e8}
+ .reader-color-panel button:focus-visible{outline:2px solid #273d32;outline-offset:-2px}
+ .reader-color-panel button:active{transform:translateY(1px)}
+ .reader[data-calm='yes'] .reader-color-swatches [data-color]::before{transition:none}
+ @media(prefers-reduced-motion:reduce){.reader-color-swatches [data-color]::before{transition:none}}
  .reader[data-coloring='yes'] [data-color-canvas]{pointer-events:auto;touch-action:none}
- .reader [data-color-canvas]{mix-blend-mode:multiply}
  .reader[data-coloring='yes'] .reader-hotspot{visibility:hidden}
  .reader[data-coloring='yes'] .reader-bottom{visibility:hidden}
- @media(min-aspect-ratio:4/3){.reader .reader-color-panel{bottom:auto;top:70px;width:min(400px,38vw);max-height:calc(100dvh - 82px)}.reader[data-coloring='yes'] .reader-main{right:min(424px,41vw)}}
- @media(max-aspect-ratio:4/3){.reader .reader-color-panel{max-height:45dvh}.reader[data-coloring='yes'] .reader-main{bottom:min(300px,46dvh)}}
- @media(max-width:1100px){.reader-color-swatches{grid-template-columns:repeat(4,1fr)}}
- @media(max-width:480px){.reader .reader-color-panel{max-height:50dvh}.reader[data-coloring='yes'] .reader-main{bottom:min(350px,51dvh)}.reader .reader-color-open{bottom:calc(max(12px,env(safe-area-inset-bottom)) + 56px)}}
 
  @font-face{font-family:'Fien Pencil';font-style:normal;font-weight:500;font-display:swap;src:url('/fonts/caveat/caveat-medium.ttf') format('truetype')}
  .reader-work-tools{position:absolute;z-index:3;left:max(12px,env(safe-area-inset-left));bottom:max(12px,env(safe-area-inset-bottom));display:flex;align-items:center;gap:8px}

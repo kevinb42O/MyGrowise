@@ -1,6 +1,6 @@
 const palette = [
   ['Rood', '#e95663'], ['Oranje', '#f59a45'], ['Geel', '#f5d75d'], ['Groen', '#83c46c'],
-  ['Blauw', '#69b8e8'], ['Paars', '#ad85d3'], ['Roze', '#ef9fbc'], ['Bruin', '#99664b'],
+  ['Blauw', '#69b8e8'], ['Paars', '#ad85d3'], ['Roze', '#ef9fbc'],
 ] as const;
 
 type ColorRegion = { name: string; polygons: number[][] };
@@ -20,8 +20,6 @@ const regions: Partial<Record<number, ColorRegion[]>> = {
 type Stroke = { kind: 'stroke'; color: string; size: number; erase: boolean; points: number[] };
 type Fill = { kind: 'fill'; color: string; region: number };
 type Action = Stroke | Fill;
-const maxPoints = 60000;
-const maxActions = 400;
 
 function paths(region: ColorRegion) {
   return region.polygons.map(points => {
@@ -40,16 +38,13 @@ export function makeColoring(root: HTMLElement, onOpen: () => void) {
   const launcher = get<HTMLButtonElement>('[data-color-open]');
   const panel = get('[data-color-panel]');
   const message = get('[data-color-message]');
-  const undo = get<HTMLButtonElement>('[data-color-undo]');
   const eraser = get<HTMLButtonElement>('[data-color-eraser]');
-  const thickness = get<HTMLButtonElement>('[data-color-size]');
   const swatches = get('[data-color-swatches]');
-  const fills = get('[data-color-fills]');
   const cursor = 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'32\' height=\'32\' viewBox=\'0 0 32 32\'%3E%3Cpath fill=\'%23ffd571\' stroke=\'%23472f24\' stroke-width=\'1.5\' d=\'M4 28l3-10L22 3q2-2 4 0l3 3q2 2 0 4L14 25Z\'/%3E%3Cpath stroke=\'%23472f24\' stroke-width=\'2\' d=\'m7 18 7 7M4 28l4-1M20 5l7 7\'/%3E%3C/svg%3E") 4 28, crosshair';
   canvas.style.cursor = cursor;
   let page = 1;
   let color: string = palette[0][1];
-  let size = 10;
+  const size = 10;
   let erase = false;
   let actions: Action[] = [];
   const unsaved = new Map<number, Action[]>();
@@ -65,15 +60,13 @@ export function makeColoring(root: HTMLElement, onOpen: () => void) {
     if (memory) return memory;
     try {
       const saved: unknown = JSON.parse(localStorage.getItem(key()) || '[]');
-      if (!Array.isArray(saved) || saved.length > maxActions) return [];
-      let points = 0;
+      if (!Array.isArray(saved)) return [];
       return saved.filter((action): action is Action => {
         if (!action || typeof action !== 'object' || !/^#[0-9a-f]{6}$/i.test(action.color)) return false;
         if (action.kind === 'fill') return Number.isInteger(action.region) && !!pageRegions[action.region];
         if (action.kind !== 'stroke' || ![4,10,22,34].includes(action.size) || typeof action.erase !== 'boolean') return false;
         if (!Array.isArray(action.points) || action.points.length < 2 || action.points.length % 2) return false;
-        points += action.points.length;
-        return points <= maxPoints && action.points.every((n: unknown, i: number) =>
+        return action.points.every((n: unknown, i: number) =>
           typeof n === 'number' && Number.isFinite(n) && n >= 0 && n <= (i % 2 ? 849 : 1200));
       });
     } catch { return []; }
@@ -81,6 +74,7 @@ export function makeColoring(root: HTMLElement, onOpen: () => void) {
 
   function draw(action: Action) {
     ctx.save();
+    ctx.globalAlpha = 1;
     if (action.kind === 'fill') {
       ctx.fillStyle = action.color;
       for (const path of regionPaths[action.region] || []) ctx.fill(path);
@@ -111,42 +105,33 @@ export function makeColoring(root: HTMLElement, onOpen: () => void) {
     for (const action of actions) draw(action);
     if (active) draw(active.stroke);
     ctx.restore();
-    undo.disabled = actions.length === 0;
   }
 
   function write(next: Action[]) {
-    const points = next.reduce((total, action) => total + (action.kind === 'stroke' ? action.points.length : 0), 0);
-    if (next.length > maxActions || points > maxPoints) {
-      message.textContent = 'Deze pagina zit vol kleuren. Met Ongedaan kun je ruimte maken.';
-      render();
-      return;
-    }
     actions = next;
     try {
       localStorage.setItem(key(), JSON.stringify(actions));
       unsaved.delete(page);
-      message.textContent = 'Je kleuren zijn bewaard op dit apparaat.';
+      message.textContent = '';
     } catch {
       unsaved.set(page, actions);
-      message.textContent = 'Je kunt verder kleuren. Bewaren lukt nu niet op dit apparaat.';
+      message.textContent = 'Oeps, houd je boek nog even open.';
     }
     render();
   }
 
   // Read the latest saved page for each edit, preserving edits made in another tab.
   function commit(action: Action) {
-    const latest = read();
-    write(latest.length ? [...latest, action] : [...actions, action]);
+    write([...read(), action]);
   }
 
-  function finish(cancelled = false) {
+  function finish(interrupted = false) {
     if (!active) return;
     const finished = active;
     active = null;
     if (canvas.hasPointerCapture(finished.id)) canvas.releasePointerCapture(finished.id);
-    if (cancelled) { render(); return; }
     const [x, y] = finished.stroke.points;
-    const region = !finished.stroke.erase && !finished.moved ? regionPaths.findIndex(group => group.some(path => ctx.isPointInPath(path, x, y))) : -1;
+    const region = !interrupted && !finished.stroke.erase && !finished.moved ? regionPaths.findIndex(group => group.some(path => ctx.isPointInPath(path, x, y))) : -1;
     if (region >= 0) commit({ kind: 'fill', color: finished.stroke.color, region });
     else commit(finished.stroke);
   }
@@ -168,7 +153,6 @@ export function makeColoring(root: HTMLElement, onOpen: () => void) {
     panel.hidden = false;
     launcher.hidden = true;
     launcher.setAttribute('aria-expanded', 'true');
-    message.textContent = pageRegions.length ? 'Tik op een vakje om het te vullen, of kleur zelf met je potlood.' : 'Kleur of teken met je vinger, muis of pen.';
     get<HTMLButtonElement>(erase ? '[data-color-eraser]' : '[data-color-swatches] button[aria-pressed="true"]').focus();
   }
 
@@ -191,16 +175,11 @@ export function makeColoring(root: HTMLElement, onOpen: () => void) {
     button.addEventListener('click', () => { color = value; erase = false; updateTools(); });
     swatches.append(button);
   }
+  swatches.append(eraser);
   updateTools();
   launcher.addEventListener('click', show);
   get('[data-color-close]').addEventListener('click', () => close(true));
   eraser.addEventListener('click', () => { erase = !erase; updateTools(); });
-  thickness.addEventListener('click', () => {
-    size = size === 10 ? 22 : size === 22 ? 4 : 10;
-    thickness.textContent = size === 4 ? 'Fijn' : size === 10 ? 'Normaal' : 'Dik';
-    thickness.setAttribute('aria-label', 'Potlooddikte. Nu ' + thickness.textContent.toLowerCase());
-  });
-  undo.addEventListener('click', () => write(read().slice(0, -1)));
   panel.addEventListener('keydown', event => {
     event.stopPropagation();
     if (event.key === 'Escape') { event.preventDefault(); close(true); }
@@ -225,7 +204,7 @@ export function makeColoring(root: HTMLElement, onOpen: () => void) {
     const stroke = active.stroke;
     const [x, y] = point(event);
     const points = stroke.points;
-    if (Math.hypot(x - points[points.length - 2], y - points[points.length - 1]) < 1.5 || points.length >= 10000) return;
+    if (Math.hypot(x - points[points.length - 2], y - points[points.length - 1]) < 1.5) return;
     active.moved ||= Math.hypot(x - points[0], y - points[1]) > 5;
     points.push(x, y);
     cancelAnimationFrame(frame);
@@ -234,13 +213,34 @@ export function makeColoring(root: HTMLElement, onOpen: () => void) {
   for (const name of ['pointerup', 'pointercancel', 'lostpointercapture'] as const) {
     canvas.addEventListener(name, event => {
       event.stopPropagation();
-      if (active?.id === event.pointerId) finish(name !== 'pointerup');
+      if (active?.id !== event.pointerId) return;
+      if (name === 'pointerup') {
+        const [x, y] = point(event);
+        const points = active.stroke.points;
+        if (x !== points[points.length - 2] || y !== points[points.length - 1]) points.push(x, y);
+        active.moved ||= Math.hypot(x - points[0], y - points[1]) > 5;
+      }
+      finish(name !== 'pointerup');
     });
   }
-  window.addEventListener('pagehide', () => finish());
-  document.addEventListener('visibilitychange', () => { if (document.hidden) finish(); });
+  function preserve() {
+    finish(true);
+    for (const [number, pending] of unsaved) {
+      try {
+        localStorage.setItem('mygrowise-fien-colors-v1-page-' + number, JSON.stringify(pending));
+        unsaved.delete(number);
+      } catch { /* Keep the drawing in memory for the next retry. */ }
+    }
+  }
+  window.addEventListener('blur', () => finish(true));
+  window.addEventListener('pagehide', preserve);
+  document.addEventListener('visibilitychange', () => { if (document.hidden) preserve(); });
+  window.addEventListener('beforeunload', event => {
+    preserve();
+    if (unsaved.size) { event.preventDefault(); event.returnValue = ''; }
+  });
   window.addEventListener('storage', event => {
-    if (event.key === key() && !active) { actions = read(); render(); }
+    if ((event.key === key() || event.key === null) && !active) { actions = read(); render(); }
   });
 
   return {
@@ -251,16 +251,6 @@ export function makeColoring(root: HTMLElement, onOpen: () => void) {
       pageRegions = regions[page] || [];
       regionPaths = pageRegions.map(paths);
       actions = read();
-      fills.replaceChildren();
-      for (const [region, entry] of pageRegions.entries()) {
-        const button = document.createElement('button');
-        button.type = 'button';
-        button.textContent = entry.name;
-        button.setAttribute('aria-label', 'Kleur ' + entry.name.toLowerCase());
-        button.addEventListener('click', () => { erase = false; updateTools(); commit({ kind: 'fill', color, region }); });
-        fills.append(button);
-      }
-      fills.hidden = pageRegions.length === 0;
       launcher.querySelector('span')!.textContent = page === 13 ? 'Teken je gevoel' : pageRegions.length ? 'Kleur de vakjes' : 'Kleuren';
       launcher.dataset.boxes = pageRegions.length ? 'yes' : 'no';
       render();
@@ -272,7 +262,7 @@ export function makeColoring(root: HTMLElement, onOpen: () => void) {
       copy.height = image.naturalHeight;
       const context = copy.getContext('2d')!;
       context.drawImage(image, 0, 0);
-      context.globalCompositeOperation = 'multiply';
+      context.globalCompositeOperation = 'source-over';
       context.drawImage(canvas, 0, 0, copy.width, copy.height);
       return copy;
     },
