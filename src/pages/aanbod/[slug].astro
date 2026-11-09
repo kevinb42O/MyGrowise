@@ -1,4 +1,5 @@
 ---
+import {BOOK_SLUG,BOOK_PATH} from '../../lib/ebooks/book';
 import {salesEnabled} from '../../lib/commerce/readiness';
 import {resolveCatalogSlug} from '../../lib/catalog/server';
 import MainLayout from '../../layouts/MainLayout.astro';
@@ -6,6 +7,7 @@ import { SUPABASE_SESSION_COOKIE, verifySupabaseSession } from '../../lib/adminA
 import { createEpcSepaQr, getWiseManualDetails, getWiseManualOrder, getWiseManualProduct } from '../../lib/wiseCheckout';
 
 const slug = String(Astro.params.slug || '').toLowerCase();
+if (slug===BOOK_SLUG) return Astro.redirect(BOOK_PATH,301);
 if (!salesEnabled() && !Astro.url.searchParams.has('order')) return Astro.redirect('/bestellen',303);
 const product = await getWiseManualProduct(slug);
 if (!product){const alias=await resolveCatalogSlug(slug);return Astro.redirect(alias||'/prijzen',alias?301:302);}

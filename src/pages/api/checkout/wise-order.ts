@@ -13,6 +13,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   let form: FormData;
   try { form = await request.formData(); } catch { return new Response('Ongeldige aanvraag.', { status: 400 }); }
   const slug = String(form.get('product') || '').trim().toLowerCase();
+  if (slug===BOOK_SLUG) return Response.redirect(new URL(BOOK_PATH, request.url),303);
   if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug)) return new Response('Product niet beschikbaar.', { status: 404 });
   if (!getWiseManualDetails()) return Response.redirect(new URL(`/aanbod/${slug}?melding=niet-beschikbaar`, request.url), 303);
   try {

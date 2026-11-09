@@ -27,7 +27,7 @@ test('order confirmation sends a durable copy of the terms only to the buyer at 
  const order={status:'paid',provider_reference:'TEST-REFERENCE',total_cents:2500,contact_snapshot:{email:'buyer@example.invalid',terms_text:terms.termsForEmail(),digital_delivery_consent:{statement:terms.digitalDeliveryStatement}},commerce_buyers:{email:'buyer@example.invalid',first_name:'Test',last_name:'Buyer'},order_items:[{product_type:'module',product_title:'Module'}]};
  const db={rpc:async()=>({data:[{id:'created',event:'created',target:'buyer'},{id:'team',event:'created',target:'team'},{id:'paid',event:'paid',target:'buyer'},{id:'delivery',event:'delivery',target:'buyer'}].map(job=>({...job,order_id:'test-order',lease_token:'lease'})),error:null}),from:table=>table==='orders'?{select:()=>({eq:()=>({single:async()=>({data:order,error:null})})})}:{update:()=>({eq:()=>({eq:async()=>({error:null})})})}};
  const {deliverCommerceMail}=load('lib/catalog/mail.ts',{
-  '../ebooks/book':{isEbook:()=>false},'../ebooks/server':{},'../commerce/websiteMail':{websiteMailReady:()=>true,sendWebsiteEmail:async(to,subject,text,_replyTo,_messageId,html,attachments)=>{sent.push({to,subject,text,html,attachments});}},
+  '../ebooks/book':{isEbook:item=>item.product_slug==='test-book'},'../ebooks/server':{issueBookCode:async id=>{assert.equal(id,'book-item');return 'FIEN-TESTCODE';}},'../commerce/websiteMail':{websiteMailReady:()=>true,sendWebsiteEmail:async(to,subject,text,_replyTo,_messageId,html,attachments)=>{sent.push({to,subject,text,html,attachments});}},
   '../commerce/purchases':{makePurchaseLink:async()=> 'https://example.invalid/aankopen'},
   '../supabase/server':{getSupabaseAdmin:()=>db},'./pricing':{money:()=> '€25,00'},'../commerce/termsArchive':load('lib/commerce/termsArchive.ts'),
   '../emailTemplate':load('lib/emailTemplate.ts'),
@@ -55,6 +55,16 @@ test('order confirmation sends a durable copy of the terms only to the buyer at 
  assert.ok(!sent[2].text.includes('inhoud staat klaar'));
  assert.ok(sent[1].text.includes('Producten: Testvragenlijst'));
  assert.ok(sent[1].text.includes('/admin/bestellingen/test-order'));
+ sent.length=0;
+ order.order_items=[{id:'book-item',product_type:'guide',product_slug:'test-book',product_title:'Testboek'}];
+ await deliverCommerceMail();
+ assert.match(sent[0].text,/Na bevestiging van je overschrijving ontvang je je persoonlijke activatiecode/);
+ assert.doesNotMatch(sent[0].text,/FIEN-TESTCODE/);
+ assert.doesNotMatch(sent[1].text,/FIEN-TESTCODE/);
+ assert.match(sent[2].text,/FIEN-TESTCODE/);
+ assert.match(sent[2].html,/Activeer mijn boek/);
+ assert.match(sent[2].html,/https:\/\/example.invalid\/boeken\/activeren/);
+
 });
 test('digital delivery consent is separately required and stored with agreed text for guest and account checkout',async()=>{
  const terms=load('lib/commerce/terms.ts');
