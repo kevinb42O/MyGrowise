@@ -2,6 +2,7 @@ export const moments = {
   5: { kind: 'star', x: .805, y: .474, size: '7%', label: 'Laat de ster oplichten', text: 'Volg het licht, het avontuur begint!' },
   10: { kind: 'chest', x: .518, y: .652, size: '10%', label: 'Tik op het slot', text: 'Welke superkracht zou jij in de kist stoppen?' },
   21: { kind: 'heart', x: .462, y: .524, size: '22%', label: 'Houd het hart vast', text: 'Adem rustig in…' },
+  23: { kind: 'bell', x: .973, y: .644, size: '9%', label: 'Laat de schoolbel rinkelen', text: 'Riiing! De bel gaat!' },
   25: { kind: 'balloon', x: .508, y: .093, size: '7%', label: 'Sleep de ballon', text: 'Laat los en kijk hoe je ballon wegzweeft.' },
 } as const;
 export type Moment = typeof moments[keyof typeof moments];
@@ -9,6 +10,7 @@ export type Moment = typeof moments[keyof typeof moments];
 export const chestDuration = 2.65;
 export const heartCycle = 4.8;
 export const balloonDuration = 2.15;
+export const bellDuration = 3.68;
 
 const unit = (value: number) => Math.max(0, Math.min(1, value));
 const easeOut = (value: number) => 1 - (1 - unit(value)) ** 3;
@@ -158,6 +160,33 @@ function paintBalloon(ctx: CanvasRenderingContext2D, elapsed: number, free: numb
   ctx.fill();
 }
 
+function paintBell(ctx: CanvasRenderingContext2D, elapsed: number, calm: boolean) {
+  const fade = unit(elapsed / .06 + .3) * unit((bellDuration - elapsed) / .65);
+  const wobble = calm ? 0 : Math.sin(elapsed * 42) * .035 * unit((3.1 - elapsed) / .7);
+  ctx.rotate(wobble);
+  glow(ctx, 0, 0, 56, '#ffeaa1', fade * .43);
+  ctx.globalAlpha = fade;
+  ctx.strokeStyle = '#fff1b7';
+  ctx.lineWidth = 2.5;
+  ctx.beginPath();
+  ctx.ellipse(0, 0, 30, 35, .12, 0, Math.PI * 2);
+  ctx.stroke();
+  if (calm) return;
+  ctx.lineCap = 'round';
+  for (let i = 0; i < 3; i++) {
+    const pulse = (elapsed * 1.25 + i / 3) % 1;
+    const radius = 44 + pulse * 31;
+    ctx.globalAlpha = fade * (1 - pulse) * .88;
+    ctx.strokeStyle = i % 2 ? '#fff6d8' : '#ffd677';
+    ctx.lineWidth = 2.5 - pulse;
+    for (const side of [0, Math.PI]) {
+      ctx.beginPath();
+      ctx.arc(0, 0, radius, side - .55, side + .55);
+      ctx.stroke();
+    }
+  }
+}
+
 export function paintIllustration(
   canvas: HTMLCanvasElement, moment: Exclude<Moment, { kind: 'star' }>,
   elapsed: number, calm: boolean, free: number | null, x: number, y: number, vx: number,
@@ -170,6 +199,7 @@ export function paintIllustration(
   ctx.scale(canvas.width / 1200, canvas.height / 849);
   if (moment.kind === 'chest') paintChest(ctx, elapsed, calm);
   else if (moment.kind === 'heart') paintHeart(ctx, elapsed, calm);
+  else if (moment.kind === 'bell') paintBell(ctx, elapsed, calm);
   else paintBalloon(ctx, elapsed, free, x, y, vx, calm);
   ctx.restore();
 }

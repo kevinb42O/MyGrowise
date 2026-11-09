@@ -2,7 +2,7 @@
 import {BOOK_TITLE} from '../../lib/ebooks/book';
 interface Props { pages:string[]; back:string; preview?:boolean }
 const {pages,back,preview=false}=Astro.props;
-const soundEffects=preview?['star','chest']:['star','chest','heart','balloon-grab','balloon-fly'];
+const soundEffects=preview?['star','chest']:['star','chest','heart','bell','balloon-grab','balloon-fly'];
 const controls=[
  ['cover','Omslag',1],['start','Het verhaal van Fien',5],
  ['chest','De toverkist',10],['heart','Het hart',21],['balloon','De ballon',25],['powers','De vijf krachten',27],
@@ -42,6 +42,7 @@ const controls=[
        <path data-icon="star" d="M12 2c0 6-4 10-10 10 6 0 10 4 10 10 0-6 4-10 10-10-6 0-10-4-10-10Z"/>
        <path data-icon="chest" d="M7.5 11V8a4.5 4.5 0 0 1 9 0v3M6 11h12v9H6zM12 14.5v2"/>
        <path data-icon="heart" d="M12 20s-8.5-5.2-8.5-10.4a4.5 4.5 0 0 1 8.5-2 4.5 4.5 0 0 1 8.5 2C20.5 14.8 12 20 12 20Z"/>
+       <path data-icon="bell" d="M20 12a8 8 0 1 1-16 0 8 8 0 0 1 16 0Zm-5 0a3 3 0 1 1-6 0 3 3 0 0 1 6 0ZM2 7 .5 5M22 7l1.5-2M2 17l-1.5 2M22 17l1.5 2"/>
        <path data-icon="balloon" d="M12 3c-3.6 0-6 2.8-6 6s2.4 6 6 6 6-2.8 6-6-2.4-6-6-6Zm0 12c-3 2 3.5 2.2 0 6"/>
       </svg>
      </button>
@@ -69,6 +70,7 @@ const controls=[
   </section>
   <!-- Page Turn (1) by OwlStorm, CC0. https://freesound.org/people/OwlStorm/sounds/151220/ -->
   <audio data-page-audio src="/audio/books/fien-page-turn.m4a" preload="auto"></audio>
+  <!-- fien-bell.m4a uses "School bell.wav" by deleted_user_7020630, CC0. https://freesound.org/s/378394/ — 3.68 s, volume reduced, short fades. -->
   {soundEffects.map(name=><audio data-effect-audio={name} src={`/audio/books/fien-${name}.m4a`} preload="auto"></audio>)}
   <p class="reader-sr" data-status aria-live="polite"></p>
   <dialog class="reader-dialog" data-menu aria-labelledby="reader-menu-title">
@@ -157,9 +159,12 @@ const controls=[
  .reader-hotspot[data-kind='balloon']:active,.reader-hotspot[data-kind='balloon']:active .reader-spot-label{cursor:grabbing}
  .reader-hotspot svg{box-sizing:content-box;width:16px;height:16px;padding:4px;z-index:1;border-radius:50%;background:#fff0b6;color:#53351c;box-shadow:0 2px 5px #392b2663;pointer-events:none}
  .reader-hotspot [data-icon]{display:none}
- .reader-hotspot[data-kind='star'] [data-icon='star'],.reader-hotspot[data-kind='chest'] [data-icon='chest'],.reader-hotspot[data-kind='heart'] [data-icon='heart'],.reader-hotspot[data-kind='balloon'] [data-icon='balloon']{display:block}
+ .reader-hotspot[data-kind='bell'] [data-icon='bell'],.reader-hotspot[data-kind='star'] [data-icon='star'],.reader-hotspot[data-kind='chest'] [data-icon='chest'],.reader-hotspot[data-kind='heart'] [data-icon='heart'],.reader-hotspot[data-kind='balloon'] [data-icon='balloon']{display:block}
  .reader-spot-label{position:absolute;z-index:2;top:calc(50% + clamp(21px,3.4cqw,29px));left:50%;transform:translateX(-50%);white-space:nowrap;padding:.5rem .65rem;background:#26392d;border:1px solid #fbe18a;border-radius:1rem;color:#fff5d5;font-size:clamp(.72rem,2.8cqw,.88rem);line-height:1.15;font-weight:700;box-shadow:0 3px 10px #211b256b;touch-action:none}
  .reader-spot-label::before{content:'';position:absolute;bottom:100%;left:50%;translate:-50%;border:5px solid transparent;border-top:0;border-bottom-color:#fbe18a;pointer-events:none}
+ .reader .reader-hotspot[data-kind='bell']{left:min(var(--spot-x),calc(100% - 26px))}
+ .reader-hotspot[data-kind='bell'] .reader-spot-label{left:auto;right:50%;transform:none}
+ .reader-hotspot[data-kind='bell'] .reader-spot-label::before{left:auto;right:8px;translate:0}
  .reader-hotspot[data-kind='star'] .reader-spot-label{margin-inline-start:-5px}
  .reader-hotspot:is(:hover,:focus-visible) .reader-spot-label{background:#3b513b}
  .reader[data-calm='no'] .reader-hotspot:active svg{transform:scale(.87)}

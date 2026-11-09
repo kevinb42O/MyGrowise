@@ -2,7 +2,7 @@ import {makePaper} from './paper';
 import {makeColoring} from './coloring';
 import {makeWriting} from './writing';
 
-import {balloonDuration,chestDuration,heartCycle,moments,paintIllustration,type Moment} from './illustration';
+import {balloonDuration,bellDuration,chestDuration,heartCycle,moments,paintIllustration,type Moment} from './illustration';
 import {paintStar,starDuration} from './star';
 
 const clamp=(n:number,min:number,max:number)=>Math.max(min,Math.min(max,n));
@@ -240,6 +240,7 @@ export function startBookReader(root:HTMLElement){
       const dt=clamp((now-last)/1000,0,.032);
       last=now;
       const free=state.released?Math.max(0,(now-state.released)/1000):null;
+      if(moment.kind==='bell'&&elapsed>=bellDuration){finishEffect();return;}
       if(moment.kind==='chest'&&elapsed>=chestDuration){finishEffect();return;}
       if(moment.kind==='heart'){
         const cycleEnd=heartCycle*Math.max(1,Math.ceil((state.released-start)/1000/heartCycle));
