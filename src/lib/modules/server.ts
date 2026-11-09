@@ -1,3 +1,4 @@
+import {ebookProduct,ebookActivated} from '../ebooks/server';
 import {getSupabaseAdmin} from '../supabase/server';
 import {listCatalog,publicCatalog, type CatalogProduct, type AdminCatalogProduct} from '../catalog/server';
 import {isUuid} from '../catalog/pricing';
@@ -52,6 +53,7 @@ export async function accessibleModuleAsset(userId:string,productId:string,key?:
   return (await moduleAssets(r.id)).find(a=>a.status==='verified'&&(key?a.module_tracks?.key===key:a.kind==='pdf'))||null;
  }
  if(!await hasModuleAccess(userId,productId))return null;
+ const book=await ebookProduct();if(book?.id===productId&&!await ebookActivated({userId},productId))return null;
  return publishedModuleAsset(productId,key);
 }
 /** Resolve published bytes only after a caller has checked its purchase owner. */

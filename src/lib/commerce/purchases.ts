@@ -15,9 +15,13 @@ export function purchaseNext(value:unknown){
  if(typeof value!=='string'||value.includes('\\')||/[\x00-\x1f]/.test(value))return '/aankopen';
  try{const u=new URL(value,'https://mygrowise.invalid');return u.origin==='https://mygrowise.invalid'&&(u.pathname==='/aankopen'||u.pathname.startsWith('/aankopen/')||u.pathname==='/bestellen')&&!u.pathname.startsWith('/aankopen/toegang')?u.pathname+u.search:'/aankopen';}catch{return '/aankopen';}
 }
-export function parseBuyer(form:FormData){
+export function parseBuyer(form:FormData,bookOnly=false){
  const get=(key:string,max:number)=>{const value=String(form.get(key)||'').trim();if(value.length>max||/[\r\n\x00]/.test(value))throw new Error('invalid_contact');return value;};
  const email=get('email',254).toLowerCase(),first_name=get('first_name',60),last_name=get('last_name',60),birth_date=get('birth_date',10),gender=get('gender',20);
+ if(bookOnly){
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)||!first_name||!last_name)throw new Error('invalid_contact');
+  return {email,first_name,last_name,birth_date:null,gender:'unspecified',participant:'self'};
+ }
  const today=new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Brussels',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)||!first_name||!last_name||!/^\d{4}-\d{2}-\d{2}$/.test(birth_date)||!Number.isFinite(Date.parse(birth_date))||new Date(birth_date).toISOString().slice(0,10)!==birth_date||birth_date>today||!['male','female','other','unspecified'].includes(gender))throw new Error('invalid_contact');
  const participant=get('participant',20);if(!['self','child'].includes(participant))throw new Error('invalid_contact');

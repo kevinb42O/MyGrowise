@@ -8,7 +8,7 @@ test('sales are closed by default in production and only explicit approval opens
 });
 test('closed checkout rejects new guest orders before parsing personal information or contacting the database',async()=>{
  let touched=false;const {POST}=load('pages/api/checkout/catalog-order.ts',{
-  '../../../lib/commerce/readiness':{salesEnabled:()=>false,salesPausedMessage:'Verkoop gepauzeerd'},
+  '../../../lib/ebooks/book':{isEbook:()=>false},'../../../lib/commerce/readiness':{salesEnabled:()=>false,salesPausedMessage:'Verkoop gepauzeerd'},
   '../../../lib/catalog/mail':{},'../../../lib/catalog/server':{},'../../../lib/commerce/terms':{},'../../../lib/adminAuth':{isTrustedFormOrigin:()=>true},'../../../lib/catalog/pricing':{},
   '../../../lib/supabase/server':{getSupabaseAdmin:()=>{touched=true;throw new Error('Must not run');}},'../../../lib/wiseCheckout':{},'../../../lib/supportMail':{},'../../../lib/commerce/purchases':{privateHeaders:{'cache-control':'private, no-store'}},
  });
@@ -27,7 +27,7 @@ test('order confirmation sends a durable copy of the terms only to the buyer at 
  const order={status:'paid',provider_reference:'TEST-REFERENCE',total_cents:2500,contact_snapshot:{email:'buyer@example.invalid',terms_text:terms.termsForEmail(),digital_delivery_consent:{statement:terms.digitalDeliveryStatement}},commerce_buyers:{email:'buyer@example.invalid',first_name:'Test',last_name:'Buyer'},order_items:[{product_type:'module',product_title:'Module'}]};
  const db={rpc:async()=>({data:[{id:'created',event:'created',target:'buyer'},{id:'team',event:'created',target:'team'},{id:'paid',event:'paid',target:'buyer'},{id:'delivery',event:'delivery',target:'buyer'}].map(job=>({...job,order_id:'test-order',lease_token:'lease'})),error:null}),from:table=>table==='orders'?{select:()=>({eq:()=>({single:async()=>({data:order,error:null})})})}:{update:()=>({eq:()=>({eq:async()=>({error:null})})})}};
  const {deliverCommerceMail}=load('lib/catalog/mail.ts',{
-  '../commerce/websiteMail':{websiteMailReady:()=>true,sendWebsiteEmail:async(to,subject,text,_replyTo,_messageId,html,attachments)=>{sent.push({to,subject,text,html,attachments});}},
+  '../ebooks/book':{isEbook:()=>false},'../ebooks/server':{},'../commerce/websiteMail':{websiteMailReady:()=>true,sendWebsiteEmail:async(to,subject,text,_replyTo,_messageId,html,attachments)=>{sent.push({to,subject,text,html,attachments});}},
   '../commerce/purchases':{makePurchaseLink:async()=> 'https://example.invalid/aankopen'},
   '../supabase/server':{getSupabaseAdmin:()=>db},'./pricing':{money:()=> '€25,00'},'../commerce/termsArchive':load('lib/commerce/termsArchive.ts'),
   '../emailTemplate':load('lib/emailTemplate.ts'),
@@ -63,7 +63,7 @@ test('digital delivery consent is separately required and stored with agreed tex
   let snapshot;let calls=0;
   const form=new FormData();for(const [key,value] of Object.entries({terms:'accepted',ids:product,mode:'custom',hash:'a'.repeat(32),submission,email:'test@example.invalid'}))form.set(key,value);
   const {POST}=load('pages/api/checkout/catalog-order.ts',{
-   '../../../lib/commerce/readiness':{salesEnabled:()=>true},'../../../lib/catalog/mail':{deliverCommerceMail:async()=>{}},
+   '../../../lib/ebooks/book':{isEbook:()=>false},'../../../lib/commerce/readiness':{salesEnabled:()=>true},'../../../lib/catalog/mail':{deliverCommerceMail:async()=>{}},
    '../../../lib/catalog/server':{quoteCatalog:async()=>({items:[{id:product,type:'module'}]})},'../../../lib/commerce/terms':terms,
    '../../../lib/adminAuth':{isTrustedFormOrigin:()=>true,isCustomerAccount:()=>signedIn},'../../../lib/catalog/pricing':{isUuid:()=>true},
    '../../../lib/supabase/server':{getSupabaseAdmin:()=>({rpc:async(name,args)=>{calls++;snapshot=args.p_contact;assert.equal(name,signedIn?'create_account_checkout':'create_guest_catalog_order');return {data:'test-order'};}})},

@@ -1,3 +1,5 @@
+import {issueBookCode} from '../ebooks/server';
+import {isEbook} from '../ebooks/book';
 import {sendWebsiteEmail,websiteMailReady} from '../commerce/websiteMail';
 import {makePurchaseLink} from '../commerce/purchases';
 import {getSupabaseAdmin} from '../supabase/server';
@@ -10,27 +12,32 @@ export async function deliverCommerceMail(limit=4,orderId?:string){
 
  const origin=(import.meta.env.PUBLIC_SITE_URL||(import.meta.env.PROD?'https://www.mygrowise.be':'http://localhost:4321')).replace(/\/$/,'');let sent=0,failed=0;
  for(const job of jobs||[]){try{
-  const {data:order,error:oe}=await db.from('orders').select('customer_user_id,contact_snapshot,provider_reference,total_cents,status,commerce_buyers!orders_buyer_id_fkey(email,first_name,last_name),order_items(product_type,product_title)').eq('id',job.order_id).single();if(oe||!order)throw new Error('order_missing');
-  if(job.event==='delivery'&&!['paid','fulfilled'].includes(order.status)){await db.from('commerce_mail_jobs').update({status:'sent',sent_at:new Date().toISOString(),lease_until:null,last_error:'delivery_access_inactive'}).eq('id',job.id).eq('lease_token',job.lease_token);continue;}
+  const {data:order,error:oe}=await db.from('orders').select('customer_user_id,contact_snapshot,provider_reference,total_cents,status,commerce_buyers!orders_buyer_id_fkey(email,first_name,last_name),order_items(id,product_id,product_slug,product_type,product_title)').eq('id',job.order_id).single();if(oe||!order)throw new Error('order_missing');
+  if(['paid','delivery'].includes(job.event)&&!['paid','fulfilled'].includes(order.status)){await db.from('commerce_mail_jobs').update({status:'sent',sent_at:new Date().toISOString(),lease_until:null,last_error:'delivery_access_inactive'}).eq('id',job.id).eq('lease_token',job.lease_token);continue;}
   const buyer=Array.isArray(order.commerce_buyers)?order.commerce_buyers[0]:order.commerce_buyers;
   const email=order.contact_snapshot?.email||buyer?.email;const recipient=job.target==='team'?'info@mygrowise.be':email;if(!recipient)throw new Error('recipient_missing');
   const types=new Set((order.order_items||[]).map((i:any)=>i.product_type));const modulesOnly=[...types].every(type=>['module','guide'].includes(type));const paidIntro=modulesOnly?'Je aangekochte inhoud staat klaar bij Mijn aankopen.':(types.has('module')||types.has('guide'))?'Je digitale inhoud staat klaar bij Mijn aankopen. Virginie bereidt je vragenlijstafnames handmatig voor en stuurt je de afnamelink en instructies per e-mail.':'Virginie bereidt je afname handmatig voor en stuurt je de afnamelink en instructies per e-mail.';
   const team=job.target==='team';const event=job.event;const subject=team?(event==='created'?'Nieuwe bestelling — MyGrowise':'Betaling bevestigd — MyGrowise'):event==='created'?'Je bestelling is ontvangen — MyGrowise':event==='paid'?'Je betaling is bevestigd — MyGrowise':'Er staat een update voor je klaar — MyGrowise';
-  const intro=team?(event==='created'?'Er is een nieuwe bestelling om op te volgen.':'Een betaling is bevestigd. Bekijk de gekochte producten en hun levering.'):event==='created'?'Via de knop hieronder vind je de gegevens voor je overschrijving.':event==='paid'?`Je betaling is bevestigd. ${paidIntro}`: 'Er staat een update over je afname voor je klaar. Open je instructies en beschikbare rapporten veilig via de link hieronder, zonder verplicht account.';
-  const link=team?`${origin}/admin/bestellingen/${job.order_id}`:event==='created'?await makePurchaseLink(email,`/bestellen?order=${job.order_id}`):await makePurchaseLink(email);
+  const bookItem=order.order_items.find((item:any)=>isEbook(item));
+  const bookMail=!team&&event==='paid'&&bookItem;
+  const code=bookMail?await issueBookCode(bookItem.id):null;
+  const intro=bookMail?('Je betaling is ontvangen. Activeer je e-book met de persoonlijke code hieronder.'+(modulesOnly?'':' Virginie volgt eventuele afnames apart op.')):team?(event==='created'?'Er is een nieuwe bestelling om op te volgen.':'Een betaling is bevestigd. Bekijk de gekochte producten en hun levering.'):event==='created'?'Via de knop hieronder vind je de gegevens voor je overschrijving.':event==='paid'?`Je betaling is bevestigd. ${paidIntro}`: 'Er staat een update over je afname voor je klaar. Open je instructies en beschikbare rapporten veilig via de link hieronder, zonder verplicht account.';
+  const link=team?`${origin}/admin/bestellingen/${job.order_id}`:bookMail?`${origin}/boeken/activeren`:event==='created'?await makePurchaseLink(email,`/bestellen?order=${job.order_id}`):await makePurchaseLink(email);
   const text=`${intro}\n\nReferentie: ${order.provider_reference}\n${team?`Producten: ${order.order_items.map((i:any)=>i.product_title).join(' · ')}`:'Je vindt de inhoud van je bestelling via de beveiligde link.'}${event!=='delivery'?`\nBedrag: ${money(order.total_cents)}`:''}\n\n${team?`Contact: ${buyer!.email}\nDeelnemer: ${order.contact_snapshot?.first_name||buyer!.first_name} ${order.contact_snapshot?.last_name||buyer!.last_name}\n\n`:''}${link}\n\nDeel geen medische gegevens via gewone e-mail.\n\nMyGrowise`;
   const consent=order.contact_snapshot?.digital_delivery_consent;
   const confirmation=consent&&typeof consent.statement==='string'?`\n\nBevestiging directe digitale levering:\n${consent.statement}\nGeregistreerd bij bestelling ${order.provider_reference}. De toestemming geldt uitsluitend voor de digitale inhoud waarvoor je deze afzonderlijk gaf.`:'';
   const agreedTerms=typeof order.contact_snapshot?.terms_text==='string'?order.contact_snapshot.terms_text:legacyTerms20261029;
   const attachments=!team&&event==='created'?[{filename:'Voorwaarden-bij-je-bestelling.txt',content:`Bestelreferentie: ${order.provider_reference}\n\n${agreedTerms}${confirmation}`,contentType:'text/plain; charset=utf-8'}]:[];
-  const message=!team&&event==='created'?`${text}\n\nVirginie volgt je bestelling op na ontvangst van je betaling. De voorwaarden vind je in de bijlage.`:text;
+  const createdNote=bookItem?'Na bevestiging van je overschrijving ontvang je je persoonlijke activatiecode. De voorwaarden vind je in de bijlage.':'Virginie volgt je bestelling op na ontvangst van je betaling. De voorwaarden vind je in de bijlage.';
+  const message=!team&&event==='created'?`${text}\n\n${createdNote}`:text;
   const title=team?(event==='created'?'Een nieuwe bestelling.':'Een betaling is bevestigd.'):event==='created'?'Je bestelling is ontvangen.':event==='paid'?'Je betaling is bevestigd.':'Er staat iets voor je klaar.';
   const name=String(order.contact_snapshot?.first_name||buyer?.first_name||'').trim();
   const details:[string,string][]=[['Referentie',order.provider_reference]];
+  if(code)details.push(['Activatiecode',code]);
   if(event!=='delivery')details.push(['Bedrag',money(order.total_cents)]);
   if(team){details.push(['Producten',order.order_items.map((i:any)=>i.product_title).join(' · ')]);details.push(['Contact',String(email)]);}
 
-  const html=renderEmail({title,preheader:intro,greeting:!team&&name?`Beste ${name},`:undefined,paragraphs:[intro],details,action:{label:team?'Open in beheer':event==='created'?'Bekijk betaalgegevens':event==='paid'?'Open mijn aankopen':'Bekijk mijn update',url:link},note:team?'Volg betaling en levering op in beheer.':event==='created'?'Virginie volgt je bestelling op na ontvangst van je betaling. De voorwaarden vind je in de bijlage.':'De link geeft persoonlijke toegang tot je aankopen. Deel hem niet met anderen.'});
+  const html=renderEmail({title,preheader:intro,greeting:!team&&name?`Beste ${name},`:undefined,paragraphs:[intro],details,action:{label:bookMail?'Activeer mijn boek':team?'Open in beheer':event==='created'?'Bekijk betaalgegevens':event==='paid'?'Open mijn aankopen':'Bekijk mijn update',url:link},note:bookMail?'Je code werkt één keer. Na activering kun je het boek opnieuw openen via Mijn aankopen.':team?'Volg betaling en levering op in beheer.':event==='created'?createdNote:'De link geeft persoonlijke toegang tot je aankopen. Deel hem niet met anderen.'});
   await sendWebsiteEmail(recipient,subject,message,undefined,undefined,html,attachments);
   const {error}=await db.from('commerce_mail_jobs').update({status:'sent',sent_at:new Date().toISOString(),lease_until:null,last_error:null}).eq('id',job.id).eq('lease_token',job.lease_token);if(error)throw new Error('mail_status_failed');sent++;
  }catch{await db.from('commerce_mail_jobs').update({status:job.attempts>=6?'failed':'pending',next_attempt_at:new Date(Date.now()+Math.min(2**job.attempts*60000,21600000)).toISOString(),lease_until:null,last_error:'delivery_failed'}).eq('id',job.id).eq('lease_token',job.lease_token);failed++;}}

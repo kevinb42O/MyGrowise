@@ -1,10 +1,12 @@
 ---
+import {BOOK_SLUG,BOOK_PATH} from '../../lib/ebooks/book';
 import MainLayout from '../../layouts/MainLayout.astro';
 import ModuleCover from '../../components/modules/ModuleCover.astro';
 import {publicCatalog,resolveCatalogSlug} from '../../lib/catalog/server';
 import {findModule} from '../../lib/modules/server';
 import {money} from '../../lib/catalog/pricing';
 import '../../styles/modules.css';
+if(Astro.params.slug===BOOK_SLUG)return Astro.redirect(BOOK_PATH,301);
 const p=(await publicCatalog()).find(p=>p.type==='guide'&&p.slug===Astro.params.slug&&p.availability!=='paused');
 if(!p){const alias=await resolveCatalogSlug(Astro.params.slug||'');return Astro.redirect(alias||'/zelf-aan-de-slag',alias?301:302);}
 const m=await findModule(p.slug);const available=p.availability==='available';

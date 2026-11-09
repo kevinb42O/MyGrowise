@@ -1,10 +1,12 @@
 ---
+import {BOOK_SLUG,BOOK_LIBRARY_PATH} from '../../../../lib/ebooks/book';
 import PurchaseUnavailable from '../../../../components/purchases/PurchaseUnavailable.astro';
 import PurchaseLayout from '../../../../layouts/PurchaseLayout.astro';
 import Icon from '../../../../components/purchases/PurchaseIcon.astro';
 import {purchaseOwner,hasPurchase,privateHeaders} from '../../../../lib/commerce/purchases';
 import {findModule,moduleAssets} from '../../../../lib/modules/server';
 Object.entries(privateHeaders).forEach(([k,v])=>Astro.response.headers.set(k,v));
+if(Astro.params.slug===BOOK_SLUG)return Astro.redirect(BOOK_LIBRARY_PATH,302);
 const owner=await purchaseOwner(Astro.cookies,Astro.locals.currentUser);if(!owner)return Astro.redirect(`/aankopen/toegang?next=${encodeURIComponent(Astro.url.pathname)}`,303);
 const m=await findModule(Astro.params.slug||'');const available=m&&await hasPurchase(owner,m.product.id);if(!available)Astro.response.status=404;
 if(m&&available&&!m.canonical)return Astro.redirect(`/aankopen/modules/${m.product.slug}`,301);

@@ -1,3 +1,4 @@
+import {BOOK_SLUG,BOOK_PATH} from '../lib/ebooks/book';
 import type {APIRoute} from 'astro';
 import {getSupabaseAdmin} from '../lib/supabase/server';
 import {SITE_ORIGIN} from '../lib/site';
@@ -12,7 +13,7 @@ export const GET:APIRoute=async()=>{
   ]);
   for(const result of [products,practitioners,content])if(result.error)throw result.error;
   const paths=['/','/startpunt','/zelf-aan-de-slag','/profielen','/vragenlijsten','/samenstellen','/modules','/community','/begeleiding','/over-ons','/contact','/privacy','/voorwaarden','/prijzen','/inspiratie'];
-  for(const p of products.data||[])paths.push(`/${p.type==='profile'?'profielen':p.type==='questionnaire'?'vragenlijsten':p.type==='module'?'modules':'verdieping'}/${p.slug}`);
+  for(const p of products.data||[])paths.push(p.slug===BOOK_SLUG?BOOK_PATH:`/${p.type==='profile'?'profielen':p.type==='questionnaire'?'vragenlijsten':p.type==='module'?'modules':'verdieping'}/${p.slug}`);
   for(const p of practitioners.data||[])paths.push(`/begeleiding/${p.slug}`);
   for(const p of content.data||[])paths.push(p.kind==='article'?`/inspiratie/${p.slug}`:`/${p.slug}`);
   return new Response(`<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${[...new Set(paths)].map(path=>`<url><loc>${escape(new URL(path,SITE_ORIGIN).href)}</loc></url>`).join('')}</urlset>`,{headers:{'content-type':'application/xml; charset=utf-8','cache-control':'public, max-age=300'}});

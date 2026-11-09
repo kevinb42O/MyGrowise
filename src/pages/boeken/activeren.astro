@@ -1,0 +1,20 @@
+---
+import PurchaseLayout from '../../layouts/PurchaseLayout.astro';
+import {privateHeaders} from '../../lib/commerce/purchases';
+import {BOOK_COVER,BOOK_LIBRARY_PATH} from '../../lib/ebooks/book';
+Object.entries(privateHeaders).forEach(([k,v])=>Astro.response.headers.set(k,v));
+const error=Astro.url.searchParams.has('error');
+---
+<PurchaseLayout title="Open jouw boek">
+ <div class="book-access">
+  <img src={BOOK_COVER} alt="Jij, Fien en een toverkist vol superkrachten" width="1100" height="778"/>
+  <section><h1>Jouw toverkist<br/>staat klaar.</h1><p>Vul de persoonlijke activatiecode uit je betaalbevestiging in. Daarna kun je je e-book openen en downloaden.</p>
+   {error&&<p class="book-access-error" role="alert">Deze code kan niet worden gebruikt. Controleer de code. Heb je hem al geactiveerd? Open je boek dan via Mijn aankopen.</p>}
+   <form action="/api/boeken/activeren" method="post"><label for="book-code">Jouw activatiecode</label><input id="book-code" name="code" type="text" required maxlength="64" autocomplete="one-time-code" autocapitalize="characters" spellcheck="false" placeholder="FIEN-XXXX-XXXX-XXXX-XXXX-XXXX" aria-describedby="book-code-help"/><p id="book-code-help">Je code werkt één keer. Je boek blijft daarna via jouw aankooptoegang beschikbaar.</p><button class="button button-primary" type="submit">Open mijn boek →</button></form>
+   <p class="book-access-return">Al eerder geactiveerd of een ander apparaat?<br/><a href={`/aankopen/toegang?next=${encodeURIComponent(BOOK_LIBRARY_PATH)}`}>Open je boek met een nieuwe e-maillink →</a></p>
+  </section>
+ </div>
+</PurchaseLayout>
+<style>
+.book-access{display:grid;grid-template-columns:1fr 1fr;gap:clamp(2rem,6vw,6rem);align-items:center;padding:2rem 0 4rem}.book-access>img{width:100%;height:auto;border-radius:4px}.book-access h1{font-size:clamp(2.5rem,4vw,3.7rem);line-height:1.08;margin-bottom:1.3rem}.book-access p{font-size:1rem;line-height:1.75;color:var(--muted)}.book-access form{margin:2rem 0}.book-access label{display:block;font-weight:600;margin-bottom:.7rem}.book-access input{display:block;width:100%;padding:1rem .8rem;background:var(--white);border:1px solid var(--line);border-radius:6px;font:500 1rem/1.5 'DM Sans',sans-serif;color:var(--ink);caret-color:var(--ink)}.book-access input:focus-visible{outline:2px solid var(--ink);outline-offset:3px}.book-access form p,.book-access-return{font-size:.875rem;line-height:1.7}.book-access button{width:100%;margin-top:.7rem}.book-access a{text-underline-offset:4px}.book-access .book-access-error{padding:1rem;background:#fcf0eb;color:#823f49;border-radius:6px}@media(max-width:760px){.book-access{grid-template-columns:1fr;gap:2.3rem;max-width:520px;margin-inline:auto;padding-top:1rem}.book-access>img{max-width:360px}.book-access h1{font-size:2.5rem}}
+</style>

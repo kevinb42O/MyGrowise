@@ -1,6 +1,9 @@
 ---
+import {BOOK_SLUG,BOOK_PATH,BOOK_COVER} from '../lib/ebooks/book';
+import {publicCatalog} from '../lib/catalog/server';
 import MainLayout from '../layouts/MainLayout.astro';
 
+const book=(await publicCatalog()).find(p=>p.slug===BOOK_SLUG&&p.availability==='available');
 const routes = [
   {
     title: 'Profielen', direction: 'Een breder beeld',
@@ -24,6 +27,7 @@ const routes = [
     image: '/images/modules/het-meer.webp',
   },
 ];
+if(book)routes.push({title:'Jij, Fien en een toverkist vol superkrachten',direction:'Samen lezen',description:'Een geïllustreerd e-book over piekeren, zenuwen en vijf superkrachten. Voor kinderen van 7 tot 12 jaar.',detail:'Digitaal boek · PDF en EPUB.',href:BOOK_PATH,action:'Ontdek het boek',image:BOOK_COVER});
 ---
 
 <MainLayout activeNav="zelf" title="Zelf aan de slag — MyGrowise" description="Ontdek profielen, losse vragenlijsten en zelfstandige modules. Kies jouw eigen ingang.">
@@ -49,7 +53,7 @@ const routes = [
     <div class="container" data-no-motion>
       <div class="self-options-heading">
         <h2 id="options-title">Wat past bij<br /> <em>jouw vraag?</em></h2>
-        <p>Een breder beeld, een gerichte vraag of zelf oefenen. Hier zie je wat de drie mogelijkheden van elkaar onderscheidt.</p>
+        <p>Een breder beeld, een gerichte vraag of zelf oefenen. Kies wat past bij jou of je kind.</p>
       </div>
       <div class="self-route-list">
         {routes.map(route => <article class="self-route">
