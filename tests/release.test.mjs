@@ -27,19 +27,27 @@ test('order confirmation sends a durable copy of the terms only to the buyer at 
  const order={status:'paid',provider_reference:'TEST-REFERENCE',total_cents:2500,contact_snapshot:{email:'buyer@example.invalid',terms_text:terms.termsForEmail(),digital_delivery_consent:{statement:terms.digitalDeliveryStatement}},commerce_buyers:{email:'buyer@example.invalid',first_name:'Test',last_name:'Buyer'},order_items:[{product_type:'module',product_title:'Module'}]};
  const db={rpc:async()=>({data:[{id:'created',event:'created',target:'buyer'},{id:'team',event:'created',target:'team'},{id:'paid',event:'paid',target:'buyer'},{id:'delivery',event:'delivery',target:'buyer'}].map(job=>({...job,order_id:'test-order',lease_token:'lease'})),error:null}),from:table=>table==='orders'?{select:()=>({eq:()=>({single:async()=>({data:order,error:null})})})}:{update:()=>({eq:()=>({eq:async()=>({error:null})})})}};
  const {deliverCommerceMail}=load('lib/catalog/mail.ts',{
-  '../commerce/websiteMail':{websiteMailReady:()=>true,sendWebsiteEmail:async(to,subject,text,_replyTo,_messageId,html)=>{sent.push({to,subject,text,html});}},
+  '../commerce/websiteMail':{websiteMailReady:()=>true,sendWebsiteEmail:async(to,subject,text,_replyTo,_messageId,html,attachments)=>{sent.push({to,subject,text,html,attachments});}},
   '../commerce/purchases':{makePurchaseLink:async()=> 'https://example.invalid/aankopen'},
   '../supabase/server':{getSupabaseAdmin:()=>db},'./pricing':{money:()=> '€25,00'},'../commerce/termsArchive':load('lib/commerce/termsArchive.ts'),
   '../emailTemplate':load('lib/emailTemplate.ts'),
  },{PUBLIC_SITE_URL:'https://example.invalid'});
  const result=await deliverCommerceMail();assert.equal(result.sent,4);assert.equal(result.failed,0);
- assert.equal(sent[0].to,'buyer@example.invalid');assert.ok(sent[0].text.endsWith(terms.termsForEmail()));
- assert.ok(sent[0].html.includes('ALGEMENE VOORWAARDEN MYGROWISE'));assert.ok(sent[0].html.includes('Je keuze voor directe digitale levering'));assert.ok(sent[0].html.includes('Bekijk bestelling en betaalgegevens'));
- assert.match(sent[0].text,/Bevestiging directe digitale levering/);assert.ok(sent[0].text.includes(terms.digitalDeliveryStatement));assert.match(sent[0].text,/info@mygrowise.be/);
- for(const message of sent.slice(1)){assert.ok(!message.text.includes('ALGEMENE VOORWAARDEN MYGROWISE'));assert.ok(!message.html.includes('ALGEMENE VOORWAARDEN MYGROWISE'));}
+ assert.equal(sent[0].to,'buyer@example.invalid');
+ assert.ok(!sent[0].text.includes('ALGEMENE VOORWAARDEN MYGROWISE'));
+ assert.ok(!sent[0].html.includes('ALGEMENE VOORWAARDEN MYGROWISE'));
+ assert.ok(sent[0].html.includes('Bekijk betaalgegevens'));
+ assert.ok(sent[0].html.includes('voorwaarden vind je in de bijlage'));
+ assert.ok(sent[0].text.length<1000);
+ assert.equal(sent[0].attachments.length,1);
+ assert.equal(sent[0].attachments[0].filename,'Voorwaarden-bij-je-bestelling.txt');
+ assert.ok(sent[0].attachments[0].content.includes(terms.termsForEmail()));
+ assert.ok(sent[0].attachments[0].content.includes(terms.digitalDeliveryStatement));
+ assert.ok(sent[0].attachments[0].content.includes('TEST-REFERENCE'));
+ for(const message of sent.slice(1))assert.equal(message.attachments.length,0);
  sent.length=0;order.contact_snapshot={email:'buyer@example.invalid'};await deliverCommerceMail();
- assert.ok(sent[0].text.endsWith(load('lib/commerce/termsArchive.ts').legacyTerms20261029));
- assert.ok(!sent[0].text.includes('Bevestiging directe digitale levering'));
+ assert.ok(sent[0].attachments[0].content.includes(load('lib/commerce/termsArchive.ts').legacyTerms20261029));
+ assert.ok(!sent[0].attachments[0].content.includes('Bevestiging directe digitale levering'));
  // A questionnaire purchase confirms payment without claiming the assessment is ready.
  sent.length=0;order.order_items=[{product_type:'questionnaire',product_title:'Testvragenlijst'}];await deliverCommerceMail();
  assert.match(sent[2].text,/Virginie bereidt je afname handmatig voor/);

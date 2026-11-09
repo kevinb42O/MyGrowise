@@ -5,14 +5,15 @@ import {makePurchaseLink} from './purchases';
 import {renderEmail,renderTextEmail} from '../emailTemplate';
 export const captureMail=()=>!import.meta.env.PROD&&import.meta.env.WEBSITE_MAIL_MODE==='capture';
 export const websiteMailReady=()=>captureMail()||supportMailReady();
-export async function sendWebsiteEmail(to:string,subject:string,text:string,replyTo='info@mygrowise.be',messageId?:string,html=renderTextEmail(subject,text)){
+export type WebsiteMailAttachment = {filename:string;content:string;contentType:string};
+export async function sendWebsiteEmail(to:string,subject:string,text:string,replyTo='info@mygrowise.be',messageId?:string,html=renderTextEmail(subject,text),attachments:WebsiteMailAttachment[]=[]){
  if(import.meta.env.DEV&&captureMail()){
   const {captureEmail}=await import('./captureMail');
-  return captureEmail(to,subject,text,replyTo,messageId,html);
+  return captureEmail(to,subject,text,replyTo,messageId,html,attachments);
  }
  if(!supportMailReady())throw new Error('mail_unavailable');
  const transport=nodemailer.createTransport({host:'smtp.mail.webnode.com',port:465,secure:true,auth:{user:import.meta.env.SUPPORT_SMTP_USER,pass:import.meta.env.SUPPORT_SMTP_PASSWORD},connectionTimeout:10000,greetingTimeout:10000,socketTimeout:10000});
- try{await transport.sendMail({from:`MyGrowise <${import.meta.env.SUPPORT_FROM_EMAIL}>`,to,replyTo,subject,text,html,messageId});}finally{transport.close();}
+ try{await transport.sendMail({from:`MyGrowise <${import.meta.env.SUPPORT_FROM_EMAIL}>`,to,replyTo,subject,text,html,messageId,attachments});}finally{transport.close();}
 }
 export async function queueWebsiteMail(kind:'contact'|'purchase_access',payload:Record<string,string>,submission?:string){
  const {error}=await getSupabaseAdmin().from('website_mail_jobs').upsert({kind,payload,submission_key:submission||null},{onConflict:'submission_key',ignoreDuplicates:true});if(error)throw new Error('mail_queue_failed');

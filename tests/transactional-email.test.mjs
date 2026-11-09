@@ -40,9 +40,9 @@ test('Supabase templates retain executable provider placeholders and have no inj
 });
 test('the development mailbox captures multipart HTML and plain text without sending',async()=>{
  const cwd=process.cwd(),dir=mkdtempSync(join(tmpdir(),'mygrowise-email-'));
- try{process.chdir(dir);await captureEmail('test@example.invalid','Testmail','Leesbare tekst','info@mygrowise.be','<synthetic@example.invalid>',renderTextEmail('Testmail','Leesbare tekst'));
+ try{process.chdir(dir);await captureEmail('test@example.invalid','Testmail','Leesbare tekst','info@mygrowise.be','<synthetic@example.invalid>',renderTextEmail('Testmail','Leesbare tekst'),[{filename:'Voorwaarden.txt',content:'Bewaarde voorwaarden',contentType:'text/plain; charset=utf-8'}]);
  const record=JSON.parse(readFileSync(join(dir,'output/mail-test/messages.jsonl'),'utf8').trim());
- assert.match(record.mime,/multipart\/alternative/);assert.match(record.mime,/Content-Type: text\/plain/);assert.match(record.mime,/Content-Type: text\/html/);assert.match(record.mime,/Leesbare tekst/);
+ assert.match(record.mime,/multipart\/mixed/);assert.match(record.mime,/Content-Disposition: attachment; filename=Voorwaarden.txt/);assert.ok(record.mime.includes(Buffer.from('Bewaarde voorwaarden').toString('base64')));assert.match(record.mime,/multipart\/alternative/);assert.match(record.mime,/Content-Type: text\/plain/);assert.match(record.mime,/Content-Type: text\/html/);assert.match(record.mime,/Leesbare tekst/);
  }finally{process.chdir(cwd);rmSync(dir,{recursive:true,force:true});}
 });
 test('the production sender sends both alternatives and always closes its connection',async()=>{
@@ -51,6 +51,7 @@ test('the production sender sends both alternatives and always closes its connec
  const source=readFileSync(new URL('../src/lib/commerce/websiteMail.ts',import.meta.url),'utf8').replaceAll('import.meta.env','__env');
  const code=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;
  const exports={};vm.runInNewContext(code,{exports,require:name=>{assert.ok(deps[name],name);return deps[name];},__env:{PROD:true,SUPPORT_FROM_EMAIL:'info@mygrowise.be'},Error});
- await exports.sendWebsiteEmail('test@example.invalid','Onderwerp','Volledige tekst');assert.equal(message.text,'Volledige tekst');assert.ok(message.html.includes('<html lang="nl">'));assert.equal(closed,1);
+ const attachments=[{filename:'Voorwaarden.txt',content:'Bewaarde voorwaarden',contentType:'text/plain; charset=utf-8'}];
+ await exports.sendWebsiteEmail('test@example.invalid','Onderwerp','Volledige tekst',undefined,undefined,undefined,attachments);assert.equal(message.attachments,attachments);assert.equal(message.text,'Volledige tekst');assert.ok(message.html.includes('<html lang="nl">'));assert.equal(closed,1);
  fail=true;await assert.rejects(exports.sendWebsiteEmail('test@example.invalid','Onderwerp','Tekst'),/SMTP offline/);assert.equal(closed,2);
 });
