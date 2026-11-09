@@ -21,8 +21,10 @@ const controls=[
  <main class="reader" data-reader data-preview={preview?'yes':'no'} data-pages={JSON.stringify(pages)} aria-label={preview?'Interactieve inkijk':'Interactieve boekeditie'}>
   <header class="reader-top">
    <a href={back} class="reader-back" aria-label={preview?'Terug naar de boekpagina':'Terug naar mijn boek'}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m14 6-6 6 6 6"/></svg></a>
-   <div class="reader-name"><span>{preview?'Een inkijk in de digitale editie':'De interactieve boekeditie'}</span><strong>Jij, Fien en een toverkist vol superkrachten</strong></div>
+   <div class="reader-tools">
+   <button type="button" data-fullscreen aria-label="Volledig scherm" aria-pressed="false" title="Volledig scherm" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path class="expand" d="M9 4H4v5m11-5h5v5M4 15v5h5m11-5v5h-5"/><path class="collapse" d="M4 9h5V4m11 5h-5V4M4 15h5v5m11-5h-5v5"/></svg></button>
    <button type="button" data-open-menu class="reader-menu" aria-label="Leesopties" aria-haspopup="dialog"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
+   </div>
   </header>
   <div class="reader-main">
    <div class="reader-stage" data-stage tabindex="0" aria-label="Boekpagina. Gebruik de pijltjestoetsen om te bladeren.">
@@ -30,10 +32,12 @@ const controls=[
      <img class="reader-page" data-page src={pages[0]} alt="De originele geïllustreerde omslag van het boek" crossorigin="anonymous" fetchpriority="high" draggable="false" width="2048" height="1448"/>
      <div class="reader-shadow" data-shadow aria-hidden="true"></div>
      <canvas data-paper aria-hidden="true" hidden></canvas>
-     <button type="button" class="reader-hotspot" data-hotspot aria-label="Ontdek dit moment" hidden><span aria-hidden="true"></span></button>
+     <canvas data-effects width="1200" height="849" aria-hidden="true"></canvas>
+     <button type="button" class="reader-hotspot" data-hotspot hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2c0 6-4 10-10 10 6 0 10 4 10 10 0-6 4-10 10-10-6 0-10-4-10-10Z"/></svg><span class="reader-spot-label" aria-hidden="true"></span></button>
     </div>
    </div>
-   <div class="reader-hint" data-hint><span aria-hidden="true">⟷</span> Veeg om te bladeren</div>
+   <div class="reader-hint" data-hint>Veeg om te bladeren</div>
+   <p class="reader-whisper" data-whisper hidden></p>
    <div class="reader-error" data-error hidden><p>Deze pagina kon niet worden geopend.</p><button type="button" data-retry>Probeer opnieuw</button> <a href={back}>Terug naar het boek</a></div>
   </div>
   <nav class="reader-bottom" aria-label="Bladeren">
@@ -47,14 +51,8 @@ const controls=[
    <h2 id="reader-menu-title">Waar waren we?</h2>
    <div class="reader-chapters">{(preview?[['cover','Omslag',1],['start','Ontmoet Fien',2],['chest','Op avontuur',3]]:controls).map(([,label,page])=><button type="button" data-go={page}><span>{label}</span><small>{page}</small></button>)}</div>
    <form class="reader-jump" data-jump><label for="reader-page-number">Naar pagina</label><input id="reader-page-number" name="page" type="number" min="1" max={pages.length} required/><button>Ga</button></form>
-   <div class="reader-settings"><button type="button" data-zoom aria-pressed="false">Vergroot de pagina</button><button type="button" data-motion aria-pressed="false">Rustig bladeren</button></div>
-   <p>Je kunt ook de pijltjes op je toetsenbord gebruiken.</p>
-  </dialog>
-  <dialog class="reader-dialog reader-moment" data-moment aria-labelledby="reader-moment-title">
-   <form method="dialog"><button aria-label="Sluiten" class="reader-close"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg></button></form>
-   <div class="reader-spark" data-spark aria-hidden="true">✦</div>
-   <h2 id="reader-moment-title" data-moment-title></h2><p data-moment-text></p>
-   <form method="dialog"><button class="reader-continue">Lees verder</button></form>
+   <div class="reader-settings"><button type="button" data-zoom aria-pressed="false">Vul het scherm</button><button type="button" data-motion aria-pressed="false">Rustig bladeren</button></div>
+   <p>Veeg om te bladeren of gebruik de pijltjes. Met schermvulling kun je de illustratie verschuiven en met de knoppen bladeren.</p>
   </dialog>
   <noscript><p class="reader-noscript">Zet JavaScript aan om interactief te bladeren, of <a href={back}>ga terug naar het boek</a>.</p></noscript>
  </main>
@@ -70,38 +68,44 @@ const controls=[
  *{box-sizing:border-box}
  body{margin:0}
  [hidden]{display:none!important}
- .reader{height:100vh;height:100dvh;min-height:280px;overflow:hidden;isolation:isolate;display:grid;grid-template-rows:auto minmax(0,1fr) auto;background:radial-gradient(ellipse at 50% 42%,#375143 0%,#243d32 50%,#152b25 82%);padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}
+ .reader{height:100vh;height:100dvh;overflow:hidden;isolation:isolate;position:relative;background:radial-gradient(ellipse at center,#293e34,#142620 80%)}
+ .reader:fullscreen{width:100%;height:100%}
  .reader button,.reader a{color:inherit;touch-action:manipulation}
  .reader button{cursor:pointer;font:inherit;border:0;background:none}
- .reader button:focus-visible,.reader a:focus-visible,.reader-stage:focus-visible{outline:2px solid #ffd990;outline-offset:4px}
- .reader-top,.reader-bottom{display:flex;justify-content:center;align-items:center;gap:clamp(.5rem,2vw,1.6rem);padding:.45rem clamp(.7rem,2.4vw,2rem);z-index:2}
- .reader-top{justify-content:space-between}
- .reader-top button,.reader-back,.reader-bottom button{min-width:44px;min-height:44px;display:inline-grid;place-items:center;border-radius:50%;text-decoration:none}
+ .reader button:focus-visible,.reader a:focus-visible,.reader-stage:focus-visible{outline:2px solid #ffd990;outline-offset:-3px}
+ .reader-top,.reader-bottom,.reader-tools{display:flex;align-items:center;gap:6px}
+ .reader-top,.reader-bottom{position:absolute;z-index:2;transition:opacity .22s}
+ .reader-top{justify-content:space-between;top:max(10px,env(safe-area-inset-top));left:max(10px,env(safe-area-inset-left));right:max(10px,env(safe-area-inset-right));pointer-events:none}
+ .reader-top button,.reader-back,.reader-bottom button{width:44px;height:44px;display:inline-grid;place-items:center;border-radius:50%;text-decoration:none}
+ .reader-top button,.reader-back,.reader-bottom{background:#132920ed;color:#fff4de;box-shadow:0 3px 14px #09191150}
+ .reader-top button,.reader-back{pointer-events:auto}
  .reader svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
- .reader-top button:hover,.reader-back:hover,.reader-bottom button:hover{background:#fff4de18}
- .reader-name{text-align:center;min-width:0}
- .reader-name span{display:block;color:#ddd5ba;font-size:.68rem;letter-spacing:.07em}
- .reader-name strong{display:block;font:normal clamp(.9rem,2.1vw,1.18rem) Georgia,serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:.18rem}
- .reader-main{display:grid;grid-template-columns:minmax(0,1fr);place-items:center;min-height:0;position:relative;overflow:hidden;padding:clamp(.4rem,1.5vw,1.25rem);container-type:size}
- .reader-stage{position:relative;width:min(96vw, calc(68vh * 1.414));width:min(96cqw, calc(95cqh * 1.414));aspect-ratio:1.414;max-width:100%;isolation:isolate;touch-action:none;user-select:none;-webkit-user-select:none;cursor:grab}
+ .reader-top button:hover,.reader-back:hover,.reader-bottom button:hover{background:#355044}
+ [data-fullscreen][aria-pressed='false'] .collapse,[data-fullscreen][aria-pressed='true'] .expand{display:none}
+ .reader-main{display:grid;place-items:center;position:absolute;inset:0;overflow:hidden;container-type:size}
+ .reader-stage{position:relative;width:min(100vw,calc(100dvh * 2048 / 1448));width:min(100cqw,calc(100cqh * 2048 / 1448));aspect-ratio:2048 / 1448;isolation:isolate;touch-action:none;user-select:none;-webkit-user-select:none;cursor:grab}
  .reader-stage:active{cursor:grabbing}
- .reader-book{position:absolute;inset:0;background:#fff7e6;box-shadow:0 12px 48px #0c211bc7,0 2px 6px #101b1688;border-radius:2px;overflow:hidden;transform-origin:center;will-change:transform}
- .reader-page,.reader-book canvas,.reader-shadow{position:absolute;width:100%;height:100%;inset:0;display:block}
- .reader-page{object-fit:contain;pointer-events:none}
- .reader-book canvas,.reader-shadow{pointer-events:none}
+ .reader-book{position:absolute;inset:0;background:#fff7e6;box-shadow:0 8px 36px #0c211b80;overflow:hidden;transform-origin:center}
+ .reader-page,.reader-book canvas,.reader-shadow{position:absolute;width:100%;height:100%;inset:0;display:block;pointer-events:none}
+ .reader-page{object-fit:contain}
  .reader-shadow{opacity:0}
- .reader-hint{position:absolute;bottom:4%;left:50%;transform:translateX(-50%);pointer-events:none;display:flex;align-items:center;gap:.5rem;white-space:nowrap;background:#152b25ed;color:#fff4de;border:1px solid #fff4de30;border-radius:2rem;padding:.65rem 1rem;font-size:.82rem;box-shadow:0 4px 22px #152b2590}
- .reader-hint span{font-size:1.1rem}
- .reader-bottom{font-variant-numeric:tabular-nums}
- .reader-bottom button:disabled{opacity:.35;cursor:default}
- .reader-bottom .reader-count{display:block;min-width:78px;border-radius:1.5rem;font-size:.82rem}
- .reader-count span{opacity:.65;margin-inline:.25rem}
- .reader-top,.reader-bottom{transition:opacity .22s}
- .reader[data-quiet='yes'] .reader-top,.reader[data-quiet='yes'] .reader-bottom{opacity:0;pointer-events:none}
- .reader[data-quiet='yes'] .reader-top:has(:focus-visible),.reader[data-quiet='yes'] .reader-bottom:has(:focus-visible){opacity:1;pointer-events:auto}
- .reader-hotspot{position:absolute;left:var(--spot-x);top:var(--spot-y);transform:translate(-50%,-50%);width:46px;height:46px;display:grid;place-items:center;border-radius:50%;touch-action:manipulation}
- .reader-hotspot span{width:22px;height:22px;border-radius:50%;background:#fff0bc;box-shadow:0 0 0 4px #27251fc2,0 0 18px 5px #ffcf7d85}
- .reader-hotspot span::before{content:'✦';color:#382a17;display:block;font-size:16px;line-height:22px}
+ .reader-hint,.reader-whisper{position:absolute;left:50%;transform:translateX(-50%);pointer-events:none;background:#132920f5;color:#fff4de;border-radius:2rem;padding:.65rem 1rem;font-size:.85rem;box-shadow:0 4px 14px #10251a45;margin:0;text-align:center}
+ .reader-hint{bottom:calc(max(12px,env(safe-area-inset-bottom)) + 56px);white-space:nowrap}
+ .reader-whisper{top:calc(max(10px,env(safe-area-inset-top)) + 50px);width:max-content;max-width:calc(100% - 24px);font-family:Georgia,serif;font-size:clamp(.9rem,2vw,1.15rem)}
+ .reader-bottom{left:50%;bottom:max(10px,env(safe-area-inset-bottom));transform:translateX(-50%);border-radius:2rem;padding:2px;gap:2px;font-variant-numeric:tabular-nums}
+ .reader-bottom button:disabled{opacity:.4;cursor:default}
+ .reader-bottom .reader-count{display:block;width:auto;min-width:58px;border-radius:1.5rem;font-size:.8rem}
+ .reader-count span{opacity:.7;margin-inline:.2rem}
+ .reader[data-quiet='yes'] :is(.reader-top,.reader-bottom):not(:has(:focus-visible)){opacity:0;pointer-events:none}
+ .reader[data-quiet='yes'] .reader-top:not(:has(:focus-visible)) :is(button,a){pointer-events:none}
+ .reader .reader-hotspot{position:absolute;left:var(--spot-x);top:var(--spot-y);transform:translate(-50%,-50%);width:max(48px, var(--spot-size));aspect-ratio:1;display:grid;place-items:center;border-radius:50%;touch-action:none;color:#fff1bb;cursor:pointer;-webkit-tap-highlight-color:transparent}
+ .reader-hotspot[data-kind='balloon']{cursor:grab}
+ .reader-hotspot[data-kind='balloon']:active{cursor:grabbing}
+ .reader-hotspot svg{width:19px;height:19px;fill:#fff1bb;stroke:#514329;stroke-width:1;filter:drop-shadow(0 0 6px #ffe1a2);transition:opacity .18s}
+ .reader-hotspot[data-playing] svg{opacity:0}
+ .reader-spot-label{position:absolute;top:calc(50% + 15px);left:50%;transform:translateX(-50%);white-space:nowrap;padding:.35rem .55rem;background:#132920f5;border-radius:1rem;color:#fff4de;font-size:.75rem;pointer-events:none}
+ .reader-hotspot[data-seen] .reader-spot-label{opacity:0}
+ .reader-hotspot:not([data-playing]):is(:hover,:focus-visible) .reader-spot-label{opacity:1}
  .reader-dialog{background:#fff7e8;color:#273d32;border:1px solid #dbcdb5;border-radius:15px;padding:clamp(1.3rem,5vw,2rem);width:min(420px,calc(100vw - 24px));max-height:85dvh;box-shadow:0 18px 72px #101d17aa}
  .reader-dialog::backdrop{background:#0e1e19b8}
  .reader-dialog h2{margin:0 2rem 1rem 0;font:normal clamp(1.7rem,5vw,2.4rem)/1.12 Georgia,serif}
@@ -112,22 +116,8 @@ const controls=[
  .reader-chapters small{color:#5e6a5e}
  .reader-jump{display:flex;align-items:center;gap:.6rem;margin:1rem 0}
  .reader-jump input{width:65px;padding:.55rem;color:#263d31;background:#fffdf6;border:1px solid #a7aa92;border-radius:5px;font:inherit}
- .reader .reader-jump button,.reader .reader-continue,.reader .reader-error button{padding:.65rem 1rem;min-height:44px;border-radius:6px;background:#284538;color:#fff7e8}
- .reader-moment{text-align:center}
- .reader-moment h2{margin-right:0}
- .reader-spark{font:2.7rem Georgia,serif;color:#934e37;margin-bottom:.65rem}
- .reader-moment[open] .reader-spark{animation:fien-appear .6s both}
- .reader-moment[data-effect='chest'][open] .reader-spark{animation:fien-glow .9s both}
- .reader-moment[data-effect='heart'][open] .reader-spark{animation:fien-heart .7s both;color:#aa5361}
- .reader-moment[data-effect='balloon'][open] .reader-spark{animation:fien-float .8s both;color:#935a32}
- @keyframes fien-glow{0%{opacity:.2;transform:scale(.6);text-shadow:0 0 30px #e9a944}60%{opacity:1;transform:scale(1.12);text-shadow:0 0 22px #e9a944}100%{transform:scale(1);text-shadow:none}}
- @keyframes fien-heart{0%{transform:scale(.7);opacity:0}45%{transform:scale(1.12);opacity:1}100%{transform:scale(1)}}
- @keyframes fien-float{0%{transform:translateY(12px);opacity:0}100%{transform:translateY(0);opacity:1}}
-
- @keyframes fien-appear{from{opacity:0;transform:scale(.7)}to{opacity:1;transform:scale(1)}}
+ .reader .reader-jump button,.reader .reader-error button{padding:.65rem 1rem;min-height:44px;border-radius:6px;background:#284538;color:#fff7e8}
  .reader-error,.reader-noscript{position:absolute;z-index:3;background:#fff7e8;color:#263d31;padding:1.1rem;border-radius:8px;max-width:85%;text-align:center}
  .reader-sr{position:absolute;clip-path:inset(50%);width:1px;height:1px;overflow:hidden;white-space:nowrap}
- @media(max-height:440px){.reader-top,.reader-bottom{padding-block:0}.reader-name span{display:none}.reader-top button,.reader-back,.reader-bottom button{min-height:36px}}
- @media(prefers-reduced-motion:reduce){.reader-top,.reader-bottom{transition:none}.reader-moment[data-effect][open] .reader-spark{animation:none}}
- .reader[data-calm='yes'] .reader-spark{animation:none}
+ @media(prefers-reduced-motion:reduce){.reader-top,.reader-bottom,.reader-hotspot svg{transition:none}}
 </style>

@@ -1,10 +1,6 @@
 import {makePaper} from './paper';
 
-const moments:Record<number,{x:number;y:number;title:string;text:string;symbol:string}>={
-  10:{x:34,y:71,title:'De toverkist',text:'Stel je voor dat je deze kist mag vullen. Welke kleine superkracht zou jij vandaag meenemen?',symbol:'✦'},
-  21:{x:48,y:60,title:'Een hartje voor jezelf',text:'Denk aan iemand bij wie je jezelf mag zijn. Welke lieve woorden zou die persoon jou vandaag zeggen?',symbol:'♥'},
-  25:{x:55,y:14,title:'Een gedachte op reis',text:'Stel je voor dat een piekergedachte even op deze ballon mag meereizen. Hoe ziet jouw ballon eruit?',symbol:'○'},
-};
+import {moments,paintIllustration,type Moment} from './illustration';
 
 const clamp=(n:number,min:number,max:number)=>Math.max(min,Math.min(max,n));
 
@@ -16,7 +12,10 @@ export function startBookReader(root:HTMLElement){
   let page=get<HTMLImageElement>('[data-page]');
   const canvas=get<HTMLCanvasElement>('[data-paper]');
   const shadow=get('[data-shadow]'),hint=get('[data-hint]'),error=get('[data-error]'),status=get('[data-status]');
-  const menu=get<HTMLDialogElement>('[data-menu]'),moment=get<HTMLDialogElement>('[data-moment]');
+  const menu=get<HTMLDialogElement>('[data-menu]');
+  const main=get('.reader-main'),whisper=get('[data-whisper]');
+  const fullscreenButton=get<HTMLButtonElement>('[data-fullscreen]');
+  const effects=get<HTMLCanvasElement>('[data-effects]');
   const hotspot=get<HTMLButtonElement>('[data-hotspot]');
   const next=get<HTMLButtonElement>('[data-next]'),prev=get<HTMLButtonElement>('[data-prev]');
   const pageNumber=get<HTMLInputElement>('#reader-page-number');
@@ -26,7 +25,11 @@ export function startBookReader(root:HTMLElement){
   const cached=new Map<number,Promise<HTMLImageElement>>();
   const ready=new Map<number,HTMLImageElement>();
   let index=0, frame=0, chromeTimer=0, hintTimer=0, navigation=0;
-  let calm=false, scale=1, panX=0, panY=0;
+  let calm=false, fill=false, scale=1, panX=0, panY=0;
+  let effectFrame=0, effectTimer=0;
+  let scene:{moment:Moment; start:number; released:number; x:number; y:number; vx:number; vy:number}|null=null;
+  let grip:{id:number; x:number; y:number; t:number; moved:boolean}|null=null;
+  const seen=new Set<Moment>();
   let hasInteracted=false;
   let renderer:ReturnType<typeof makePaper>|undefined;
   let turn:{target:number; side:number; grip:number; value:number; image:HTMLImageElement; previous:HTMLImageElement; gpu:boolean}|null=null;
@@ -44,13 +47,13 @@ export function startBookReader(root:HTMLElement){
     calmButton.setAttribute('aria-pressed',String(quiet));
   }
   applyCalm();
-  media.addEventListener('change',()=>{applyCalm();if(media.matches&&turn)complete(false);});
+  media.addEventListener('change',()=>{applyCalm();if(media.matches){if(turn)complete(false);clearEffect();}});
 
   function showControls(autohide=true){
     root.dataset.quiet='no';
     clearTimeout(chromeTimer);
     if(autohide&&hasInteracted)chromeTimer=window.setTimeout(()=>{
-      if(!menu.open&&!moment.open&&!pointer)root.dataset.quiet='yes';
+      if(!menu.open&&!pointer)root.dataset.quiet='yes';
     },2800);
   }
   function interact(){
@@ -82,7 +85,7 @@ export function startBookReader(root:HTMLElement){
     image.draggable=false;
     if(image!==page){page.replaceWith(image);page=image;}
   }
-  function getMoment(){return moments[preview&&index===2?10:index+1];}
+  function getMoment():Moment|undefined{return (moments as Partial<Record<number,Moment>>)[preview?[1,5,10][index]:index+1];}
   function update(){
     get('[data-count]').replaceChildren(String(index+1),Object.assign(document.createElement('span'),{textContent:'/'}),String(urls.length));
     prev.disabled=index===0;
@@ -90,11 +93,16 @@ export function startBookReader(root:HTMLElement){
     pageNumber.value=String(index+1);
     status.textContent=`Pagina ${index+1} van ${urls.length}`;
     const spot=getMoment();
+    clearEffect();
     hotspot.hidden=!spot;
     if(spot){
-      hotspot.style.setProperty('--spot-x',spot.x+'%');
-      hotspot.style.setProperty('--spot-y',spot.y+'%');
-      hotspot.setAttribute('aria-label',`Ontdek ${spot.title.toLowerCase()}`);
+      hotspot.style.setProperty('--spot-x',spot.x*100+'%');
+      hotspot.style.setProperty('--spot-y',spot.y*100+'%');
+      hotspot.style.setProperty('--spot-size',spot.size);
+      hotspot.setAttribute('aria-label',spot.label);
+      hotspot.querySelector('span')!.textContent=spot.label;
+      hotspot.dataset.kind=spot.kind;
+      hotspot.toggleAttribute('data-seen',seen.has(spot));
     }
     if(!preview)prefs(storageKey+'-page',String(index));
     for(const neighbor of [index-1,index+1]){
@@ -105,14 +113,76 @@ export function startBookReader(root:HTMLElement){
     }
   }
 
+  const fillScale=()=>Math.max(1,main.clientWidth/stage.clientWidth,main.clientHeight/stage.clientHeight);
+  const canPan=()=>scale>1.005;
   function transform(){
-    const limitX=stage.clientWidth*(scale-1)/2,limitY=stage.clientHeight*(scale-1)/2;
-    panX=clamp(panX,-limitX,limitX);panY=clamp(panY,-limitY,limitY);
+    const cropX=Math.max(0,(stage.clientWidth*scale-main.clientWidth)/2);
+    const cropY=Math.max(0,(stage.clientHeight*scale-main.clientHeight)/2);
+    panX=clamp(panX,-cropX,cropX);panY=clamp(panY,-cropY,cropY);
     book.style.transform=scale===1?'':`translate(${panX}px,${panY}px) scale(${scale})`;
-    zoomButton.setAttribute('aria-pressed',String(scale>1));
-    zoomButton.textContent=scale>1?'Terug naar normale grootte':'Vergroot de pagina';
+    zoomButton.setAttribute('aria-pressed',String(fill));
+    zoomButton.textContent=fill?'Toon de hele pagina':'Vul het scherm';
   }
-  function resetZoom(){scale=1;panX=panY=0;transform();}
+  function resetZoom(){scale=fill?fillScale():1;panX=panY=0;transform();}
+
+  function clearEffect(){
+    clearTimeout(effectTimer);
+    cancelAnimationFrame(effectFrame);
+    if(grip&&hotspot.hasPointerCapture(grip.id))hotspot.releasePointerCapture(grip.id);
+    grip=null;
+    scene=null;
+    effects.getContext('2d')?.clearRect(0,0,effects.width,effects.height);
+    hotspot.removeAttribute('data-playing');
+    whisper.hidden=true;
+  }
+
+  function startEffect(moment:Moment, held:boolean){
+    clearEffect();
+    clearTimeout(chromeTimer);
+    hint.hidden=true;
+    hasInteracted=true;
+    root.dataset.quiet='yes';
+    seen.add(moment);
+    hotspot.setAttribute('data-seen','');
+    hotspot.setAttribute('data-playing','');
+    whisper.textContent=moment.text;
+    whisper.hidden=false;
+    status.textContent=moment.text;
+    const start=performance.now();
+    const state={moment,start,released:held?0:start,x:0,y:0,vx:0,vy:0};
+    scene=state;
+    if(root.dataset.calm==='yes'){
+      paintIllustration(effects,moment,.66,.85,0,0);
+      effectTimer=window.setTimeout(clearEffect,3800);
+      return;
+    }
+
+    let last=start;
+    function animate(now:number){
+      const elapsed=(now-start)/1000,dt=clamp((now-last)/1000,.001,.032);
+      last=now;
+      const free=state.released?(now-state.released)/1000:0;
+      let progress=1-Math.pow(1-Math.min(elapsed/1.9,1),2);
+      let fade=1-Math.max(0,free-1.35)/1.3;
+      if(moment.kind==='heart'){
+        progress=.5-.5*Math.cos(elapsed*Math.PI/2.5);
+        fade=Math.min(1,.4+elapsed*3)*Math.max(0,1-(held?free:Math.max(0,free-3))/.65);
+      }
+      if(moment.kind==='balloon'&&state.released){
+        if(!held){state.y=-180*(1-Math.exp(-3*free));}
+        else{
+          state.vx+=(-180*state.x-19*state.vx)*dt;
+          state.vy+=(-180*state.y-19*state.vy)*dt;
+          state.x+=state.vx*dt;
+          state.y+=state.vy*dt;
+        }
+      }
+      if(fade<=0){clearEffect();return;}
+      paintIllustration(effects,moment,progress,fade,state.x,state.y);
+      effectFrame=requestAnimationFrame(animate);
+    }
+    effectFrame=requestAnimationFrame(animate);
+  }
 
   function draw(value:number){
     if(!turn)return;
@@ -139,6 +209,7 @@ export function startBookReader(root:HTMLElement){
     renderPage(image,target);
     if(gpu)canvas.hidden=false;
     else if(root.dataset.calm!=='yes'){page.after(previous);}
+    clearEffect();
     hotspot.hidden=true;
     draw(0);
     return true;
@@ -214,8 +285,12 @@ export function startBookReader(root:HTMLElement){
     touches.set(event.pointerId,{x:event.clientX,y:event.clientY});
     if(pinch&&touches.size===2){
       const [a,b]=[...touches.values()];
-      scale=clamp(pinch.scale*Math.hypot(a.x-b.x,a.y-b.y)/pinch.distance,1,3.5);
-      panX=pinch.panX+(a.x+b.x)/2-pinch.x;panY=pinch.panY+(a.y+b.y)/2-pinch.y;
+      scale=clamp(pinch.scale*Math.hypot(a.x-b.x,a.y-b.y)/pinch.distance,fill?fillScale():1,Math.max(3.5,fillScale()));
+      const bounds=stage.getBoundingClientRect();
+      const centerX=bounds.left+bounds.width/2,centerY=bounds.top+bounds.height/2;
+      const ratio=scale/pinch.scale;
+      panX=(a.x+b.x)/2-centerX-(pinch.x-centerX-pinch.panX)*ratio;
+      panY=(a.y+b.y)/2-centerY-(pinch.y-centerY-pinch.panY)*ratio;
       transform();return;
     }
     if(!pointer||pointer.id!==event.pointerId)return;
@@ -224,7 +299,7 @@ export function startBookReader(root:HTMLElement){
     pointer.velocity=.35*pointer.velocity+.65*((event.clientX-pointer.lastX)/dt);
     pointer.lastX=event.clientX;pointer.lastTime=event.timeStamp;
     if(Math.abs(dx)>8||Math.abs(dy)>8)pointer.dragged=true;
-    if(scale>1){panX+=event.clientX-previous.x;panY+=event.clientY-previous.y;transform();return;}
+    if(canPan()){panX+=event.clientX-previous.x;panY+=event.clientY-previous.y;transform();return;}
     if(!turn&&Math.abs(dx)>8&&Math.abs(dx)>Math.abs(dy)){
       const rect=stage.getBoundingClientRect();
       begin(index-Math.sign(dx),clamp((pointer.y-rect.top)/rect.height,0,1));
@@ -241,7 +316,8 @@ export function startBookReader(root:HTMLElement){
       settle(!cancelled&&(turn.value+speed*.12>.39),clamp(speed,-5,5));
       return;
     }
-    if(cancelled||scale>1)return;
+    if(cancelled)return;
+    if(canPan()){if(!released.dragged)showControls();return;}
     const dx=event.clientX-released.x,dy=event.clientY-released.y;
     if(Math.abs(dx)>35&&Math.abs(dx)>Math.abs(dy)){advance(-Math.sign(dx));return;}
     if(released.dragged)return;
@@ -254,10 +330,34 @@ export function startBookReader(root:HTMLElement){
   stage.addEventListener('pointerup',event=>release(event));
   stage.addEventListener('pointercancel',event=>release(event,true));
   stage.addEventListener('lostpointercapture',event=>{if(touches.has(event.pointerId))release(event,true);});
+  main.addEventListener('pointerup',event=>{if(event.target===main)interact();});
   canvas.addEventListener('webglcontextlost',event=>{event.preventDefault();complete(false);renderer=null;});
-  window.addEventListener('resize',()=>{transform();if(turn)draw(turn.value);});
+  window.addEventListener('resize',()=>{if(fill)resetZoom();else transform();if(turn)draw(turn.value);});
+  fullscreenButton.hidden=!document.fullscreenEnabled;
+  document.addEventListener('fullscreenchange',()=>{
+    const active=document.fullscreenElement===root;
+    fullscreenButton.setAttribute('aria-pressed',String(active));
+    const label=active?'Verlaat volledig scherm':'Volledig scherm';
+    fullscreenButton.setAttribute('aria-label',label);
+    fullscreenButton.title=label;
+    showControls();
+  });
+  async function toggleFullscreen(){
+    if(fullscreenButton.hidden)return;
+    try{
+      if(document.fullscreenElement===root)await document.exitFullscreen();
+      else await root.requestFullscreen();
+    }catch{
+      whisper.textContent='Je browser kon volledig scherm niet openen.';
+      whisper.hidden=false;
+      clearTimeout(effectTimer);
+      effectTimer=window.setTimeout(()=>{whisper.hidden=true;},3800);
+    }
+  }
+  fullscreenButton.addEventListener('click',()=>void toggleFullscreen());
   window.addEventListener('keydown',event=>{
-    if(menu.open||moment.open||event.altKey||event.metaKey||event.ctrlKey||/INPUT|TEXTAREA/.test((event.target as HTMLElement)?.tagName||''))return;
+    if(menu.open||event.altKey||event.metaKey||event.ctrlKey||/INPUT|TEXTAREA/.test((event.target as HTMLElement)?.tagName||''))return;
+    if(event.key.toLowerCase()==='f'){void toggleFullscreen();return;}
     if(['ArrowLeft','ArrowRight','PageUp','PageDown','Home','End'].includes(event.key)){
       event.preventDefault();
       if(event.key==='Home')void go(0,false);
@@ -272,22 +372,44 @@ export function startBookReader(root:HTMLElement){
   next.addEventListener('click',()=>advance(1));
   root.querySelectorAll<HTMLButtonElement>('[data-go]').forEach(button=>button.addEventListener('click',()=>{menu.close();void go(Number(button.dataset.go)-1,false);}));
   get<HTMLFormElement>('[data-jump]').addEventListener('submit',event=>{event.preventDefault();menu.close();void go(Number(pageNumber.value)-1,false);});
-  zoomButton.addEventListener('click',()=>{menu.close();if(scale>1)resetZoom();else{scale=2;transform();}showControls();});
+  zoomButton.addEventListener('click',()=>{menu.close();fill=!fill;resetZoom();showControls();});
   calmButton.addEventListener('click',()=>{calm=!calm;prefs(storageKey+'-calm',calm?'yes':'no');applyCalm();});
   get('[data-retry]').addEventListener('click',()=>{
     const target=Number(error.dataset.retry);
     if(target===index)location.reload();else void go(target,false);
   });
-  hotspot.addEventListener('click',()=>{
-    const spot=getMoment();if(!spot)return;
-    interact();
-    moment.dataset.effect=spot.symbol==='♥'?'heart':spot.symbol==='○'?'balloon':'chest';
-    get('[data-moment-title]').textContent=spot.title;
-    get('[data-moment-text]').textContent=spot.text;
-    get('[data-spark]').textContent=spot.symbol;
-    moment.showModal();
+  hotspot.addEventListener('pointerdown',event=>{
+    const moment=getMoment();
+    if(event.button!==0||grip||!moment||root.dataset.calm==='yes'||(moment.kind!=='heart'&&moment.kind!=='balloon'))return;
+    startEffect(moment,true);
+    hotspot.setPointerCapture(event.pointerId);
+    grip={id:event.pointerId,x:event.clientX,y:event.clientY,t:event.timeStamp,moved:false};
   });
-  for(const panel of [menu,moment])panel.addEventListener('close',()=>showControls());
+  hotspot.addEventListener('pointermove',event=>{
+    if(grip?.id!==event.pointerId||scene?.moment.kind!=='balloon')return;
+    const bounds=book.getBoundingClientRect();
+    const x=clamp((event.clientX-grip.x)*effects.width/bounds.width,-390,390);
+    const y=clamp((event.clientY-grip.y)*effects.height/bounds.height,-45,440);
+    if(!grip.moved&&Math.hypot(event.clientX-grip.x,event.clientY-grip.y)<4)return;
+    grip.moved=true;
+    const dt=Math.max(.012,(event.timeStamp-grip.t)/1000);
+    scene.vx=clamp((x-scene.x)/dt,-1700,1700);
+    scene.vy=clamp((y-scene.y)/dt,-1700,1700);
+    scene.x=x;scene.y=y;grip.t=event.timeStamp;
+  });
+  function releaseEffect(event:PointerEvent){
+    if(grip?.id!==event.pointerId||!scene)return;
+    if(scene.moment.kind==='balloon'&&!grip.moved&&event.type==='pointerup'){startEffect(scene.moment,false);return;}
+    if(event.timeStamp-grip.t>85){scene.vx=0;scene.vy=0;}
+    scene.released=performance.now();
+    grip=null;
+  }
+  for(const name of ['pointerup','pointercancel','lostpointercapture'] as const)hotspot.addEventListener(name,releaseEffect);
+  hotspot.addEventListener('click',event=>{
+    const moment=getMoment();
+    if(moment&&(event.detail===0||root.dataset.calm==='yes'||(moment.kind!=='heart'&&moment.kind!=='balloon')))startEffect(moment,false);
+  });
+  menu.addEventListener('close',()=>showControls());
 
   const saved=preview?0:Number(prefs(storageKey+'-page')||0);
   if(Number.isInteger(saved)&&saved>0&&saved<urls.length){

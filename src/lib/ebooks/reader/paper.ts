@@ -9,14 +9,14 @@ varying float folded;
 void main() {
   ink = paper;
   float x = direction > 0.0 ? paper.x : 1.0 - paper.x;
-  float r = 0.085 + 0.042 * sin(progress * 3.14159);
-  float bias = (grip - 0.5) * 0.43 * sin(progress * 3.14159);
+  float r = 0.067 + 0.061 * sin(progress * 3.14159);
+  float bias = (0.5 - grip) * 0.51 * sin(progress * 3.14159);
   float fold = mix(1.005, -0.34, progress) + (paper.y - 0.5) * bias;
   float distanceFromFold = max(0.0, x - fold);
   float angle = min(3.14159, distanceFromFold / r);
   float height = r * (1.0 - cos(angle));
   if (x > fold) x = fold + r * sin(angle) - max(0.0, distanceFromFold - r * 3.14159);
-  float y = (paper.y - 0.5) * (1.0 + height * 0.07) + 0.5;
+  float y = paper.y + height * (0.55 * (grip - paper.y) + 0.15 * (grip - 0.5));
   if (direction < 0.0) x = 1.0 - x;
   gl_Position = vec4(x * 2.0 - 1.0, 1.0 - y * 2.0, -height * 1.5, 1.0);
   curvature = sin(angle);
@@ -32,7 +32,7 @@ void main() {
   vec3 printed = texture2D(page, ink).rgb;
   vec3 reverse = mix(vec3(0.985, 0.953, 0.881), printed, 0.12);
   vec3 color = mix(printed, reverse, folded);
-  float light = 1.0 - curvature * 0.22 + pow(curvature, 5.0) * 0.10;
+  float light = 1.0 - curvature * 0.29 + pow(curvature, 7.0) * 0.18;
   gl_FragColor = vec4(color * light, 1.0);
 }`;
 
