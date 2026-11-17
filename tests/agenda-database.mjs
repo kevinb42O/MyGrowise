@@ -106,6 +106,44 @@ export async function exerciseAgendaDatabase(query) {
     const covered = (await q('select * from public.get_offer_slots($1,4)', [offer])).rows;
     assert.ok(covered.length>0 && covered.every(candidate => +new Date(candidate.ends_at) <= +new Date(slot.ends_at)));
     await expectFailure(() => q("insert into public.bookings(practitioner_id,client_name,client_email,starts_at,ends_at,status) values($1,'Other synthetic client','other@example.invalid',$2,$3,'confirmed')",[owner,from,to]),'55000');
+
+    // Coverage follows the provider's documented window, including empty feeds.
+    // A distant appointment, or a generated recurrence, cannot move that window.
+    const applySnapshot = events => q('select practice_private.apply_mijndiad_snapshot($1,$2::jsonb)', [owner,JSON.stringify(events)]);
+    const future = {
+      id:randomUUID(),externalUid:'a'.repeat(64),title:'Synthetic coverage test',
+      startsAt:new Date(Date.now()+70*86400000).toISOString(),
+      endsAt:new Date(Date.now()+70*86400000+1800000).toISOString(),
+      status:'confirmed',kind:'block',location:'',color:'#687985',externalUrl:null,coverageEdge:false,
+    };
+    const distant = {...future,id:randomUUID(),externalUid:'b'.repeat(64),
+      startsAt:new Date(Date.now()+800*86400000).toISOString(),endsAt:new Date(Date.now()+800*86400000+1800000).toISOString()};
+    await applySnapshot([future,distant]);
+    const sync = (await q('select practice_private.mijndiad_sync_status($1) state',[owner])).rows[0].state;
+    assert.ok(Date.parse(sync.coverageUntil)>Date.now()+360*86400000);
+    assert.ok(Date.parse(sync.coverageUntil)<Date.now()+367*86400000);
+    assert.ok(Date.parse(sync.coverageFrom)<Date.now());
+    const coverageEnd=sync.coverageUntil;
+    await applySnapshot([]);
+    assert.equal((await q('select status from public.practice_calendar_events where id=$1',[future.id])).rows[0].status,'confirmed');
+    assert.equal((await q('select practice_private.mijndiad_sync_status($1) state',[owner])).rows[0].state.pendingMissing,1);
+    await applySnapshot([]);
+    assert.equal((await q('select status from public.practice_calendar_events where id=$1',[future.id])).rows[0].status,'cancelled');
+    assert.equal((await q('select status from public.practice_calendar_events where id=$1',[distant.id])).rows[0].status,'confirmed');
+    const emptySync=(await q('select practice_private.mijndiad_sync_status($1) state',[owner])).rows[0].state;
+    assert.equal(emptySync.coverageUntil,coverageEnd);
+    assert.equal(emptySync.eventCount,0);
+    assert.equal(emptySync.coverageUncertain,1);
+    // A historical missing record must not leave a permanent sync warning.
+    const historical={...future,id:randomUUID(),externalUid:'c'.repeat(64),
+      startsAt:new Date(Date.now()-7200000).toISOString(),endsAt:new Date(Date.now()-3600000).toISOString()};
+    await applySnapshot([historical]);
+    await q("select set_config('mygrowise.mijndiad_import','on',true)");
+    await q('update public.practice_calendar_events set external_missing_count=1 where id=$1',[historical.id]);
+    await q("select set_config('mygrowise.mijndiad_import','off',true)");
+    assert.equal((await q('select practice_private.mijndiad_sync_status($1) state',[owner])).rows[0].state.pendingMissing,0);
+    assert.equal((await q('select practice_private.mijndiad_covers($1,$2) covered',[owner,new Date(Date.now()+300*86400000)])).rows[0].covered,true);
+    assert.equal((await q('select practice_private.mijndiad_covers($1,$2) covered',[owner,new Date(Date.now()+400*86400000)])).rows[0].covered,false);
   } finally {
     await q('rollback');
   }
