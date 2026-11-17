@@ -24,7 +24,10 @@ export const GET: APIRoute = async ({ url, locals }) => {
     const to = url.searchParams.get('to');
     const practitioner = url.searchParams.get('practitioner') || undefined;
     if (!agendaRange(from, to) || (practitioner && !agendaUuid.test(practitioner))) return invalid();
-    const [events, practitioners] = await Promise.all([listAgendaEvents(from!, to!, practitioner), listAgendaPractitioners()]);
+    const [events, practitioners] = await Promise.all([
+      listAgendaEvents(from!, to!, practitioner, locals.adminUser?.practitionerId || undefined),
+      listAgendaPractitioners(),
+    ]);
     return json({ events, practitioners });
   } catch {
     return json({ error: 'Agenda kon niet worden geladen.' }, 502);

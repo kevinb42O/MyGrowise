@@ -6,6 +6,7 @@ import vm from 'node:vm';
 import ts from 'typescript';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { createElement } from 'react';
+import { createHash } from 'node:crypto';
 
 const require = createRequire(import.meta.url);
 const load = (path, dependencies) => {
@@ -79,6 +80,45 @@ test('admin agenda returns MyGrowise events and excludes Itransform', async () =
   const busy = events.find(event => event.id === 'anonymous');
   assert.equal(busy.title,'Niet beschikbaar');
   assert.doesNotMatch(JSON.stringify(busy),/geheim|Itransform/);
+});
+
+test('organization agenda preserves the authenticated owner’s private colours and removes only its duplicate busy block', async () => {
+  const { service, rows, busyBlocks } = setup();
+  const privateEvent=rows.find(event=>event.id==='itransform-event');
+  Object.assign(privateEvent,{title:'EMDR online',color:'#326b9e',event_kind:'appointment',
+    external_source:'mijndiad',external_url:'https://praktijkitransform.mijndiad.nl/appointments/123',practitioners:{name:'Virginie'}});
+  const hex=createHash('md5').update('event:itransform-event').digest('hex');
+  const duplicateId=hex.replace(/^(........)(....)(....)(....)(............)$/, '$1-$2-$3-$4-$5');
+  const occupancy={practitioner_id:person,practitioner_name:'Virginie',starts_at:privateEvent.starts_at,ends_at:privateEvent.ends_at};
+  busyBlocks.push({...occupancy,id:duplicateId},{...occupancy,id:'separate-exception'});
+  rows.push({...privateEvent,id:'another-private-event',practitioner_id:'another-owner',title:'Private other therapist'});
+  for(const filter of [undefined,person]){
+    const events=await service.listAgendaEvents(from,to,filter,person);
+    const own=events.find(event=>event.id===privateEvent.id);
+    assert.equal(own.title,'EMDR online');assert.equal(own.color,'#326b9e');
+    assert.equal(own.externalSource,'mijndiad');assert.equal(own.editable,false);
+    assert.equal(own.externalUrl,privateEvent.external_url);
+    assert.ok(!events.some(event=>event.id===duplicateId));
+    assert.ok(events.some(event=>event.id==='separate-exception'));
+    assert.ok(!events.some(event=>event.id==='another-private-event'));
+  }
+  const anotherViewer=await service.listAgendaEvents(from,to,person,'another-owner');
+  assert.ok(!anotherViewer.some(event=>event.id===privateEvent.id));
+  assert.ok(anotherViewer.some(event=>event.id===duplicateId && event.title==='Niet beschikbaar'));
+  const otherFilter=await service.listAgendaEvents(from,to,'another-owner',person);
+  assert.ok(!otherFilter.some(event=>event.source==='itransform'));
+});
+
+test('organization API uses the session owner and never a URL-supplied viewer identity', async () => {
+  const calls=[];
+  const route=load('../src/pages/api/admin/agenda.ts',{
+    '../../../lib/adminAgenda':{listAgendaEvents:async(...args)=>{calls.push(args);return [];},listAgendaPractitioners:async()=>[]},
+    '../../../lib/agendaData':setup().helpers,
+    '../../../lib/adminAuth':{},'../../../lib/securityAudit':{},
+  });
+  const response=await route.GET({url:new URL(`https://example.invalid/api/admin/agenda?from=${from}&to=${to}&practitioner=${person}&viewerPractitionerId=${person}`),locals:{adminUser:{practitionerId:'authenticated-owner'}}});
+  assert.equal(response.status,200);
+  assert.equal(calls[0][3],'authenticated-owner');
 });
 
 test('admin rejects Itransform assignments and requires a MyGrowise professional', async () => {
