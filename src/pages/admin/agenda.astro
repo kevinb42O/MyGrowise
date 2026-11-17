@@ -1,17 +1,17 @@
 ---
 import AdminLayout from '../../layouts/AdminLayout.astro';
 import UnifiedAgenda from '../../components/admin/UnifiedAgenda';
+Astro.response.headers.set('Cache-Control', 'private, no-store');
 ---
 
 <AdminLayout title="Agenda" description="Beheer de planning en afspraken van MyGrowise">
   <div class="admin-page agenda-page">
     <section class="admin-page-heading agenda-heading" aria-labelledby="agenda-title">
       <div>
-        <p class="admin-eyebrow">Planning & capaciteit</p>
         <h1 id="agenda-title">Agenda</h1>
         <p>Alle afspraken en momenten van MyGrowise.</p>
       </div>
     </section>
-    <UnifiedAgenda client:only="react" />
+    <UnifiedAgenda client:only="react"><p slot="fallback" role="status">Agenda laden…</p></UnifiedAgenda>
   </div>
 </AdminLayout>

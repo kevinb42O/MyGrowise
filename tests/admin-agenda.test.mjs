@@ -16,7 +16,7 @@ const load = (path, dependencies) => {
   });
   vm.runInNewContext(outputText, {
     exports, require: (name) => Object.hasOwn(dependencies, name) ? dependencies[name] : require(name),
-    Response, Date, setTimeout,
+    Response, Date, setTimeout, URLSearchParams,
   }, { filename: path });
   return exports;
 };
@@ -29,53 +29,56 @@ const input = { title: 'MyGrowise moment', startsAt: '2026-10-19T12:00:00Z', end
   kind: 'personal', location: '', color: '#1f7060', practitionerId: person, calendarScope: 'mygrowise' };
 const actor = { userId: person, email: 'test@example.invalid' };
 
-// Exercise the actual service and route code against an in-memory Supabase adapter.
+const from = '2026-10-19T00:00:00Z';
+const to = '2026-10-20T00:00:00Z';
+const revision = '2026-10-18T08:11:00.123456+00:00';
+
+// Stub the storage boundary while exercising real validation, range reads and RPC payloads.
 const setup = () => {
   const rows = [row('mygrowise-event', 'mygrowise'), row('itransform-event', 'itransform')];
-  const audits = [];
-  const db = { from(table) {
-    let operation = 'select'; let values; const filters = [];
+  const bookingRows = [];
+  const rpcCalls = [];
+  const busyBlocks = [];
+  const offers = [];
+  const tables = { practice_calendar_events: rows, bookings: bookingRows };
+  const queryFor = data => {
+    const filters = [];
     const query = {
       select() { return query; }, order() { return query; },
       eq(key, value) { filters.push(r => r[key] === value); return query; },
       lt(key, value) { filters.push(r => r[key] < value); return query; },
       gt(key, value) { filters.push(r => r[key] > value); return query; },
       in(key, values) { filters.push(r => values.includes(r[key])); return query; },
-      insert(value) { operation = 'insert'; values = value; return query; },
-      update(value) { operation = 'update'; values = value; return query; },
-      delete() { operation = 'delete'; return query; },
-      single() { return execute(true); }, maybeSingle() { return execute(true); },
-      then(resolve, reject) { return execute(false).then(resolve, reject); },
+      range(start, end) { return Promise.resolve({ data: data.filter(r => filters.every(matches => matches(r))).slice(start, end + 1), error: null }); },
     };
-    async function execute(single) {
-      if (table !== 'practice_calendar_events') return { data: [], error: null };
-      let selected = rows.filter(r => filters.every(matches => matches(r)));
-      if (operation === 'insert') { const created = { id: 'new-event', status: 'confirmed', ...values }; rows.push(created); selected = [created]; }
-      if (operation === 'update') selected.forEach(r => Object.assign(r, values));
-      if (operation === 'delete') selected.forEach(r => rows.splice(rows.indexOf(r), 1));
-      return { data: single ? selected[0] || null : selected, error: null };
-    }
     return query;
-  } };
-  const service = load('../src/lib/adminAgenda.ts', {
-    './supabase/server': { getSupabaseAdmin: () => db },
-    './securityAudit': { writeSecurityAudit: async audit => audits.push(audit) },
-  });
-  const practiceService = load('../src/lib/practiceAgenda.ts', {
-    './supabase/server': { getSupabaseAdmin: () => db },
-    './practiceStore': { getBookableSlots: async () => [] },
-    './securityAudit': { writeSecurityAudit: async audit => audits.push(audit) },
-  });
-  return { service, practiceService, rows, audits };
+  };
+  const db = {
+    from(table) { return queryFor(tables[table] || []); },
+    rpc(name, args) {
+      if (name === 'agenda_private_occupancy') return queryFor(busyBlocks);
+      if (name === 'agenda_offer_availability') return queryFor(offers);
+      rpcCalls.push({ name, args });
+      return Promise.resolve({ data: { id: args.p_id || 'new-event' }, error: null });
+    },
+  };
+  const supabase = { getSupabaseAdmin: () => db };
+  const helpers = load('../src/lib/agendaData.ts', { './supabase/server': supabase });
+  const dependencies = { './supabase/server': supabase, './agendaData': helpers };
+  const service = load('../src/lib/adminAgenda.ts', dependencies);
+  const practiceService = load('../src/lib/practiceAgenda.ts', dependencies);
+  return { service, practiceService, rows, rpcCalls, busyBlocks, offers, bookingRows, helpers };
 };
 
 test('admin agenda returns MyGrowise events and excludes Itransform', async () => {
-  const { service } = setup();
-  const events = await service.listAgendaEvents('2026-10-19T00:00:00Z', '2026-10-20T00:00:00Z');
-  assert.equal(events.length, 1);
-  assert.equal(events[0].id, 'mygrowise-event');
-  assert.equal(events[0].source, 'mygrowise');
-  assert.equal(events[0].subtitle, 'MyGrowise');
+  const { service, busyBlocks } = setup();
+  busyBlocks.push({id:'anonymous',practitioner_id:person,practitioner_name:'Therapeut',starts_at:from,ends_at:to,private_reason:'geheim'});
+  const events = await service.listAgendaEvents(from, to);
+  assert.equal(events.length, 2);
+  assert.ok(events.some(event => event.id === 'mygrowise-event' && event.source === 'mygrowise'));
+  const busy = events.find(event => event.id === 'anonymous');
+  assert.equal(busy.title,'Niet beschikbaar');
+  assert.doesNotMatch(JSON.stringify(busy),/geheim|Itransform/);
 });
 
 test('admin rejects Itransform assignments and requires a MyGrowise professional', async () => {
@@ -83,30 +86,32 @@ test('admin rejects Itransform assignments and requires a MyGrowise professional
   for (const method of ['createPracticeAgendaEvent', 'updatePracticeAgendaEvent']) {
     for (const invalid of [{ ...input, calendarScope: 'itransform' }, { ...input, practitionerId: null }]) {
       const args = method.startsWith('update') ? ['mygrowise-event', invalid, actor] : [invalid, actor];
-      await assert.rejects(service[method](...args), /invalid_event/);
+      assert.throws(() => service[method](...args), /invalid_event/);
     }
   }
   assert.equal(rows.length, 2);
 });
 
-test('admin cannot update, convert or delete an Itransform event by ID', async () => {
-  const { service, rows, audits } = setup();
-  await assert.rejects(service.updatePracticeAgendaEvent('itransform-event', input, actor), /not_found/);
-  await assert.rejects(service.deletePracticeAgendaEvent('itransform-event', actor), /not_found/);
-  assert.equal(rows.find(r => r.id === 'itransform-event').calendar_scope, 'itransform');
-  assert.equal(rows.length, 2);
-  assert.equal(audits.length, 0);
+test('writes carry the actor, revision and scoped operation to one RPC', async () => {
+  const { service, practiceService, rpcCalls } = setup();
+  await service.createPracticeAgendaEvent(input, actor);
+  await service.movePracticeAgendaEvent('mygrowise-event', input.startsAt, input.endsAt, actor, revision);
+  await practiceService.deleteOwnedAgendaEvent(person, 'mygrowise-event', actor, revision);
+  assert.equal(rpcCalls.length, 3);
+  const [,move,remove] = rpcCalls;
+  assert.equal(move.args.p_mode, 'admin');
+  assert.equal(move.args.p_revision, revision);
+  assert.equal(move.args.p_actor, person);
+  assert.equal(Object.keys(move.args.p_values).sort().join(','), 'ends_at,starts_at');
+  assert.equal(remove.args.p_mode,'practice');
+  assert.equal(remove.args.p_practitioner,person);
+  assert.equal(remove.name,'mutate_agenda_item');
 });
 
-test('MyGrowise create, update and delete remain available and audited', async () => {
-  const { service, rows, audits } = setup();
-  const created = await service.createPracticeAgendaEvent(input, actor);
-  assert.equal(rows.find(r => r.id === created.id).calendar_scope, 'mygrowise');
-  await service.updatePracticeAgendaEvent(created.id, { ...input, title: 'Aangepast' }, actor);
-  assert.equal(rows.find(r => r.id === created.id).title, 'Aangepast');
-  await service.deletePracticeAgendaEvent(created.id, actor);
-  assert.equal(rows.length, 2);
-  assert.equal(audits.length, 3);
+test('range reads page beyond the Data API cap with stable filters', async () => {
+  const { service, rows } = setup();
+  rows.push(...Array.from({length:1008}, (_, index) => row(`paged-${index}`, 'mygrowise')));
+  assert.equal((await service.listAgendaEvents(from,to,person)).length,1009);
 });
 
 const routeSetup = () => {
@@ -116,6 +121,7 @@ const routeSetup = () => {
       createPracticeAgendaEvent: async value => { calls.push(value); return { id: person }; },
       updatePracticeAgendaEvent: async (id, value) => { calls.push(value); return { id }; },
     },
+    '../../../lib/agendaData': setup().helpers,
     '../../../lib/adminAuth': { isTrustedFormOrigin: () => true },
     '../../../lib/securityAudit': { auditActor: () => actor },
   });
@@ -125,7 +131,7 @@ const routeSetup = () => {
 test('admin API defaults omitted scope to MyGrowise and rejects other scopes', async () => {
   for (const method of ['POST', 'PATCH']) {
     const { route, calls } = routeSetup();
-    const context = body => ({ request: { json: async () => body }, locals: {}, url: new URL(`https://example.invalid/api/admin/agenda?id=${person}`) });
+    const context = body => ({ request: { json: async () => ({ ...body, revision }) }, locals: {}, url: new URL(`https://example.invalid/api/admin/agenda?id=${person}`) });
     const { calendarScope, ...withoutScope } = input;
     const response = await route[method](context(withoutScope));
     assert.equal(response.status, method === 'POST' ? 201 : 200);
@@ -138,11 +144,12 @@ test('admin API defaults omitted scope to MyGrowise and rejects other scopes', a
   }
 });
 
-const { default: Agenda, AgendaEventCard, ImportedAgendaDetails } = load('../src/components/admin/UnifiedAgenda.tsx', {
+const { default: Agenda, AgendaEventCard, ImportedAgendaDetails, eventForeground } = load('../src/components/admin/UnifiedAgenda.tsx', {
   '@fullcalendar/react': { __esModule: true, default: () => null },
   ...Object.fromEntries(['daygrid', 'timegrid', 'interaction', 'list', 'luxon3'].map(name => [`@fullcalendar/${name}`, {}])),
   '@fullcalendar/core/locales/nl': {},
   '../../lib/brusselsTime': {},
+  './AgendaClientPicker': {}, './AgendaDialog': {},
 });
 
 test('admin UI has no Itransform filter, even if practice access is supplied', () => {
@@ -164,27 +171,42 @@ test('MijnDiAd blocks are read-only and only appear in their owner practice agen
   const { practiceService, service, rows } = setup();
   rows.push({ ...row('external-event', 'itransform'), external_source: 'mijndiad' });
   rows.push({ ...row('someone-elses-event', 'itransform'), practitioner_id: 'someone-else', external_source: 'mijndiad' });
-  const events = await practiceService.listPracticeAgenda(person, '2026-10-19T00:00:00Z', '2026-10-20T00:00:00Z', true);
+  const { events } = await practiceService.listPracticeAgenda(person, from, to, true);
   assert.equal(events.find(e => e.id === 'external-event').editable, false);
   assert.match(events.find(e => e.id === 'external-event').subtitle, /MijnDiAd/);
   assert.ok(!events.some(e => e.id === 'someone-elses-event'));
-  const withoutAccess = await practiceService.listPracticeAgenda(person, '2026-10-19T00:00:00Z', '2026-10-20T00:00:00Z', false);
+  const { events: withoutAccess } = await practiceService.listPracticeAgenda(person, from, to, false);
   assert.ok(!withoutAccess.some(e => e.source === 'itransform'));
   const adminEvents = await service.listAgendaEvents('2026-10-19T00:00:00Z', '2026-10-20T00:00:00Z');
   assert.ok(!adminEvents.some(e => e.id === 'external-event'));
 });
 
-test('practice service rejects imported event edits/deletes and cross-owner Itransform writes', async () => {
-  const { practiceService, rows, audits } = setup();
-  rows.push({ ...row('external-event', 'itransform'), external_source: 'mijndiad' });
-  rows.push({ ...row('someone-elses-event', 'itransform'), practitioner_id: 'someone-else' });
-  for (const id of ['external-event', 'someone-elses-event']) {
-    await assert.rejects(practiceService.updateOwnedAgendaEvent(person, id, { ...input, calendarScope: 'itransform' }, actor, true), /not_found/);
-    await assert.rejects(practiceService.deleteOwnedAgendaEvent(person, id, actor, true), /not_found/);
-  }
-  assert.equal(audits.length, 0);
-  await practiceService.updateOwnedAgendaEvent(person, 'itransform-event', { ...input, calendarScope: 'itransform' }, actor, true);
-  assert.equal(audits.length, 1);
+test('practice agenda keeps completed appointments, labels overlaps and retains exact typed slots', async () => {
+  const { practiceService, rows, bookingRows, offers } = setup();
+  rows.push({...row('external-event','itransform'),external_source:'mijndiad'});
+  bookingRows.push(
+    {...row('confirmed-booking','mygrowise'),client_name:'Cliënt',status:'confirmed',channel:'online'},
+    {...row('completed-booking','mygrowise'),client_name:'Cliënt',status:'completed',location:'Brugge'},
+  );
+  offers.push({offer_id:'offer',offer_name:'Consult van 30 min',slots:[['2026-10-19T11:15:00Z','2026-10-19T11:45:00Z']]});
+  const { events } = await practiceService.listPracticeAgenda(person,from,to,true);
+  assert.equal(events.find(row => row.id === 'confirmed-booking').conflict,true);
+  assert.equal(events.find(row => row.id === 'confirmed-booking').location,'Online');
+  assert.equal(events.find(row => row.id === 'completed-booking').status,'completed');
+  assert.equal(events.find(row => row.source === 'availability').startsAt, '2026-10-19T11:15:00Z');
+});
+
+test('event text remains legible on light and dark custom colours', () => {
+  assert.equal(eventForeground('#d97706'),'#000000');
+  assert.equal(eventForeground('#ffffff'),'#000000');
+  assert.equal(eventForeground('#1f7060'),'#ffffff');
+});
+
+test('agenda time input requires an offset and a real calendar date', () => {
+  const { agendaInstant } = setup().helpers;
+  assert.equal(agendaInstant('2026-02-30T08:00:00Z'),false);
+  assert.equal(agendaInstant('2026-10-30T08:00'),false);
+  assert.equal(agendaInstant(revision),true);
 });
 
 test('imported event cards show actual appointment type and location', () => {

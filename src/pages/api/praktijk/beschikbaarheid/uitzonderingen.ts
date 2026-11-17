@@ -1,5 +1,6 @@
 import type { APIRoute } from 'astro';
 import { isTrustedFormOrigin } from '../../../../lib/adminAuth';
+import { auditActor } from '../../../../lib/securityAudit';
 import { createAvailabilityException } from '../../../../lib/practiceStore';
 
 export const prerender = false;
@@ -10,7 +11,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   const endsAt = String(form.get('ends_at') || '');
   const reason = String(form.get('reason') || '');
   try {
-    await createAvailabilityException(locals.currentUser!.practitionerId!, locals.currentUser!.sub, startsAt, endsAt, reason);
+    await createAvailabilityException(locals.currentUser!.practitionerId!, auditActor(locals.currentUser, locals.requestId, new URL(request.url).pathname), startsAt, endsAt, reason);
     return new Response(null, { status: 303, headers: { location: '/praktijk/beschikbaarheid?exception_saved=1' } });
   } catch {
     return new Response(null, { status: 303, headers: { location: '/praktijk/beschikbaarheid?exception_error=1' } });

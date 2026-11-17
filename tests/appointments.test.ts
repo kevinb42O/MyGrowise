@@ -1,4 +1,5 @@
 import {test} from 'node:test';
+import {fromBrusselsLocalInput} from '../src/lib/brusselsTime.ts';
 import {bookingNotificationStartsAt} from '../src/lib/bookingNotificationTime.ts';
 import assert from 'node:assert/strict';
 import {parsePatientDetails} from '../src/lib/patientDetails.ts';
@@ -46,4 +47,12 @@ test('status notifications retain their historical appointment time after multip
  assert.equal(bookingNotificationStartsAt('2026-11-03T11:00:00Z','2026-10-30T09:00:00Z',changes),'2026-11-01T09:00:00Z');
  assert.equal(bookingNotificationStartsAt('2026-11-03T11:00:00Z','2026-10-30T11:00:00Z',changes),'2026-11-02T10:00:00Z');
  assert.equal(bookingNotificationStartsAt('2026-11-03T11:00:00Z','2026-10-30T13:00:00Z',changes),'2026-11-03T11:00:00Z');
+});
+
+test('Brussels agenda distinguishes invalid, skipped and repeated clock times', () => {
+ assert.throws(() => fromBrusselsLocalInput('2026-02-30T10:00'), /invalid_time/);
+ assert.throws(() => fromBrusselsLocalInput('2026-03-29T02:30'), /nonexistent_time/);
+ assert.throws(() => fromBrusselsLocalInput('2026-10-25T02:30'), /ambiguous_time/);
+ assert.equal(fromBrusselsLocalInput('2026-03-29T03:30'), '2026-03-29T01:30:00.000Z');
+ assert.equal(fromBrusselsLocalInput('2026-10-25T03:30'), '2026-10-25T02:30:00.000Z');
 });

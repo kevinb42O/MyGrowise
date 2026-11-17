@@ -1,8 +1,7 @@
 import { getSupabaseAdmin } from './supabase/server';
-import { getBookableSlots } from './practiceStore';
-import { writeSecurityAudit, type AuditActor } from './securityAudit';
+import { agendaEventValues, agendaRows, calendarBookingStatuses, writeAgendaItem } from './agendaData';
+import type { AuditActor } from './securityAudit';
 
-type Row = Record<string, any>;
 export type CalendarScope = 'mygrowise' | 'itransform';
 
 export const getPracticeAgendaAccess = async (practitionerId: string, userId: string) => {
@@ -28,70 +27,58 @@ export type PracticeAgendaItem = {
   patientId?: string | null;
   externalSource?: 'mijndiad' | null;
   externalUrl?: string | null;
+  revision?: string;
+  conflict?: boolean;
+  offerIds?: string[];
 };
 
-export const listPracticeAgenda = async (practitionerId: string, from: string, to: string, canUseItransform: boolean): Promise<PracticeAgendaItem[]> => {
+export const listPracticeAgenda = async (practitionerId: string, from: string, to: string, canUseItransform: boolean, actorId?: string, canReadAllPatients = false) => {
   const client = getSupabaseAdmin();
-  const [bookings, exceptions, ownedEvents, itransformEvents, slots] = await Promise.all([
-    client.from('bookings')
-      .select('id,patient_id,client_name,client_email,appointment_name,offer:practitioner_appointment_types(appointment_types(treatment_groups(color))),starts_at,ends_at,status')
-      .eq('practitioner_id', practitionerId)
-      .in('status', ['pending', 'confirmed'])
-      .lt('starts_at', to).gt('ends_at', from).order('starts_at'),
-    client.from('availability_exceptions')
-      .select('id,starts_at,ends_at,private_reason')
-      .eq('practitioner_id', practitionerId).eq('kind', 'unavailable')
-      .lt('starts_at', to).gt('ends_at', from).order('starts_at'),
-    client.from('practice_calendar_events')
-      .select('id,title,starts_at,ends_at,event_kind,location,color,calendar_scope,external_source,external_url')
-      .eq('practitioner_id', practitionerId).eq('calendar_scope', 'mygrowise').eq('status', 'confirmed')
-      .lt('starts_at', to).gt('ends_at', from).order('starts_at'),
-    canUseItransform ? client.from('practice_calendar_events')
-      .select('id,title,starts_at,ends_at,event_kind,location,color,calendar_scope,external_source,external_url')
-      .eq('practitioner_id', practitionerId).eq('calendar_scope', 'itransform').eq('status', 'confirmed')
-      .lt('starts_at', to).gt('ends_at', from).order('starts_at') : Promise.resolve({ data: [], error: null }),
-    // A source outage must not hide existing appointments or suggest free time.
-    getBookableSlots(practitionerId, 62).catch(() => []),
+  const [bookings, exceptions, moments, availability, assignments] = await Promise.all([
+    agendaRows<any>(client.from('bookings')
+      .select('id,patient_id,client_name,appointment_name,offer:practitioner_appointment_types(appointment_types(treatment_groups(color))),starts_at,ends_at,updated_at,status,location,channel')
+      .eq('practitioner_id', practitionerId).in('status', calendarBookingStatuses).lt('starts_at', to).gt('ends_at', from).order('starts_at').order('id')),
+    agendaRows<any>(client.from('availability_exceptions').select('id,starts_at,ends_at,private_reason')
+      .eq('practitioner_id', practitionerId).eq('kind', 'unavailable').lt('starts_at', to).gt('ends_at', from).order('starts_at').order('id')),
+    agendaRows<any>(client.from('practice_calendar_events')
+      .select('id,title,starts_at,ends_at,event_kind,location,color,calendar_scope,external_source,external_url,updated_at')
+      .eq('practitioner_id', practitionerId).in('calendar_scope', canUseItransform ? ['mygrowise', 'itransform'] : ['mygrowise']).eq('status', 'confirmed')
+      .lt('starts_at', to).gt('ends_at', from).order('starts_at').order('id')),
+    agendaRows<{ offer_id: string; offer_name: string; slots: [string, string][] }>(client.rpc('agenda_offer_availability', { p_practitioner: practitionerId, p_from: from, p_to: to })
+      .order('slot_day').order('offer_id')).catch(() => null),
+    actorId && !canReadAllPatients ? agendaRows<{ patient_id: string }>(client.from('patient_assignments')
+      .select('patient_id').eq('user_id', actorId).is('ended_at', null).order('patient_id')) : Promise.resolve([]),
   ]);
-  if (bookings.error || exceptions.error || ownedEvents.error || itransformEvents.error) throw bookings.error || exceptions.error || ownedEvents.error || itransformEvents.error;
 
-  const appointments: PracticeAgendaItem[] = ((bookings.data || []) as Row[]).map((row) => ({
-    id: String(row.id), source: 'mygrowise', title: String(row.client_name),
-    subtitle: `${String(row.appointment_name)} · ${String(row.client_email)}`, startsAt: String(row.starts_at), endsAt: String(row.ends_at),
-    status: String(row.status), kind: 'appointment', location: '',
-    color: row.offer?.appointment_types?.treatment_groups?.color || '#1f7060', editable: false,
-    patientId: row.patient_id ? String(row.patient_id) : null,
+  const assignedPatients = new Set(assignments.map(row => row.patient_id));
+  const appointments: PracticeAgendaItem[] = bookings.map(row => ({
+    id: row.id, source: 'mygrowise', title: row.client_name, subtitle: row.appointment_name, startsAt: row.starts_at, endsAt: row.ends_at,
+    status: row.status, kind: 'appointment', location: row.channel === 'online' ? 'Online' : row.location || '',
+    color: row.offer?.appointment_types?.treatment_groups?.color || '#1f7060', editable: false, patientId: canReadAllPatients || assignedPatients.has(row.patient_id) ? row.patient_id : null, revision: row.updated_at,
   }));
-  const blocks: PracticeAgendaItem[] = ((exceptions.data || []) as Row[]).map((row) => ({
-    id: String(row.id), source: 'block', title: 'Niet beschikbaar',
-    subtitle: row.private_reason ? String(row.private_reason) : 'Privéblokkade',
-    startsAt: String(row.starts_at), endsAt: String(row.ends_at), status: 'confirmed',
-    kind: 'block', location: '', color: '#6b7280', editable: false,
+  const blocks: PracticeAgendaItem[] = exceptions.map(row => ({
+    id: row.id, source: 'block', title: 'Niet beschikbaar', subtitle: row.private_reason || 'Privéblokkade', startsAt: row.starts_at, endsAt: row.ends_at,
+    status: 'confirmed', kind: 'block', location: '', color: '#687985', editable: false,
   }));
-  const customEvents: PracticeAgendaItem[] = ([...(ownedEvents.data || []), ...(itransformEvents.data || [])] as Row[]).map((row) => ({
-    id: String(row.id), source: row.calendar_scope === 'itransform' ? 'itransform' : 'mygrowise', title: String(row.title),
-    subtitle: row.external_source === 'mijndiad' ? ['MijnDiAd', row.location].filter(Boolean).join(' · ') : String(row.location || (row.calendar_scope === 'itransform' ? 'Praktijk Itransform' : 'MyGrowise')),
-    startsAt: String(row.starts_at), endsAt: String(row.ends_at), status: 'confirmed',
-    kind: String(row.event_kind) as PracticeAgendaItem['kind'],
-    location: String(row.location || ''), color: String(row.color || '#d26479'), editable: !row.external_source,
-    externalSource: row.external_source === 'mijndiad' ? 'mijndiad' : null,
+  const customEvents: PracticeAgendaItem[] = moments.map(row => ({
+    id: row.id, source: row.calendar_scope, title: row.title, subtitle: row.external_source === 'mijndiad' ? 'MijnDiAd' : row.location || '',
+    startsAt: row.starts_at, endsAt: row.ends_at, status: 'confirmed', kind: row.event_kind, location: row.location || '',
+    color: row.color || '#d26479', editable: !row.external_source, revision: row.updated_at, externalSource: row.external_source,
     externalUrl: row.external_source === 'mijndiad' && /^https:\/\/praktijkitransform\.mijndiad\.nl\/appointments\/\d+$/.test(row.external_url || '') ? row.external_url : null,
   }));
-  const available: PracticeAgendaItem[] = [];
-  for (const slot of slots.filter((item) => Date.parse(item.startsAt) < Date.parse(to) && Date.parse(item.endsAt) > Date.parse(from))
-    .sort((left, right) => Date.parse(left.startsAt) - Date.parse(right.startsAt))) {
-    const previous = available.at(-1);
-    if (previous && Date.parse(slot.startsAt) <= Date.parse(previous.endsAt)) {
-      if (Date.parse(slot.endsAt) > Date.parse(previous.endsAt)) previous.endsAt = slot.endsAt;
-      continue;
-    }
-    available.push({
-      id: `${slot.startsAt}/${slot.endsAt}`, source: 'availability', title: '', subtitle: '',
-      startsAt: slot.startsAt, endsAt: slot.endsAt, status: 'available', kind: 'availability',
-      location: '', color: '#e7f4eb', editable: false,
-    });
+  const scheduled = [...appointments.filter(item => ['pending', 'confirmed'].includes(item.status)), ...blocks, ...customEvents.filter(item => !item.externalSource)];
+  const imported = customEvents.filter(item => item.externalSource === 'mijndiad');
+  for (const external of imported) {
+    const matches = scheduled.filter(item => Date.parse(item.startsAt) < Date.parse(external.endsAt) && Date.parse(item.endsAt) > Date.parse(external.startsAt));
+    if (matches.length) external.conflict = true;
+    for (const item of matches) item.conflict = true;
   }
-  return [...available, ...blocks, ...customEvents, ...appointments];
+  const available: PracticeAgendaItem[] = (availability || []).flatMap(row => row.slots.map(([startsAt, endsAt]) => ({
+    id: `${row.offer_id}/${startsAt}`, source: 'availability', title: row.offer_name, subtitle: '',
+    startsAt, endsAt, status: 'available', kind: 'availability', location: '',
+    color: '#a1d1b0', editable: false, offerIds: [row.offer_id],
+  })));
+  return { events: [...available, ...blocks, ...customEvents, ...appointments], availabilityUnknown: availability === null };
 };
 
 export type OwnedAgendaInput = {
@@ -99,55 +86,17 @@ export type OwnedAgendaInput = {
   kind: 'appointment' | 'personal' | 'block'; location: string; color: string; calendarScope: CalendarScope;
 };
 
-const validateOwnedEvent = (input: OwnedAgendaInput, canUseItransform: boolean) => {
-  const title = input.title.trim(); const location = input.location.trim(); const color = input.color.trim();
-  const start = Date.parse(input.startsAt); const end = Date.parse(input.endsAt);
+const ownedValues = (input: OwnedAgendaInput, canUseItransform: boolean) => {
   if (input.calendarScope === 'itransform' && !canUseItransform) throw new Error('not_allowed');
-  if (title.length < 2 || title.length > 100 || location.length > 120 || !/^#[0-9a-f]{6}$/i.test(color)
-    || !['appointment', 'personal', 'block'].includes(input.kind)
-    || !['mygrowise', 'itransform'].includes(input.calendarScope)
-    || !Number.isFinite(start) || !Number.isFinite(end) || end <= start || end - start > 366 * 86400000) {
-    throw new Error('invalid_event');
-  }
-  return { title, location, color, starts_at: input.startsAt, ends_at: input.endsAt, event_kind: input.kind, calendar_scope: input.calendarScope };
+  if (!['mygrowise', 'itransform'].includes(input.calendarScope)) throw new Error('invalid_event');
+  return agendaEventValues(input);
 };
 
-export const createOwnedAgendaEvent = async (practitionerId: string, input: OwnedAgendaInput, actor: AuditActor, canUseItransform: boolean) => {
-  const values = validateOwnedEvent(input, canUseItransform);
-  const { data, error } = await getSupabaseAdmin().from('practice_calendar_events')
-    .insert({ ...values, practitioner_id: practitionerId, created_by: actor.userId })
-    .select('id,practitioner_id,title,starts_at,ends_at,event_kind,calendar_scope').single();
-  if (error) throw error;
-  await writeSecurityAudit({ actor, action: 'practice_calendar_event.created', objectType: 'practice_calendar_event', objectId: String(data.id), after: data });
-  return String(data.id);
-};
+export const createOwnedAgendaEvent = (practitionerId: string, input: OwnedAgendaInput, actor: AuditActor, canUseItransform: boolean) =>
+  writeAgendaItem(actor, 'practice', 'create', practitionerId, { values: ownedValues(input, canUseItransform) });
 
-export const updateOwnedAgendaEvent = async (practitionerId: string, id: string, input: OwnedAgendaInput, actor: AuditActor, canUseItransform: boolean) => {
-  const values = validateOwnedEvent(input, canUseItransform);
-  const client = getSupabaseAdmin();
-  const { data: before, error: readError } = await client.from('practice_calendar_events')
-    .select('id,practitioner_id,title,starts_at,ends_at,event_kind,location,color,calendar_scope,external_source')
-    .eq('id', id).maybeSingle();
-  if (readError) throw readError;
-  if (!before || before.external_source || before.practitioner_id !== practitionerId || !(before.calendar_scope === 'itransform' && canUseItransform || before.calendar_scope === 'mygrowise')) throw new Error('not_found');
-  const { data, error } = await client.from('practice_calendar_events')
-    .update({ ...values, practitioner_id: input.calendarScope === 'mygrowise' ? practitionerId : before.practitioner_id || practitionerId })
-    .eq('id', id)
-    .select('id,practitioner_id,title,starts_at,ends_at,event_kind,location,color,calendar_scope').maybeSingle();
-  if (error) throw error;
-  if (!data) throw new Error('not_found');
-  await writeSecurityAudit({ actor, action: 'practice_calendar_event.updated', objectType: 'practice_calendar_event', objectId: id, before, after: data });
-};
+export const updateOwnedAgendaEvent = (practitionerId: string, id: string, input: OwnedAgendaInput, actor: AuditActor, canUseItransform: boolean, revision?: string) =>
+  writeAgendaItem(actor, 'practice', 'update', practitionerId, { id, revision, values: ownedValues(input, canUseItransform) });
 
-export const deleteOwnedAgendaEvent = async (practitionerId: string, id: string, actor: AuditActor, canUseItransform: boolean) => {
-  const client = getSupabaseAdmin();
-  const { data: before, error: readError } = await client.from('practice_calendar_events')
-    .select('id,practitioner_id,title,starts_at,ends_at,event_kind,calendar_scope,external_source').eq('id', id).maybeSingle();
-  if (readError) throw readError;
-  if (!before || before.external_source || before.practitioner_id !== practitionerId || !(before.calendar_scope === 'itransform' && canUseItransform || before.calendar_scope === 'mygrowise')) throw new Error('not_found');
-  const { data, error } = await client.from('practice_calendar_events').delete()
-    .eq('id', id).select('id,practitioner_id,title,starts_at,ends_at,event_kind,calendar_scope').maybeSingle();
-  if (error) throw error;
-  if (!data) throw new Error('not_found');
-  await writeSecurityAudit({ actor, action: 'practice_calendar_event.deleted', objectType: 'practice_calendar_event', objectId: id, before: data });
-};
+export const deleteOwnedAgendaEvent = (practitionerId: string, id: string, actor: AuditActor, revision?: string) =>
+  writeAgendaItem(actor, 'practice', 'delete', practitionerId, { id, revision });

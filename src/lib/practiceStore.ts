@@ -1,6 +1,8 @@
 import { getSupabaseAdmin } from './supabase/server';
 import { fromBrusselsLocalInput } from './brusselsTime';
 import { ensurePracticeCalendarFresh } from './mijndiadSync';
+import { agendaRange, writeAgendaItem } from './agendaData';
+import type { AuditActor } from './securityAudit';
 
 export type AvailabilityRule = { weekday: number; startTime: string; endTime: string };
 export type BookingStatus = 'pending' | 'confirmed' | 'declined' | 'cancelled' | 'completed' | 'no_show';
@@ -100,27 +102,17 @@ export const listAvailabilityExceptions = async (idOrSlug: string): Promise<Avai
   return ((data || []) as Row[]).map((row) => ({ id: String(row.id), practitionerId: String(row.practitioner_id), startsAt: String(row.starts_at), endsAt: String(row.ends_at), kind: String(row.kind) as AvailabilityException['kind'], privateReason: row.private_reason ? String(row.private_reason) : null, createdAt: String(row.created_at) }));
 };
 
-export const createAvailabilityException = async (idOrSlug: string, actorUserId: string, startsAt: string, endsAt: string, privateReason: string) => {
-  const practitioner = await resolvePractitioner(idOrSlug);
-  const start = new Date(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(startsAt) ? fromBrusselsLocalInput(startsAt) : startsAt);
-  const end = new Date(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(endsAt) ? fromBrusselsLocalInput(endsAt) : endsAt);
-  if (!practitioner) throw new Error('not_found');
-  if (!Number.isFinite(start.getTime()) || !Number.isFinite(end.getTime()) || end <= start || end.getTime() - start.getTime() > 366 * 86400000) throw new Error('invalid_exception');
-  const { data, error } = await getSupabaseAdmin().from('availability_exceptions').insert({ practitioner_id: practitioner.id, starts_at: start.toISOString(), ends_at: end.toISOString(), kind: 'unavailable', private_reason: privateReason.trim().slice(0, 80) || null }).select('id,practitioner_id,starts_at,ends_at,kind,private_reason,created_at').single();
-  fail(error);
-  if (!data) throw new Error('Availability exception could not be created.');
-  await getSupabaseAdmin().from('security_audit_log').insert({ actor_user_id: uuidPattern.test(actorUserId) ? actorUserId : null, action: 'availability.exception_created', object_type: 'availability_exception', object_id: String(data.id), metadata: { practitionerId: practitioner.id } });
-  return { id: String(data.id), practitionerId: String(data.practitioner_id), startsAt: String(data.starts_at), endsAt: String(data.ends_at), kind: String(data.kind) as AvailabilityException['kind'], privateReason: data.private_reason ? String(data.private_reason) : null, createdAt: String(data.created_at) };
+export const createAvailabilityException = async (practitionerId: string, actor: AuditActor, startsAt: string, endsAt: string, privateReason: string) => {
+  const start = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(startsAt) ? fromBrusselsLocalInput(startsAt) : startsAt;
+  const end = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(endsAt) ? fromBrusselsLocalInput(endsAt) : endsAt;
+  if (!agendaRange(start, end, 367)) throw new Error('invalid_event');
+  return writeAgendaItem(actor, 'practice', 'block', practitionerId, {
+    values: { starts_at: start, ends_at: end, private_reason: privateReason },
+  });
 };
 
-export const deleteAvailabilityException = async (id: string, idOrSlug: string, actorUserId: string) => {
-  const practitioner = await resolvePractitioner(idOrSlug);
-  if (!practitioner) throw new Error('not_found');
-  const { data, error } = await getSupabaseAdmin().from('availability_exceptions').delete().eq('id', id).eq('practitioner_id', practitioner.id).select('id').maybeSingle();
-  fail(error);
-  if (!data) throw new Error('not_found');
-  await getSupabaseAdmin().from('security_audit_log').insert({ actor_user_id: uuidPattern.test(actorUserId) ? actorUserId : null, action: 'availability.exception_deleted', object_type: 'availability_exception', object_id: id, metadata: { practitionerId: practitioner.id } });
-};
+export const deleteAvailabilityException = (id: string, practitionerId: string, actor: AuditActor) =>
+  writeAgendaItem(actor, 'practice', 'unblock', practitionerId, { id });
 
 export const listBookings = async (idOrSlug: string, status?: BookingStatus): Promise<PracticeBooking[]> => {
   const practitioner = await resolvePractitioner(idOrSlug);
@@ -132,21 +124,18 @@ export const listBookings = async (idOrSlug: string, status?: BookingStatus): Pr
   return ((data || []) as Row[]).map(bookingFromRow);
 };
 
-export const updateBookingStatus = async (bookingId: string, idOrSlug: string, actorUserId: string, nextStatus: BookingStatus, requestId?: string, requestPath?: string) => {
+export const updateBookingStatus = async (bookingId: string, idOrSlug: string, actorUserId: string, nextStatus: BookingStatus, requestId?: string, requestPath?: string, revision?: string) => {
   const practitioner = await resolvePractitioner(idOrSlug);
   if (!practitioner) throw new Error('not_found');
   if (nextStatus === 'confirmed') await ensurePracticeCalendarFresh(practitioner.id, {maxAgeSeconds:60});
-  const { error } = await getSupabaseAdmin().rpc('transition_booking_status', {
-    p_booking_id: bookingId,
-    p_actor_user_id: actorUserId,
-    p_next_status: nextStatus,
-    p_request_id: requestId || null,
-    p_request_path: requestPath || null,
+  const { error } = await getSupabaseAdmin().rpc('agenda_staff_booking_change', {
+    p_booking: bookingId, p_actor: actorUserId, p_practitioner: practitioner.id, p_revision: revision || null,
+    p_status: nextStatus, p_starts: null, p_request: requestId || null, p_path: requestPath || null,
   });
   if (error?.code === 'P0002') throw new Error('not_found');
   if (error?.code === '42501') throw new Error('not_allowed');
   if (error?.code === '22023') throw new Error('invalid_transition');
-  fail(error);
+  if (error) throw error;
 };
 
 export const createStaffBooking = async (practitionerId: string, actorUserId: string, patientId: string, startsAt: string, offerId: string, requestId?: string) => {
@@ -156,18 +145,26 @@ export const createStaffBooking = async (practitionerId: string, actorUserId: st
   const { data, error } = await getSupabaseAdmin().rpc('create_typed_staff_booking', {p_actor:actorUserId,p_patient:patientId,p_offer:offerId,p_starts:startsAt,p_request:requestId||null});
   if(error?.code==='23P01')throw new Error('slot_unavailable');
   if(error?.code==='42501')throw new Error('not_allowed');
-  fail(error); return String(data);
+  if (error) throw error;
+  return String(data);
 };
 
-export const rescheduleStaffBooking = async (bookingId: string, actorUserId: string, startsAt: string, _endsAt: string, requestId?: string) => {
-  const {data:booking,error:readError} = await getSupabaseAdmin().from('bookings').select('practitioner_id').eq('id',bookingId).maybeSingle();
-  fail(readError);
+export const rescheduleStaffBooking = async (bookingId: string, actorUserId: string, startsAt: string, options: {
+  requestId?: string; requestPath?: string; practitionerId?: string; revision?: string;
+} = {}) => {
+  const query = getSupabaseAdmin().from('bookings').select('practitioner_id').eq('id',bookingId);
+  if (options.practitionerId) query.eq('practitioner_id', options.practitionerId);
+  const {data:booking,error:readError} = await query.maybeSingle();
+  if (readError) throw readError;
   if (!booking) throw new Error('not_found');
   await ensurePracticeCalendarFresh(booking.practitioner_id, {maxAgeSeconds:60});
-  const { error } = await getSupabaseAdmin().rpc('reschedule_practice_appointment', {p_actor:actorUserId,p_booking:bookingId,p_starts:startsAt,p_request:requestId||null});
+  const { error } = await getSupabaseAdmin().rpc('agenda_staff_booking_change', {
+    p_booking: bookingId, p_actor: actorUserId, p_practitioner: booking.practitioner_id, p_revision: options.revision || null,
+    p_status: null, p_starts: startsAt, p_request: options.requestId || null, p_path: options.requestPath || null,
+  });
   if(error?.code==='23P01')throw new Error('slot_unavailable');
   if(error?.code==='42501')throw new Error('not_allowed');
-  fail(error);
+  if (error) throw error;
 };
 
 const parseList = (value: string, maximum: number) => Array.from(new Set(value.split(/[\n,]/).map((item) => item.trim().replace(/\s+/g, ' ')).filter((item) => item.length >= 2 && item.length <= 60))).slice(0, maximum);

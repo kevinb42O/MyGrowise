@@ -9,6 +9,6 @@ import {deliverSupportMail} from './supportMail';
  */
 export async function deliverQueuedMail() {
   const entries = Object.entries({support:deliverSupportMail, commerce:deliverCommerceMail, booking:deliverBookingMail, website:deliverWebsiteMail});
-  const results = await Promise.allSettled(entries.map(([,deliver]) => deliver(2)));
+  const results = await Promise.allSettled(entries.map(([name,deliver]) => deliver(name === 'booking' ? 4 : 2)));
   return Object.fromEntries(results.map((result,index) => [entries[index][0],result.status === 'fulfilled' ? result.value : {unavailable:true}]));
 }

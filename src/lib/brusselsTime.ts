@@ -13,10 +13,11 @@ export const toBrusselsLocalInput = (value: Date | string) => {
 export const fromBrusselsLocalInput = (value: string) => {
   const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/.exec(value);
   if (!match) throw new Error('invalid_time');
-  const [, year, month, day, hour, minute] = match;
-  const wallAsUtc = Date.UTC(Number(year), Number(month) - 1, Number(day), Number(hour), Number(minute));
+  const wallAsUtc = Date.parse(`${value}Z`);
+  if (!Number.isFinite(wallAsUtc) || new Date(wallAsUtc).toISOString().slice(0, 16) !== value) throw new Error('invalid_time');
   const candidates = [60, 120].map((offset) => new Date(wallAsUtc - offset * 60000))
     .filter((date) => toBrusselsLocalInput(date) === value);
-  if (candidates.length !== 1) throw new Error('ambiguous_time');
+  if (!candidates.length) throw new Error('nonexistent_time');
+  if (candidates.length > 1) throw new Error('ambiguous_time');
   return candidates[0].toISOString();
 };

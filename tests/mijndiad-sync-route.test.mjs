@@ -8,15 +8,16 @@ function setup({allowed=true,trusted=true,failure=false}={}) {
  const calls=[];const exports={};
  const deps={
   '../../../lib/appointmentCatalog':{},'../../../lib/bookingMail':{},
-  '../../../lib/practiceAgenda':{getPracticeAgendaAccess:async()=>({canUseItransform:allowed}),listPracticeAgenda:async()=>[]},
+  '../../../lib/practiceAgenda':{getPracticeAgendaAccess:async()=>({canUseItransform:allowed}),listPracticeAgenda:async()=>({events:[],availabilityUnknown:false})},
   '../../../lib/adminAuth':{isTrustedFormOrigin:()=>trusted},'../../../lib/practiceStore':{},
-  '../../../lib/clientRecords':{},'../../../lib/securityAudit':{},
+  '../../../lib/clientRecords':{},'../../../lib/securityAudit':{auditActor:()=>({userId:'user'})},
+  '../../../lib/agendaData':{agendaRange:()=>true},
   '../../../lib/mijndiadSync':{ensurePracticeCalendarFresh:async(owner,options)=>{calls.push({name:'ensure_mijndiad_fresh',args:{p_practitioner_id:owner},options});return {usable:!failure,sync:failure?{enabled:true,lastError:'feed_unavailable_or_invalid'}:{enabled:true,lastSuccessAt:'2026-10-18T19:35:00Z'}};},CALENDAR_UNAVAILABLE_MESSAGE:'Externe agenda tijdelijk niet bereikbaar.'},
-  '../../../lib/supabase/server':{getSupabaseAdmin:()=>({rpc:async(name,args)=>{calls.push({name,args});return failure?{error:{message:'private upstream details'}}:{data:{usable:true,configured:true}};}})},
+  '../../../lib/supabase/server':{getSupabaseAdmin:()=>({rpc:async(name,args)=>{calls.push({name,args});return failure?{error:{message:'private upstream details'}}:{data:{outcome:'refreshed'}};}})},
  };
  const code=ts.transpileModule(readFileSync(new URL('../src/pages/api/praktijk/agenda.ts',import.meta.url),'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;
  vm.runInNewContext(code,{exports,require:name=>{assert.ok(deps[name],name);return deps[name];},Response,Date});
- const context={request:{json:async()=>({action:'sync'})},locals:{currentUser:{sub:'user',practitionerId:'owner'}},url:new URL('https://example.invalid/api/praktijk/agenda?from=2026-10-19&to=2026-10-26')};
+ const context={request:{json:async()=>({action:'sync'})},locals:{currentUser:{sub:'user',practitionerId:'owner',roles:['practitioner']}},url:new URL('https://example.invalid/api/praktijk/agenda?from=2026-10-19&to=2026-10-26')};
  return {route:exports,calls,context};
 }
 

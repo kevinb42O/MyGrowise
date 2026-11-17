@@ -49,7 +49,7 @@ test('Free slot total counts the whole fortnight independently of the four-item 
     rpc: async () => ({data: Array.from({length: 17}, (_, index) => ({starts_at: new Date(Date.UTC(2026, 10, 2, index)).toISOString(), ends_at: new Date(Date.UTC(2026, 10, 2, index + 1)).toISOString()})), error: null}),
   };
   const { getPracticeSummary } = load('../src/lib/practiceStore.ts', {
-    './supabase/server': {getSupabaseAdmin: () => db}, './brusselsTime': {}, './mijndiadSync': {ensurePracticeCalendarFresh: async () => {}},
+    './supabase/server': {getSupabaseAdmin: () => db}, './brusselsTime': {}, './mijndiadSync': {ensurePracticeCalendarFresh: async () => {}}, './agendaData': {},
   });
   const summary = await getPracticeSummary('test', []);
   assert.equal(summary.freeSlotCount, 17);

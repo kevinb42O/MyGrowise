@@ -1,12 +1,13 @@
 import type { APIRoute } from 'astro';
 import { isTrustedFormOrigin } from '../../../../../lib/adminAuth';
+import { auditActor } from '../../../../../lib/securityAudit';
 import { deleteAvailabilityException } from '../../../../../lib/practiceStore';
 
 export const prerender = false;
 export const POST: APIRoute = async ({ request, locals, params }) => {
   if (!isTrustedFormOrigin(request)) return new Response('Ongeldige aanvraag.', { status: 403 });
   try {
-    await deleteAvailabilityException(params.id || '', locals.currentUser!.practitionerId!, locals.currentUser!.sub);
+    await deleteAvailabilityException(params.id || '', locals.currentUser!.practitionerId!, auditActor(locals.currentUser, locals.requestId, new URL(request.url).pathname));
     return new Response(null, { status: 303, headers: { location: '/praktijk/beschikbaarheid?exception_deleted=1' } });
   } catch {
     return new Response('Blokkade niet gevonden.', { status: 404 });

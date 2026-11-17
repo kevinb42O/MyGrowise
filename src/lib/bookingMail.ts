@@ -8,6 +8,13 @@ export async function deliverBookingMail(limit=4,bookingId?:string){
  if(error)throw new Error('mail_claim_failed');
  let sent=0,failed=0;
  for(const job of jobs||[]){try{
+   const {data:current,error:currentError}=await db.rpc('booking_mail_is_current',{p_job:job.id});
+   if(currentError)throw new Error('mail_check_failed');
+   if(!current){
+     const {error}=await db.from('booking_mail_jobs').update({status:'superseded',lease_until:null,lease_token:null}).eq('id',job.id).eq('lease_token',job.lease_token);
+     if(error)throw new Error('mail_status_failed');
+     continue;
+   }
    const mail=bookingMailContent(job.kind,job.payload as BookingMailPayload,import.meta.env.PUBLIC_SITE_URL);
    await sendWebsiteEmail(job.recipient,mail.subject,mail.text,import.meta.env.SUPPORT_FROM_EMAIL,`<booking-${job.id}@mygrowise.be>`,mail.html);
    const {error}=await db.from('booking_mail_jobs').update({status:'sent',sent_at:new Date().toISOString(),lease_until:null,last_error:null}).eq('id',job.id).eq('lease_token',job.lease_token);
@@ -16,4 +23,20 @@ export async function deliverBookingMail(limit=4,bookingId?:string){
    await db.from('booking_mail_jobs').update({status:job.attempts>=6?'failed':'pending',next_attempt_at:new Date(Date.now()+Math.min(2**job.attempts*60000,21600000)).toISOString(),lease_until:null,last_error:'delivery_failed'}).eq('id',job.id).eq('lease_token',job.lease_token);failed++;
  }}
  return {sent,failed,configured:true};
+}
+
+// Read the latest job state even when the immediate transport attempt fails.
+export async function attemptAgendaBookingMail(bookingId: string) {
+  try {
+    await deliverBookingMail(1, bookingId);
+  } catch {
+    // The durable job remains available for retry.
+  }
+  try {
+    const { data, error } = await getSupabaseAdmin().from('booking_mail_jobs').select('status')
+      .eq('booking_id', bookingId).neq('status', 'superseded').order('created_at', { ascending: false }).limit(1).maybeSingle();
+    return error ? 'unknown' : data?.status || 'unknown';
+  } catch {
+    return 'unknown';
+  }
 }
