@@ -80,7 +80,7 @@ export function AgendaEventCard({ item, timeText, compact = false, list = false,
 }) {
   const imported = item.externalSource === 'mijndiad';
   const duration = (Date.parse(item.endsAt) - Date.parse(item.startsAt)) / 60000;
-  const short = !compact && !list && duration > 0 && duration <= 30;
+  const short = !compact && !list && duration > 0 && duration <= 45;
   const title = item.location?.toLowerCase() === 'online' ? item.title.replace(/\s+online$/i, '') : item.title;
   const state = item.conflict ? 'Overlap · ' : item.status === 'pending' || historical.includes(item.status) ? `${statusLabels[item.status]} · `
     : item.source === 'itransform' && !imported ? 'Itransform · ' : '';
@@ -463,7 +463,7 @@ export default function UnifiedAgenda({ mode = 'admin', allowItransform = false 
         headerToolbar={{ left: 'prev,next today', center: 'title', right: 'dayGridMonth,timeGridWeek,timeGridDay,listWeek' }}
         buttonText={{ today: 'Vandaag', month: 'Maand', week: 'Week', day: 'Dag', list: 'Lijst' }}
         allDaySlot slotMinTime={hours.min} slotMaxTime={hours.max} slotDuration="00:30:00" snapDuration="00:15:00"
-        height={practice ? 'clamp(520px, calc(100dvh - 180px), 1100px)' : 'auto'} scrollTime="08:30:00" scrollTimeReset={false} expandRows
+        height="clamp(520px, calc(100dvh - 180px), 1100px)" scrollTime="08:30:00" scrollTimeReset={false} expandRows
         dayHeaderFormat={{ weekday: 'short', day: 'numeric', month: 'short' }} slotLabelFormat={{ hour: '2-digit', minute: '2-digit', hour12: false }}
         events={events} dateClick={arg => chooseSlot(windowFor(arg.dateStr))}
         select={arg => { chooseSlot(windowFor(arg.startStr, arg.endStr, arg.allDay)); calendarRef.current?.getApi().unselect(); }}
