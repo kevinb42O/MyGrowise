@@ -199,7 +199,8 @@ test('admin UI has no Itransform filter, even if practice access is supplied', (
     const html = renderToStaticMarkup(createElement(Agenda, { mode: 'admin', allowItransform }));
     assert.doesNotMatch(html, /Itransform|Agenda filter/);
     assert.match(html, /Professional/);
-    assert.match(html, /Nieuw moment/);
+    assert.match(html, /Eigen moment/);
+    assert.match(html, /Cliëntafspraak/);
   }
 });
 

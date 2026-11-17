@@ -1,11 +1,14 @@
 ---
-interface Props { surface: 'admin' | 'practice' }
-const { surface } = Astro.props;
+import AdminIcon from './AdminIcon.astro';
+interface Props { surface: 'admin' | 'practice'; compact?: boolean }
+const { surface, compact = false } = Astro.props;
 ---
 <details class="admin-attention-overview" data-attention-status data-surface={surface}>
-  <summary><span data-attention-heading>Op te volgen · controleren…</span> <span class="admin-attention-dot" data-attention-keys="*" role="img" aria-label="Aandacht nodig" hidden></span></summary>
-  <p class="admin-attention-status" role="status" data-attention-status-text>Aandachtspunten controleren…</p>
-  <div class="admin-attention-summary" data-attention-summary aria-label="Open aandachtspunten"></div>
+  <summary aria-label={compact ? "Op te volgen" : undefined} title={compact ? "Op te volgen" : undefined}>{compact && <AdminIcon name="warning" />}<span data-attention-heading>Op te volgen · controleren…</span> <span class="admin-attention-dot" data-attention-keys="*" role="img" aria-label="Aandacht nodig" hidden></span></summary>
+  <div class:list={{ "agenda-attention-panel": compact }}>
+    <p class="admin-attention-status" role="status" data-attention-status-text>Aandachtspunten controleren…</p>
+    <div class="admin-attention-summary" data-attention-summary aria-label="Open aandachtspunten"></div>
+  </div>
 </details>
 <script>
   const root = document.querySelector<HTMLElement>('[data-attention-status]');

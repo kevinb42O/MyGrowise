@@ -1,5 +1,6 @@
 ---
 import FormProtection from '../components/practice/FormProtection.astro';
+import AgendaNavigation from '../components/admin/AgendaNavigation.astro';
 import ClientSearch from '../components/admin/ClientSearch';
 import AppIcons from '../components/astro/AppIcons.astro';
 import AdminIcon from '../components/admin/AdminIcon.astro';
@@ -8,10 +9,11 @@ import NotificationBell from '../components/admin/NotificationBell.astro';
 import '../styles/admin.css';
 import '../styles/practice-management.css';
 import '../styles/practice-improvements.css';
+import '../styles/agenda-workspace.css';
 import { hasPermission } from '../lib/adminAuth';
 
-interface Props { title: string; description?: string }
-const { title, description = 'Mijn praktijk bij MyGrowise' } = Astro.props;
+interface Props { title: string; description?: string; agendaWorkspace?: boolean }
+const { title, agendaWorkspace = false, description = 'Mijn praktijk bij MyGrowise' } = Astro.props;
 const user = Astro.locals.currentUser;
 const currentPath = Astro.url.pathname.replace(/\/$/, '') || '/praktijk';
 const initials = (user?.name || '?').split(/\s+/).map((part) => part[0]).join('').slice(0, 2).toUpperCase();
@@ -46,25 +48,26 @@ const active = (item: { href: string; exact?: boolean }) => item.exact ? current
     <AppIcons />
     <title>{title} · Mijn praktijk</title>
   </head>
-  <body class="admin-body practice-body">
+  <body class:list={["admin-body", "practice-body", { "agenda-workspace": agendaWorkspace }]}>
     <a class="admin-skip-link" href="#practice-main">Naar de hoofdinhoud</a>
     <div class="admin-shell">
       <div class="admin-sidebar-scrim" data-sidebar-close></div>
       <aside class="admin-sidebar practice-sidebar" id="practice-sidebar" aria-label="Praktijknavigatie">
-        <div class="admin-brand"><a href="/praktijk"><img class="admin-brand__mark" src="/images/logo-lelie.webp" alt="" width="382" height="289" /><span><strong>MyGrowise</strong><small>Mijn praktijk</small></span></a><button class="admin-icon-button admin-sidebar__close" type="button" aria-label="Menu sluiten" data-sidebar-close><AdminIcon name="close" /></button></div>
-        <nav class="admin-nav"><section class="admin-nav__group"><h2>Mijn werkdag</h2><ul>{nav.map((item) => <li><a href={item.href} class:list={{ 'is-active': active(item) }} aria-current={active(item) ? 'page' : undefined}><AdminIcon name={item.icon} /><span>{item.label}</span><span class="admin-attention-dot" data-attention-keys={attentionKeys[item.href] || ""} role="img" aria-label="Aandacht nodig" hidden></span></a></li>)}</ul></section><section class="admin-nav__group"><h2>Praktijk instellen</h2><ul>{settingsNav.map((item) => <li><a href={item.href} class:list={{ 'is-active': active(item) }} aria-current={active(item) ? 'page' : undefined}><AdminIcon name={item.icon} /><span>{item.label}</span><span class="admin-attention-dot" data-attention-keys={attentionKeys[item.href] || ""} role="img" aria-label="Aandacht nodig" hidden></span></a></li>)}</ul></section></nav>
+        <div class="admin-brand"><a href="/praktijk" aria-label="MyGrowise praktijkdashboard"><img class="admin-brand__mark" src="/images/logo-lelie.webp" alt="" width="382" height="289" /><span><strong>MyGrowise</strong><small>Mijn praktijk</small></span></a><button class="admin-icon-button admin-sidebar__close" type="button" aria-label="Menu sluiten" data-sidebar-close><AdminIcon name="close" /></button></div>
+        <nav class="admin-nav"><section class="admin-nav__group"><h2>Mijn werkdag</h2><ul>{nav.map((item) => <li><a href={item.href} aria-label={item.label} title={item.label} class:list={{ 'is-active': active(item) }} aria-current={active(item) ? 'page' : undefined}><AdminIcon name={item.icon} /><span>{item.label}</span><span class="admin-attention-dot" data-attention-keys={attentionKeys[item.href] || ""} role="img" aria-label="Aandacht nodig" hidden></span></a></li>)}</ul></section><section class="admin-nav__group"><h2>Praktijk instellen</h2><ul>{settingsNav.map((item) => <li><a href={item.href} aria-label={item.label} title={item.label} class:list={{ 'is-active': active(item) }} aria-current={active(item) ? 'page' : undefined}><AdminIcon name={item.icon} /><span>{item.label}</span><span class="admin-attention-dot" data-attention-keys={attentionKeys[item.href] || ""} role="img" aria-label="Aandacht nodig" hidden></span></a></li>)}</ul></section></nav>
+        {agendaWorkspace && <AgendaNavigation practice={true} user={user} />}
         <div class="admin-sidebar__footer">
-          {user?.roles.includes('super_admin') && <a class="practice-switch" href="/admin"><AdminIcon name="overview" /> Naar organisatiebeheer</a>}
-          <a href="/begeleiding" target="_blank" rel="noreferrer"><AdminIcon name="external" /> Publiek profiel bekijken</a>
+          {user?.roles.includes('super_admin') && <a class="practice-switch" href="/admin" aria-label="Naar organisatiebeheer" title="Naar organisatiebeheer"><AdminIcon name="overview" /> Naar organisatiebeheer</a>}
+          <a href="/begeleiding" aria-label="Publiek profiel bekijken" title="Publiek profiel bekijken" target="_blank" rel="noreferrer"><AdminIcon name="external" /> Publiek profiel bekijken</a>
           <div class="admin-user"><span>{initials}</span><span><strong>{user?.name}</strong><small>Professional</small></span><form action="/api/admin/logout" method="post"><button type="submit" aria-label="Afmelden" title="Afmelden"><AdminIcon name="logout" size={16} /></button></form></div>
         </div>
       </aside>
       <div class="admin-workspace">
-        <header class="admin-topbar"><div class="admin-topbar__left"><button class="admin-icon-button admin-menu-button" type="button" aria-label="Menu openen" aria-controls="practice-sidebar" aria-expanded="false" data-sidebar-open><AdminIcon name="menu" /><span class="admin-attention-dot" data-attention-keys="*" role="img" aria-label="Aandacht nodig" hidden></span></button><span class="admin-topbar__crumb">Mijn praktijk</span><span aria-hidden="true">/</span><strong>{title}</strong></div><div class="admin-topbar__right">{hasPermission(user, 'client_records.read') && <ClientSearch practice={true} client:only="react" />} {user && <NotificationBell userId={user.sub} basePath="/praktijk/berichten" />}<span class="practice-private-badge"><AdminIcon name="lock" size={13} /> Privé</span></div></header>
-        <main id="practice-main" class="admin-main"><AttentionStatus surface="practice" /><slot /></main>
+        {!agendaWorkspace && <header class="admin-topbar"><div class="admin-topbar__left"><button class="admin-icon-button admin-menu-button" type="button" aria-label="Menu openen" aria-controls="practice-sidebar" aria-expanded="false" data-sidebar-open><AdminIcon name="menu" /><span class="admin-attention-dot" data-attention-keys="*" role="img" aria-label="Aandacht nodig" hidden></span></button><span class="admin-topbar__crumb">Mijn praktijk</span><span aria-hidden="true">/</span><strong>{title}</strong></div><div class="admin-topbar__right">{hasPermission(user, 'client_records.read') && <ClientSearch practice={true} client:only="react" />} {user && <NotificationBell userId={user.sub} basePath="/praktijk/berichten" />}<span class="practice-private-badge"><AdminIcon name="lock" size={13} /> Privé</span></div></header>}
+        <main id="practice-main" class="admin-main">{!agendaWorkspace && <AttentionStatus surface="practice" />}<slot /></main>
       </div>
     </div>
-    <script is:inline>
+    {!agendaWorkspace && <script is:inline>
       const body = document.body;
       const openButton = document.querySelector('[data-sidebar-open]');
       const closeButtons = document.querySelectorAll('[data-sidebar-close]');
@@ -72,7 +75,7 @@ const active = (item: { href: string; exact?: boolean }) => item.exact ? current
       openButton?.addEventListener('click', () => setSidebar(true));
       closeButtons.forEach((button) => button.addEventListener('click', () => setSidebar(false)));
       document.addEventListener('keydown', (event) => { if (event.key === 'Escape') setSidebar(false); });
-    </script>
+    </script>}
 
   <FormProtection/>
   </body>

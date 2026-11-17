@@ -4,14 +4,9 @@ import UnifiedAgenda from '../../components/admin/UnifiedAgenda';
 Astro.response.headers.set('Cache-Control', 'private, no-store');
 ---
 
-<AdminLayout title="Agenda" description="Beheer de planning en afspraken van MyGrowise">
+<AdminLayout agendaWorkspace title="Agenda" description="Beheer de planning en afspraken van MyGrowise">
   <div class="admin-page agenda-page">
-    <section class="admin-page-heading agenda-heading" aria-labelledby="agenda-title">
-      <div>
-        <h1 id="agenda-title">Agenda</h1>
-        <p>Alle afspraken en momenten van MyGrowise.</p>
-      </div>
-    </section>
+    <h1 class="sr-only" id="agenda-title">Agenda</h1>
     <UnifiedAgenda preferenceKey={Astro.locals.currentUser!.sub} client:only="react"><p slot="fallback" role="status">Agenda laden…</p></UnifiedAgenda>
   </div>
 </AdminLayout>

@@ -1,0 +1,61 @@
+---
+import AdminIcon from './AdminIcon.astro';
+import AttentionStatus from './AttentionStatus.astro';
+import ClientSearch from './ClientSearch';
+import NotificationBell from './NotificationBell.astro';
+import { hasPermission, type UserSession } from '../../lib/adminAuth';
+interface Props { practice: boolean; user?: UserSession | null }
+const { practice, user } = Astro.props;
+---
+<div class="agenda-navigation-tools">
+  {hasPermission(user, 'client_records.read') && <details class="agenda-client-search">
+    <summary aria-label="Zoek cliënt" title="Zoek cliënt"><AdminIcon name="customers" /><span>Zoek cliënt</span></summary>
+    <div class="agenda-client-search__panel"><ClientSearch practice={practice} client:only="react" /></div>
+  </details>}
+  {user && <NotificationBell userId={user.sub} basePath={practice ? '/praktijk/berichten' : '/admin/berichten'} />}
+  <AttentionStatus surface={practice ? 'practice' : 'admin'} compact />
+</div>
+<script>
+  const body = document.body;
+  if (body.classList.contains('agenda-workspace')) {
+    const sidebar = document.querySelector<HTMLElement>('.admin-sidebar')!;
+    const workspace = document.querySelector<HTMLElement>('.admin-workspace')!;
+    const mobile = window.matchMedia('(max-width: 820px)');
+    const setNavigation = (open: boolean, restoreFocus = false) => {
+      body.classList.toggle('agenda-navigation-open', open);
+      body.classList.toggle('admin-menu-open', open && mobile.matches);
+      workspace.inert = open && mobile.matches;
+      sidebar.inert = !open && mobile.matches;
+      const toggle = document.querySelector<HTMLButtonElement>('[data-agenda-navigation]');
+      toggle?.setAttribute('aria-expanded', String(open));
+      toggle?.setAttribute('aria-label', open ? 'Navigatie inklappen' : 'Navigatie openen');
+      if (open && mobile.matches) sidebar.querySelector<HTMLButtonElement>('[data-sidebar-close]')?.focus();
+      if (!open && restoreFocus) toggle?.focus();
+      window.dispatchEvent(new Event('resize'));
+    };
+    document.addEventListener('click', event => {
+      const target = event.target instanceof Element ? event.target : null;
+      if (target?.closest('[data-agenda-navigation]')) setNavigation(!body.classList.contains('agenda-navigation-open'));
+      if (target?.closest('[data-sidebar-close]')) setNavigation(false, true);
+      document.querySelectorAll<HTMLDetailsElement>('.agenda-navigation-tools details[open], details[name="agenda-tools"][open]').forEach(menu => {
+        if (target && !menu.contains(target)) menu.open = false;
+      });
+    });
+    document.addEventListener('keydown', event => {
+      if (event.target instanceof Element && event.target.closest('dialog[open]')) return;
+      if (event.key === 'Escape' && !event.defaultPrevented) {
+        const openMenu = document.querySelector<HTMLDetailsElement>('.agenda-navigation-tools details[open], details[name="agenda-tools"][open]');
+        if (openMenu) { event.preventDefault(); openMenu.open = false; openMenu.querySelector('summary')?.focus(); return; }
+        if (body.classList.contains('agenda-navigation-open')) setNavigation(false, true);
+      }
+      if (event.key === 'Tab' && mobile.matches && body.classList.contains('agenda-navigation-open')) {
+        const focusable = [...sidebar.querySelectorAll<HTMLElement>('a[href], button, summary, input, select')].filter(el => el.getClientRects().length && !el.hasAttribute('disabled'));
+        const first = focusable[0], last = focusable.at(-1);
+        if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
+        else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
+      }
+    });
+    mobile.addEventListener('change', () => setNavigation(false));
+    setNavigation(false);
+  }
+</script>

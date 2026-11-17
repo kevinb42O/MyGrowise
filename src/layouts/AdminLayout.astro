@@ -1,4 +1,5 @@
 ---
+import AgendaNavigation from '../components/admin/AgendaNavigation.astro';
 import ClientSearch from '../components/admin/ClientSearch';
 import AppIcons from '../components/astro/AppIcons.astro';
 import FormProtection from '../components/practice/FormProtection.astro';
@@ -8,15 +9,17 @@ import NotificationBell from '../components/admin/NotificationBell.astro';
 import '../styles/admin.css';
 import '../styles/practice-management.css';
 import '../styles/practice-improvements.css';
+import '../styles/agenda-workspace.css';
 import { hasPermission } from '../lib/adminAuth';
 import { requiredAdminPermission } from '../lib/adminPermissions';
 
 interface Props {
   title: string;
   description?: string;
+  agendaWorkspace?: boolean;
 }
 
-const { title, description = 'Beheer MyGrowise' } = Astro.props;
+const { title, agendaWorkspace = false, description = 'Beheer MyGrowise' } = Astro.props;
 const currentPath = Astro.url.pathname.replace(/\/$/, '') || '/';
 const adminUser = Astro.locals.adminUser;
 if (currentPath.startsWith('/admin')) {
@@ -99,7 +102,7 @@ const canOpen = (href: string) => {
     <meta name="description" content={description} />
     <title>{title} · MyGrowise Admin</title>
   </head>
-  <body class="admin-body">
+  <body class:list={["admin-body", { "agenda-workspace": agendaWorkspace }]}>
     <a class="admin-skip-link" href="#admin-main">Naar de hoofdinhoud</a>
     <div class="admin-shell">
       <div class="admin-sidebar-scrim" data-sidebar-close></div>
@@ -121,7 +124,7 @@ const canOpen = (href: string) => {
               <ul>
                 {group.items.filter((item) => canOpen(item.href)).map((item) => (
                   <li>
-                    <a href={item.href} class:list={{ 'is-active': isActive(item) }} aria-current={isActive(item) ? 'page' : undefined}>
+                    <a href={item.href} aria-label={item.label} title={item.label} class:list={{ 'is-active': isActive(item) }} aria-current={isActive(item) ? 'page' : undefined}>
                       <AdminIcon name={item.icon} />
                       <span>{item.label}</span>
                       <span class="admin-attention-dot" data-attention-keys={attentionKeys[item.href] || ""} role="img" aria-label="Aandacht nodig" hidden></span>
@@ -133,9 +136,10 @@ const canOpen = (href: string) => {
           ))}
         </nav>
 
+        {agendaWorkspace && <AgendaNavigation practice={false} user={adminUser} />}
         <div class="admin-sidebar__footer">
-          {adminUser?.roles.includes('practitioner') && <a class="practice-switch" href="/praktijk"><AdminIcon name="calendar" /> Naar mijn praktijk</a>}
-          <a href="/" target="_blank" rel="noreferrer">
+          {adminUser?.roles.includes('practitioner') && <a class="practice-switch" href="/praktijk" aria-label="Naar mijn praktijk" title="Naar mijn praktijk"><AdminIcon name="calendar" /> Naar mijn praktijk</a>}
+          <a href="/" aria-label="Website bekijken" title="Website bekijken" target="_blank" rel="noreferrer">
             <AdminIcon name="external" />
             Website bekijken
           </a>
@@ -150,7 +154,7 @@ const canOpen = (href: string) => {
       </aside>
 
       <div class="admin-workspace">
-        <header class="admin-topbar">
+        {!agendaWorkspace && <header class="admin-topbar">
           <div class="admin-topbar__left">
             <button class="admin-icon-button admin-menu-button" type="button" aria-label="Menu openen" aria-controls="admin-sidebar" aria-expanded="false" data-sidebar-open>
               <AdminIcon name="menu" /><span class="admin-attention-dot" data-attention-keys="*" role="img" aria-label="Aandacht nodig" hidden></span>
@@ -166,16 +170,16 @@ const canOpen = (href: string) => {
               <span>Website</span>
             </a>
           </div>
-        </header>
+        </header>}
 
         <main id="admin-main" class="admin-main">
-          <AttentionStatus surface="admin" />
+          {!agendaWorkspace && <AttentionStatus surface="admin" />}
           <slot />
         </main>
       </div>
     </div>
 
-    <script is:inline>
+    {!agendaWorkspace && <script is:inline>
       const body = document.body;
       const openButton = document.querySelector('[data-sidebar-open]');
       const closeButtons = document.querySelectorAll('[data-sidebar-close]');
@@ -188,7 +192,7 @@ const canOpen = (href: string) => {
       document.addEventListener('keydown', (event) => {
         if (event.key === 'Escape') setSidebar(false);
       });
-    </script>
+    </script>}
     <FormProtection/>
   </body>
 </html>

@@ -159,13 +159,18 @@ function visibleHours(items: Item[]) {
   return { min: `${String(min).padStart(2, '0')}:00:00`, max: `${String(max).padStart(2, '0')}:00:00` };
 }
 
+function AgendaIcon({ name }: { name: 'menu' | 'previous' | 'next' }) {
+  return <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={name === 'menu' ? 'M4 7h16M4 12h16M4 17h16' : name === 'previous' ? 'm15 6-6 6 6 6' : 'm9 6 6 6-6 6'} /></svg>;
+}
+
 export default function UnifiedAgenda({ mode = 'admin', allowItransform = false, preferenceKey = '' }: { mode?: Mode; allowItransform?: boolean; preferenceKey?: string }) {
   const practice = mode === 'practice';
   const endpoint = practice ? '/api/praktijk/agenda' : '/api/admin/agenda';
   const calendarRef = useRef<FullCalendar>(null);
   const calendarContainer = useRef<HTMLDivElement>(null);
-  const [calendarHeight, setCalendarHeight] = useState(600);
   const [compact, setCompact] = useState(true);
+  const [filterOpen, setFilterOpen] = useState(false);
+  const [calendarTitle, setCalendarTitle] = useState('Agenda');
   useEffect(() => {
     try { setCompact(localStorage.getItem(`agenda-workday:${preferenceKey}`) !== 'all'); } catch { /* Storage is optional. */ }
   }, [preferenceKey]);
@@ -174,11 +179,13 @@ export default function UnifiedAgenda({ mode = 'admin', allowItransform = false,
     try { localStorage.setItem(`agenda-workday:${preferenceKey}`, next ? 'compact' : 'all'); } catch { /* Storage is optional. */ }
   };
   useEffect(() => {
-    const measure = () => { if (calendarContainer.current) setCalendarHeight(Math.max(440, Math.floor(window.innerHeight - calendarContainer.current.getBoundingClientRect().top - 20))); };
-    const observer = new ResizeObserver(measure);
-    if (calendarContainer.current?.parentElement) observer.observe(calendarContainer.current.parentElement);
-    window.addEventListener('resize', measure); measure();
-    return () => { observer.disconnect(); window.removeEventListener('resize', measure); };
+    let frame = 0;
+    const observer = new ResizeObserver(() => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => calendarRef.current?.getApi().updateSize());
+    });
+    if (calendarContainer.current) observer.observe(calendarContainer.current);
+    return () => { observer.disconnect(); cancelAnimationFrame(frame); };
   }, []);
   const [initial] = useState(initialNavigation);
   const [range, setRange] = useState<CalendarRange>();
@@ -411,17 +418,53 @@ export default function UnifiedAgenda({ mode = 'admin', allowItransform = false,
   const syncWarning = Boolean(!sync?.enabled || !sync.lastSuccessAt || sync.lastError || clock - Date.parse(sync.lastSuccessAt) > 300000 || sync.pendingMissing || sync.coverageUncertain || coverageWarning);
   const syncLabel = !sync ? 'MijnDiAd · status onbekend' : !sync.enabled ? 'MijnDiAd · inactief' : syncWarning ? 'MijnDiAd · controleren' : 'MijnDiAd · bijgewerkt';
 
-  return <div className={`unified-agenda${practice ? ' unified-agenda--practice' : ''}`}>
-    <div className="unified-agenda__controls">
+  return <div className={`unified-agenda${filterOpen ? ' has-open-filters' : ''}${practice ? ' unified-agenda--practice' : ''}`}>
+    <div className="agenda-toolbar" aria-label="Agendabediening">
+      <button type="button" className="agenda-toolbar__menu" data-agenda-navigation aria-label="Navigatie openen" aria-controls={practice ? 'practice-sidebar' : 'admin-sidebar'} aria-expanded="false"><AgendaIcon name="menu" /></button>
+      <div className="agenda-toolbar__navigation">
+        <button type="button" aria-label="Vorige periode" onClick={() => calendarRef.current?.getApi().prev()}><AgendaIcon name="previous" /></button>
+        <button type="button" aria-label="Volgende periode" onClick={() => calendarRef.current?.getApi().next()}><AgendaIcon name="next" /></button>
+        <button type="button" onClick={() => calendarRef.current?.getApi().today()}>Vandaag</button>
+      </div>
+      <h2 className="agenda-toolbar__title" aria-live="polite">{calendarTitle}</h2>
+      <div className="agenda-toolbar__views" role="group" aria-label="Kalenderweergave">
+        {([['dayGridMonth', 'Maand'], ['timeGridWeek', 'Week'], ['timeGridDay', 'Dag'], ['listWeek', 'Lijst']] as const).map(([view, label]) =>
+          <button key={view} type="button" aria-pressed={(range?.view || initial.view) === view} onClick={() => calendarRef.current?.getApi().changeView(view)}>{label}</button>)}
+      </div>
+      <select className="agenda-toolbar__view-select" aria-label="Kalenderweergave" value={range?.view || initial.view} onChange={event => calendarRef.current?.getApi().changeView(event.target.value)}>
+        <option value="dayGridMonth">Maand</option><option value="timeGridWeek">Week</option><option value="timeGridDay">Dag</option><option value="listWeek">Lijst</option>
+      </select>
+      <button type="button" className="agenda-toolbar__filter" aria-expanded={filterOpen} aria-controls="agenda-filters" onClick={() => setFilterOpen(value => !value)}>Filters{(search || practitioner !== 'all' || source !== 'all') && <span className="agenda-filter-indicator" role="img" aria-label="Actieve filters" />}</button>
+      {practice && <details name="agenda-tools" className="unified-agenda__menu unified-agenda__create agenda-toolbar__create">
+        <summary>+ Nieuw</summary><div className="unified-agenda__popover">
+          {(['Cliëntafspraak', 'Tijd blokkeren', 'Eigen moment'] as const).map((label, index) => <button key={label} type="button" onClick={event => {
+            const menu = event.currentTarget.closest('details');
+            menu?.querySelector('summary')?.focus();
+            if (menu) menu.open = false;
+            const dates = windowFor(nextQuarter());
+            if (index === 0) open({ type: 'booking', fields: { startsAt: dates.startsAt, patientId: '', offerId: '' } });
+            else if (index === 1) open({ type: 'block', fields: { ...dates, reason: '' } });
+            else openEvent(dates);
+          }}>{label}</button>)}
+        </div>
+      </details>}
+      {!practice && <details name="agenda-tools" className="unified-agenda__menu unified-agenda__create agenda-toolbar__create">
+        <summary>+ Nieuw</summary><div className="unified-agenda__popover">
+          <a href={typeof window === 'undefined' ? '/admin/afspraken/nieuw' : bookingHref('nieuw', practitioner === 'all' ? {} : { professional: practitioner })}>Cliëntafspraak</a>
+          <button type="button" onClick={event => { const menu = event.currentTarget.closest('details'); if (menu) { menu.open = false; menu.querySelector('summary')?.focus(); } openEvent(windowFor(nextQuarter())); }}>Eigen moment</button>
+        </div>
+      </details>}
+    </div>
+    <div className="unified-agenda__controls" id="agenda-filters">
       <div className="unified-agenda__filters">
         {hasItransform && <div className="unified-agenda__source" role="group" aria-label="Agenda filter">
           {([['all', 'Alles'], ['mygrowise', 'MyGrowise'], ['itransform', 'Praktijk Itransform']] as const).map(([value, label]) =>
             <button key={value} type="button" className={source === value ? 'is-active' : ''} aria-pressed={source === value} onClick={() => setSource(value)}>{label}</button>)}
         </div>}
-        {!practice && <label className="unified-agenda__search"><span>Professional</span><select value={practitioner} onChange={event => setPractitioner(event.target.value)}>
+        {!practice && <label className="unified-agenda__search"><span className="sr-only">Professional</span><select value={practitioner} onChange={event => setPractitioner(event.target.value)}>
           <option value="all">Iedereen</option>{professionals.map(person => <option key={person.id} value={person.id}>{person.name}{!person.active ? ' (inactief)' : ''}</option>)}
         </select></label>}
-        <label className="unified-agenda__search"><span>Zoek in deze agendaperiode</span><input type="search" value={search} onChange={event => setSearch(event.target.value)} autoComplete="off" placeholder="Naam, locatie of titel…" /></label>
+        <label className="unified-agenda__search"><span className="sr-only">Zoek in deze agendaperiode</span><input type="search" value={search} onChange={event => setSearch(event.target.value)} autoComplete="off" placeholder="Zoek in agenda…" /></label>
       </div>
       <div className="unified-agenda__actions">
         {hasItransform && <details name="agenda-tools" className={`unified-agenda__menu unified-agenda__sync${syncWarning ? ' is-warning' : ''}`}>
@@ -446,22 +489,6 @@ export default function UnifiedAgenda({ mode = 'admin', allowItransform = false,
             {practice && <><p>De groene achtergrond toont waar minstens één publiek afspraaktype past.</p><a href="/praktijk/beschikbaarheid">Weekschema beheren</a></>}
           </div>
         </details>
-        {practice ? <details name="agenda-tools" className="unified-agenda__menu unified-agenda__create">
-          <summary>+ Nieuw</summary><div className="unified-agenda__popover">
-            {(['Cliëntafspraak', 'Tijd blokkeren', 'Eigen moment'] as const).map((label, index) => <button key={label} type="button" onClick={event => {
-              const menu = event.currentTarget.closest('details');
-              menu?.querySelector('summary')?.focus();
-              if (menu) menu.open = false;
-              const dates = windowFor(nextQuarter());
-              if (index === 0) open({ type: 'booking', fields: { startsAt: dates.startsAt, patientId: '', offerId: '' } });
-              else if (index === 1) open({ type: 'block', fields: { ...dates, reason: '' } });
-              else openEvent(dates);
-            }}>{label}</button>)}
-          </div>
-        </details> : <>
-          <button type="button" className="unified-agenda__new" onClick={() => openEvent(windowFor(nextQuarter()))}>+ Nieuw moment</button>
-          <a className="unified-agenda__new" href={typeof window === 'undefined' ? '/admin/afspraken/nieuw' : bookingHref('nieuw', practitioner === 'all' ? {} : { professional: practitioner })}>+ Cliëntafspraak</a>
-        </>}
       </div>
     </div>
     <div className="agenda-feedback" aria-live="polite">
@@ -480,11 +507,11 @@ export default function UnifiedAgenda({ mode = 'admin', allowItransform = false,
       <FullCalendar ref={calendarRef} plugins={plugins} locale={nlLocale} timeZone={zone}
         initialView={initial.view} initialDate={initial.date} firstDay={1} nowIndicator selectable selectMirror
         eventResizableFromStart weekends={showWeekends} views={{ timeGridDay: { weekends: true }, listWeek: { weekends: true }, dayGridMonth: { weekends: true } }}
-        datesSet={datesSet} slotEventOverlap={false} eventMinHeight={24} eventShortHeight={38} dayMaxEvents={4}
-        headerToolbar={{ left: 'prev,next today', center: 'title', right: 'dayGridMonth,timeGridWeek,timeGridDay,listWeek' }}
+        datesSet={arg => { setCalendarTitle(arg.view.title); datesSet(arg); }} slotEventOverlap={false} eventMinHeight={24} eventShortHeight={38} dayMaxEvents={4}
+        headerToolbar={false}
         buttonText={{ today: 'Vandaag', month: 'Maand', week: 'Week', day: 'Dag', list: 'Lijst' }}
         allDaySlot slotMinTime={hours.min} slotMaxTime={hours.max} slotDuration="00:30:00" snapDuration="00:15:00"
-        height={calendarHeight} scrollTime="08:00:00" scrollTimeReset={false} expandRows
+        height="100%" scrollTime="08:00:00" scrollTimeReset={false} expandRows
         dayHeaderFormat={{ weekday: 'short', day: 'numeric', month: 'short' }} slotLabelFormat={{ hour: '2-digit', minute: '2-digit', hour12: false }}
         events={events} dateClick={arg => chooseSlot(windowFor(arg.dateStr))}
         select={arg => { chooseSlot(windowFor(arg.startStr, arg.endStr, arg.allDay)); calendarRef.current?.getApi().unselect(); }}
