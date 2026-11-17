@@ -2,10 +2,18 @@
  const guarded=new Set<HTMLFormElement>();
  document.querySelectorAll<HTMLFormElement>('form[data-unsaved-form]').forEach(form=>{
   const mark=()=>guarded.add(form);
+  if(form.dataset.unsavedPending==='true')mark();
   form.addEventListener('input',mark);form.addEventListener('change',mark);
-  form.addEventListener('submit',()=>{
-   guarded.delete(form);
-   form.querySelectorAll<HTMLButtonElement>('button[type="submit"]').forEach(button=>{button.disabled=true;button.setAttribute('aria-busy','true');});
+  form.addEventListener('form-saved',()=>guarded.delete(form));
+  form.addEventListener('submit',event=>{
+   // Enhanced forms only become clean after the server confirms the save.
+   if(form.hasAttribute('data-note-form'))return;
+   queueMicrotask(()=>{
+    if(event.defaultPrevented)return;
+    guarded.delete(form);
+    // Defer disabling: named submit buttons must remain in the submitted data.
+    setTimeout(()=>form.querySelectorAll<HTMLButtonElement>('button[type="submit"]').forEach(button=>{button.disabled=true;button.setAttribute('aria-busy','true');}),0);
+   });
   });
  });
  window.addEventListener('beforeunload',event=>{if(guarded.size){event.preventDefault();event.returnValue='';}});

@@ -10,15 +10,16 @@ export default function AgendaClientPicker({ mode, value, onChange, initial, nam
   const [page, setPage] = useState(0);
   const [result, setResult] = useState<{ clients: ClientChoice[]; hasMore: boolean }>({ clients: [], hasMore: false });
   const [selected, setSelected] = useState(initial);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [retry, setRetry] = useState(0);
-  const [open, setOpen] = useState(!initial);
+  const [open, setOpen] = useState(false);
   const [active, setActive] = useState(-1);
   const [creating, setCreating] = useState(Boolean(initialNew));
   const [newPatient, setNewPatient] = useState<NewPatient>(initialNew || { firstName: '', lastName: '', email: '', birthDate: '', key: '' });
   const activeId = value ?? selected?.id ?? '';
   useEffect(() => {
+    if (!open || creating) { setLoading(false); return; }
     const controller = new AbortController();
     setLoading(true); setResult({ clients: [], hasMore: false }); setActive(-1);
     const timer = window.setTimeout(async () => {
@@ -32,7 +33,7 @@ export default function AgendaClientPicker({ mode, value, onChange, initial, nam
       finally { if (!controller.signal.aborted) setLoading(false); }
     }, query ? 250 : 0);
     return () => { window.clearTimeout(timer); controller.abort(); };
-  }, [mode, query, page, retry]);
+  }, [mode, query, page, retry, open, creating]);
   const choose = (client: ClientChoice) => { setSelected(client); onChange?.(client.id); document.getElementById(`${id}-search`)?.focus(); setOpen(false); };
   const patchNew = (patch: Partial<NewPatient>) => { const next = { ...newPatient, ...patch }; setNewPatient(next); onNewChange?.(next); };
   return <div className="agenda-client-picker is-wide">
@@ -66,8 +67,8 @@ export default function AgendaClientPicker({ mode, value, onChange, initial, nam
     </ul>}
     <p role="status">{selected&&activeId ? `Geselecteerd: ${selected.name} · ${selected.email}` : 'Kies een cliënt om de afspraak te plannen.'}</p>
     {selected&&activeId&&selected.accountLinked===false&&<p>Dit dossier heeft nog geen gekoppeld cliëntaccount. Koppel het account in het dossier, zodat de afspraak ook in ‘Mijn begeleiding’ verschijnt. <a href={`${mode==='practice'?'/praktijk':'/admin'}/clienten/${selected.id}`}>Dossier openen</a></p>}
-    <div className="agenda-client-picker__status" role="status">{loading ? 'Cliënten laden…' : error || (!result.clients.length ? 'Geen cliënten gevonden.' : '')}</div>
-      {error && <button type="button" onClick={() => setRetry(retry + 1)}>Opnieuw laden</button>}
+    {open && <div className="agenda-client-picker__status" role="status">{loading ? 'Cliënten laden…' : error || (!result.clients.length ? 'Geen cliënten gevonden.' : '')}</div>}
+      {open && error && <button type="button" onClick={() => setRetry(retry + 1)}>Opnieuw laden</button>}
       {open && !loading && (page > 0 || result.hasMore) && <div className="agenda-client-picker__pages">
         <button type="button" disabled={!page} onClick={() => setPage(page - 1)}>Vorige</button><span>Pagina {page + 1}</span>
         <button type="button" disabled={!result.hasMore} onClick={() => setPage(page + 1)}>Volgende</button>

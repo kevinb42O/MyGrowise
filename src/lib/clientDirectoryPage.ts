@@ -56,6 +56,7 @@ export async function loadClientDirectoryPage(context: Pick<AstroGlobal, 'locals
   const date = (value: string) => new Intl.DateTimeFormat('nl-BE', { timeZone: 'Europe/Brussels', dateStyle: 'medium' }).format(new Date(value));
   const dateTime = (value: string) => new Intl.DateTimeFormat('nl-BE', { timeZone: 'Europe/Brussels', dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value));
 
-  return { submitted, canWrite, canAssign, status, clients, staff, customerSearch, customerAccounts, bookingId, booking, linkedPatient, bookingEmailMatches, showBookingError, formError, errors, date, dateTime, practice, recordsBase };
+  const defaultAssignee = staff.some(member=>member.id===user.sub) ? user.sub : '';
+  return { defaultAssignee, submitted, canWrite, canAssign, status, clients, staff, customerSearch, customerAccounts, bookingId, booking, linkedPatient, bookingEmailMatches, showBookingError, formError, errors, date, dateTime, practice, recordsBase };
 }
 export type ClientDirectoryData = Exclude<Awaited<ReturnType<typeof loadClientDirectoryPage>>, Response>;

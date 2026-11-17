@@ -1,4 +1,5 @@
 ---
+import FormProtection from '../components/practice/FormProtection.astro';
 import ClientSearch from '../components/admin/ClientSearch';
 import AppIcons from '../components/astro/AppIcons.astro';
 import AdminIcon from '../components/admin/AdminIcon.astro';
@@ -21,7 +22,7 @@ const nav = [
   { label: 'Berichten', href: '/praktijk/berichten', icon: 'messages' },
 ];
 const settingsNav = [
-  ...(hasPermission(user, 'practice.manage') ? [{label:'Afspraaktypes',href:'/admin/afspraaktypes',icon:'calendar'}, {label:'Boekingslinks',href:'/admin/boekingslinks',icon:'external'}, {label:'Therapeuten',href:'/admin/therapeuten',icon:'professionals'}] : []),
+  ...(hasPermission(user, 'practice.manage') ? [{label:'Afspraaktypes',href:'/admin/afspraaktypes',icon:'calendar'}, {label:'Afspraaklinks',href:'/admin/boekingslinks',icon:'external'}, {label:'Therapeuten',href:'/admin/therapeuten',icon:'professionals'}] : []),
   { label: 'Beschikbaarheid', href: '/praktijk/beschikbaarheid', icon: 'clock' },
   { label: 'Mijn profiel', href: '/praktijk/profiel', icon: 'professionals' },
   { label: 'Account', href: '/praktijk/account', icon: 'settings' },
@@ -68,5 +69,6 @@ const active = (item: { href: string; exact?: boolean }) => item.exact ? current
       document.addEventListener('keydown', (event) => { if (event.key === 'Escape') setSidebar(false); });
     </script>
 
+  <FormProtection/>
   </body>
 </html>

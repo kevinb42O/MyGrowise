@@ -4,7 +4,7 @@ import AdminIcon from '../admin/AdminIcon.astro';
 import PracticeLayout from '../../layouts/PracticeLayout.astro';
 import type { ClientDirectoryData } from '../../lib/clientDirectoryPage';
 interface Props { data: ClientDirectoryData }
-const { submitted, canWrite, canAssign, status, clients, staff, customerSearch, customerAccounts, bookingId, booking, linkedPatient, bookingEmailMatches, showBookingError, formError, errors, date, dateTime, practice, recordsBase } = Astro.props.data;
+const { defaultAssignee, submitted, canWrite, canAssign, status, clients, staff, customerSearch, customerAccounts, bookingId, booking, linkedPatient, bookingEmailMatches, showBookingError, formError, errors, date, dateTime, practice, recordsBase } = Astro.props.data;
 const Layout = practice ? PracticeLayout : AdminLayout;
 ---
 
@@ -12,7 +12,7 @@ const Layout = practice ? PracticeLayout : AdminLayout;
   <div class="admin-page client-records-page">
     <section class="admin-page-heading">
       <div><p class="admin-eyebrow">Begeleiding · vertrouwelijk</p><h1>Cliëntendossiers</h1><p>Bewaar verslagen per cliënt en volg afspraken en toewijzingen op één beveiligde plek.</p></div>
-      {canWrite && <a class="admin-button admin-button--primary" href="#client-record-create"><AdminIcon name="customers" size={16}/> Nieuw dossier</a>}
+      {canWrite && <a class="admin-button admin-button--primary" href="#client-record-create"><AdminIcon name="customers" size={16}/> Cliënt toevoegen</a>}
     </section>
 
     {Astro.url.searchParams.get('melding')==='verwijderd' && <p class="practice-alert" role="status">Het lege dossier is definitief verwijderd.</p>}
@@ -54,28 +54,30 @@ const Layout = practice ? PracticeLayout : AdminLayout;
       <div class="admin-empty-row" data-client-empty hidden={clients.length > 0}><div><span><AdminIcon name="customers" size={17}/></span><strong data-client-empty-title>{status === 'archived' ? 'Geen gearchiveerde dossiers' : 'Nog geen cliëntendossiers'}</strong><p data-client-empty-copy>Maak een cliënt aan of open een bevestigde afspraak om het eerste dossier te starten.</p></div></div>
     </section>
 
-    {canAssign && <section class="client-create-panel admin-panel" id="client-account-create">
-      <header class="admin-panel__header"><div><h2>Bestaande klant kiezen</h2><p>Koppel een bestaand klantaccount aan een privé dossier. Verslagen verschijnen alleen voor bevoegde medewerkers.</p></div><span class="practice-private-badge"><AdminIcon name="lock" size={13}/> Privé</span></header>
+
+    {canWrite && <section class="client-create-panel admin-panel" id="client-record-create">
+      <header class="admin-panel__header"><div><h2>Cliënt toevoegen</h2><p>Controleer eerst of de cliënt hierboven al een dossier heeft. Vul daarna de naam in of kies een bestaand online account.</p></div><span class="practice-private-badge"><AdminIcon name="lock" size={13}/> Privé</span></header>
+    {canAssign && <details class="practice-card" id="client-account-create" open={Boolean(customerSearch)}><summary>De cliënt heeft al een online account</summary>
+      <header class="admin-panel__header"><div><h2>Bestaand online account kiezen</h2><p>Koppel een bestaand online account aan een privé dossier. Verslagen verschijnen alleen voor bevoegde medewerkers.</p></div><span class="practice-private-badge"><AdminIcon name="lock" size={13}/> Privé</span></header>
       <form class="client-account-search" method="get" action={`${recordsBase}#client-account-create`}>
-        <label><span class="sr-only">Zoek klantaccount</span><input type="search" name="klantzoek" maxlength="80" value={customerSearch} placeholder="Zoek op naam of e-mailadres"/></label>
-        <button class="admin-button" type="submit"><AdminIcon name="search" size={15}/> Zoek klant</button>
+        <label><span class="sr-only">Zoek online account</span><input type="search" name="klantzoek" maxlength="80" value={customerSearch} placeholder="Zoek op naam of e-mailadres"/></label>
+        <button class="admin-button" type="submit"><AdminIcon name="search" size={15}/> Zoeken</button>
         {customerSearch && <a class="admin-button" href={`${recordsBase}#client-account-create`}>Wis zoekterm</a>}
       </form>
       {customerAccounts.length ? <form class="client-create-form client-account-create-form" method="post" action={`/api/admin/clienten?werkruimte=${practice ? 'praktijk' : 'admin'}`}>
         <input type="hidden" name="operation" value="from_customer"/>
-        <label><span>Bestaand klantaccount</span><select name="customer_user_id" required><option value="" disabled selected>Kies een klant</option>{customerAccounts.map((account) => <option value={account.id}>{account.fullName} · {account.email || 'Geen e-mailadres'}</option>)}</select></label>
-        <label><span>Toegewezen aan <small>optioneel</small></span><select name="assignee_user_id"><option value="">Alleen superadmins</option>{staff.map((member) => <option value={member.id} selected={submitted.assignee_user_id===member.id}>{member.name}</option>)}</select></label>
-        <button class="admin-button admin-button--primary" type="submit">Open dossier</button>
+        <label><span>Online account</span><select name="customer_user_id" required><option value="" disabled selected>Kies een cliënt</option>{customerAccounts.map((account) => <option value={account.id}>{account.fullName} · {account.email || 'Geen e-mailadres'}</option>)}</select></label>
+        <label><span>Toegewezen aan <small>optioneel</small></span><select name="assignee_user_id"><option value="" selected={(submitted.assignee_user_id ?? defaultAssignee)===''}>Nog niet toewijzen</option>{staff.map((member) => <option value={member.id} selected={(submitted.assignee_user_id ?? defaultAssignee)===member.id}>{member.name}</option>)}</select></label>
+        <button class="admin-button admin-button--primary" type="submit">Dossier aanmaken met dit account</button>
       </form> : <p class="client-account-empty">{customerSearch ? 'Geen klantaccount gevonden zonder dossier. Pas de zoekterm aan.' : 'Alle klantaccounts hebben al een dossier of er zijn nog geen klantaccounts.'}</p>}
-    </section>}
+    </details>}
 
-    {canWrite && <section class="client-create-panel admin-panel" id="client-record-create">
-      <header class="admin-panel__header"><div><h2>Cliënt toevoegen</h2><p>Medewerkers worden automatisch aan hun eigen nieuwe cliënt toegewezen.</p></div><span class="practice-private-badge"><AdminIcon name="lock" size={13}/> Privé</span></header>
+      <h3>Nieuwe cliëntgegevens invullen</h3>
       <form class="client-create-form" method="post" action={`${recordsBase}#client-record-create`}>
         <label><span>Voornaam</span><input name="first_name" required maxlength="60" autocomplete="given-name" value={submitted.first_name}/></label>
         <label><span>Achternaam</span><input name="last_name" required maxlength="60" autocomplete="family-name" value={submitted.last_name}/></label>
         <label><span>E-mailadres <small>optioneel</small></span><input name="email" value={submitted.email} type="email" maxlength="254" autocomplete="off" placeholder="naam@voorbeeld.be"/></label>
-        {canAssign && <label><span>Toegewezen aan <small>optioneel</small></span><select name="assignee_user_id"><option value="">Nog niet toegewezen</option>{staff.map((member) => <option value={member.id} selected={submitted.assignee_user_id===member.id}>{member.name}{member.roles.includes('practitioner') ? ' · Professional' : member.roles.includes('super_admin') ? ' · Superadmin' : ' · Medewerker'}</option>)}</select></label>}
+        {canAssign && <label><span>Toegewezen aan <small>optioneel</small></span><select name="assignee_user_id"><option value="" selected={(submitted.assignee_user_id ?? defaultAssignee)===''}>Nog niet toewijzen</option>{staff.map((member) => <option value={member.id} selected={(submitted.assignee_user_id ?? defaultAssignee)===member.id}>{member.name}{member.roles.includes('practitioner') ? ' · Professional' : member.roles.includes('super_admin') ? ' · Superadmin' : ' · Medewerker'}</option>)}</select></label>}
         <button class="admin-button admin-button--primary" type="submit"><AdminIcon name="check" size={15}/> Cliënt aanmaken</button>
       </form>
     </section>}

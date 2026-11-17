@@ -1,3 +1,4 @@
+import {saveNoteForm} from './noteForm';
 import {patientAgeLabel} from './patientAge';
 import {salutationLabels} from './patientSalutation';
 import { getBookingForNote } from './clientRecords';
@@ -17,10 +18,20 @@ export async function loadClientDetailPage(context: Pick<AstroGlobal, 'locals' |
   const historyNoteId = context.url.searchParams.get('geschiedenis') || '';
   const requestedNotePage = Number(context.url.searchParams.get('pagina') || '1');
   let detailsError='';
+  let noteError='';
+  let submittedNote:Record<string,string>|null=null;
   let submittedDetails:Record<string,unknown>|null=null;
   if(context.request.method==='POST'){
    if(!isTrustedFormOrigin(context.request)||!hasPermission(user,'client_records.write'))return new Response('Geen toegang.',{status:403});
-   const form=await context.request.formData();submittedDetails=Object.fromEntries(form.entries());
+   const form=await context.request.formData();
+   if(form.get('operation')==='create_note'||form.get('operation')==='save_note'){
+    submittedNote=Object.fromEntries(Array.from(form.entries(),([key,value])=>[key,String(value)]));
+    const result=await saveNoteForm(form,user,patientId,recordsBase,context.locals.requestId);
+    if(context.request.headers.get('accept')?.includes('application/json'))return Response.json(result,{status:result.error?422:200,headers:{'Cache-Control':'private, no-store'}});
+    if(result.location)return context.redirect(result.location,303);
+    noteError=result.error||'Opslaan is niet gelukt. Je tekst staat hieronder.';
+   }else{
+   submittedDetails=Object.fromEntries(form.entries());
    try{
    if(form.get('operation')==='delete_empty'){
     if(form.get('confirm_retention')!=='yes')throw new Error('Bevestig eerst dat dit een foutieve registratie zonder bewaarplicht is.');
@@ -33,9 +44,10 @@ export async function loadClientDetailPage(context: Pick<AstroGlobal, 'locals' |
    if(error)throw new Error(error.code==='40001'?'Het dossier is intussen gewijzigd. Herlaad en controleer de gegevens.':'De gegevens konden niet worden opgeslagen. Controleer je toegang en invoer.');
    return context.redirect(`${recordsBase}/${patientId}?melding=gegevens`,303);
    }catch(cause){detailsError=cause instanceof Error?cause.message:'Opslaan is niet gelukt.';}
+   }
   }
   const bookingStatus=context.url.searchParams.get('status')||'',bookingFrom=context.url.searchParams.get('van')||'',bookingTo=context.url.searchParams.get('tot')||'';
-  const patient = await getPatientDetail(user, patientId, historyNoteId, context.locals.requestId, requestedNotePage,Number(context.url.searchParams.get('afsprakenpagina')||1),bookingStatus,bookingFrom,bookingTo,context.url.searchParams.get('concept') || '');
+  const patient = await getPatientDetail(user, patientId, historyNoteId, context.locals.requestId, submittedNote?.pagina ? Number(submittedNote.pagina) : requestedNotePage,Number(context.url.searchParams.get('afsprakenpagina')||1),bookingStatus,bookingFrom,bookingTo,submittedNote?.note_id || submittedNote?.corrects_note_id || context.url.searchParams.get('concept') || '');
 
   if (!patient) return context.redirect(`${recordsBase}?fout=dossier_niet_gevonden`);
   const { error: visitError } = await getSupabaseAdmin().rpc('record_patient_visit', { p_actor: user.sub, p_patient: patientId });
@@ -50,7 +62,7 @@ export async function loadClientDetailPage(context: Pick<AstroGlobal, 'locals' |
   const canWrite = hasPermission(user, 'client_records.write');
   const activeAssignments = patient.assignments.filter((item) => !item.endedAt);
   const assignedIds = new Set(activeAssignments.map((item) => item.userId));
-  const correctionId = context.url.searchParams.get('correctie') || '';
+  const correctionId = submittedNote?.corrects_note_id || context.url.searchParams.get('correctie') || '';
   const correctionTarget = patient.notes.find((note) => note.id === correctionId && note.status === 'final') || null;
   const message = context.url.searchParams.get('melding') || '';
   const errorCode = context.url.searchParams.get('fout') || '';
@@ -83,7 +95,7 @@ export async function loadClientDetailPage(context: Pick<AstroGlobal, 'locals' |
   };
   const noteLabel = (value: string) => noteTypeLabels[value as keyof typeof noteTypeLabels] || 'Verslag';
   const statusLabel: Record<string, string> = { pending: 'Aangevraagd', confirmed: 'Bevestigd', completed: 'Afgerond', no_show: 'Niet verschenen', cancelled: 'Geannuleerd', declined: 'Afgewezen' };
-  const bookingId = context.url.searchParams.get('boeking') || '';
+  const bookingId = submittedNote?.booking_id ?? (context.url.searchParams.get('boeking') || '');
   const selectedBooking = patient.linkableBookings.find((item) => item.id === bookingId);
   const contextBooking = bookingId && !patient.bookings.some(item => item.id === bookingId)
     ? await getBookingForNote(user, patientId, bookingId) : null;
@@ -99,6 +111,6 @@ export async function loadClientDetailPage(context: Pick<AstroGlobal, 'locals' |
    ['Reden van aanmelding',patient.details.registration_reason],['Doorverwijzer',patient.details.referrer],
   ];
 
-  return { user, patient, deletionBlocker, detailsError, submittedDetails, bookingStatus, bookingFrom, bookingTo, staff, matchingCustomerAccounts, canWrite, assignedIds, correctionTarget, message, errorCode, messages, errors, formatDate, formatDateTime, formatLocalNow, noteLabel, statusLabel, bookingId, selectedBooking, overview, practice, recordsBase, noteBooking, noteBookings };
+  return { noteError, submittedNote, user, patient, deletionBlocker, detailsError, submittedDetails, bookingStatus, bookingFrom, bookingTo, staff, matchingCustomerAccounts, canWrite, assignedIds, correctionTarget, message, errorCode, messages, errors, formatDate, formatDateTime, formatLocalNow, noteLabel, statusLabel, bookingId, selectedBooking, overview, practice, recordsBase, noteBooking, noteBookings };
 }
 export type ClientDetailData = Exclude<Awaited<ReturnType<typeof loadClientDetailPage>>, Response>;
