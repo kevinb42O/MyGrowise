@@ -31,8 +31,9 @@ export default function ClientSearch({ practice = false }: { practice?: boolean 
     document.addEventListener('pointerdown', close);
     return () => document.removeEventListener('pointerdown', close);
   }, []);
-  return <div ref={root} className="client-search" onBlur={event => { if (!event.currentTarget.contains(event.relatedTarget)) setOpen(false); }}>
+  return <div ref={root} className="header-client-search" onBlur={event => { if (!event.currentTarget.contains(event.relatedTarget)) setOpen(false); }}>
     <label className="sr-only" htmlFor={id}>Zoek cliënt op naam of e-mailadres</label>
+    <svg className="header-client-search__icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5" /><path d="m16 16 4.5 4.5" /></svg>
     <input id={id} type="search" placeholder="Zoek cliënt…" autoComplete="off" maxLength={80} role="combobox" aria-expanded={open}
       aria-controls={`${id}-results`} aria-autocomplete="list" aria-activedescendant={active >= 0 ? `${id}-${active}` : undefined}
       value={query} onFocus={() => setOpen(true)} onChange={event => { setQuery(event.target.value); setOpen(true); setActive(-1); }}

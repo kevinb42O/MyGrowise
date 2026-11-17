@@ -18,7 +18,6 @@ interface Props {
 const { title, description = 'Beheer MyGrowise' } = Astro.props;
 const currentPath = Astro.url.pathname.replace(/\/$/, '') || '/';
 const adminUser = Astro.locals.adminUser;
-const environmentLabel = import.meta.env.PROD ? 'Productie' : 'Lokaal';
 if (currentPath.startsWith('/admin')) {
   Astro.response.headers.set('Cache-Control', 'private, no-store, max-age=0');
   Astro.response.headers.set('Referrer-Policy', 'no-referrer');
@@ -154,7 +153,6 @@ const canOpen = (href: string) => {
           </div>
           <div class="admin-topbar__right">{hasPermission(adminUser, 'client_records.read') && <ClientSearch practice={false} client:only="react" />}
             {adminUser && <NotificationBell userId={adminUser.sub} basePath="/admin/berichten" />}
-            <span class="admin-environment"><i></i> {environmentLabel}</span>
             <a class="admin-topbar__site-link" href="/" target="_blank" rel="noreferrer">
               <AdminIcon name="external" size={16} />
               <span>Website</span>

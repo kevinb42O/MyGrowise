@@ -184,19 +184,6 @@ html { background: var(--admin-canvas); }
   cursor: pointer;
 }
 .admin-menu-button { display: none; margin-right: 4px; }
-.admin-environment {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 5px 9px;
-  border: 1px solid #f0dc99;
-  border-radius: 999px;
-  background: var(--admin-yellow-soft);
-  color: #795b00;
-  font-size: 11px;
-  font-weight: 600;
-}
-.admin-environment i { width: 6px; height: 6px; border-radius: 50%; background: var(--admin-yellow); }
 .admin-topbar__site-link { display: inline-flex; align-items: center; gap: 7px; color: var(--admin-muted); font-size: 12px; font-weight: 500; }
 .admin-main { width: 100%; padding: 36px clamp(24px, 4vw, 56px) 64px; }
 .admin-page { width: min(100%, 1440px); margin: 0 auto; }
