@@ -1,5 +1,7 @@
 # Release en verkoopvrijgave op Vercel Free
 
+**Praktijkuitrol 17 november 2026:** migratie `20261117170000` toegepast, implementatie `02ff86f` via Vercel gedeployd en aanvullende Supabase-minuutcontrole voor 72-uursherinneringen geactiveerd. Zie [uitvoering, productiecontroles en uitschakelen](PRAKTIJK-VERBETERINGEN-UITVOERING-2026-11-17.md). De dagelijkse Vercel-cron blijft behouden; eerdere beschrijvingen hieronder van niet-beschikbare herinneringen zijn historische releasecontext.
+
 **Verkoopvrijgave 9 november 2026:** Kevin heeft overschrijving en handmatige opvolging door Virginie bevestigd. Zie [de uitvoering en verificatie](VERKOOPVRIJGAVE-2026-11-09.md). De eerdere gesloten verkoopstand hieronder is historische context.
 
 **Actuele verwijzing: 30 oktober 2026.** [MASTERPLAN.md](MASTERPLAN.md) beschrijft de huidige status op codebasis `29d4b87`. Alle fixes zijn lokaal gecontroleerd en naar `main` gepusht; de nieuwe Vercel-status is in deze ronde niet afzonderlijk geverifieerd. De ondernemingsgegevens, privacy en volledige voorwaarden zijn inmiddels verwerkt. De [afspraakacceptatie](APPOINTMENT-FLOW-ACCEPTANCE.md) bewijst de eerdere productieketen en mailontvangst; [transactionele mails](TRANSACTIONELE-MAILS.md) beschrijft de nieuwe opmaak en opgeslagen Auth-templates.

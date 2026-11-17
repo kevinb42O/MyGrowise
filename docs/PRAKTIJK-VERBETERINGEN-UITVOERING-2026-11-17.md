@@ -1,6 +1,6 @@
 # Praktijkverbeteringen — uitvoering en uitrol
 
-Datum: 17 november 2026. Lokaal geïmplementeerd op basis van het [verbeterplan](PRAKTIJK-VERBETERPLAN-2026-11-17.md). Uitrol gestart op uitdrukkelijk verzoek: migratie `20261117170000` succesvol toegepast. Applicatiedeployment en scheduleractivatie volgen na deze codepublicatie; de definitieve verificatie wordt hieronder bijgewerkt. De databaserepetitie draaide tegen de gekoppelde database in één teruggedraaide transactie met synthetische gegevens; er zijn geen mails verstuurd.
+Datum: 17 november 2026. Geïmplementeerd en op uitdrukkelijk verzoek uitgerold op basis van het [verbeterplan](PRAKTIJK-VERBETERPLAN-2026-11-17.md). Migratie `20261117170000` is succesvol toegepast. Implementatiecommit `02ff86f` is naar `origin/main` gepusht en door de bestaande Vercel-integratie succesvol gedeployd. De scheduler is geactiveerd en de eerste automatische uitvoering is geslaagd. De databaserepetities gebruikten telkens één teruggedraaide transactie met synthetische gegevens; daarbij zijn geen mails verstuurd.
 
 ## Opgeleverd in de code
 
@@ -37,6 +37,16 @@ De worker verwerkt maximaal 100 mails per aanroep in groepen van vier met een ti
 - Impeccable-detectie: alleen advisories voor afwijkingen van het Startpunt-ontwerp; geen niet-adviserende bevindingen. Praktijktypografie heeft bewust eigen functionele formaten.
 
 Visuele browseracceptatie is nog open: de beschikbare browserconnector liep vast voordat de pagina kon worden geopend. Geen screenshots of geslaagde schermtests beschikbaar. Controleer vóór vrijgave dag/week op 1366×768 en 1440×900, mobiel, 200% zoom, lange namen/notities, cliëntaanmaak en toetsenbordbediening.
+
+## Productiecontrole na activatie
+
+- Vercel rapporteerde `success` voor implementatiecommit `02ff86f`; de nieuwe route is bereikbaar op `https://www.mygrowise.be`.
+- Herinneringsendpoint: onbevoegde HEAD en GET geven 401; geautoriseerde HEAD geeft 204 zonder mailverwerking.
+- Homepage geeft 200. Mijn begeleiding, adminagenda en praktijkagenda sturen een niet-aangemelde bezoeker naar de juiste login.
+- Scheduler `mygrowise-booking-reminders`, job-ID 8, is actief met `* * * * *`. `pg_net` 0.20.4 is ingeschakeld; endpoint en token zijn in Vault opgeslagen. Het canonieke www-domein voorkomt verlies van de autorisatieheader bij een domeinredirect.
+- Eerste automatische run: 17 november 2026 om **23.27 uur Europe/Brussels** (22.27 UTC), status `succeeded`.
+- Na activatie stonden twee toekomstige herinneringen klaar, geen enkele met een verstreken deadline. De eerste cronrun hoefde daarom geen HTTP-aanroep of mail te versturen. Werkelijke SMTP-aflevering op een herinneringsdeadline is hiermee nog niet bewezen.
+- De 46 databasecontroles zijn na toepassing van de migratie opnieuw geslaagd. Visuele browseracceptatie blijft open door de eerder vastgelopen connector; Kevin gaf expliciet opdracht om migratie, push, deployment en scheduleractivatie door te zetten.
 
 ## Uitrolvolgorde
 

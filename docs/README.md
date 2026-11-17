@@ -13,7 +13,7 @@ De [lanceringsaudit van 30 oktober](LAUNCH-AUDIT-2026-10-30.md) beschrijft de ac
 
 ## Documenten per onderwerp
 
-Het [praktijkverbeterplan van 17 november 2026](PRAKTIJK-VERBETERPLAN-2026-11-17.md) plant het herstel van accountafspraken, leesbaarheid, compacte agenda, cliëntzoeken en -aanmaak, herinneringen en interne afspraakstatussen. Dit is een codegestuurd plan; uitvoering en productieacceptatie volgen afzonderlijk.
+Het [praktijkverbeterplan van 17 november 2026](PRAKTIJK-VERBETERPLAN-2026-11-17.md) plant het herstel van accountafspraken, leesbaarheid, compacte agenda, cliëntzoeken en -aanmaak, herinneringen en interne afspraakstatussen. De implementatie is uitgerold; zie het [uitvoeringsverslag](PRAKTIJK-VERBETERINGEN-UITVOERING-2026-11-17.md) voor migratie, Vercel-deployment, actieve scheduler en de resterende visuele acceptatie.
 
 De [MijnDiAd-agendakoppeling](MIJNDIAD-AGENDA-IMPORT.md) beschrijft de 262 overgenomen momenten voor Virginie en verversing bij gebruik voor Supabase Free, met gedeelde cache en boekingsbescherming, inclusief foutafhandeling en synchronisatiegrenzen.
 
@@ -48,4 +48,4 @@ De [historische plannen](archive/README.md) bewaren de oorspronkelijke visie en 
 
 Wijzig documentatie in dezelfde pull request als een verandering aan de beschreven flow. Zet bovenaan een datum en, waar nuttig, de gecontroleerde commit. Schrijf bij elke belangrijke claim of die **aanwezig in code**, **getest in de doelomgeving** of **nog te bevestigen** is. Sluit of vervang oude bevindingen zodra ze zijn opgelost; voeg niet alleen een nieuwe laag tekst toe. Voor een releasebesluit: actualiseer eerst het beslisregister en de open punten in het masterplan.
 
-- [Praktijkverbeteringen: uitvoering en uitrol, 17 november](PRAKTIJK-VERBETERINGEN-UITVOERING-2026-11-17.md) — lokale implementatie, controles, beperkingen en nog uit te voeren activatie.
+- [Praktijkverbeteringen: uitvoering en uitrol, 17 november](PRAKTIJK-VERBETERINGEN-UITVOERING-2026-11-17.md) — uitgerolde implementatie, toegepaste migratie, actieve scheduler, controles en bewijsgrenzen.

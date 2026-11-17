@@ -1,6 +1,6 @@
 # MyGrowise — verbeterplan praktijk en cliëntafspraken
 
-**Uitvoering:** geïmplementeerd; databasemigratie toegepast, applicatiedeployment en scheduleractivatie in uitvoering. Zie [uitvoeringsstatus en uitrol](PRAKTIJK-VERBETERINGEN-UITVOERING-2026-11-17.md). De bevindingen hieronder beschrijven het vertrekpunt.
+**Uitvoering:** geïmplementeerd en uitgerold; databasemigratie toegepast, Vercel-deployment geslaagd en scheduler actief met een geslaagde automatische uitvoering. Zie [uitvoeringsstatus en uitrol](PRAKTIJK-VERBETERINGEN-UITVOERING-2026-11-17.md). De bevindingen hieronder beschrijven het vertrekpunt.
 
 Datum: 17 november 2026. Gebaseerd op de negen aangeleverde aandachtspunten en gerichte inspectie van lokale code en migraties bij commit `6c50b1f`. Dit is een uitvoeringsplan; de bevindingen zijn niet opnieuw in productie of tegen de productiedatabase gereproduceerd. Na akkoord is dit lokaal geïmplementeerd; er zijn geen blijvende databasewijzigingen of deployments uitgevoerd.
 
