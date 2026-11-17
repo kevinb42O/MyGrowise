@@ -34,4 +34,5 @@ Geen GitHub Actions, betaalde diensten of schedulers toegevoegd.
 ## Uitrolregistratie
 
 - Database: migratie `20261117180000` succesvol toegepast en geregistreerd via de bestaande Supabase CLI-route, vóór applicatiepublicatie.
-- Applicatie: de bijbehorende implementatie wordt via de bestaande Git/Vercel-integratie gepubliceerd; de uiteindelijke deploymentstatus wordt apart gecontroleerd.
+- Applicatie: implementatiecommit `7d05f9d` via de bestaande Git/Vercel-integratie gepubliceerd. Vercel meldt “Deployment has completed” / success. Deployment: https://vercel.com/lanternnetworks-projects/mygrowise/DcdnkqZ2eq4a6ycFrG5rCr8vWpNT.
+- Productiecontrole: beide gewijzigde afspraak-/agendabundels zijn op www.mygrowise.be opgehaald en hun SHA-256 komt exact overeen met de lokaal geteste releasebuild. De cliënt- en nieuwe-afspraakroutes blijven voor een niet-ingelogde bezoeker naar de juiste login verwijzen. Dit is beperkte technische acceptatie; de ingelogde formulier- en visuele acceptatie blijft open zoals hierboven beschreven.
