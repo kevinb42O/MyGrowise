@@ -1,3 +1,7 @@
+import {isTrustedFormOrigin} from './adminAuth';
+import {auditActor} from './securityAudit';
+import {createPatient} from './clientRecords';
+import {clientRecordError} from './clientRecordErrors';
 import type { AstroGlobal } from 'astro';
 import { hasPermission } from './adminAuth';
 import { auditPatientDirectoryAccess, getBookingForPatientCreation, getPatientReference, getPatientStaff, listPatientRecords, listUnlinkedCustomerAccounts } from './clientRecords';
@@ -10,6 +14,17 @@ export async function loadClientDirectoryPage(context: Pick<AstroGlobal, 'locals
   const canWrite = hasPermission(user, 'client_records.write');
   const canAssign = hasPermission(user, 'client_records.assign');
   const canArchive = hasPermission(user, 'client_records.archive');
+  let createError = '';
+  let submitted: Record<string,string> = {};
+  if (context.request.method === 'POST') {
+    if (!isTrustedFormOrigin(context.request) || !canWrite) return new Response('Geen toegang.', {status:403});
+    const form = await context.request.formData();
+    submitted = Object.fromEntries([...form.entries()].map(([k,v])=>[k,String(v)]));
+    try {
+      const id = await createPatient({firstName:form.get('first_name'),lastName:form.get('last_name'),email:form.get('email'),assigneeUserId:form.get('assignee_user_id')},user,auditActor(user,context.locals.requestId,'/api/admin/clienten'));
+      return context.redirect(`${recordsBase}/${id}?melding=aangemaakt`,303);
+    } catch (error) { createError = clientRecordError(error); }
+  }
   const requestedStatus = context.url.searchParams.get('status') || 'active';
   const status = ['active', 'archived', 'all'].includes(requestedStatus) ? requestedStatus as 'active' | 'archived' | 'all' : 'active';
   await auditPatientDirectoryAccess(user, context.locals.requestId);
@@ -25,7 +40,7 @@ export async function loadClientDirectoryPage(context: Pick<AstroGlobal, 'locals
         .filter((client) => !client.customerUserId || client.customerUserId === booking.customerUserId)
     : [];
   const showBookingError = Boolean(bookingId && !booking);
-  const formError = context.url.searchParams.get('fout') || '';
+  const formError = createError || context.url.searchParams.get('fout') || '';
   const errors: Record<string, string> = {
     invalid_input: 'Controleer de naam en het e-mailadres.', invalid_patient: 'Controleer de naam en het e-mailadres.', not_found: 'De afspraak bestaat niet of je hebt er geen toegang toe.',
     not_allowed: 'Je hebt geen toegang tot deze dossieractie.',
@@ -41,6 +56,6 @@ export async function loadClientDirectoryPage(context: Pick<AstroGlobal, 'locals
   const date = (value: string) => new Intl.DateTimeFormat('nl-BE', { timeZone: 'Europe/Brussels', dateStyle: 'medium' }).format(new Date(value));
   const dateTime = (value: string) => new Intl.DateTimeFormat('nl-BE', { timeZone: 'Europe/Brussels', dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value));
 
-  return { canWrite, canAssign, status, clients, staff, customerSearch, customerAccounts, bookingId, booking, linkedPatient, bookingEmailMatches, showBookingError, formError, errors, date, dateTime, practice, recordsBase };
+  return { submitted, canWrite, canAssign, status, clients, staff, customerSearch, customerAccounts, bookingId, booking, linkedPatient, bookingEmailMatches, showBookingError, formError, errors, date, dateTime, practice, recordsBase };
 }
 export type ClientDirectoryData = Exclude<Awaited<ReturnType<typeof loadClientDirectoryPage>>, Response>;

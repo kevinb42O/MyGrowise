@@ -4,7 +4,7 @@ import AdminIcon from '../admin/AdminIcon.astro';
 import PracticeLayout from '../../layouts/PracticeLayout.astro';
 import type { ClientDirectoryData } from '../../lib/clientDirectoryPage';
 interface Props { data: ClientDirectoryData }
-const { canWrite, canAssign, status, clients, staff, customerSearch, customerAccounts, bookingId, booking, linkedPatient, bookingEmailMatches, showBookingError, formError, errors, date, dateTime, practice, recordsBase } = Astro.props.data;
+const { submitted, canWrite, canAssign, status, clients, staff, customerSearch, customerAccounts, bookingId, booking, linkedPatient, bookingEmailMatches, showBookingError, formError, errors, date, dateTime, practice, recordsBase } = Astro.props.data;
 const Layout = practice ? PracticeLayout : AdminLayout;
 ---
 
@@ -64,17 +64,18 @@ const Layout = practice ? PracticeLayout : AdminLayout;
       {customerAccounts.length ? <form class="client-create-form client-account-create-form" method="post" action={`/api/admin/clienten?werkruimte=${practice ? 'praktijk' : 'admin'}`}>
         <input type="hidden" name="operation" value="from_customer"/>
         <label><span>Bestaand klantaccount</span><select name="customer_user_id" required><option value="" disabled selected>Kies een klant</option>{customerAccounts.map((account) => <option value={account.id}>{account.fullName} · {account.email || 'Geen e-mailadres'}</option>)}</select></label>
-        <label><span>Toegewezen aan <small>optioneel</small></span><select name="assignee_user_id"><option value="">Alleen superadmins</option>{staff.map((member) => <option value={member.id}>{member.name}</option>)}</select></label>
+        <label><span>Toegewezen aan <small>optioneel</small></span><select name="assignee_user_id"><option value="">Alleen superadmins</option>{staff.map((member) => <option value={member.id} selected={submitted.assignee_user_id===member.id}>{member.name}</option>)}</select></label>
         <button class="admin-button admin-button--primary" type="submit">Open dossier</button>
       </form> : <p class="client-account-empty">{customerSearch ? 'Geen klantaccount gevonden zonder dossier. Pas de zoekterm aan.' : 'Alle klantaccounts hebben al een dossier of er zijn nog geen klantaccounts.'}</p>}
     </section>}
 
     {canWrite && <section class="client-create-panel admin-panel" id="client-record-create">
       <header class="admin-panel__header"><div><h2>Cliënt toevoegen</h2><p>Medewerkers worden automatisch aan hun eigen nieuwe cliënt toegewezen.</p></div><span class="practice-private-badge"><AdminIcon name="lock" size={13}/> Privé</span></header>
-      <form class="client-create-form" method="post" action={`/api/admin/clienten?werkruimte=${practice ? 'praktijk' : 'admin'}`}>
-        <label><span>Naam cliënt</span><input name="full_name" required minlength="2" maxlength="120" autocomplete="off" placeholder="Voor- en achternaam"/></label>
-        <label><span>E-mailadres <small>optioneel</small></span><input name="email" type="email" maxlength="254" autocomplete="off" placeholder="naam@voorbeeld.be"/></label>
-        {canAssign && <label><span>Toegewezen aan <small>optioneel</small></span><select name="assignee_user_id"><option value="">Nog niet toegewezen</option>{staff.map((member) => <option value={member.id}>{member.name}{member.roles.includes('practitioner') ? ' · Professional' : member.roles.includes('super_admin') ? ' · Superadmin' : ' · Medewerker'}</option>)}</select></label>}
+      <form class="client-create-form" method="post" action={`${recordsBase}#client-record-create`}>
+        <label><span>Voornaam</span><input name="first_name" required maxlength="60" autocomplete="given-name" value={submitted.first_name}/></label>
+        <label><span>Achternaam</span><input name="last_name" required maxlength="60" autocomplete="family-name" value={submitted.last_name}/></label>
+        <label><span>E-mailadres <small>optioneel</small></span><input name="email" value={submitted.email} type="email" maxlength="254" autocomplete="off" placeholder="naam@voorbeeld.be"/></label>
+        {canAssign && <label><span>Toegewezen aan <small>optioneel</small></span><select name="assignee_user_id"><option value="">Nog niet toegewezen</option>{staff.map((member) => <option value={member.id} selected={submitted.assignee_user_id===member.id}>{member.name}{member.roles.includes('practitioner') ? ' · Professional' : member.roles.includes('super_admin') ? ' · Superadmin' : ' · Medewerker'}</option>)}</select></label>}
         <button class="admin-button admin-button--primary" type="submit"><AdminIcon name="check" size={15}/> Cliënt aanmaken</button>
       </form>
     </section>}

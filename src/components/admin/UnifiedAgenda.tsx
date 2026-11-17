@@ -10,6 +10,7 @@ import type { DatesSetArg, EventApi, EventChangeArg, EventInput } from '@fullcal
 import { fromBrusselsLocalInput, toBrusselsLocalInput } from '../../lib/brusselsTime';
 import AgendaClientPicker, {type NewPatient} from './AgendaClientPicker';
 import AgendaDialog from './AgendaDialog';
+import {appointmentChoices,appointmentTherapists,initialPractitioner,type AppointmentChoice} from '../../lib/appointmentChoices';
 import {bookingOutcomeLabel} from '../../lib/bookingOutcome';
 
 type Source = 'mygrowise' | 'itransform' | 'block' | 'availability';
@@ -25,13 +26,13 @@ type CalendarRange = { from: string; to: string; date: string; view: string };
 type TimeRange = { startsAt: string; endsAt: string };
 type EventFields = TimeRange & { title: string; kind: 'appointment' | 'personal' | 'block'; location: string; color: string;
   practitionerId: string; calendarScope: 'mygrowise' | 'itransform'; revision?: string; id?: string };
-type Offer = { id: string; name: string; duration: number; location: string };
+type Offer = AppointmentChoice;
 type Editor =
   | { type: 'choose'; dates: TimeRange }
   | { type: 'detail'; item: Item }
   | { type: 'event'; fields: EventFields }
   | { type: 'block'; fields: TimeRange & { reason: string } }
-  | { type: 'booking'; fields: { startsAt: string; patientId: string; offerId: string; newPatient?: NewPatient }; original?: Item };
+  | { type: 'booking'; fields: { startsAt: string; patientId: string; offerId: string; practitionerId?: string; newPatient?: NewPatient }; original?: Item };
 type CalendarSync = { enabled: boolean; lastSuccessAt: string | null; lastError: string | null; pendingMissing: number;
   coverageUncertain: number; coverageUntil: string | null };
 type Payload = { events: Item[]; practitioners?: { id: string; name: string; active: boolean }[];
@@ -566,13 +567,17 @@ export default function UnifiedAgenda({ mode = 'admin', allowItransform = false,
           })()}
           {editor.type === 'block' && <label className="is-wide"><span>Privénotitie (optioneel)</span><input maxLength={80} value={editor.fields.reason} onChange={event => change({ ...editor, fields: { ...editor.fields, reason: event.target.value } })} /></label>}
           {editor.type === 'booking' && !editor.original && <>
-            <AgendaClientPicker mode="practice" value={editor.fields.patientId} onChange={patientId => change({ ...editor, fields: { ...editor.fields, patientId } })} onNewChange={newPatient => change({ ...editor, fields: { ...editor.fields, patientId: '', newPatient } })} />
-            <label className="is-wide"><span>Afspraaktype</span><select required value={editor.fields.offerId} onChange={event => change({ ...editor, fields: { ...editor.fields, offerId: event.target.value } })}>
-              <option value="">{offerState === 'idle' ? 'Afspraaktypes laden…' : 'Kies een afspraaktype'}</option>
-              {offers.map(offer => <option key={offer.id} value={offer.id}>{offer.name} · {offer.duration} min</option>)}
+            <AgendaClientPicker mode="practice" initialNew={editor.fields.newPatient} value={editor.fields.patientId} onChange={patientId => change({ ...editor, fields: { ...editor.fields, patientId } })} onNewChange={newPatient => change({ ...editor, fields: { ...editor.fields, patientId: '', newPatient } })} />
+            <label><span>Therapeut</span><select required disabled={offerState!=='ready'} value={initialPractitioner(offers,editor.fields.practitionerId)} onChange={event=>change({...editor,fields:{...editor.fields,practitionerId:event.target.value,offerId:''}})}>
+              <option value="">{offerState==='idle'?'Therapeuten laden…':'Kies een therapeut'}</option>
+              {appointmentTherapists(offers).map(person=><option key={person.id} value={person.id}>{person.name}</option>)}
+            </select></label>
+            <label><span>Afspraaktype</span><select required disabled={offerState!=='ready'||!initialPractitioner(offers,editor.fields.practitionerId)} value={editor.fields.offerId} onChange={event => change({ ...editor, fields: { ...editor.fields, offerId: event.target.value } })}>
+              <option value="">{!initialPractitioner(offers,editor.fields.practitionerId)?'Kies eerst een therapeut':'Kies een afspraaktype'}</option>
+              {appointmentChoices(offers,initialPractitioner(offers,editor.fields.practitionerId)).map(offer => <option key={offer.id} value={offer.id}>{offer.name} · {offer.duration} min · {offer.channel==='online'?'Online':offer.location||'In de praktijk'}</option>)}
             </select></label>
             {offerState === 'failed' && <button type="button" onClick={() => setOfferState('idle')}>Afspraaktypes opnieuw laden</button>}
-            {offerState === 'ready' && !offers.length && <p>Er zijn geen actieve afspraaktypes.</p>}
+            {offerState === 'ready' && !offers.length && <p role="status">Er zijn geen therapeuten met actieve afspraaktypes beschikbaar.</p>}
           </>}
           {editor.type !== 'event' && <label><span>Van</span><input required type="datetime-local" value={editor.fields.startsAt}
             onChange={event => change({ ...editor, fields: { ...editor.fields, startsAt: event.target.value } } as Editor)} /></label>}

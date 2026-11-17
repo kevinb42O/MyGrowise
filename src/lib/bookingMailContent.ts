@@ -1,10 +1,11 @@
+import {patientGreeting} from './patientSalutation.ts';
 import {renderEmail,emailUrl} from './emailTemplate.ts';
 export type BookingMailPayload={name:string;salutation?:string;appointment:string;practitioner:string;startsAt:string;endsAt:string;channel:string;location?:string;instructions?:string};
 export function bookingMailContent(kind:string,p:BookingMailPayload,origin='https://www.mygrowise.be'){
  const when=new Intl.DateTimeFormat('nl-BE',{timeZone:'Europe/Brussels',dateStyle:'full',timeStyle:'short'}).format(new Date(p.startsAt));
  const reminder=kind==='reminder';
  const label=reminder?'herinnering':kind==='cancelled'?'geannuleerd':kind==='rescheduled'?'verplaatst':'bevestigd';
- const greeting=p.salutation?`Geachte ${p.salutation} ${p.name},`:`Beste ${p.name},`;
+ const greeting=patientGreeting(p.name,p.salutation);
  const cancelled=kind==='cancelled';
  const title=reminder?'Een herinnering aan je afspraak.':cancelled?'Je afspraak is geannuleerd.':kind==='rescheduled'?'Je nieuwe moment staat vast.':'Je afspraak staat vast.';
  const intro=reminder?'Over drie dagen staat je afspraak gepland. Hieronder vind je de praktische gegevens.':cancelled?'Je afspraak is geannuleerd. Je hoeft voor dit moment niets meer te doen. Wil je een nieuw moment plannen? Bekijk de beschikbare afspraken in je account.':kind==='rescheduled'?'Je afspraak is verplaatst. Hieronder vind je het nieuwe moment; het eerdere tijdstip is vervallen.':'Je afspraak is bevestigd. Hieronder vind je alle praktische gegevens, zodat je rustig kunt voorbereiden.';

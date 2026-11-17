@@ -26,14 +26,16 @@ export async function loadAppointmentPage(context:{request:Request;locals:{curre
  const offers=id==='nieuw' ? (await listOffers({practitionerId:manager&&!practice?undefined:user.practitionerId||'none'})).filter(o=>o.active) : [];
  let error='';
  let submitted:Record<string,string>={};
+ const linkedOffer=offers.find(o=>o.id===context.url.searchParams.get('offer_id'));
+ if(context.request.method!=='POST'&&linkedOffer)submitted.offer_id=linkedOffer.id;
  if(context.request.method==='POST'){
  if(!isTrustedFormOrigin(context.request))return new Response('Geen toegang.',{status:403});
  try{const form=await context.request.formData(),operation=String(form.get('operation')||'');
  submitted=Object.fromEntries([...form.entries()].map(([key,value])=>[key,String(value)]));
  if(id==='nieuw'){
- const offer=offers.find(o=>o.id===form.get('offer_id'));if(!offer)throw new Error('Kies een geldig afspraaktype.');
+ const offer=offers.find(o=>o.id===form.get('offer_id'));if(!offer||offer.practitionerId!==form.get('practitioner_id'))throw new Error('invalid_offer');
  const starts=fromBrusselsLocalInput(String(form.get('starts_at')||''));
- const data=form.get('new_name') ? await bookNewPatient(user.sub,String(form.get('submission_key')||''),String(form.get('new_name')),String(form.get('new_email')||''),offer.id,starts,String(form.get('new_birth_date')||''),context.locals.requestId) : await createStaffBooking(offer.practitionerId,user.sub,String(form.get('patient_id')||''),starts,offer.id,context.locals.requestId);
+ const data=form.has('new_first_name') ? await bookNewPatient(user.sub,String(form.get('submission_key')||''),String(form.get('new_first_name')||''),String(form.get('new_last_name')||''),String(form.get('new_email')||''),offer.id,starts,String(form.get('new_birth_date')||''),context.locals.requestId) : await createStaffBooking(offer.practitionerId,user.sub,String(form.get('patient_id')||''),starts,offer.id,context.locals.requestId);
  return context.redirect(savedHref(data,await attemptAgendaBookingMail(data)),303);
  }
  const revision=String(form.get('revision')||'');
@@ -60,7 +62,7 @@ export async function loadAppointmentPage(context:{request:Request;locals:{curre
  const patientAccount=patient ? await db.from('patients').select('email,customer_user_id').eq('id',patient.id).single() : null;
  if(patientAccount)fail(patientAccount.error);
  const initialClient=patient?.status==='active' ? {id:patient.id,name:patient.fullName,email:patientAccount?.data?.email||'',accountLinked:Boolean(patientAccount?.data?.customer_user_id)} : undefined;
- const selectedPractitioner=context.url.searchParams.get('professional') || '';
+ const selectedPractitioner=submitted.practitioner_id || offers.find(o=>o.id===submitted.offer_id)?.practitionerId || context.url.searchParams.get('professional') || '';
  const start=submitted.starts_at || context.url.searchParams.get('start') || '';
  const initialStart=/^\d{4}-\d\d-\d\dT\d\d:\d\d$/.test(start) ? start : '';
  const canViewPatient=booking?.patient_id?Boolean(await getPatientReference(user,booking.patient_id,context.locals.requestId)):false;
@@ -70,6 +72,6 @@ export async function loadAppointmentPage(context:{request:Request;locals:{curre
  const actorIds=[...new Set((outcomeHistory.data||[]).map(event=>event.actor_user_id).filter(Boolean))];
  const actors=actorIds.length?await db.from('profiles').select('id,full_name').in('id',actorIds):{data:[],error:null};fail(actors.error);
  const actorNames=new Map((actors.data||[]).map(actor=>[actor.id,actor.full_name]));
- return {submitted,initialNew:submitted.new_name?{name:submitted.new_name,email:submitted.new_email||'',birthDate:submitted.new_birth_date||'',key:submitted.submission_key||''}:undefined,outcomeHistory:(outcomeHistory.data||[]).map(event=>({...event,actorName:actorNames.get(event.actor_user_id)||'Medewerker'})),booking,offers,initialClient,selectedPractitioner,initialStart,agendaHref,error,mail:mail.data||[],history:history.data||[],canViewPatient,isNew:id==='nieuw',practice};
+ return {submitted,initialNew:Object.hasOwn(submitted,'new_first_name')?{firstName:submitted.new_first_name,lastName:submitted.new_last_name||'',email:submitted.new_email||'',birthDate:submitted.new_birth_date||'',key:submitted.submission_key||''}:undefined,outcomeHistory:(outcomeHistory.data||[]).map(event=>({...event,actorName:actorNames.get(event.actor_user_id)||'Medewerker'})),booking,offers,initialClient,selectedPractitioner,initialStart,agendaHref,error,mail:mail.data||[],history:history.data||[],canViewPatient,isNew:id==='nieuw',practice};
 }
 export type AppointmentPage=Exclude<Awaited<ReturnType<typeof loadAppointmentPage>>,Response>;

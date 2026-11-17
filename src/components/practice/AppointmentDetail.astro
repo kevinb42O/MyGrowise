@@ -1,4 +1,5 @@
 ---
+import {appointmentTherapists,appointmentChoices,initialPractitioner} from '../../lib/appointmentChoices';
 import {bookingOutcomeLabel} from '../../lib/bookingOutcome';
 import type {AppointmentPage} from '../../lib/appointmentDetail';
 import AgendaClientPicker from '../admin/AgendaClientPicker';
@@ -6,6 +7,9 @@ import {toBrusselsLocalInput} from '../../lib/brusselsTime';
 interface Props {data:AppointmentPage;}
 const {data}=Astro.props;
 const {submitted,initialNew,outcomeHistory,booking,offers,initialClient,selectedPractitioner,initialStart,agendaHref,error,mail,history,canViewPatient,isNew,practice}=data;
+const practitionerId=initialPractitioner(offers,selectedPractitioner);
+const therapists=appointmentTherapists(offers);
+const choices=appointmentChoices(offers,practitionerId);
 const recordsBase = practice ? '/praktijk/clienten' : '/admin/clienten';
 const fmt=(v:string)=>new Intl.DateTimeFormat('nl-BE',{timeZone:'Europe/Brussels',dateStyle:'medium',timeStyle:'short'}).format(new Date(v));
 const statuses:Record<string,string>={confirmed:'Bevestigd',pending:'Oude aanvraag',cancelled:'Geannuleerd',completed:'Uitgevoerd',no_show:'Niet verschenen',declined:'Geweigerd'};
@@ -18,10 +22,16 @@ const kinds:Record<string,string>={confirmation:'Bevestiging',rescheduled:'Verpl
 {isNew?<form method="post" class="practice-card practice-stack" data-new-appointment>
   <div class="practice-grid">
     <AgendaClientPicker mode={practice?'practice':'admin'} name="patient_id" initial={initialClient} initialNew={initialNew} client:only="react" />
-    <label>Therapeut en afspraaktype<select name="offer_id" required>
-      <option value="">Kies een afspraaktype</option>
-      {offers.map((o,index)=><option value={o.id} selected={submitted.offer_id?submitted.offer_id===o.id:Boolean(selectedPractitioner&&o.practitionerId===selectedPractitioner&&offers.findIndex(candidate=>candidate.practitionerId===selectedPractitioner)===index)} data-duration={o.duration} data-location={o.channel==='online'?'Online':o.location}>{o.practitionerName} · {o.name} · {o.duration} min</option>)}
+    <label>Therapeut<select name="practitioner_id" required data-therapist>
+      <option value="">Kies een therapeut</option>
+      {therapists.map(p=><option value={p.id} selected={p.id===practitionerId}>{p.name}</option>)}
     </select></label>
+    <label>Afspraaktype<select name="offer_id" required disabled={!practitionerId}>
+      <option value="">{!practitionerId?'Kies eerst een therapeut':choices.length?'Kies een afspraaktype':'Geen actieve afspraaktypes'}</option>
+      {choices.map(o=><option value={o.id} selected={submitted.offer_id===o.id} data-duration={o.duration} data-location={o.channel==='online'?'Online':o.location}>{o.name} · {o.duration} min · {o.channel==='online'?'Online':o.location||'In de praktijk'}</option>)}
+    </select></label>
+    {!therapists.length&&<p role="status">Er zijn geen therapeuten met actieve afspraaktypes beschikbaar.</p>}
+    <script type="application/json" data-appointment-offers set:html={JSON.stringify(offers).replace(/</g,'\\u003c')}/>
     <label>Datum en starttijd<input type="datetime-local" name="starts_at" value={initialStart} required/></label>
   </div>
   <p data-appointment-preview role="status">De eindtijd volgt uit het afspraaktype.</p>
@@ -41,6 +51,7 @@ const kinds:Record<string,string>={confirmation:'Bevestiging',rescheduled:'Verpl
 </>}
 </div>
 <script>
+ import {appointmentChoices} from '../../lib/appointmentChoices';
  import {fromBrusselsLocalInput} from '../../lib/brusselsTime';
  const form=document.querySelector<HTMLFormElement>('[data-new-appointment]');
  if(form){
@@ -57,6 +68,22 @@ const kinds:Record<string,string>={confirmation:'Bevestiging',rescheduled:'Verpl
        preview.textContent=`Tot ${format.format(end)} · ${duration} min${option?.dataset.location?` · ${option.dataset.location}`:''}`;
      } catch {preview.textContent='Kies een geldig starttijdstip.';}
    };
+   const therapist=form.querySelector<HTMLSelectElement>('[data-therapist]');
+   const allOffers=JSON.parse(form.querySelector('[data-appointment-offers]')?.textContent||'[]');
+   therapist?.addEventListener('change',()=>{
+     if(!offers)return;
+     const previous=offers.value;
+     const choices=appointmentChoices(allOffers,therapist.value);
+     offers.replaceChildren(new Option(!therapist.value?'Kies eerst een therapeut':choices.length?'Kies een afspraaktype':'Geen actieve afspraaktypes',''));
+     for(const choice of choices){
+       const location=choice.channel==='online'?'Online':choice.location||'In de praktijk';
+       const option=new Option(`${choice.name} · ${choice.duration} min · ${location}`,choice.id);
+       option.dataset.duration=String(choice.duration);option.dataset.location=location;offers.add(option);
+     }
+     offers.disabled=!therapist.value;
+     offers.value=choices.some(o=>o.id===previous)?previous:'';
+     update();
+   });
    form.addEventListener('input',update);
    update();
  }

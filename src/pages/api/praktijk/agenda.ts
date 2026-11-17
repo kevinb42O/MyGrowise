@@ -28,7 +28,7 @@ export const GET: APIRoute = async ({ url, locals }) => {
     }
     if (url.searchParams.get('offers') === '1') {
       const offers = (await listOffers({ practitionerId })).filter(offer => offer.active)
-        .map(({ id, name, duration, location, channel }) => ({ id, name, duration, location: channel === 'online' ? 'Online' : location }));
+        .map(({ id, name, duration, location, channel, practitionerId, practitionerName }) => ({ id, name, duration, channel, practitionerId, practitionerName, location: channel === 'online' ? 'Online' : location }));
       return json({ offers });
     }
     const from = url.searchParams.get('from');
@@ -78,7 +78,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         if(offerError) throw offerError;
         if(selectedOffer?.practitioner_id!==practitionerId) return invalid();
         const bookingId = body.newPatient
-          ? await bookNewPatient(user.sub,body.newPatient.key,String(body.newPatient.name||''),String(body.newPatient.email||''),offerId,startsAt,String(body.newPatient.birthDate||''),locals.requestId)
+          ? await bookNewPatient(user.sub,body.newPatient.key,String(body.newPatient.firstName||''),String(body.newPatient.lastName||''),String(body.newPatient.email||''),offerId,startsAt,String(body.newPatient.birthDate||''),locals.requestId)
           : await createStaffBooking(practitionerId, user.sub, patientId, startsAt, offerId, locals.requestId);
         return json({ ok: true, id: bookingId, mail: await attemptAgendaBookingMail(bookingId) }, 201);
       }

@@ -1,5 +1,5 @@
 import { useEffect, useId, useState } from 'react';
-export type NewPatient = { name: string; email: string; birthDate: string; key: string };
+export type NewPatient = { firstName: string; lastName: string; email: string; birthDate: string; key: string };
 type ClientChoice = { id: string; name: string; email: string; accountLinked?: boolean };
 export default function AgendaClientPicker({ mode, value, onChange, initial, name, onNewChange, initialNew }: {
   mode: 'admin' | 'practice'; value?: string; onChange?: (id: string) => void; initial?: ClientChoice; name?: string;
@@ -16,7 +16,7 @@ export default function AgendaClientPicker({ mode, value, onChange, initial, nam
   const [open, setOpen] = useState(!initial);
   const [active, setActive] = useState(-1);
   const [creating, setCreating] = useState(Boolean(initialNew));
-  const [newPatient, setNewPatient] = useState<NewPatient>(initialNew || { name: '', email: '', birthDate: '', key: '' });
+  const [newPatient, setNewPatient] = useState<NewPatient>(initialNew || { firstName: '', lastName: '', email: '', birthDate: '', key: '' });
   const activeId = value ?? selected?.id ?? '';
   useEffect(() => {
     const controller = new AbortController();
@@ -43,7 +43,8 @@ export default function AgendaClientPicker({ mode, value, onChange, initial, nam
       }}>Nieuwe cliënt</button></div>
     {creating ? <div className="practice-grid">
       <input type="hidden" name="submission_key" value={newPatient.key} />
-      <label>Voornaam en familienaam<input name="new_name" required minLength={2} maxLength={120} autoComplete="off" value={newPatient.name} onChange={event => patchNew({ name: event.target.value })} /></label>
+      <label>Voornaam<input name="new_first_name" required maxLength={60} autoComplete="given-name" value={newPatient.firstName} onChange={event => patchNew({ firstName: event.target.value })} /></label>
+      <label>Achternaam<input name="new_last_name" required maxLength={60} autoComplete="family-name" value={newPatient.lastName} onChange={event => patchNew({ lastName: event.target.value })} /></label>
       <label>E-mailadres<input name="new_email" type="email" required maxLength={254} autoComplete="off" value={newPatient.email} onChange={event => patchNew({ email: event.target.value })} /></label>
       <label>Geboortedatum<input name="new_birth_date" type="date" required min="1900-01-01" value={newPatient.birthDate} onChange={event => patchNew({ birthDate: event.target.value })} /></label>
       <p className="is-wide">De overige dossiergegevens kun je later aanvullen. Controleer eerst of deze cliënt al bestaat.</p>

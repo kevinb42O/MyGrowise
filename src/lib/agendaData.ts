@@ -71,6 +71,7 @@ export function agendaError(error: unknown) {
   if (cause?.code === '55000' || cause?.code === 'external_calendar_unavailable') return { status: 503, message: 'De externe agenda kon niet worden gecontroleerd voor dit tijdstip. Probeer later of controleer MijnDiAd.' };
   if (cause?.message === 'invalid_transition') return { status: 409, message: 'Deze statuswijziging is niet meer mogelijk. Ververs de agenda.' };
   if (cause?.message === 'invalid_reschedule') return { status: 400, message: 'Kies een ander toekomstig tijdstip.' };
+  if (cause?.message === 'invalid_offer') return { status: 400, message: 'Kies een geldig afspraaktype bij de therapeut.' };
   if (cause?.message === 'invalid_input') return { status: 400, message: 'Controleer de cliënt, het afspraaktype en het tijdstip.' };
   if (cause?.message === 'invalid_event' || ['22007', '22023', '22P02', '23514'].includes(cause?.code || '')) return { status: 400, message: 'Controleer de ingevulde gegevens en het tijdstip.' };
   return { status: 502, message: 'De agenda kon de wijziging niet bevestigen. Ververs de agenda voordat je opnieuw probeert.' };

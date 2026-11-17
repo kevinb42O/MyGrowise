@@ -68,6 +68,7 @@ test('All dossier form redirects retain the chosen workspace and reject external
 
 test('Creating a dossier from an appointment preserves that appointment for the report', async () => {
   const {POST} = load('../src/pages/api/admin/clienten/index.ts', {
+    '../../../../lib/clientRecordErrors': load('../src/lib/clientRecordErrors.ts'),
     '../../../../lib/adminAuth': {isTrustedFormOrigin: () => true},
     '../../../../lib/securityAudit': {auditActor: () => ({})},
     '../../../../lib/clientRecordNavigation': {clientRecordsBaseForRequest},

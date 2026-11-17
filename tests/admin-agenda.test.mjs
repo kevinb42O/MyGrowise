@@ -190,6 +190,7 @@ const { default: Agenda, AgendaEventCard, ImportedAgendaDetails, eventForeground
   '@fullcalendar/core/locales/nl': {},
   '../../lib/brusselsTime': {},
   '../../lib/bookingOutcome': load('../src/lib/bookingOutcome.ts',{}),
+  '../../lib/appointmentChoices': load('../src/lib/appointmentChoices.ts',{}),
   './AgendaClientPicker': {}, './AgendaDialog': {},
 });
 

@@ -1,3 +1,5 @@
+import {patientAgeLabel} from './patientAge';
+import {salutationLabels} from './patientSalutation';
 import { getBookingForNote } from './clientRecords';
 import type { AstroGlobal } from 'astro';
 import {patientFields,genderLabels,parsePatientDetails} from './patientDetails';
@@ -89,8 +91,8 @@ export async function loadClientDetailPage(context: Pick<AstroGlobal, 'locals' |
   const noteBookings = contextBooking ? [contextBooking, ...patient.bookings] : patient.bookings;
   const overview = [
    ['Voornaam',patient.details.first_name],['Achternaam',patient.details.last_name],
-   ['Geboortedatum',patient.details.birth_date?formatDate(patient.details.birth_date):''],
-   ['Geslacht',genderLabels[patient.details.gender]],['Aanhef',patient.details.salutation],
+   ['Geboortedatum',patient.details.birth_date?[formatDate(patient.details.birth_date),patientAgeLabel(patient.details.birth_date)?`(${patientAgeLabel(patient.details.birth_date)})`:''].filter(Boolean).join(' '):''],
+   ['Geslacht',genderLabels[patient.details.gender]],['Aanhef',salutationLabels[patient.details.salutation]||'Geen aanhef'],
    ['Intakedatum',patient.details.intake_date?formatDate(patient.details.intake_date):''],
    ['Adres',[`${patient.details.street} ${patient.details.house_number}${patient.details.address_box?` bus ${patient.details.address_box}`:''}`.trim(),`${patient.details.postal_code} ${patient.details.city}`.trim(),patient.details.country].filter(Boolean).join(', ')],
    ['Mobiel telefoonnummer',patient.details.mobile],['E-mailadres',patient.details.email],
