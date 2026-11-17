@@ -6,7 +6,7 @@ import type { AuditActor } from './securityAudit';
 
 export type AvailabilityRule = { weekday: number; startTime: string; endTime: string };
 export type BookingStatus = 'pending' | 'confirmed' | 'declined' | 'cancelled' | 'completed' | 'no_show';
-export type PracticeBooking = { appointmentName: string; id: string; practitionerId: string; patientId: string | null; clientName: string; clientEmail: string; startsAt: string; endsAt: string; status: BookingStatus; origin: 'customer_request' | 'staff'; calendarBookedAt: string | null; createdAt: string; updatedAt: string };
+export type PracticeBooking = { cancellationCategory?: string; noShowBilling?: string; appointmentName: string; id: string; practitionerId: string; patientId: string | null; clientName: string; clientEmail: string; startsAt: string; endsAt: string; status: BookingStatus; origin: 'customer_request' | 'staff'; calendarBookedAt: string | null; createdAt: string; updatedAt: string };
 export type BookableSlot = { practitionerId: string; practitionerSlug: string; startsAt: string; endsAt: string; dateLabel: string; timeLabel: string };
 export type AvailabilityException = { id: string; practitionerId: string; startsAt: string; endsAt: string; kind: 'available' | 'unavailable'; privateReason: string | null; createdAt: string };
 export type PractitionerProfile = {
@@ -40,7 +40,7 @@ const profileFromRow = (row: Row): PractitionerProfile => {
 };
 const bookingFromRow = (row: Row): PracticeBooking => ({
   appointmentName:String(row.appointment_name||'Afspraaktype nog te bepalen'), id: String(row.id), practitionerId: String(row.practitioner_id), patientId: row.patient_id ? String(row.patient_id) : null, clientName: String(row.client_name), clientEmail: String(row.client_email),
-  startsAt: String(row.starts_at), endsAt: String(row.ends_at), status: String(row.status) as BookingStatus, origin: String(row.origin || 'customer_request') as PracticeBooking['origin'],
+  startsAt: String(row.starts_at), endsAt: String(row.ends_at), cancellationCategory: String(row.cancellation_category || 'unknown'), noShowBilling: String(row.no_show_billing || 'unreviewed'), status: String(row.status) as BookingStatus, origin: String(row.origin || 'customer_request') as PracticeBooking['origin'],
   calendarBookedAt: row.calendar_booked_at ? String(row.calendar_booked_at) : null, createdAt: String(row.created_at), updatedAt: String(row.updated_at),
 });
 
@@ -114,11 +114,12 @@ export const createAvailabilityException = async (practitionerId: string, actor:
 export const deleteAvailabilityException = (id: string, practitionerId: string, actor: AuditActor) =>
   writeAgendaItem(actor, 'practice', 'unblock', practitionerId, { id });
 
-export const listBookings = async (idOrSlug: string, status?: BookingStatus): Promise<PracticeBooking[]> => {
+export const listBookings = async (idOrSlug: string, status?: BookingStatus, page?: number): Promise<PracticeBooking[]> => {
   const practitioner = await resolvePractitioner(idOrSlug);
   if (!practitioner) return [];
-  let query = getSupabaseAdmin().from('bookings').select('id,practitioner_id,patient_id,client_name,client_email,appointment_name,starts_at,ends_at,status,origin,calendar_booked_at,created_at,updated_at').eq('practitioner_id', practitioner.id).order('starts_at');
+  let query = getSupabaseAdmin().from('bookings').select('id,practitioner_id,patient_id,client_name,client_email,appointment_name,starts_at,ends_at,status,cancellation_category,no_show_billing,origin,calendar_booked_at,created_at,updated_at').eq('practitioner_id', practitioner.id).order('starts_at',{ascending:!page});
   if (status) query = query.eq('status', status);
+  if(page)query=query.order('id').range((page-1)*50,(page-1)*50+50);
   const { data, error } = await query;
   fail(error);
   return ((data || []) as Row[]).map(bookingFromRow);

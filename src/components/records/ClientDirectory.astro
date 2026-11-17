@@ -15,6 +15,7 @@ const Layout = practice ? PracticeLayout : AdminLayout;
       {canWrite && <a class="admin-button admin-button--primary" href="#client-record-create"><AdminIcon name="customers" size={16}/> Nieuw dossier</a>}
     </section>
 
+    {Astro.url.searchParams.get('melding')==='verwijderd' && <p class="practice-alert" role="status">Het lege dossier is definitief verwijderd.</p>}
     {formError && <div class="admin-login__alert admin-login__alert--error" role="alert"><AdminIcon name="warning" size={17}/><span>{errors[formError] || 'De actie kon niet worden opgeslagen. Controleer je toegang en probeer opnieuw.'}</span></div>}
 
     {bookingId && <section class="client-source-card" aria-labelledby="client-source-title">

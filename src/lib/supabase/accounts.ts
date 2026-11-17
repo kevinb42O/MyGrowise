@@ -147,6 +147,8 @@ export const getNotificationPreferences = async (userId: string): Promise<Notifi
 export const updateNotificationPreferences = async (userId: string, input: Omit<NotificationPreferences, 'timezone'>) => {
   const { error } = await getSupabaseAdmin().from('user_preferences').upsert({ user_id: userId, booking_email_enabled: input.bookingEmailEnabled, booking_reminder_enabled: input.bookingReminderEnabled, weekly_digest_enabled: input.weeklyDigestEnabled }, { onConflict: 'user_id' });
   fail(error);
+  const {error: reminderError}=await getSupabaseAdmin().rpc('refresh_customer_booking_reminders',{p_customer:userId});
+  fail(reminderError);
   await getSupabaseAdmin().from('security_audit_log').insert({ actor_user_id: userId, action: 'account.notifications_updated', object_type: 'user', object_id: userId });
 };
 export const listOwnSecurityActivity = async (userId: string): Promise<SecurityActivity[]> => {

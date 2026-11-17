@@ -62,6 +62,8 @@ export async function writeAgendaItem(
 
 export function agendaError(error: unknown) {
   const cause = error as { code?: string; message?: string } | null;
+  if (cause?.message === 'potential_patient_match') return { status: 409, message: 'Er bestaat mogelijk al een cliënt met deze naam of dit e-mailadres. Zoek en selecteer eerst het bestaande dossier.' };
+  if (cause?.message === 'idempotency_conflict') return { status: 409, message: 'Deze aanvraag is al verwerkt met andere gegevens. Open de opgeslagen afspraak voordat je opnieuw plant.' };
   if (cause?.code === '23P01' || cause?.message === 'slot_unavailable') return { status: 409, message: 'Dit tijdstip overlapt met een afspraak of blokkade. Kies een ander tijdstip.' };
   if (cause?.code === '40001') return { status: 409, message: 'Dit item is intussen gewijzigd. Ververs de agenda en open het opnieuw.' };
   if (cause?.code === '42501' || cause?.message === 'not_allowed') return { status: 403, message: 'Je hebt geen toegang tot dit item.' };
@@ -83,5 +85,9 @@ export async function agendaClientChoices(actor: AuditActor, parameters: URLSear
     p_actor: actor.userId, p_search: search, p_offset: page * pageSize, p_limit: pageSize + 1,
   });
   if (error) throw error;
-  return { clients: (data || []).slice(0, pageSize), hasMore: (data || []).length > pageSize };
+  const choices = (data || []).slice(0, pageSize);
+  const {data: identities,error: identityError}=choices.length ? await getSupabaseAdmin().from('patients').select('id,customer_user_id').in('id',choices.map((client:{id:string})=>client.id)) : {data:[],error:null};
+  if(identityError) throw identityError;
+  const linked=new Set((identities||[]).filter(patient=>patient.customer_user_id).map(patient=>patient.id));
+  return { clients: choices.map((client:{id:string;name:string;email:string})=>({...client,accountLinked:linked.has(client.id)})), hasMore: (data || []).length > pageSize };
 }

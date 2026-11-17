@@ -9,7 +9,8 @@ function setup({allowed=true,trusted=true,failure=false}={}) {
  const deps={
   '../../../lib/appointmentCatalog':{},'../../../lib/bookingMail':{},
   '../../../lib/practiceAgenda':{getPracticeAgendaAccess:async()=>({canUseItransform:allowed}),listPracticeAgenda:async()=>({events:[],availabilityUnknown:false})},
-  '../../../lib/adminAuth':{isTrustedFormOrigin:()=>trusted},'../../../lib/practiceStore':{},
+  '../../../lib/staffBooking':{},
+  '../../../lib/adminAuth':{isTrustedFormOrigin:()=>trusted},'../../../lib/practiceStore':{},'../../../lib/staffBooking':{},
   '../../../lib/clientRecords':{},'../../../lib/securityAudit':{auditActor:()=>({userId:'user'})},
   '../../../lib/agendaData':{agendaRange:()=>true},
   '../../../lib/mijndiadSync':{ensurePracticeCalendarFresh:async(owner,options)=>{calls.push({name:'ensure_mijndiad_fresh',args:{p_practitioner_id:owner},options});return {usable:!failure,sync:failure?{enabled:true,lastError:'feed_unavailable_or_invalid'}:{enabled:true,lastSuccessAt:'2026-10-18T19:35:00Z'}};},CALENDAR_UNAVAILABLE_MESSAGE:'Externe agenda tijdelijk niet bereikbaar.'},

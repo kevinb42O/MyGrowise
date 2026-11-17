@@ -20,6 +20,7 @@ export type PracticeAgendaItem = {
   startsAt: string;
   endsAt: string;
   status: string;
+  cancellationCategory?: string; noShowBilling?: string;
   kind: 'appointment' | 'personal' | 'block' | 'availability';
   location: string;
   color: string;
@@ -36,7 +37,7 @@ export const listPracticeAgenda = async (practitionerId: string, from: string, t
   const client = getSupabaseAdmin();
   const [bookings, exceptions, moments, availability, assignments] = await Promise.all([
     agendaRows<any>(client.from('bookings')
-      .select('id,patient_id,client_name,appointment_name,offer:practitioner_appointment_types(appointment_types(treatment_groups(color))),starts_at,ends_at,updated_at,status,location,channel')
+      .select('id,patient_id,client_name,appointment_name,offer:practitioner_appointment_types(appointment_types(treatment_groups(color))),starts_at,ends_at,updated_at,status,cancellation_category,no_show_billing,location,channel')
       .eq('practitioner_id', practitionerId).in('status', calendarBookingStatuses).lt('starts_at', to).gt('ends_at', from).order('starts_at').order('id')),
     agendaRows<any>(client.from('availability_exceptions').select('id,starts_at,ends_at,private_reason')
       .eq('practitioner_id', practitionerId).eq('kind', 'unavailable').lt('starts_at', to).gt('ends_at', from).order('starts_at').order('id')),
@@ -53,7 +54,7 @@ export const listPracticeAgenda = async (practitionerId: string, from: string, t
   const assignedPatients = new Set(assignments.map(row => row.patient_id));
   const appointments: PracticeAgendaItem[] = bookings.map(row => ({
     id: row.id, source: 'mygrowise', title: row.client_name, subtitle: row.appointment_name, startsAt: row.starts_at, endsAt: row.ends_at,
-    status: row.status, kind: 'appointment', location: row.channel === 'online' ? 'Online' : row.location || '',
+    status: row.status, cancellationCategory:row.cancellation_category,noShowBilling:row.no_show_billing, kind: 'appointment', location: row.channel === 'online' ? 'Online' : row.location || '',
     color: row.offer?.appointment_types?.treatment_groups?.color || '#1f7060', editable: false, patientId: canReadAllPatients || assignedPatients.has(row.patient_id) ? row.patient_id : null, revision: row.updated_at,
   }));
   const blocks: PracticeAgendaItem[] = exceptions.map(row => ({

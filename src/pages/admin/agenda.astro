@@ -12,6 +12,6 @@ Astro.response.headers.set('Cache-Control', 'private, no-store');
         <p>Alle afspraken en momenten van MyGrowise.</p>
       </div>
     </section>
-    <UnifiedAgenda client:only="react"><p slot="fallback" role="status">Agenda laden…</p></UnifiedAgenda>
+    <UnifiedAgenda preferenceKey={Astro.locals.currentUser!.sub} client:only="react"><p slot="fallback" role="status">Agenda laden…</p></UnifiedAgenda>
   </div>
 </AdminLayout>

@@ -4,7 +4,7 @@ import type { AuditActor } from './securityAudit';
 type RecordRow = Record<string, any>;
 export type AdminOrder = { id: string; status: string; totalCents: number; currency: string; createdAt: string; customerId: string; paymentVerifiedAt?: string | null; paymentClaimedAt?: string | null; provider?: string };
 export type AdminOrderDetail = { id: string; status: string; totalCents: number; currency: string; createdAt: string; customerId: string; customerName: string; provider: string; reference: string; paymentClaimedAt: string | null; paymentVerifiedAt: string | null; productTitles: string[] };
-export type AdminBooking = { appointmentName?:string; id: string; practitionerId: string; practitionerName: string; patientId: string | null; clientName: string; clientEmail: string; startsAt: string; endsAt: string; status: string; createdAt: string };
+export type AdminBooking = { cancellationCategory?: string; noShowBilling?: string; appointmentName?:string; id: string; practitionerId: string; practitionerName: string; patientId: string | null; clientName: string; clientEmail: string; startsAt: string; endsAt: string; status: string; createdAt: string };
 export type AdminTask = { id: string; title: string; category: string; priority: number; status: string; dueAt: string | null; createdAt: string; assignedToName: string | null };
 export type IntegrationCheck = { key: string; label: string; state: 'healthy' | 'degraded' | 'not_configured' | 'failed'; detail: string | null; lastCheckedAt: string | null };
 
@@ -64,10 +64,12 @@ export const listAdminOrderDetails = async (): Promise<AdminOrderDetail[]> => {
   });
 };
 
-export const listAdminBookings = async (limit = 100): Promise<AdminBooking[]> => {
-  const { data, error } = await getSupabaseAdmin().from('bookings').select('id,practitioner_id,patient_id,client_name,client_email,appointment_name,starts_at,ends_at,status,created_at,practitioners(name)').order('starts_at', { ascending: true }).limit(limit);
+export const listAdminBookings = async (limit = 100, offset = 0, status?: string): Promise<AdminBooking[]> => {
+  const query = getSupabaseAdmin().from('bookings').select('id,practitioner_id,patient_id,client_name,client_email,appointment_name,starts_at,ends_at,status,cancellation_category,no_show_billing,created_at,practitioners(name)').order('starts_at', { ascending: false }).order('id').range(offset,offset+limit-1);
+  if(status) query.eq('status',status);
+  const {data,error}=await query;
   fail(error);
-  return ((data || []) as RecordRow[]).map((row) => ({ id: String(row.id), practitionerId: String(row.practitioner_id), practitionerName: String(row.practitioners?.name || 'Onbekend'), patientId: row.patient_id ? String(row.patient_id) : null, appointmentName:String(row.appointment_name||'Afspraaktype nog te bepalen'), clientName: String(row.client_name), clientEmail: String(row.client_email), startsAt: String(row.starts_at), endsAt: String(row.ends_at), status: String(row.status), createdAt: String(row.created_at) }));
+  return ((data || []) as RecordRow[]).map((row) => ({ id: String(row.id), practitionerId: String(row.practitioner_id), practitionerName: String(row.practitioners?.name || 'Onbekend'), patientId: row.patient_id ? String(row.patient_id) : null, appointmentName:String(row.appointment_name||'Afspraaktype nog te bepalen'), clientName: String(row.client_name), clientEmail: String(row.client_email), startsAt: String(row.starts_at), endsAt: String(row.ends_at), cancellationCategory: String(row.cancellation_category || 'unknown'), noShowBilling: String(row.no_show_billing || 'unreviewed'), status: String(row.status), createdAt: String(row.created_at) }));
 };
 
 const listDashboardBookings = async (): Promise<AdminBooking[]> => {
@@ -76,7 +78,7 @@ const listDashboardBookings = async (): Promise<AdminBooking[]> => {
   const after = new Date().toISOString();
   for (let offset = 0; ; offset += 500) {
     const { data, error } = await client.from('bookings')
-      .select('id,practitioner_id,patient_id,client_name,client_email,appointment_name,starts_at,ends_at,status,created_at,practitioners(name)')
+      .select('id,practitioner_id,patient_id,client_name,client_email,appointment_name,starts_at,ends_at,status,cancellation_category,no_show_billing,created_at,practitioners(name)')
       .in('status', ['pending', 'confirmed']).or(`status.eq.pending,starts_at.gte.${after}`)
       .order('starts_at', { ascending: true }).order('id', { ascending: true }).range(offset, offset + 499);
     fail(error);
@@ -84,7 +86,7 @@ const listDashboardBookings = async (): Promise<AdminBooking[]> => {
     bookings.push(...page.map((row) => ({
       id: String(row.id), practitionerId: String(row.practitioner_id), practitionerName: String(row.practitioners?.name || 'Onbekend'),
       patientId: row.patient_id ? String(row.patient_id) : null, appointmentName:String(row.appointment_name||'Afspraaktype nog te bepalen'), clientName: String(row.client_name), clientEmail: String(row.client_email),
-      startsAt: String(row.starts_at), endsAt: String(row.ends_at), status: String(row.status), createdAt: String(row.created_at),
+      startsAt: String(row.starts_at), endsAt: String(row.ends_at), cancellationCategory: String(row.cancellation_category || 'unknown'), noShowBilling: String(row.no_show_billing || 'unreviewed'), status: String(row.status), createdAt: String(row.created_at),
     })));
     if (page.length < 500) break;
   }
@@ -187,7 +189,7 @@ export const getAdminCustomer = async (id: string) => {
     client.auth.admin.getUserById(id),
     client.from('orders').select('id,status,total_cents,currency,created_at,order_items(product_title,product_slug,product_type,price_cents)').eq('customer_user_id', id).order('created_at', { ascending: false }).limit(100),
     client.from('entitlements').select('id,product_title,product_slug,product_type,status,granted_at,revoked_at').eq('customer_user_id', id).order('granted_at', { ascending: false }).limit(100),
-    client.from('bookings').select('id,starts_at,ends_at,status,practitioners(name)').eq('customer_user_id', id).order('starts_at', { ascending: false }).limit(100),
+    client.from('bookings').select('id,starts_at,ends_at,status,cancellation_category,no_show_billing,practitioners(name)').eq('customer_user_id', id).order('starts_at', { ascending: false }).limit(100),
     client.from('data_subject_requests').select('id,request_type,status,received_at,due_at,resolved_at').eq('customer_user_id', id).order('received_at', { ascending: false }).limit(50),
   ]);
   fail(profileError); fail(ordersResult.error); fail(entitlementsResult.error); fail(bookingsResult.error); fail(requestsResult.error);

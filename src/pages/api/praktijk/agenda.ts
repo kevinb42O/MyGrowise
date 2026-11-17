@@ -1,3 +1,4 @@
+import {bookNewPatient} from '../../../lib/staffBooking';
 import type { APIRoute } from 'astro';
 import { listOffers } from '../../../lib/appointmentCatalog';
 import { attemptAgendaBookingMail } from '../../../lib/bookingMail';
@@ -71,8 +72,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
       case 'manual': {
         const patientId = String(body.patientId || '');
         const offerId = String(body.offerId || '');
-        if (!agendaUuid.test(patientId) || !agendaUuid.test(offerId) || !agendaInstant(startsAt)) return invalid();
-        const bookingId = await createStaffBooking(practitionerId, user.sub, patientId, startsAt, offerId, locals.requestId);
+        if ((!body.newPatient && !agendaUuid.test(patientId)) || !agendaUuid.test(offerId) || !agendaInstant(startsAt)) return invalid();
+        if (body.newPatient && !agendaUuid.test(String(body.newPatient.key || ''))) return invalid();
+        const {data: selectedOffer,error: offerError}=await getSupabaseAdmin().from('practitioner_appointment_types').select('practitioner_id').eq('id',offerId).maybeSingle();
+        if(offerError) throw offerError;
+        if(selectedOffer?.practitioner_id!==practitionerId) return invalid();
+        const bookingId = body.newPatient
+          ? await bookNewPatient(user.sub,body.newPatient.key,String(body.newPatient.name||''),String(body.newPatient.email||''),offerId,startsAt,String(body.newPatient.birthDate||''),locals.requestId)
+          : await createStaffBooking(practitionerId, user.sub, patientId, startsAt, offerId, locals.requestId);
         return json({ ok: true, id: bookingId, mail: await attemptAgendaBookingMail(bookingId) }, 201);
       }
       case 'reschedule':

@@ -22,6 +22,7 @@
     "supabase:migrate-identities": "dotenv -e .env -- node scripts/migrate-local-identities-to-supabase.mjs",
     "test:catalog": "node --experimental-strip-types --test tests/catalog-pricing.test.ts tests/questionnaire-landings.test.ts",
     "test:catalog:db": "dotenv -e .env -- node tests/catalog-database.mjs",
+    "test:practice:db": "dotenv -e .env -- node tests/practice-workflow-database.mjs",
     "test:appointments:db": "dotenv -e .env -- node tests/appointments-database.mjs",
     "test:appointments": "node --experimental-strip-types --test tests/appointments.test.ts",
     "test:questionnaires:db": "dotenv -e .env -- node tests/questionnaire-landings-database.mjs",
@@ -32,7 +33,8 @@
     "test:commerce:http": "dotenv -e .env -- node tests/commerce-http.mjs",
     "test": "node --experimental-strip-types --test tests/*.test.ts tests/*.test.mjs",
     "test:profiles:db": "node tests/profiles-database.mjs",
-    "check:artifact": "node scripts/check-release-artifact.mjs"
+    "check:artifact": "node scripts/check-release-artifact.mjs",
+    "reminders:configure": "dotenv -e .env -- node scripts/configure-booking-reminders.mjs"
   },
   "dependencies": {
     "@astrojs/react": "^6.0.5",

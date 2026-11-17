@@ -8,8 +8,9 @@ import luxon3Plugin from '@fullcalendar/luxon3';
 import nlLocale from '@fullcalendar/core/locales/nl';
 import type { DatesSetArg, EventApi, EventChangeArg, EventInput } from '@fullcalendar/core';
 import { fromBrusselsLocalInput, toBrusselsLocalInput } from '../../lib/brusselsTime';
-import AgendaClientPicker from './AgendaClientPicker';
+import AgendaClientPicker, {type NewPatient} from './AgendaClientPicker';
 import AgendaDialog from './AgendaDialog';
+import {bookingOutcomeLabel} from '../../lib/bookingOutcome';
 
 type Source = 'mygrowise' | 'itransform' | 'block' | 'availability';
 type Mode = 'admin' | 'practice';
@@ -17,6 +18,7 @@ type Item = {
   id: string; source: Source; title: string; subtitle: string; startsAt: string; endsAt: string; status: string;
   kind: 'appointment' | 'personal' | 'block' | 'availability'; location: string; color: string; editable: boolean;
   practitionerId?: string | null; practitionerName?: string; patientId?: string | null; externalSource?: 'mijndiad' | null; externalUrl?: string | null;
+  cancellationCategory?: string; noShowBilling?: string;
   revision?: string; conflict?: boolean; offerIds?: string[];
 };
 type CalendarRange = { from: string; to: string; date: string; view: string };
@@ -29,7 +31,7 @@ type Editor =
   | { type: 'detail'; item: Item }
   | { type: 'event'; fields: EventFields }
   | { type: 'block'; fields: TimeRange & { reason: string } }
-  | { type: 'booking'; fields: { startsAt: string; patientId: string; offerId: string }; original?: Item };
+  | { type: 'booking'; fields: { startsAt: string; patientId: string; offerId: string; newPatient?: NewPatient }; original?: Item };
 type CalendarSync = { enabled: boolean; lastSuccessAt: string | null; lastError: string | null; pendingMissing: number;
   coverageUncertain: number; coverageUntil: string | null };
 type Payload = { events: Item[]; practitioners?: { id: string; name: string; active: boolean }[];
@@ -82,11 +84,11 @@ export function AgendaEventCard({ item, timeText, compact = false, list = false,
   const duration = (Date.parse(item.endsAt) - Date.parse(item.startsAt)) / 60000;
   const short = !compact && !list && duration > 0 && duration <= 45;
   const title = item.location?.toLowerCase() === 'online' ? item.title.replace(/\s+online$/i, '') : item.title;
-  const state = item.conflict ? 'Overlap · ' : item.status === 'pending' || historical.includes(item.status) ? `${statusLabels[item.status]} · `
+  const state = item.conflict ? 'Overlap · ' : item.status === 'pending' || historical.includes(item.status) ? `${bookingOutcomeLabel(item)} · `
     : item.source === 'itransform' && !imported ? 'Itransform · ' : '';
   const context = [item.practitionerName, item.location?.split(' - ')[0], imported ? 'MijnDiAd' : ''].filter(Boolean).join(' · ');
   return <div className={`unified-agenda__event${imported ? ' is-imported' : ''}${compact ? ' is-compact' : ''}${short ? ' is-short' : ''}${short && duration < 30 ? ' is-tiny' : ''}`}
-    title={[timeText, item.title, item.location, item.subtitle, imported ? 'MijnDiAd' : ''].filter(Boolean).join(' · ')}>
+    title={[timeText, item.title, item.location, item.subtitle, historical.includes(item.status)?bookingOutcomeLabel(item):'', imported ? 'MijnDiAd' : ''].filter(Boolean).join(' · ')}>
     {timeText && !list && <b>{timeText}</b>}
     {list && onOpen ? <button className="agenda-list-event" type="button" onClick={event => { event.stopPropagation(); onOpen(); }}>{state}{title}</button> : <span>{state}{title}</span>}
     {context && !compact && !short && <small>{context}</small>}
@@ -156,10 +158,27 @@ function visibleHours(items: Item[]) {
   return { min: `${String(min).padStart(2, '0')}:00:00`, max: `${String(max).padStart(2, '0')}:00:00` };
 }
 
-export default function UnifiedAgenda({ mode = 'admin', allowItransform = false }: { mode?: Mode; allowItransform?: boolean }) {
+export default function UnifiedAgenda({ mode = 'admin', allowItransform = false, preferenceKey = '' }: { mode?: Mode; allowItransform?: boolean; preferenceKey?: string }) {
   const practice = mode === 'practice';
   const endpoint = practice ? '/api/praktijk/agenda' : '/api/admin/agenda';
   const calendarRef = useRef<FullCalendar>(null);
+  const calendarContainer = useRef<HTMLDivElement>(null);
+  const [calendarHeight, setCalendarHeight] = useState(600);
+  const [compact, setCompact] = useState(true);
+  useEffect(() => {
+    try { setCompact(localStorage.getItem(`agenda-workday:${preferenceKey}`) !== 'all'); } catch { /* Storage is optional. */ }
+  }, [preferenceKey]);
+  const changeCompact = (next: boolean) => {
+    setCompact(next);
+    try { localStorage.setItem(`agenda-workday:${preferenceKey}`, next ? 'compact' : 'all'); } catch { /* Storage is optional. */ }
+  };
+  useEffect(() => {
+    const measure = () => { if (calendarContainer.current) setCalendarHeight(Math.max(440, Math.floor(window.innerHeight - calendarContainer.current.getBoundingClientRect().top - 20))); };
+    const observer = new ResizeObserver(measure);
+    if (calendarContainer.current?.parentElement) observer.observe(calendarContainer.current.parentElement);
+    window.addEventListener('resize', measure); measure();
+    return () => { observer.disconnect(); window.removeEventListener('resize', measure); };
+  }, []);
   const [initial] = useState(initialNavigation);
   const [range, setRange] = useState<CalendarRange>();
   const [practitioner, setPractitioner] = useState(initial.practitioner);
@@ -244,7 +263,7 @@ export default function UnifiedAgenda({ mode = 'admin', allowItransform = false 
       weekendCount: results.filter(item => ['Sat', 'Sun'].includes(weekend.format(new Date(item.startsAt)))).length };
   }, [items, source, showPrivate, showInactive, search]);
   const imported = hasItransform ? results.filter(item => item.externalSource === 'mijndiad') : [];
-  const hours = useMemo(() => visibleHours(results), [results]);
+  const hours = useMemo(() => compact ? {min:'08:00:00',max:'17:00:00'} : visibleHours(results), [results,compact]);
   const events = useMemo<EventInput[]>(() => {
     const visible = source === 'itransform' || loadState?.error ? results : [...results, ...displayAvailability(bookable)];
     return visible.map(item => {
@@ -383,7 +402,7 @@ export default function UnifiedAgenda({ mode = 'admin', allowItransform = false 
     finally { setSyncBusy(false); }
   };
 
-  const outOfHours = hours.min < '07:00:00' || hours.max > '23:00:00';
+  const outOfHours = compact && results.some(item => !isDayBounded(item) && (toBrusselsLocalInput(item.startsAt).slice(11) < '08:00' || toBrusselsLocalInput(item.endsAt).slice(11) > '17:00' || toBrusselsLocalInput(item.startsAt).slice(0,10)!==toBrusselsLocalInput(item.endsAt).slice(0,10)));
   const loadError = loadState?.key === query ? loadState.error : undefined;
   const loading = !loadState || loadState.key !== query;
   const coverageWarning = Boolean(hasItransform && range && Date.parse(range.to) > clock &&
@@ -401,7 +420,7 @@ export default function UnifiedAgenda({ mode = 'admin', allowItransform = false 
         {!practice && <label className="unified-agenda__search"><span>Professional</span><select value={practitioner} onChange={event => setPractitioner(event.target.value)}>
           <option value="all">Iedereen</option>{professionals.map(person => <option key={person.id} value={person.id}>{person.name}{!person.active ? ' (inactief)' : ''}</option>)}
         </select></label>}
-        <label className="unified-agenda__search"><span>Zoeken</span><input type="search" value={search} onChange={event => setSearch(event.target.value)} autoComplete="off" placeholder="Naam, locatie of titel…" /></label>
+        <label className="unified-agenda__search"><span>Zoek in deze agendaperiode</span><input type="search" value={search} onChange={event => setSearch(event.target.value)} autoComplete="off" placeholder="Naam, locatie of titel…" /></label>
       </div>
       <div className="unified-agenda__actions">
         {hasItransform && <details name="agenda-tools" className={`unified-agenda__menu unified-agenda__sync${syncWarning ? ' is-warning' : ''}`}>
@@ -419,6 +438,7 @@ export default function UnifiedAgenda({ mode = 'admin', allowItransform = false 
         </details>}
         <details name="agenda-tools" className="unified-agenda__menu">
           <summary>Weergave</summary><div className="unified-agenda__popover">
+            <label className="unified-agenda__private-toggle"><input type="checkbox" checked={compact} onChange={event => changeCompact(event.target.checked)} />Werkdag 08.00–17.00</label>
             {practice && range?.view === 'timeGridWeek' && <label className="unified-agenda__private-toggle"><input type="checkbox" checked={showWeekends} onChange={event => setShowWeekends(event.target.checked)} />Weekend tonen</label>}
             <label className="unified-agenda__private-toggle"><input type="checkbox" checked={showPrivate} onChange={event => setShowPrivate(event.target.checked)} />Persoonlijke momenten tonen</label>
             <label className="unified-agenda__private-toggle"><input type="checkbox" checked={showInactive} onChange={event => setShowInactive(event.target.checked)} />Geannuleerde en geweigerde afspraken tonen</label>
@@ -448,14 +468,14 @@ export default function UnifiedAgenda({ mode = 'admin', allowItransform = false 
       {loading && !payload && <p>Agenda laden…</p>}
       {!loading && !loadError && payload && !results.length && <p>{search || source !== 'all' ? 'Geen momenten die aan deze filters voldoen.' : 'Geen geplande momenten in deze periode.'}</p>}
       {!loadError && (payload?.availabilityUnknown || coverageWarning) && <p className="is-warning">{payload?.availabilityUnknown ? 'Publieke beschikbaarheid kon niet worden gecontroleerd.' : 'De externe beschikbaarheid is voor een deel van deze periode onbekend.'}</p>}
-      {!loadError && outOfHours && range?.view.startsWith('timeGrid') && <p>Er zijn momenten buiten 07:00–23:00. <button type="button" className="agenda-text-button"
-        onClick={() => calendarRef.current?.getApi().scrollToTime(hours.min < '07:00:00' ? hours.min : '22:00:00')}>Toon die uren</button></p>}
+      {!loadError && outOfHours && range?.view.startsWith('timeGrid') && <p>Er zijn momenten buiten 08.00–17.00. <button type="button" className="agenda-text-button"
+        onClick={() => changeCompact(false)}>Alle uren tonen</button></p>}
       {!loadError && results.some(item => item.conflict) && <p className="is-warning">Een afspraak of blokkade overlapt met MijnDiAd. Open het gemarkeerde moment om dit te controleren.</p>}
       {notice && <div className="unified-agenda__notice">{notice}<button type="button" onClick={() => setNotice('')} aria-label="Melding sluiten">×</button></div>}
     </div>
     {practice && range?.view === 'timeGridWeek' && !showWeekends && weekendCount > 0 &&
       <div className="unified-agenda__weekend-notice">{weekendCount} {weekendCount === 1 ? 'moment begint' : 'momenten beginnen'} in het weekend.<button type="button" onClick={() => setShowWeekends(true)}>Toon weekend</button></div>}
-    <div className="agenda-calendar" aria-busy={loading}>
+    <div ref={calendarContainer} className={`agenda-calendar${compact ? ' is-workday' : ''}`} aria-busy={loading}>
       <FullCalendar ref={calendarRef} plugins={plugins} locale={nlLocale} timeZone={zone}
         initialView={initial.view} initialDate={initial.date} firstDay={1} nowIndicator selectable selectMirror
         eventResizableFromStart weekends={showWeekends} views={{ timeGridDay: { weekends: true }, listWeek: { weekends: true }, dayGridMonth: { weekends: true } }}
@@ -463,7 +483,7 @@ export default function UnifiedAgenda({ mode = 'admin', allowItransform = false 
         headerToolbar={{ left: 'prev,next today', center: 'title', right: 'dayGridMonth,timeGridWeek,timeGridDay,listWeek' }}
         buttonText={{ today: 'Vandaag', month: 'Maand', week: 'Week', day: 'Dag', list: 'Lijst' }}
         allDaySlot slotMinTime={hours.min} slotMaxTime={hours.max} slotDuration="00:30:00" snapDuration="00:15:00"
-        height="clamp(520px, calc(100dvh - 180px), 1100px)" scrollTime="08:30:00" scrollTimeReset={false} expandRows
+        height={calendarHeight} scrollTime="08:00:00" scrollTimeReset={false} expandRows
         dayHeaderFormat={{ weekday: 'short', day: 'numeric', month: 'short' }} slotLabelFormat={{ hour: '2-digit', minute: '2-digit', hour12: false }}
         events={events} dateClick={arg => chooseSlot(windowFor(arg.dateStr))}
         select={arg => { chooseSlot(windowFor(arg.startStr, arg.endStr, arg.allDay)); calendarRef.current?.getApi().unselect(); }}
@@ -498,7 +518,7 @@ export default function UnifiedAgenda({ mode = 'admin', allowItransform = false 
         return <>
           <div className="practice-agenda-detail">
             <strong>{rangeTitle(item)}</strong>
-            <span>{item.source === 'block' ? 'Niet beschikbaar' : booking ? statusLabels[item.status] : 'Praktijk Itransform'}</span>
+            <span>{item.source === 'block' ? 'Niet beschikbaar' : booking ? bookingOutcomeLabel(item) : 'Praktijk Itransform'}</span>
             {item.subtitle && <span>{item.subtitle}</span>}
             {item.location && !item.externalSource && <span>{item.location}</span>}
             {item.conflict && <p role="alert">Dit moment overlapt met een ander bezet tijdvak.</p>}
@@ -515,7 +535,7 @@ export default function UnifiedAgenda({ mode = 'admin', allowItransform = false 
             </>}
             {booking && item.status === 'confirmed' && <>
               <button type="button" disabled={busy} onClick={() => statusAction('cancelled', 'Afspraak geannuleerd.', `Afspraak van ${item.title} op ${rangeTitle(item)} annuleren? De cliënt krijgt een melding volgens diens voorkeuren.`)}>Afspraak annuleren</button>
-              {Date.parse(item.startsAt) <= clock && <button type="button" disabled={busy} onClick={() => statusAction('no_show', 'Afspraak gemarkeerd als niet verschenen.', `${item.title} markeren als niet verschenen?`)}>Niet verschenen</button>}
+              <a href={`${bookingHref(item.id)}#registratie`}>Annulering of no-show intern registreren</a>
               {Date.parse(item.startsAt) > clock && <button type="button" disabled={busy} onClick={() => open({ type: 'booking', original: item, fields: { startsAt: toBrusselsLocalInput(item.startsAt), patientId: '', offerId: '' } })}>Verplaatsen</button>}
               {Date.parse(item.endsAt) <= clock && <button type="button" disabled={busy} onClick={() => statusAction('completed', 'Afspraak afgerond.', `Afspraak van ${item.title} afronden?`)}>Afronden</button>}
             </>}
@@ -546,7 +566,7 @@ export default function UnifiedAgenda({ mode = 'admin', allowItransform = false 
           })()}
           {editor.type === 'block' && <label className="is-wide"><span>Privénotitie (optioneel)</span><input maxLength={80} value={editor.fields.reason} onChange={event => change({ ...editor, fields: { ...editor.fields, reason: event.target.value } })} /></label>}
           {editor.type === 'booking' && !editor.original && <>
-            <AgendaClientPicker mode="practice" value={editor.fields.patientId} onChange={patientId => change({ ...editor, fields: { ...editor.fields, patientId } })} />
+            <AgendaClientPicker mode="practice" value={editor.fields.patientId} onChange={patientId => change({ ...editor, fields: { ...editor.fields, patientId } })} onNewChange={newPatient => change({ ...editor, fields: { ...editor.fields, patientId: '', newPatient } })} />
             <label className="is-wide"><span>Afspraaktype</span><select required value={editor.fields.offerId} onChange={event => change({ ...editor, fields: { ...editor.fields, offerId: event.target.value } })}>
               <option value="">{offerState === 'idle' ? 'Afspraaktypes laden…' : 'Kies een afspraaktype'}</option>
               {offers.map(offer => <option key={offer.id} value={offer.id}>{offer.name} · {offer.duration} min</option>)}

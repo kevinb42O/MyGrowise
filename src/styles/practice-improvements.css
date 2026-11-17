@@ -1,0 +1,81 @@
+/* Functional typography for the practice workspace; public brand pages keep their own scale. */
+.admin-body { --practice-body-size: 1rem; --practice-meta-size: .875rem; }
+.admin-body :is(.practice-table,.practice-kv dd,.practice-bookings,.client-booking-list,.client-note,.client-directory,.admin-products-table) { font-size:var(--practice-body-size); line-height:1.55; }
+.admin-body :is(.practice-muted,.practice-chip,.practice-kv dt,.practice-fields label,.practice-grid label,.practice-label,.practice-filter label,.practice-table th,.practice-table small,.client-booking-list small,.client-note-meta,.client-account-badge,.practice-booking__person small,.practice-booking__time small,.admin-product-cell small,.admin-product-status,.admin-row-action) { font-size:var(--practice-meta-size); line-height:1.5; }
+.admin-body :is(.client-records-page,.practice-card,.practice-bookings) :is(input,select,textarea) { font-size:1rem; line-height:1.5; }
+.admin-body :is(.client-records-page,.practice-bookings,.admin-products-table) strong { font-size:1rem; }
+.admin-body :is(.client-note-body,.client-note-content,.client-record-detail textarea) { font-size:1rem; line-height:1.7; }
+.admin-body :is(.admin-button,.practice-button,.practice-filter-tabs a) { font-size:.875rem; min-height:40px; }
+.admin-body .practice-kv dd { font-size:1rem; }
+.admin-body :is(.client-record-detail,.practice-card) :is(small,time) { font-size:.875rem; }
+.admin-body .admin-product-status { white-space:normal; }
+.admin-body .practice-bookings>article { gap:1rem; }
+.admin-body .unified-agenda__search>span,
+.admin-body .unified-agenda__menu summary,
+.admin-body .unified-agenda__filters :is(input,select),
+.admin-body .unified-agenda__popover,
+.admin-body .agenda-feedback,
+.admin-body .unified-agenda-dialog :is(label,legend,span,input,select,button,p),
+.admin-body .fc :is(.fc-col-header-cell-cushion,.fc-timegrid-slot-label-cushion,.fc-toolbar-title,.fc-button),
+.admin-body .unified-agenda__event :is(strong,span,time) { font-size:.875rem; }
+.admin-body .unified-agenda__event { line-height:1.3; }
+.admin-body .fc .fc-toolbar-title { font-size:1.15rem; }
+.admin-body .agenda-calendar.is-workday .fc-timegrid-slot { height:1.4em; }
+.admin-body .fc .fc-timegrid-event { overflow:hidden; }
+.admin-body :is(.unified-agenda,.practice-stack,.client-records-page) :focus-visible,
+.client-search :focus-visible { outline:2px solid var(--admin-green,#173d35); outline-offset:3px; }
+.admin-body :is(.unified-agenda,.client-records-page) ::selection { background:#f3c9c8; color:#173d35; }
+.admin-body :is(.practice-table,.fc,.practice-outcome-history) time { font-variant-numeric:tabular-nums; }
+.client-search { position:relative; width:clamp(180px,22vw,340px); color:var(--admin-text,#173d35); }
+.client-search input { box-sizing:border-box; width:100%; min-height:42px; border:1px solid var(--admin-border,#cbd7d0); border-radius:8px; padding:.65rem .8rem; background:white; color:inherit; font:inherit; font-size:1rem; }
+.client-search input::placeholder { color:#54675f; opacity:1; }
+.client-search__panel { position:absolute; z-index:70; right:0; top:calc(100% + 8px); box-sizing:border-box; width:min(440px,calc(100vw - 32px)); max-height:min(70dvh,580px); overflow-y:auto; padding:1rem; border:1px solid var(--admin-border,#cbd7d0); border-radius:12px; background:white; box-shadow:0 12px 32px #173d351c; font-size:.875rem; }
+.client-search__panel>strong { font-size:1rem; }
+.client-search__panel>p { margin:.5rem 0; }
+.client-search__panel>p:empty { display:none; }
+.client-search__panel ul { margin:.75rem 0 0; padding:0; list-style:none; }
+.client-search__panel li { padding:.75rem 0; border-bottom:1px solid var(--admin-border,#dce3df); }
+.client-search__panel li[aria-selected=true] { background:#edf4ef; }
+.client-search__panel a { display:block; color:inherit; text-decoration:none; overflow-wrap:anywhere; }
+.client-search__panel a:hover { text-decoration:underline; }
+.client-search__panel small { display:block; margin-top:.2rem; font-size:.875rem; color:#54675f; }
+.client-search__links { display:flex; gap:1.2rem; margin-top:.6rem; }
+.client-search__links a { padding:.25rem 0; text-decoration:underline; }
+.client-search__panel button,.client-picker-tabs button,.agenda-client-picker__pages button { min-height:40px; padding:.5rem .7rem; border:1px solid #cbd7d0; border-radius:6px; background:white; color:#173d35; font:inherit; cursor:pointer; }
+.client-search__panel>button { margin-top:.75rem; }
+.client-picker-tabs { display:flex; flex-wrap:wrap; gap:.5rem; margin-bottom:1rem; }
+.client-picker-tabs button[aria-pressed=true] { background:#173d35; color:white; border-color:#173d35; }
+.agenda-client-picker { min-width:0; }
+.admin-body .agenda-client-picker input { box-sizing:border-box; width:100%; min-width:0; min-height:44px; padding:.7rem; border:1px solid #cbd7d0; border-radius:8px; color:#173d35; background:white; font:inherit; font-size:1rem; }
+.admin-body .agenda-client-picker>div>label>span { display:block; margin-bottom:.5rem; font-size:.875rem; }
+.agenda-client-picker [role=listbox] { max-height:240px; overflow-y:auto; list-style:none; padding:0; margin:.4rem 0; border:1px solid #cbd7d0; border-radius:8px; }
+.agenda-client-picker [role=option] { margin:0; }
+.agenda-client-picker [role=option] button { width:100%; min-height:48px; border:0; border-bottom:1px solid #e1e8e3; background:white; padding:.65rem .8rem; text-align:left; cursor:pointer; color:#173d35; font:inherit; }
+.agenda-client-picker [role=option][aria-selected=true] button,.agenda-client-picker [role=option] button:hover { background:#edf4ef; }
+.agenda-client-picker [role=option] small { display:block; margin-top:.2rem; color:#54675f; font-size:.875rem; }
+.agenda-client-picker__pages { display:flex; align-items:center; justify-content:space-between; gap:.75rem; margin-top:.5rem; }
+.agenda-client-picker p,.agenda-client-picker__status { font-size:.875rem; line-height:1.5; }
+.practice-outcome-history { margin-top:1.5rem; }
+.practice-outcome-history ol { list-style:none; padding:0; }
+.practice-outcome-history li { display:flex; flex-wrap:wrap; gap:.5rem 1rem; padding:.65rem 0; border-bottom:1px solid #dce3df; }
+#registratie,#verslagen,#afspraken { scroll-margin-top:6rem; }
+@media(max-width:800px) {
+ .admin-topbar { flex-wrap:wrap; height:auto; min-height:64px; gap:.5rem; }
+ .admin-topbar__right { flex:1; justify-content:flex-end; min-width:0; }
+ .client-search { flex:1; width:auto; max-width:300px; }
+ .client-search__panel { right:0; }
+ .admin-body .practice-kv { grid-template-columns:repeat(2,minmax(0,1fr)); }
+}
+@media(max-width:520px) {
+ .admin-topbar__left { width:100%; }
+ .admin-topbar__right { width:100%; }
+ .client-search { max-width:none; }
+ .admin-body .practice-kv { grid-template-columns:1fr; }
+}
+/* Functional dossier text uses the same scale as appointments. */
+.admin-body .client-records-page :is(label,small,time,dt,.client-record-summary-grid span,.client-assignment-list span,.client-directory-lock,.client-account-badge,.client-records-footnote,.client-note-status,.client-note__footer,.client-note-history summary,.client-note-edit summary) { font-size:.875rem; }
+.admin-body .client-records-page :is(.client-note__content,.client-note-history .client-note__content) { font-size:1rem; line-height:1.7; }
+.admin-body .client-records-page .client-note__header h3 { font-size:1.125rem; }
+.admin-body .client-record-row__main strong,.admin-body .client-record-row__meta strong { font-size:1rem; white-space:normal; }
+.admin-body :is(.practice-booking__person,.practice-booking__time) small { font-size:.875rem; white-space:normal; overflow-wrap:anywhere; }
+.admin-body .admin-table :is(td,th),.admin-body .admin-product-cell small,.admin-body .admin-row-action { font-size:.875rem; }

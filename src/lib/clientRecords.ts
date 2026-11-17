@@ -52,6 +52,7 @@ export type PatientDirectoryItem = {
 };
 
 export type PatientBooking = {
+  cancellationCategory?: string; noShowBilling?: string;
   appointmentName?: string;
   id: string;
   startsAt: string;
@@ -278,7 +279,7 @@ export const getPatientDetail = async (user: UserSession, patientId: string, his
   const bookingPage=Math.min(bookingPageCount,Math.max(1,Number.isInteger(requestedBookingPage)?requestedBookingPage:1));
   const [{ data: noteRows, error: noteError }, { data: bookingRows, error: bookingError }, assignments, bookingCountResult] = await Promise.all([
     client.from('patient_notes_current').select('id,booking_id,note_type,occurred_at,status,current_version,created_by,created_at,updated_at,finalized_at,corrects_note_id,title,body,version_created_at').eq('patient_id', patientId).order('occurred_at', { ascending: false }).order('created_at', { ascending: false }).range((notePage - 1) * 50, notePage * 50 - 1),
-    filterBookings(client.from('bookings').select('id,appointment_name,starts_at,ends_at,status,practitioners(name)')).order('starts_at', { ascending: false }).order('id').range((bookingPage-1)*50,bookingPage*50-1),
+    filterBookings(client.from('bookings').select('id,appointment_name,starts_at,ends_at,status,cancellation_category,no_show_billing,practitioners(name)')).order('starts_at', { ascending: false }).order('id').range((bookingPage-1)*50,bookingPage*50-1),
     loadAssignments(patientId, isOwner(user)),
     client.from('bookings').select('id', { count: 'exact', head: true }).eq('patient_id', patientId),
   ]);
@@ -317,17 +318,17 @@ export const getPatientDetail = async (user: UserSession, patientId: string, his
     current: { versionNumber: Number(row.current_version), title: String(row.title), body: String(row.body), createdBy: row.created_by ? String(row.created_by) : null, createdAt: String(row.version_created_at) },
     versions: versionHistory.get(String(row.id)) || [],
   }));
-  const bookings: PatientBooking[] = ((bookingRows || []) as Row[]).map((row) => ({ id: String(row.id), appointmentName:String(row.appointment_name||'Afspraaktype nog te bepalen'), startsAt: String(row.starts_at), endsAt: String(row.ends_at), status: String(row.status), practitionerName: String(row.practitioners?.name || 'Professional') }));
+  const bookings: PatientBooking[] = ((bookingRows || []) as Row[]).map((row) => ({ id: String(row.id), appointmentName:String(row.appointment_name||'Afspraaktype nog te bepalen'), startsAt: String(row.starts_at), endsAt: String(row.ends_at), cancellationCategory: String(row.cancellation_category || 'unknown'), noShowBilling: String(row.no_show_billing || 'unreviewed'), status: String(row.status), practitionerName: String(row.practitioners?.name || 'Professional') }));
   let linkableBookings: PatientBooking[] = [];
   const practitionerId = user.practitionerId;
   if (patient.status === 'active' && (isOwner(user) || practitionerId)) {
-    let query = client.from('bookings').select('id,customer_user_id,starts_at,ends_at,status,practitioners(name)').is('patient_id', null).in('status', ['confirmed', 'completed', 'no_show']).order('starts_at', { ascending: false }).limit(100);
+    let query = client.from('bookings').select('id,customer_user_id,starts_at,ends_at,status,cancellation_category,no_show_billing,practitioners(name)').is('patient_id', null).in('status', ['confirmed', 'completed', 'no_show']).order('starts_at', { ascending: false }).limit(100);
     if (!isOwner(user)) query = query.eq('practitioner_id', practitionerId);
     if (patient.customer_user_id) query = query.eq('customer_user_id', patient.customer_user_id);
     else if (patient.email) query = query.eq('client_email', patient.email);
     else query = query.is('customer_user_id', null).eq('client_name', patient.full_name);
     const result = await query; fail(result.error);
-    linkableBookings = ((result.data || []) as Row[]).map((row) => ({ id: String(row.id), appointmentName:String(row.appointment_name||'Afspraaktype nog te bepalen'), startsAt: String(row.starts_at), endsAt: String(row.ends_at), status: String(row.status), practitionerName: String(row.practitioners?.name || 'Professional') }));
+    linkableBookings = ((result.data || []) as Row[]).map((row) => ({ id: String(row.id), appointmentName:String(row.appointment_name||'Afspraaktype nog te bepalen'), startsAt: String(row.starts_at), endsAt: String(row.ends_at), cancellationCategory: String(row.cancellation_category || 'unknown'), noShowBilling: String(row.no_show_billing || 'unreviewed'), status: String(row.status), practitionerName: String(row.practitioners?.name || 'Professional') }));
   }
   let linkedCustomer: PatientDetail['linkedCustomer'] = null;
   if (patient.customer_user_id) {
@@ -465,7 +466,7 @@ export const getBookingForNote = async (user: UserSession, patientId: string, bo
   assertRecordRole(user);
   await assertPatientAccess(user, patientId);
   if (!uuidPattern.test(bookingId)) return null;
-  const { data, error } = await getSupabaseAdmin().from('bookings').select('id,starts_at,ends_at,status,appointment_name').eq('id', bookingId).eq('patient_id', patientId).maybeSingle();
+  const { data, error } = await getSupabaseAdmin().from('bookings').select('id,starts_at,ends_at,status,cancellation_category,no_show_billing,appointment_name').eq('id', bookingId).eq('patient_id', patientId).maybeSingle();
   fail(error);
   return data ? { id: data.id, startsAt: data.starts_at, endsAt: data.ends_at, status: data.status, appointmentName: data.appointment_name, practitionerName: '' } : null;
 };

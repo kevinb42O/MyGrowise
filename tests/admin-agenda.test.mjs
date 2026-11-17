@@ -189,6 +189,7 @@ const { default: Agenda, AgendaEventCard, ImportedAgendaDetails, eventForeground
   ...Object.fromEntries(['daygrid', 'timegrid', 'interaction', 'list', 'luxon3'].map(name => [`@fullcalendar/${name}`, {}])),
   '@fullcalendar/core/locales/nl': {},
   '../../lib/brusselsTime': {},
+  '../../lib/bookingOutcome': load('../src/lib/bookingOutcome.ts',{}),
   './AgendaClientPicker': {}, './AgendaDialog': {},
 });
 

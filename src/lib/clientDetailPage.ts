@@ -20,6 +20,12 @@ export async function loadClientDetailPage(context: Pick<AstroGlobal, 'locals' |
    if(!isTrustedFormOrigin(context.request)||!hasPermission(user,'client_records.write'))return new Response('Geen toegang.',{status:403});
    const form=await context.request.formData();submittedDetails=Object.fromEntries(form.entries());
    try{
+   if(form.get('operation')==='delete_empty'){
+    if(form.get('confirm_retention')!=='yes')throw new Error('Bevestig eerst dat dit een foutieve registratie zonder bewaarplicht is.');
+    const {error}=await getSupabaseAdmin().rpc('delete_empty_patient',{p_actor:user.sub,p_patient:patientId,p_name:String(form.get('confirm_name')||''),p_reason:String(form.get('delete_reason')||''),p_request:context.locals.requestId||null});
+    if(error)throw new Error('Verwijderen is geblokkeerd. Controleer de bevestigingsnaam en of het dossier leeg, gearchiveerd en ongekoppeld is.');
+    return context.redirect(`${recordsBase}?melding=verwijderd`,303);
+   }
    const details=parsePatientDetails(submittedDetails);
    const {error}=await getSupabaseAdmin().rpc('save_patient_details',{p_actor:user.sub,p_patient:patientId,p_details:details,p_expected:String(form.get('expected_updated_at')||'')});
    if(error)throw new Error(error.code==='40001'?'Het dossier is intussen gewijzigd. Herlaad en controleer de gegevens.':'De gegevens konden niet worden opgeslagen. Controleer je toegang en invoer.');
@@ -30,6 +36,11 @@ export async function loadClientDetailPage(context: Pick<AstroGlobal, 'locals' |
   const patient = await getPatientDetail(user, patientId, historyNoteId, context.locals.requestId, requestedNotePage,Number(context.url.searchParams.get('afsprakenpagina')||1),bookingStatus,bookingFrom,bookingTo,context.url.searchParams.get('concept') || '');
 
   if (!patient) return context.redirect(`${recordsBase}?fout=dossier_niet_gevonden`);
+  const { error: visitError } = await getSupabaseAdmin().rpc('record_patient_visit', { p_actor: user.sub, p_patient: patientId });
+  if (visitError) console.error('Recent dossierbezoek kon niet worden bijgewerkt.');
+  const deletion = patient.canArchive ? await getSupabaseAdmin().rpc('patient_deletion_blocker',{p_actor:user.sub,p_patient:patientId}) : null;
+  const deletionBlockers: Record<string,string> = { archive_first:'Archiveer het dossier eerst.',linked_account:'Er is een cliëntaccount gekoppeld. Accountverwijdering vraagt een afzonderlijke beoordeling.',appointments:'Het dossier bevat afspraken. De administratieve en boekhoudkundige historiek moet behouden blijven.',care_data:'Het dossier bevat zorggegevens of verslagen. Verwijdering vereist eerst beoordeling van de bewaarplicht.',not_found:'Dit dossier bestaat niet meer.' };
+  const deletionBlocker = deletion?.error ? 'De controle is niet beschikbaar. Probeer later opnieuw.' : deletionBlockers[String(deletion?.data||'')]||'';
   const staff = patient.canManageAssignments ? await getPatientStaff() : [];
   const matchingCustomerAccounts = patient.canManageAssignments && !patient.customerUserId && patient.email
     ? (await listUnlinkedCustomerAccounts(user, patient.email)).filter((account) => account.email?.toLowerCase() === patient.email?.toLowerCase())
@@ -86,6 +97,6 @@ export async function loadClientDetailPage(context: Pick<AstroGlobal, 'locals' |
    ['Reden van aanmelding',patient.details.registration_reason],['Doorverwijzer',patient.details.referrer],
   ];
 
-  return { user, patient, detailsError, submittedDetails, bookingStatus, bookingFrom, bookingTo, staff, matchingCustomerAccounts, canWrite, assignedIds, correctionTarget, message, errorCode, messages, errors, formatDate, formatDateTime, formatLocalNow, noteLabel, statusLabel, bookingId, selectedBooking, overview, practice, recordsBase, noteBooking, noteBookings };
+  return { user, patient, deletionBlocker, detailsError, submittedDetails, bookingStatus, bookingFrom, bookingTo, staff, matchingCustomerAccounts, canWrite, assignedIds, correctionTarget, message, errorCode, messages, errors, formatDate, formatDateTime, formatLocalNow, noteLabel, statusLabel, bookingId, selectedBooking, overview, practice, recordsBase, noteBooking, noteBookings };
 }
 export type ClientDetailData = Exclude<Awaited<ReturnType<typeof loadClientDetailPage>>, Response>;

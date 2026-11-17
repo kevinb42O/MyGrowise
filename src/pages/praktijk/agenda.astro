@@ -10,6 +10,6 @@ Astro.response.headers.set('Cache-Control', 'private, no-store');
 <PracticeLayout title="Mijn agenda" description="Beheer je afspraken en beschikbaarheid in één agenda.">
   <div class="admin-page agenda-page">
     <h1 class="sr-only" id="practice-agenda-title">Mijn agenda</h1>
-    <UnifiedAgenda mode="practice" allowItransform={canUseItransform} client:only="react"><p slot="fallback" role="status">Agenda laden…</p></UnifiedAgenda>
+    <UnifiedAgenda preferenceKey={Astro.locals.currentUser!.sub} mode="practice" allowItransform={canUseItransform} client:only="react"><p slot="fallback" role="status">Agenda laden…</p></UnifiedAgenda>
   </div>
 </PracticeLayout>

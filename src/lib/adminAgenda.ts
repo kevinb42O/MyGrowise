@@ -11,6 +11,7 @@ export type AgendaEvent = {
   startsAt: string;
   endsAt: string;
   status: string;
+  cancellationCategory?: string; noShowBilling?: string;
   kind: 'appointment' | 'personal' | 'block';
   location: string;
   color: string;
@@ -28,7 +29,7 @@ type CreatePracticeAgendaEvent = Pick<AgendaEvent, 'title' | 'startsAt' | 'endsA
 export const listAgendaEvents = async (from: string, to: string, practitionerId?: string, viewerPractitionerId?: string): Promise<AgendaEvent[]> => {
   const client = getSupabaseAdmin();
   const bookingsQuery = client.from('bookings')
-    .select('id,practitioner_id,client_name,appointment_name,offer:practitioner_appointment_types(appointment_types(treatment_groups(color))),starts_at,ends_at,status,location,channel,practitioners(name)')
+    .select('id,practitioner_id,client_name,appointment_name,offer:practitioner_appointment_types(appointment_types(treatment_groups(color))),starts_at,ends_at,status,cancellation_category,no_show_billing,location,channel,practitioners(name)')
     .in('status', calendarBookingStatuses).lt('starts_at', to).gt('ends_at', from).order('starts_at').order('id');
   const momentsQuery = client.from('practice_calendar_events')
     .select('id,title,starts_at,ends_at,status,event_kind,location,color,practitioner_id,updated_at,practitioners(name)')
@@ -58,7 +59,7 @@ export const listAgendaEvents = async (from: string, to: string, practitionerId?
   return [
     ...bookings.map((row): AgendaEvent => ({
       id: row.id, source: 'mygrowise', title: row.client_name, subtitle: [row.appointment_name, row.practitioners?.name].filter(Boolean).join(' · '),
-      startsAt: row.starts_at, endsAt: row.ends_at, status: row.status, kind: 'appointment',
+      startsAt: row.starts_at, endsAt: row.ends_at, status: row.status, cancellationCategory:row.cancellation_category,noShowBilling:row.no_show_billing, kind: 'appointment',
       location: row.channel === 'online' ? 'Online' : row.location || '', color: row.offer?.appointment_types?.treatment_groups?.color || '#1f7060',
       editable: false, practitionerId: row.practitioner_id, practitionerName: row.practitioners?.name,
     })),
