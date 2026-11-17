@@ -1,8 +1,11 @@
 ---
 import AdminIcon from '../../components/admin/AdminIcon.astro';
+import { hasPermission, type UserSession } from '../../lib/adminAuth';
+interface Props { period: string; user: UserSession }
+const { user } = Astro.props;
 import { getSuperadminOverview } from '../../lib/superAdmin';
 
-const loadedOverview = await getSuperadminOverview().catch((error) => {
+const loadedOverview = await getSuperadminOverview(user).catch((error) => {
   console.error('[admin.dashboard] Data unavailable', error instanceof Error ? error.name : 'unknown');
   return null;
 });
@@ -72,7 +75,7 @@ const periodLabel: Record<string, string> = { alles: 'Alle tijd', '30d': 'Laatst
       <article><span>Omzet · {periodLabel[period].toLowerCase()}</span><strong>{euro(revenue)}</strong><small>Betaalde bestellingen in euro</small></article>
       <article><span>Betaalde bestellingen</span><strong>{number(selectedPaid.length)}</strong><small>In de gekozen periode</small></article>
       <a href="/admin/boekingen"><span>Open boekingsaanvragen</span><strong>{number(pendingBookings)}</strong><small>Bekijk aanvragen <AdminIcon name="arrow" size={12}/></small></a>
-      <a href="/admin/analytics"><span>Paginaweergaven</span><strong>{number(overview.analyticsEvents)}</strong><small>Met toestemming · laatste 30 dagen <AdminIcon name="arrow" size={12}/></small></a>
+      {hasPermission(user, 'analytics.read') && <a href="/admin/analytics"><span>Paginaweergaven</span><strong>{number(overview.analyticsEvents)}</strong><small>Met toestemming · laatste 30 dagen <AdminIcon name="arrow" size={12}/></small></a>}
     </section>
 
     <div class="dashboard-home__main">
@@ -96,7 +99,7 @@ const periodLabel: Record<string, string> = { alles: 'Alle tijd', '30d': 'Laatst
           {pendingTransfers > 0 && <a href="/admin/bestellingen?status=overschrijvingen"><span class="dashboard-home__attention-count">{pendingTransfers}</span><span><strong>Open overschrijvingen</strong><small>Bekijk de bestellingen en bevestig ontvangen betalingen</small></span><AdminIcon name="arrow" size={14}/></a>}
           {pendingBookings > 0 && <a href="/admin/boekingen"><span class="dashboard-home__attention-count">{pendingBookings}</span><span><strong>Boekingsaanvragen</strong><small>Wachten op bevestiging</small></span><AdminIcon name="arrow" size={14}/></a>}
           {openTasks.slice(0, 3).map((task) => <a href="/admin/instellingen#acties"><span class="dashboard-home__attention-dot"></span><span><strong>{task.title}</strong><small>{task.dueAt ? `Deadline ${date(task.dueAt)}` : task.category}</small></span><AdminIcon name="arrow" size={14}/></a>)}
-          {!pendingTransfers && !pendingBookings && !openTasks.length && <p class="dashboard-home__calm">Alles bijgewerkt. Er staan geen directe acties open.</p>}
+          <p class="dashboard-home__calm">Bekijk ‘Op te volgen’ bovenaan voor alle actuele meldingen, klantvragen en systeemacties.</p>
         </div>
       </section>
     </div>
@@ -111,5 +114,5 @@ const periodLabel: Record<string, string> = { alles: 'Alle tijd', '30d': 'Laatst
         {upcomingBookings.length ? <div class="dashboard-home__rows">{upcomingBookings.map((booking) => <div class="dashboard-home__row"><span><strong>{booking.clientName}</strong><small>{booking.practitionerName} · {dateTime(booking.startsAt)}</small></span><span class:list={['dashboard-home__booking-state', booking.status === 'pending' && 'is-pending']}>{booking.status === 'pending' ? 'Aanvraag' : 'Bevestigd'}</span></div>)}</div> : <p class="dashboard-home__calm">Geen komende afspraken gepland.</p>}
       </section>
     </div>
-    <footer class="dashboard-home__footer"><span><strong>{overview.publishedProducts}</strong> producten online</span><a href="/admin/producten">Aanbod beheren <AdminIcon name="arrow" size={12}/></a><span class="dashboard-home__footer-separator"></span><span><strong>{overview.openTaskCount}</strong> open werkpunten</span><a href="/admin/instellingen#acties">Werkpunten bekijken <AdminIcon name="arrow" size={12}/></a></footer>
+    {hasPermission(user, 'operations.manage') && <footer class="dashboard-home__footer"><span><strong>{overview.publishedProducts}</strong> producten online</span><a href="/admin/producten">Aanbod beheren <AdminIcon name="arrow" size={12}/></a><span class="dashboard-home__footer-separator"></span><span><strong>{overview.openTaskCount}</strong> open werkpunten</span><a href="/admin/instellingen#acties">Werkpunten bekijken <AdminIcon name="arrow" size={12}/></a></footer>}
   </div> : <p class="admin-load-error" role="alert">De dashboardgegevens konden niet worden geladen. <a href="/admin">Probeer opnieuw</a>.</p>}

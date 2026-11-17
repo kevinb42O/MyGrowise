@@ -1,4 +1,5 @@
 import { getSupabaseAdmin } from './supabase/server';
+import { hasPermission, type UserSession } from './adminAuth';
 import type { AuditActor } from './securityAudit';
 
 type RecordRow = Record<string, any>;
@@ -136,12 +137,16 @@ export const listIntegrationChecks = async (): Promise<IntegrationCheck[]> => {
   return ((data || []) as RecordRow[]).map((row) => ({ key: String(row.key), label: String(row.label), state: row.state as IntegrationCheck['state'], detail: row.detail ? String(row.detail) : null, lastCheckedAt: row.last_checked_at ? String(row.last_checked_at) : null }));
 };
 
-export const getSuperadminOverview = async () => {
+export const getSuperadminOverview = async (user: UserSession) => {
+  if (!hasPermission(user, 'dashboard.read')) throw new Error('forbidden');
+  const emptyCount = { count: 0, error: null };
   const [orders, bookings, tasks, productsResult, analyticsResult, taskCountResult] = await Promise.all([
-    listDashboardOrders(), listDashboardBookings(), listAdminTasks(),
-    getSupabaseAdmin().from('products').select('id', { count: 'exact', head: true }).eq('status', 'published'),
-    getSupabaseAdmin().from('analytics_events').select('id', { count: 'exact', head: true }).eq('consented', true).eq('environment', 'production').eq('event_name', 'page_view').not('path', 'like', '/account%').not('path', 'like', '/admin%').not('path', 'like', '/praktijk%').not('path', 'like', '/api%').gte('occurred_at', new Date(Date.now() - 30 * 86400000).toISOString()),
-    getSupabaseAdmin().from('admin_work_items').select('id', { count: 'exact', head: true }).in('status', ['open', 'in_progress', 'blocked']),
+    hasPermission(user, 'orders.read') ? listDashboardOrders() : Promise.resolve([]),
+    hasPermission(user, 'bookings.read') ? listDashboardBookings() : Promise.resolve([]),
+    hasPermission(user, 'operations.manage') ? listAdminTasks() : Promise.resolve([]),
+    hasPermission(user, 'products.read') ? getSupabaseAdmin().from('products').select('id', { count: 'exact', head: true }).eq('status', 'published') : Promise.resolve(emptyCount),
+    hasPermission(user, 'analytics.read') ? getSupabaseAdmin().from('analytics_events').select('id', { count: 'exact', head: true }).eq('consented', true).eq('environment', 'production').eq('event_name', 'page_view').not('path', 'like', '/account%').not('path', 'like', '/admin%').not('path', 'like', '/praktijk%').not('path', 'like', '/api%').gte('occurred_at', new Date(Date.now() - 30 * 86400000).toISOString()) : Promise.resolve(emptyCount),
+    hasPermission(user, 'operations.manage') ? getSupabaseAdmin().from('admin_work_items').select('id', { count: 'exact', head: true }).in('status', ['open', 'in_progress', 'blocked']) : Promise.resolve(emptyCount),
   ]);
   fail(productsResult.error); fail(analyticsResult.error); fail(taskCountResult.error);
   return {

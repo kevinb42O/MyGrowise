@@ -1,0 +1,70 @@
+---
+interface Props { surface: 'admin' | 'practice' }
+const { surface } = Astro.props;
+---
+<details class="admin-attention-overview" data-attention-status data-surface={surface}>
+  <summary><span data-attention-heading>Op te volgen · controleren…</span> <span class="admin-attention-dot" data-attention-keys="*" role="img" aria-label="Aandacht nodig" hidden></span></summary>
+  <p class="admin-attention-status" role="status" data-attention-status-text>Aandachtspunten controleren…</p>
+  <div class="admin-attention-summary" data-attention-summary aria-label="Open aandachtspunten"></div>
+</details>
+<script>
+  const root = document.querySelector<HTMLElement>('[data-attention-status]');
+  if (root) {
+    const surface = root.dataset.surface || 'admin';
+    const status = root.querySelector<HTMLElement>('[data-attention-status-text]')!;
+    const heading = root.querySelector<HTMLElement>('[data-attention-heading]')!;
+    const summary = root.querySelector<HTMLElement>('[data-attention-summary]')!;
+    const indicators = document.querySelectorAll<HTMLElement>('[data-attention-keys]');
+    let running = false;
+    let stopped = false;
+    type Item = { key: string; href: string; label: string; count: number };
+    let previous: Item[] = [];
+    const refresh = async () => {
+      if (running || stopped || document.hidden) return;
+      running = true;
+      try {
+        const response = await fetch(`/api/internal/attention?surface=${surface}`, { credentials: 'same-origin', cache: 'no-store', signal: AbortSignal.timeout(15000) });
+        if (!response.ok) throw new Error('unavailable');
+        const data = await response.json() as { items: Item[]; unavailable: string[] };
+        if (!Array.isArray(data.items) || !Array.isArray(data.unavailable)) throw new Error('invalid');
+        const missing = new Set(data.unavailable);
+        // Keep the last known signal if one source is temporarily unavailable.
+        const items = [...data.items, ...previous.filter(item => missing.has(item.key))];
+        previous = items;
+        indicators.forEach(dot => {
+          const keys = (dot.dataset.attentionKeys || '').split(' ');
+          const matches = items.filter(item => keys.includes('*') || keys.includes(item.key) || (keys.includes('mail') && item.key.startsWith('mail:')));
+          const total = matches.reduce((sum, item) => sum + item.count, 0);
+          dot.hidden = total === 0;
+          const label = `${total} aandachtspunten: ${matches.filter(item => item.count > 0).map(item => `${item.label} (${item.count})`).join(', ')}`;
+          dot.setAttribute('aria-label', label);
+          dot.title = label;
+        });
+        summary.replaceChildren();
+        const grouped = new Map<string, Item>();
+        items.filter(item => item.count > 0).forEach(item => {
+          const key = `${item.href}|${item.label}`;
+          const current = grouped.get(key);
+          grouped.set(key, current ? { ...current, count: current.count + item.count } : item);
+        });
+        grouped.forEach(item => {
+          const link = document.createElement('a');
+          link.href = item.href;
+          link.textContent = `${item.label} (${item.count})`;
+          summary.append(link);
+        });
+        heading.textContent = data.unavailable.length ? 'Op te volgen · controle onvolledig' : 'Op te volgen';
+        status.textContent = data.unavailable.length ? 'Niet alle aandachtspunten konden worden gecontroleerd. De laatst bekende meldingen blijven staan; we proberen opnieuw.' : grouped.size ? 'Deze onderdelen vragen aandacht.' : 'Geen open aandachtspunten.';
+      } catch {
+        heading.textContent = 'Op te volgen · tijdelijk niet bereikbaar';
+        status.textContent = 'Aandachtspunten tijdelijk niet bereikbaar. De laatst bekende meldingen blijven staan; we proberen opnieuw.';
+      } finally { running = false; }
+    };
+    const timer = window.setInterval(refresh, 60000);
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) refresh(); });
+    window.addEventListener('focus', refresh);
+    window.addEventListener('notifications:changed', refresh);
+    window.addEventListener('pagehide', () => { stopped = true; window.clearInterval(timer); }, { once: true });
+    refresh();
+  }
+</script>

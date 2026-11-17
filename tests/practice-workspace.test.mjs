@@ -94,7 +94,7 @@ test('The work queue suppresses reported conversations and drafts owned by anoth
       {id:'own-draft',patient_id:'assigned',booking_id:'already-reported',status:'draft',created_by:'clinician'},
       {id:'other-draft',patient_id:'assigned',booking_id:null,status:'draft',created_by:'colleague'},
     ]})},
-    './adminAuth': {hasPermission:()=>true}, './practiceWorkday':{workdayBookings:()=>({today:[],upcoming:[],awaitingReport:allBookings})},
+    './adminAuth': {hasPermission:()=>true}, './practiceWorkday':load('../src/lib/practiceWorkday.ts'),
   });
   const data = await loadPracticeWorkdayPage({locals:{currentUser:{sub:'clinician',practitionerId:'clinician',roles:['practitioner']}},url:new URL('https://example.test/praktijk')});
   assert.deepEqual(Array.from(data.tasks, task=>task.id), ['own-draft','needs-report','unlinked']);

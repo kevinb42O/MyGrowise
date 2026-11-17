@@ -1808,3 +1808,21 @@ html { background: var(--admin-canvas); }
   .unified-agenda-dialog .unified-agenda__colours > button { width:44px; height:44px; }
 }
 .agenda-text-button { border:0; background:transparent; color:var(--admin-green); padding:4px; text-decoration:underline; cursor:pointer; }
+
+/* Persistent action state; reading a notification does not resolve the work. */
+.admin-body .admin-attention-dot { display: inline-block; flex: 0 0 9px; width: 9px; height: 9px; margin-left: auto; border-radius: 50%; background: var(--admin-danger); }
+.admin-body .admin-attention-dot[hidden] { display: none; }
+.admin-attention-overview { margin-bottom: 1rem; padding: .65rem 1rem; border: 1px solid var(--admin-border); border-radius: var(--admin-radius); background: var(--admin-surface); }
+.admin-attention-overview summary { min-height: 44px; align-content: center; cursor: pointer; font-weight: 600; }
+.admin-attention-overview summary .admin-attention-dot { margin-left: .5rem; }
+.admin-attention-status { margin: .5rem 0; color: var(--admin-muted); font-size: .875rem; }
+.admin-attention-summary { display: flex; flex-wrap: wrap; gap: .5rem 1rem; }
+.admin-attention-summary a { display: inline-flex; align-items: center; min-height: 44px; text-decoration: underline; text-underline-offset: .2em; }
+.admin-notification-panel [data-notification-list] { max-height: min(28rem, calc(100dvh - var(--notification-top, 72px) - 9rem)); overflow-y: auto; overscroll-behavior: contain; }
+.admin-notification-panel header button { min-height: 44px; font-size: .875rem; }
+.admin-notification-panel a { min-height: 44px; overflow-wrap: anywhere; }
+.admin-notification-panel a time { font-size: .75rem; }
+.admin-notifications > button > small { background: var(--admin-danger); font-size: 11px; }
+@media (max-width: 600px) {
+  .admin-notification-panel { position: fixed; top: var(--notification-top, calc(var(--admin-topbar-height) + 8px)); right: 1rem; }
+}

@@ -2,23 +2,100 @@
 import AdminIcon from './AdminIcon.astro';
 interface Props { userId: string; basePath: string; }
 const { basePath } = Astro.props;
-const supportPath = basePath.startsWith('/praktijk') ? '/praktijk/berichten' : '/admin/berichten';
 ---
-<div class="admin-notifications" data-notifications data-base-path={basePath} data-support-path={supportPath}>
-  <button class="admin-icon-button" type="button" aria-label="Notificaties" aria-expanded="false" data-notification-toggle><AdminIcon name="bell" size={17}/><small data-notification-count hidden>0</small></button>
-  <section class="admin-notification-panel" hidden data-notification-panel aria-label="Nieuwe notificaties"><header><strong>Notificaties</strong><button type="button" data-notification-read-all>Alles gelezen</button></header><div data-notification-list><p>Notificaties laden…</p></div></section>
+<div class="admin-notifications" data-notifications data-base-path={basePath}>
+  <button class="admin-icon-button" type="button" aria-label="Notificaties" aria-controls="admin-notification-panel" aria-expanded="false" data-notification-toggle><AdminIcon name="bell" size={17}/><small data-notification-count hidden>0</small></button>
+  <section id="admin-notification-panel" class="admin-notification-panel" hidden data-notification-panel aria-label="Nieuwe notificaties">
+    <header><strong>Notificaties</strong><button type="button" data-notification-read-all disabled>Alles gelezen</button></header>
+    <p role="status" data-notification-status>Notificaties laden…</p>
+    <div data-notification-list></div>
+  </section>
 </div>
-<script is:inline>
-  (() => {
-    const root = document.querySelector('[data-notifications]'); if (!root) return;
-    const toggle = root.querySelector('[data-notification-toggle]'); const panel = root.querySelector('[data-notification-panel]'); const count = root.querySelector('[data-notification-count]'); const list = root.querySelector('[data-notification-list]'); const basePath = root.dataset.basePath || '/admin/berichten'; const supportPath = root.dataset.supportPath || '/admin/berichten';
-    const escapeHtml = (value) => String(value).replace(/[&<>'"]/g, (character) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' })[character]);
-    const render = (notifications) => { count.textContent = String(notifications.length); count.hidden = notifications.length === 0; list.innerHTML = notifications.length ? notifications.map((item) => { const href = item.supportConversationId ? `${supportPath}?conversation=${item.supportConversationId}` : item.threadId ? `${basePath}?thread=${item.threadId}` : basePath; return `<a href="${escapeHtml(href)}"><span>${escapeHtml(item.title)}</span><time>${new Intl.DateTimeFormat('nl-BE', { hour: '2-digit', minute: '2-digit' }).format(new Date(item.createdAt))}</time></a>`; }).join('') : '<p>Geen nieuwe notificaties.</p>'; };
-    const refresh = async () => { try { const response = await fetch('/api/internal/notifications', { headers: { accept: 'application/json' }, credentials: 'same-origin' }); if (!response.ok) return; const data = await response.json(); render(Array.isArray(data.notifications) ? data.notifications : []); } catch {} };
-    toggle?.addEventListener('click', () => { const open = panel.hidden; panel.hidden = !open; toggle.setAttribute('aria-expanded', String(open)); if (open) refresh(); });
-    root.querySelector('[data-notification-read-all]')?.addEventListener('click', async () => { try { await fetch('/api/internal/notifications', { method: 'POST', headers: { 'content-type': 'application/json' }, credentials: 'same-origin', body: '{}' }); await refresh(); } catch {} });
-    list?.addEventListener('click', (event) => { const link = event.target.closest('a'); if (!link) return; fetch('/api/internal/notifications', { method: 'POST', headers: { 'content-type': 'application/json' }, credentials: 'same-origin', body: '{}' }).catch(() => {}); });
+<script>
+  import { notificationHref } from '../../lib/notificationPresentation';
+  const root = document.querySelector<HTMLElement>('[data-notifications]');
+  if (root) {
+    const toggle = root.querySelector<HTMLButtonElement>('[data-notification-toggle]')!;
+    const panel = root.querySelector<HTMLElement>('[data-notification-panel]')!;
+    const count = root.querySelector<HTMLElement>('[data-notification-count]')!;
+    const list = root.querySelector<HTMLElement>('[data-notification-list]')!;
+    const status = root.querySelector<HTMLElement>('[data-notification-status]')!;
+    const readAll = root.querySelector<HTMLButtonElement>('[data-notification-read-all]')!;
+    const basePath = root.dataset.basePath || '/admin/berichten';
+    type Notification = { id: string; threadId: string | null; supportConversationId: string | null; title: string; createdAt: string };
+    let refreshing = false;
+    let mutating = false;
+    let stopped = false;
+    let revision = 0;
+    let checkedAt = '';
+    const render = (notifications: Notification[], unread: number) => {
+      count.textContent = unread > 99 ? '99+' : String(unread);
+      count.hidden = unread === 0;
+      toggle.setAttribute('aria-label', unread ? `Notificaties: ${unread} ongelezen` : 'Notificaties: geen ongelezen meldingen');
+      readAll.disabled = unread === 0;
+      list.replaceChildren();
+      notifications.forEach(item => {
+        const link = document.createElement('a');
+        link.href = notificationHref(item, basePath);
+        const title = document.createElement('span'); title.textContent = item.title;
+        const time = document.createElement('time');
+        const date = new Date(item.createdAt);
+        if (Number.isFinite(date.getTime())) {
+          time.dateTime = item.createdAt;
+          time.textContent = new Intl.DateTimeFormat('nl-BE', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Brussels' }).format(date);
+        }
+        link.append(title, time); list.append(link);
+      });
+      status.textContent = unread === 0 ? 'Geen nieuwe notificaties.' : unread > notifications.length ? `De nieuwste ${notifications.length} van ${unread} ongelezen meldingen.` : `${unread} ongelezen ${unread === 1 ? 'melding' : 'meldingen'}.`;
+    };
+    const refresh = async () => {
+      if (refreshing || mutating || stopped || document.hidden) return;
+      refreshing = true;
+      const startedRevision = revision;
+      try {
+        const response = await fetch('/api/internal/notifications', { credentials: 'same-origin', cache: 'no-store', signal: AbortSignal.timeout(15000) });
+        if (!response.ok) throw new Error('unavailable');
+        const data = await response.json();
+        if (!Array.isArray(data.notifications) || !Number.isSafeInteger(data.unreadCount) || data.unreadCount < 0) throw new Error('invalid');
+        if (startedRevision === revision) { checkedAt = data.checkedAt; render(data.notifications, data.unreadCount); }
+      } catch {
+        if (startedRevision === revision) status.textContent = 'Notificaties konden niet worden geladen. We proberen opnieuw; je kunt de inbox openen via Berichten.';
+      } finally {
+        refreshing = false;
+        if (startedRevision !== revision && !mutating) refresh();
+      }
+    };
+    const positionPanel = () => {
+      if (window.matchMedia('(max-width: 600px)').matches) {
+        const top = (root.closest('.admin-topbar')?.getBoundingClientRect().bottom || toggle.getBoundingClientRect().bottom) + 8;
+        panel.style.setProperty('--notification-top', `${top}px`);
+      }
+    };
+    window.addEventListener('resize', positionPanel);
+    const close = () => { panel.hidden = true; toggle.setAttribute('aria-expanded', 'false'); };
+    toggle.addEventListener('click', () => {
+      const open = panel.hidden; panel.hidden = !open; toggle.setAttribute('aria-expanded', String(open));
+      if (open) { positionPanel(); refresh(); }
+    });
+    document.addEventListener('click', event => { if (event.target instanceof Node && !root.contains(event.target)) close(); });
+    document.addEventListener('keydown', event => { if (event.key === 'Escape' && !panel.hidden) { close(); toggle.focus(); } });
+    readAll.addEventListener('click', async () => {
+      if (mutating) return;
+      mutating = true; revision++; readAll.disabled = true;
+      const before = checkedAt;
+      try {
+        const response = await fetch('/api/internal/notifications', { method: 'POST', headers: { 'content-type': 'application/json' }, credentials: 'same-origin', signal: AbortSignal.timeout(15000), body: JSON.stringify({ all: true, before }) });
+        if (!response.ok) throw new Error('unavailable');
+        window.dispatchEvent(new Event('notifications:changed'));
+      } catch { status.textContent = 'Markeren als gelezen is niet gelukt. Probeer opnieuw.'; return; }
+      finally { mutating = false; readAll.disabled = false; }
+      await refresh();
+    });
+    // The destination marks only that conversation read after it has loaded.
+    const timer = window.setInterval(refresh, 30000);
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) refresh(); });
+    window.addEventListener('focus', refresh);
+    window.addEventListener('pagehide', () => { stopped = true; window.clearInterval(timer); }, { once: true });
     refresh();
-    window.setInterval(refresh, 30000);
-  })();
+  }
 </script>

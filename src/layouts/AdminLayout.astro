@@ -3,6 +3,7 @@ import ClientSearch from '../components/admin/ClientSearch';
 import AppIcons from '../components/astro/AppIcons.astro';
 import FormProtection from '../components/practice/FormProtection.astro';
 import AdminIcon from '../components/admin/AdminIcon.astro';
+import AttentionStatus from '../components/admin/AttentionStatus.astro';
 import NotificationBell from '../components/admin/NotificationBell.astro';
 import '../styles/admin.css';
 import '../styles/practice-management.css';
@@ -66,12 +67,19 @@ const navGroups = [
   {
     label: 'Organisatie',
     items: [
-      { label: 'Berichten', href: '/admin/berichten', icon: 'messages', badge: '0' },
+      { label: 'Berichten', href: '/admin/berichten', icon: 'messages' },
+      { label: 'Privacy & retentie', href: '/admin/privacy', icon: 'lock' },
       { label: 'Instellingen', href: '/admin/instellingen', icon: 'settings' },
     ],
   },
 ];
 
+const attentionKeys: Record<string, string> = {
+  '/admin': '*', '/admin/mail': 'mail', '/admin/bestellingen': 'payments disputes',
+  '/admin/boekingen': 'bookings', '/admin/agenda': 'bookings', '/admin/berichten': 'messages support supportNotifications',
+  '/admin/afnames': 'assessmentsPending assessmentsReceived', '/admin/producten': 'products', '/admin/content': 'content', '/admin/privacy': 'privacy',
+  '/admin/instellingen': 'tasks costs integrations',
+};
 const isActive = (item: { href: string; exact?: boolean }) =>
   item.exact ? currentPath === item.href : currentPath.startsWith(item.href);
 const canOpen = (href: string) => {
@@ -116,7 +124,7 @@ const canOpen = (href: string) => {
                     <a href={item.href} class:list={{ 'is-active': isActive(item) }} aria-current={isActive(item) ? 'page' : undefined}>
                       <AdminIcon name={item.icon} />
                       <span>{item.label}</span>
-                      {item.badge && <small>{item.badge}</small>}
+                      <span class="admin-attention-dot" data-attention-keys={attentionKeys[item.href] || ""} role="img" aria-label="Aandacht nodig" hidden></span>
                     </a>
                   </li>
                 ))}
@@ -145,7 +153,7 @@ const canOpen = (href: string) => {
         <header class="admin-topbar">
           <div class="admin-topbar__left">
             <button class="admin-icon-button admin-menu-button" type="button" aria-label="Menu openen" aria-controls="admin-sidebar" aria-expanded="false" data-sidebar-open>
-              <AdminIcon name="menu" />
+              <AdminIcon name="menu" /><span class="admin-attention-dot" data-attention-keys="*" role="img" aria-label="Aandacht nodig" hidden></span>
             </button>
             <span class="admin-topbar__crumb">MyGrowise</span>
             <span aria-hidden="true">/</span>
@@ -161,6 +169,7 @@ const canOpen = (href: string) => {
         </header>
 
         <main id="admin-main" class="admin-main">
+          <AttentionStatus surface="admin" />
           <slot />
         </main>
       </div>

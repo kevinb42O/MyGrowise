@@ -1,3 +1,4 @@
+import { readMessagePages } from './messagePagination';
 import { getSupabaseAdmin } from './supabase/server';
 import { writeSecurityAudit, type AuditActor } from './securityAudit';
 
@@ -63,9 +64,10 @@ export const listSupportConversations = async (actorId: string, staff: boolean, 
 
 export const getSupportConversation = async (id: string, actorId: string, staff: boolean): Promise<SupportConversation | null> => {
   if (!uuid(id)) return null; const client = getSupabaseAdmin(); let query = client.from('support_conversations').select('id,customer_user_id,guest_email,guest_name,guest_verified_at,public_reference,subject,category,status,priority,assigned_to,last_message_at,customer_last_read_at,staff_last_read_at').eq('id', id); if (!staff) query = query.eq('customer_user_id', actorId); const { data: conversation, error } = await query.maybeSingle(); fail(error); if (!conversation) return null;
-  const { data: messages, error: messageError } = await client.from('support_messages').select('id,sender_user_id,sender_type,body,is_internal_note,created_at').eq('conversation_id', id).order('created_at'); fail(messageError);
-  const now = new Date().toISOString(); const { error: readError } = await client.from('support_conversations').update(staff ? { staff_last_read_at: now } : { customer_last_read_at: now }).eq('id', id); fail(readError);
-  if (staff) { const { error: notificationError } = await client.from('internal_notifications').update({ read_at: now }).eq('support_conversation_id', id).eq('recipient_user_id', actorId).is('read_at', null); fail(notificationError); }
+  const now = new Date().toISOString();
+  const messages = await readMessagePages<Row>((offset, end) => client.from('support_messages').select('id,sender_user_id,sender_type,body,is_internal_note,created_at').eq('conversation_id', id).lte('created_at', now).order('created_at').order('id').range(offset, end));
+  const { error: readError } = await client.from('support_conversations').update(staff ? { staff_last_read_at: now } : { customer_last_read_at: now }).eq('id', id).or(`${staff ? 'staff_last_read_at' : 'customer_last_read_at'}.is.null,${staff ? 'staff_last_read_at' : 'customer_last_read_at'}.lte.${now}`); fail(readError);
+  if (staff) { const { error: notificationError } = await client.from('internal_notifications').update({ read_at: now }).eq('support_conversation_id', id).eq('recipient_user_id', actorId).is('read_at', null).lte('created_at', now); fail(notificationError); }
   return mapConversation({ ...conversation, [staff ? 'staff_last_read_at' : 'customer_last_read_at']: now } as Row, actorId, staff, ((messages || []) as Row[]).slice().reverse());
 };
 

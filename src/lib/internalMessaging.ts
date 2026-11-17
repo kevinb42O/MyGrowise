@@ -1,3 +1,4 @@
+import { readMessagePages } from './messagePagination';
 import { getSupabaseAdmin } from './supabase/server';
 import { writeSecurityAudit, type AuditActor } from './securityAudit';
 
@@ -21,13 +22,21 @@ const profileNames = async (ids: string[]) => {
 
 export const listMessageContacts = async (excludeUserId: string): Promise<StaffContact[]> => {
   const client = getSupabaseAdmin();
-  const [{ data: roleRows, error: roleError }, { data: authData, error: authError }] = await Promise.all([
-    client.from('user_roles').select('user_id,role').neq('role', 'customer'), client.auth.admin.listUsers({ page: 1, perPage: 100 }),
+  const [{ data: roleRows, error: roleError }, authUsers] = await Promise.all([
+    client.from('user_roles').select('user_id,role').neq('role', 'customer'), (async () => {
+      const users = [];
+      for (let page = 1; ; page++) {
+        const { data, error } = await client.auth.admin.listUsers({ page, perPage: 100 });
+        if (error) throw new Error('contacts_unavailable');
+        users.push(...data.users);
+        if (data.users.length < 100) return users;
+      }
+    })(),
   ]);
-  fail(roleError); if (authError) throw new Error('contacts_unavailable');
+  fail(roleError);
   const roles = new Map<string, string[]>();
   ((roleRows || []) as Row[]).forEach((item) => roles.set(String(item.user_id), [...(roles.get(String(item.user_id)) || []), String(item.role)]));
-  return authData.users.filter((user) => user.id !== excludeUserId && roles.has(user.id) && !(user.banned_until && new Date(user.banned_until).getTime() > Date.now())).map((user) => ({ id: user.id, name: String(user.user_metadata?.full_name || user.email || 'MyGrowise-team'), email: user.email || '', roles: roles.get(user.id) || [] })).sort((a, b) => a.name.localeCompare(b.name));
+  return authUsers.filter((user) => user.id !== excludeUserId && roles.has(user.id) && !(user.banned_until && new Date(user.banned_until).getTime() > Date.now())).map((user) => ({ id: user.id, name: String(user.user_metadata?.full_name || user.email || 'MyGrowise-team'), email: user.email || '', roles: roles.get(user.id) || [] })).sort((a, b) => a.name.localeCompare(b.name));
 };
 
 export const listInternalThreads = async (userId: string): Promise<InternalThread[]> => {
@@ -39,17 +48,18 @@ export const listInternalThreads = async (userId: string): Promise<InternalThrea
   const [{ data: threads, error: threadError }, { data: participants, error: allParticipantsError }, { data: messages, error: messageError }] = await Promise.all([
     client.from('internal_threads').select('id,subject,last_message_at').in('id', ids).order('last_message_at', { ascending: false }),
     client.from('internal_thread_participants').select('thread_id,user_id').in('thread_id', ids),
-    client.from('internal_messages').select('thread_id,body,created_at').in('thread_id', ids).order('created_at', { ascending: false }),
+    readMessagePages<Row>((offset, end) => client.from('internal_messages').select('thread_id,sender_user_id,body,created_at').in('thread_id', ids).order('created_at', { ascending: false }).order('id').range(offset, end)).then(data => ({ data, error: null })),
   ]);
   fail(threadError); fail(allParticipantsError); fail(messageError);
   const participantNames = await profileNames(((participants || []) as Row[]).map((item) => String(item.user_id)));
   const participantMap = new Map<string, string[]>();
   ((participants || []) as Row[]).forEach((item) => participantMap.set(String(item.thread_id), [...(participantMap.get(String(item.thread_id)) || []), participantNames.get(String(item.user_id)) || 'MyGrowise-team']));
   const newest = new Map<string, Row>();
-  ((messages || []) as Row[]).forEach((item) => { if (!newest.has(String(item.thread_id))) newest.set(String(item.thread_id), item); });
+  const newestIncoming = new Map<string, Row>();
+  ((messages || []) as Row[]).forEach((item) => { if (!newest.has(String(item.thread_id))) newest.set(String(item.thread_id), item); if (item.sender_user_id !== userId && !newestIncoming.has(String(item.thread_id))) newestIncoming.set(String(item.thread_id), item); });
   return ((threads || []) as Row[]).map((thread) => {
-    const latest = newest.get(String(thread.id)); const lastRead = reads.get(String(thread.id));
-    return { id: String(thread.id), subject: String(thread.subject), lastMessageAt: String(thread.last_message_at), unread: Boolean(latest && (!lastRead || new Date(latest.created_at).getTime() > new Date(lastRead).getTime())), participants: (participantMap.get(String(thread.id)) || []).filter((name) => name !== participantNames.get(userId)), lastMessagePreview: latest ? sanitizeText(latest.body, 120) : '' };
+    const latest = newest.get(String(thread.id)); const incoming = newestIncoming.get(String(thread.id)); const lastRead = reads.get(String(thread.id));
+    return { id: String(thread.id), subject: String(thread.subject), lastMessageAt: String(thread.last_message_at), unread: Boolean(incoming && (!lastRead || new Date(incoming.created_at).getTime() > new Date(lastRead).getTime())), participants: (participantMap.get(String(thread.id)) || []).filter((name) => name !== participantNames.get(userId)), lastMessagePreview: latest ? sanitizeText(latest.body, 120) : '' };
   });
 };
 
@@ -62,17 +72,19 @@ const assertParticipant = async (threadId: string, userId: string) => {
 export const getInternalThread = async (threadId: string, userId: string): Promise<InternalThreadDetail | null> => {
   try { await assertParticipant(threadId, userId); } catch (error) { if (error instanceof Error && ['not_found', 'forbidden'].includes(error.message)) return null; throw error; }
   const client = getSupabaseAdmin();
-  const [{ data: thread, error: threadError }, { data: participantRows, error: participantError }, { data: messageRows, error: messageError }] = await Promise.all([
-    client.from('internal_threads').select('id,subject').eq('id', threadId).maybeSingle(), client.from('internal_thread_participants').select('user_id').eq('thread_id', threadId), client.from('internal_messages').select('id,sender_user_id,body,created_at').eq('thread_id', threadId).order('created_at'),
+  const readAt = new Date().toISOString();
+  const [{ data: thread, error: threadError }, { data: participantRows, error: participantError }, messageRows] = await Promise.all([
+    client.from('internal_threads').select('id,subject').eq('id', threadId).maybeSingle(), client.from('internal_thread_participants').select('user_id').eq('thread_id', threadId), readMessagePages<Row>((offset, end) => client.from('internal_messages').select('id,sender_user_id,body,created_at').eq('thread_id', threadId).lte('created_at', readAt).order('created_at').order('id').range(offset, end)),
   ]);
-  fail(threadError); fail(participantError); fail(messageError); if (!thread) return null;
+  fail(threadError); fail(participantError); if (!thread) return null;
   const ids = [...((participantRows || []) as Row[]).map((item) => String(item.user_id)), ...((messageRows || []) as Row[]).map((item) => String(item.sender_user_id))];
   const names = await profileNames(ids); const contacts = await listMessageContacts('');
   const contactById = new Map(contacts.map((contact) => [contact.id, contact]));
-  await Promise.all([
-    client.from('internal_thread_participants').update({ last_read_at: new Date().toISOString() }).eq('thread_id', threadId).eq('user_id', userId),
-    client.from('internal_notifications').update({ read_at: new Date().toISOString() }).eq('thread_id', threadId).eq('recipient_user_id', userId).is('read_at', null),
+  const readResults = await Promise.all([
+    client.from('internal_thread_participants').update({ last_read_at: readAt }).eq('thread_id', threadId).eq('user_id', userId).or(`last_read_at.is.null,last_read_at.lte.${readAt}`),
+    client.from('internal_notifications').update({ read_at: readAt }).eq('thread_id', threadId).eq('recipient_user_id', userId).is('read_at', null).lte('created_at', readAt),
   ]);
+  readResults.forEach(result => fail(result.error));
   return { id: String(thread.id), subject: String(thread.subject), participants: ((participantRows || []) as Row[]).map((item) => ({ id: String(item.user_id), name: names.get(String(item.user_id)) || 'MyGrowise-team', email: contactById.get(String(item.user_id))?.email || '', roles: contactById.get(String(item.user_id))?.roles || [] })), messages: ((messageRows || []) as Row[]).map((item) => ({ id: String(item.id), senderId: String(item.sender_user_id), senderName: names.get(String(item.sender_user_id)) || 'MyGrowise-team', body: String(item.body), createdAt: String(item.created_at) })) };
 };
 
@@ -104,13 +116,27 @@ export const sendInternalMessage = async (input: { threadId: string; senderId: s
   await writeSecurityAudit({ actor, action: 'internal_message.sent', objectType: 'internal_thread', objectId: input.threadId, metadata: { message_id: data.id } });
 };
 
-export const listUnreadNotifications = async (userId: string): Promise<InternalNotification[]> => {
-  const { data, error } = await getSupabaseAdmin().from('internal_notifications').select('id,thread_id,support_conversation_id,title,created_at').eq('recipient_user_id', userId).is('read_at', null).order('created_at', { ascending: false }).limit(20);
-  fail(error); return ((data || []) as Row[]).map((item) => ({ id: String(item.id), threadId: item.thread_id ? String(item.thread_id) : null, supportConversationId: item.support_conversation_id ? String(item.support_conversation_id) : null, title: String(item.title), createdAt: String(item.created_at) }));
+export const getUnreadNotifications = async (userId: string, includeSupport = false) => {
+  if (!uuid(userId)) throw new Error('forbidden');
+  let query = getSupabaseAdmin().from('internal_notifications').select('id,thread_id,support_conversation_id,title,created_at', { count: 'exact' }).eq('recipient_user_id', userId).is('read_at', null).order('created_at', { ascending: false }).order('id', { ascending: false }).limit(20);
+  if (!includeSupport) query = query.eq('notification_type', 'internal_message');
+  const { data, count, error } = await query;
+  fail(error);
+  const notifications: InternalNotification[] = ((data || []) as Row[]).map((item) => ({ id: String(item.id), threadId: item.thread_id ? String(item.thread_id) : null, supportConversationId: item.support_conversation_id ? String(item.support_conversation_id) : null, title: String(item.title), createdAt: String(item.created_at) }));
+  return { notifications, unreadCount: count || 0 };
 };
 
-export const markNotificationsRead = async (userId: string, ids?: string[]) => {
-  const query = getSupabaseAdmin().from('internal_notifications').update({ read_at: new Date().toISOString() }).eq('recipient_user_id', userId).is('read_at', null);
-  const { error } = ids?.length ? await query.in('id', ids.filter(uuid)) : await query;
+export const listUnreadNotifications = async (userId: string): Promise<InternalNotification[]> => (await getUnreadNotifications(userId)).notifications;
+
+// Undefined means explicit read-all; an empty or invalid selection never means read-all.
+export const markNotificationsRead = async (userId: string, ids?: string[], before?: string) => {
+  if (!uuid(userId)) throw new Error('forbidden');
+  if (ids !== undefined && (!Array.isArray(ids) || ids.length > 100 || ids.some(id => !uuid(id)))) throw new Error('invalid_input');
+  if (ids?.length === 0) return;
+  const readAt = before || new Date().toISOString();
+  if (!Number.isFinite(Date.parse(readAt))) throw new Error('invalid_input');
+  let query = getSupabaseAdmin().from('internal_notifications').update({ read_at: readAt }).eq('recipient_user_id', userId).is('read_at', null).lte('created_at', readAt);
+  if (ids !== undefined) query = query.in('id', ids);
+  const { error } = await query;
   fail(error);
 };
