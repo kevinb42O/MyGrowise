@@ -152,7 +152,7 @@ const canOpen = (href: string) => {
             <span aria-hidden="true">/</span>
             <strong>{title}</strong>
           </div>
-          <div class="admin-topbar__right">{hasPermission(user, 'client_records.read') && <ClientSearch practice={false} client:only="react" />}
+          <div class="admin-topbar__right">{hasPermission(adminUser, 'client_records.read') && <ClientSearch practice={false} client:only="react" />}
             {adminUser && <NotificationBell userId={adminUser.sub} basePath="/admin/berichten" />}
             <span class="admin-environment"><i></i> {environmentLabel}</span>
             <a class="admin-topbar__site-link" href="/" target="_blank" rel="noreferrer">
