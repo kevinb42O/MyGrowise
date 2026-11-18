@@ -32,6 +32,7 @@ test('failed native note POST re-renders submitted text without running patient-
  const db={rpc:async(name)=>{if(name==='save_patient_details')updated=true;return {data:null,error:null};}};
  const patient={id:'client',canArchive:false,canManageAssignments:false,assignments:[],notes:[],bookings:[],details:{},linkableBookings:[]};
  const {loadClientDetailPage}=load('../src/lib/clientDetailPage.ts',{
+  './clientRecordWorkspace':load('../src/lib/clientRecordWorkspace.ts',{}),
   './patientAge':{patientAgeLabel:()=>''},'./patientSalutation':{salutationLabels:{}},
   './noteForm':{saveNoteForm:async()=>({error:'Opslaan mislukt',location:''})},
   './adminAuth':{hasPermission:()=>true,isTrustedFormOrigin:()=>true},'./patientDetails':{genderLabels:{},parsePatientDetails:()=>{throw new Error('Wrong operation');}},
@@ -40,4 +41,18 @@ test('failed native note POST re-renders submitted text without running patient-
  const request=new Request('http://localhost/praktijk/clienten/client',{method:'POST',body:form(values)});
  const result=await loadClientDetailPage({request,url:new URL(request.url),locals:{currentUser:user},params:{id:'client'},redirect:()=>{throw new Error('must retain form');}});
  assert.deepEqual({...result.submittedNote},values);assert.equal(result.noteError,'Opslaan mislukt');assert.equal(updated,false);assert.equal(result.bookingId,'appointment');assert.equal(result.noteBooking.id,'appointment');
+});
+
+test('formatting travels with both new notes and versioned edits',async()=>{
+ const document=JSON.stringify({type:'doc',content:[{type:'paragraph',content:[{type:'text',text:'Opgemaakt',marks:[{type:'bold'}]}]}]});
+ for(const operation of ['create_note','save_note']){
+  let saved;const save=setup({createPatientNote:async input=>{saved=input;return 'note';},getPatientByNote:async()=>({patientId:'client'}),savePatientNoteVersion:async input=>{saved=input;}});
+  const result=await save(form({operation,note_id:'note',expected_version:'2',title:'Verslag',body:'Opgemaakt',body_document:document}),user,'client','/admin/clienten');
+  assert.equal(result.error,'');assert.equal(saved.document,document);assert.equal(saved.body,'Opgemaakt');
+ }
+});
+test('invalid formatting gets a recoverable error without a successful redirect',async()=>{
+ const save=setup({createPatientNote:async()=>{throw new Error('note_document_mismatch');}});
+ const result=await save(form({operation:'create_note',body:'Tekst'}),user,'client','/admin/clienten');
+ assert.equal(result.location,'');assert.match(result.error,/tekstopmaak/);assert.match(result.error,/tekst blijft hier/);
 });

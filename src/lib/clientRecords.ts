@@ -1,3 +1,4 @@
+import { validatedNoteContent, type NoteDocument } from './noteDocument';
 import { fromBrusselsLocalInput } from './brusselsTime';
 import { parsePatientDetails, patientFields, type PatientDetails } from './patientDetails';
 import { getSupabaseAdmin } from './supabase/server';
@@ -62,6 +63,7 @@ export type PatientBooking = {
 };
 
 export type PatientNoteVersion = {
+  document?: NoteDocument | null;
   versionNumber: number;
   title: string;
   body: string;
@@ -255,7 +257,7 @@ const loadAssignments = async (patientId: string, showHistory: boolean): Promise
   return rows.map((row) => ({ id: String(row.id), userId: String(row.user_id), name: names.get(String(row.user_id)) || 'Medewerker', assignedAt: String(row.assigned_at), endedAt: row.ended_at ? String(row.ended_at) : null }));
 };
 
-export const getPatientDetail = async (user: UserSession, patientId: string, historyNoteId = '', requestId?: string, requestedNotePage = 1, requestedBookingPage = 1, bookingStatus = '', bookingFrom = '', bookingTo = '', focusedDraftId = ''): Promise<PatientDetail | null> => {
+export const getPatientDetail = async (user: UserSession, patientId: string, historyNoteId = '', requestId?: string, requestedNotePage = 1, requestedBookingPage = 1, bookingStatus = '', bookingFrom = '', bookingTo = '', focusedDraftId = '', loadNotes = true): Promise<PatientDetail | null> => {
   assertRecordRole(user);
   if (!uuidPattern.test(patientId) || !(await hasPatientAccess(user, patientId))) return null;
   const client = getSupabaseAdmin();
@@ -278,7 +280,7 @@ export const getPatientDetail = async (user: UserSession, patientId: string, his
   const bookingPageCount=Math.max(1,Math.ceil((filteredCount.count||0)/50));
   const bookingPage=Math.min(bookingPageCount,Math.max(1,Number.isInteger(requestedBookingPage)?requestedBookingPage:1));
   const [{ data: noteRows, error: noteError }, { data: bookingRows, error: bookingError }, assignments, bookingCountResult] = await Promise.all([
-    client.from('patient_notes_current').select('id,booking_id,note_type,occurred_at,status,current_version,created_by,created_at,updated_at,finalized_at,corrects_note_id,title,body,version_created_at').eq('patient_id', patientId).order('occurred_at', { ascending: false }).order('created_at', { ascending: false }).range((notePage - 1) * 50, notePage * 50 - 1),
+    loadNotes ? client.from('patient_notes_current').select('id,booking_id,note_type,occurred_at,status,current_version,created_by,created_at,updated_at,finalized_at,corrects_note_id,title,body,body_document,version_created_at').eq('patient_id', patientId).order('occurred_at', { ascending: false }).order('created_at', { ascending: false }).range((notePage - 1) * 50, notePage * 50 - 1) : Promise.resolve({data: [], error: null}),
     filterBookings(client.from('bookings').select('id,appointment_name,starts_at,ends_at,status,cancellation_category,no_show_billing,practitioners(name)')).order('starts_at', { ascending: false }).order('id').range((bookingPage-1)*50,bookingPage*50-1),
     loadAssignments(patientId, isOwner(user)),
     client.from('bookings').select('id', { count: 'exact', head: true }).eq('patient_id', patientId),
@@ -286,8 +288,8 @@ export const getPatientDetail = async (user: UserSession, patientId: string, his
   fail(noteError); fail(bookingError); fail(bookingCountResult.error);
   const rawNotes = (noteRows || []) as Row[];
   // A workday task must remain reachable even when its draft is on an older page.
-  if (uuidPattern.test(focusedDraftId) && !rawNotes.some(note => note.id === focusedDraftId)) {
-    const query = client.from('patient_notes_current').select('id,booking_id,note_type,occurred_at,status,current_version,created_by,created_at,updated_at,finalized_at,corrects_note_id,title,body,version_created_at').eq('patient_id', patientId).eq('id', focusedDraftId);
+  if (loadNotes && uuidPattern.test(focusedDraftId) && !rawNotes.some(note => note.id === focusedDraftId)) {
+    const query = client.from('patient_notes_current').select('id,booking_id,note_type,occurred_at,status,current_version,created_by,created_at,updated_at,finalized_at,corrects_note_id,title,body,body_document,version_created_at').eq('patient_id', patientId).eq('id', focusedDraftId);
     const { data, error } = await query.maybeSingle();
     fail(error);
     if (data) rawNotes.unshift(data);
@@ -295,7 +297,7 @@ export const getPatientDetail = async (user: UserSession, patientId: string, his
   const noteIds = rawNotes.map((row) => String(row.id));
   let versionRows: Row[] = [];
   if (historyNoteId && noteIds.includes(historyNoteId)) {
-    const { data, error } = await client.from('patient_note_versions').select('note_id,version_number,title,body,created_by,created_at').eq('note_id', historyNoteId).order('version_number', { ascending: false }).limit(50);
+    const { data, error } = await client.from('patient_note_versions').select('note_id,version_number,title,body,body_document,created_by,created_at').eq('note_id', historyNoteId).order('version_number', { ascending: false }).limit(50);
     fail(error); versionRows = (data || []) as Row[];
   }
   const correctedNoteIds = [...new Set(rawNotes.map((row) => row.corrects_note_id ? String(row.corrects_note_id) : '').filter(Boolean))];
@@ -307,7 +309,7 @@ export const getPatientDetail = async (user: UserSession, patientId: string, his
   }
   const versionHistory = new Map<string, PatientNoteVersion[]>();
   versionRows.forEach((row) => versionHistory.set(String(row.note_id), [...(versionHistory.get(String(row.note_id)) || []), {
-    versionNumber: Number(row.version_number), title: String(row.title), body: String(row.body), createdBy: row.created_by ? String(row.created_by) : null, createdAt: String(row.created_at),
+    versionNumber: Number(row.version_number), title: String(row.title), body: String(row.body), document: row.body_document || null, createdBy: row.created_by ? String(row.created_by) : null, createdAt: String(row.created_at),
   }]));
   const notes: PatientNote[] = rawNotes.map((row) => ({
     id: String(row.id), bookingId: row.booking_id ? String(row.booking_id) : null, type: String(row.note_type) as NoteType,
@@ -315,7 +317,7 @@ export const getPatientDetail = async (user: UserSession, patientId: string, his
     createdBy: row.created_by ? String(row.created_by) : null, createdAt: String(row.created_at), updatedAt: String(row.updated_at),
     finalizedAt: row.finalized_at ? String(row.finalized_at) : null, correctsNoteId: row.corrects_note_id ? String(row.corrects_note_id) : null,
     correctsNoteTitle: row.corrects_note_id ? correctedNoteTitles.get(String(row.corrects_note_id)) || null : null,
-    current: { versionNumber: Number(row.current_version), title: String(row.title), body: String(row.body), createdBy: row.created_by ? String(row.created_by) : null, createdAt: String(row.version_created_at) },
+    current: { versionNumber: Number(row.current_version), title: String(row.title), body: String(row.body), document: row.body_document || null, createdBy: row.created_by ? String(row.created_by) : null, createdAt: String(row.version_created_at) },
     versions: versionHistory.get(String(row.id)) || [],
   }));
   const bookings: PatientBooking[] = ((bookingRows || []) as Row[]).map((row) => ({ id: String(row.id), appointmentName:String(row.appointment_name||'Afspraaktype nog te bepalen'), startsAt: String(row.starts_at), endsAt: String(row.ends_at), cancellationCategory: String(row.cancellation_category || 'unknown'), noShowBilling: String(row.no_show_billing || 'unreviewed'), status: String(row.status), practitionerName: String(row.practitioners?.name || 'Professional') }));
@@ -410,26 +412,28 @@ export const linkPatientCustomerAccount = async (patientId: string, customerUser
   fail(error);
 };
 
-export const createPatientNote = async (input: { patientId: string; bookingId: string | null; type: NoteType; occurredAt: string; title: unknown; body: unknown; status: NoteStatus; correctsNoteId: string | null }, user: UserSession, actor: AuditActor) => {
+export const createPatientNote = async (input: { patientId: string; bookingId: string | null; type: NoteType; occurredAt: string; title: unknown; body: unknown; document?: unknown; status: NoteStatus; correctsNoteId: string | null }, user: UserSession, actor: AuditActor) => {
   assertRecordRole(user); await assertPatientAccess(user, input.patientId);
-  const title = typeof input.title === 'string' ? input.title.trim() : ''; const body = typeof input.body === 'string' ? input.body.trim() : '';
+  const title = typeof input.title === 'string' ? input.title.trim() : '';
+  const { body, document } = validatedNoteContent(input.body, input.document);
   const occurred = parseBrusselsDateTime(input.occurredAt);
   if (!noteTypes.includes(input.type) || title.length < 2 || title.length > 120 || body.length < 1 || body.length > 20000 || !Number.isFinite(occurred.getTime()) || (input.bookingId && !uuidPattern.test(input.bookingId)) || (input.correctsNoteId && !uuidPattern.test(input.correctsNoteId)) || !['draft', 'final'].includes(input.status)) throw new Error('invalid_input');
   if (input.correctsNoteId && input.type !== 'correction') throw new Error('invalid_input');
   const { data, error } = await getSupabaseAdmin().rpc('create_patient_note', {
     p_actor_user_id: user.sub, p_patient_id: input.patientId, p_booking_id: input.bookingId, p_note_type: input.type,
-    p_occurred_at: occurred.toISOString(), p_title: title, p_body: body, p_status: input.status, p_corrects_note_id: input.correctsNoteId, p_request_id: actor.requestId || null,
+    p_occurred_at: occurred.toISOString(), p_title: title, p_body: body, p_body_document: document, p_status: input.status, p_corrects_note_id: input.correctsNoteId, p_request_id: actor.requestId || null,
   });
   fail(error); const noteId = String(data);
   return noteId;
 };
 
-export const savePatientNoteVersion = async (input: { noteId: string; patientId: string; expectedVersion: number; title: unknown; body: unknown; finalize: boolean }, user: UserSession, actor: AuditActor) => {
+export const savePatientNoteVersion = async (input: { noteId: string; patientId: string; expectedVersion: number; title: unknown; body: unknown; document?: unknown; finalize: boolean }, user: UserSession, actor: AuditActor) => {
   assertRecordRole(user);
-  const title = typeof input.title === 'string' ? input.title.trim() : ''; const body = typeof input.body === 'string' ? input.body.trim() : '';
+  const title = typeof input.title === 'string' ? input.title.trim() : '';
+  const { body, document } = validatedNoteContent(input.body, input.document);
   if (!uuidPattern.test(input.noteId) || !uuidPattern.test(input.patientId) || !Number.isInteger(input.expectedVersion) || input.expectedVersion < 1 || title.length < 2 || title.length > 120 || body.length < 1 || body.length > 20000) throw new Error('invalid_input');
   const { data, error } = await getSupabaseAdmin().rpc('append_patient_note_version', {
-    p_actor_user_id: user.sub, p_note_id: input.noteId, p_expected_version: input.expectedVersion, p_title: title, p_body: body, p_finalize: input.finalize, p_request_id: actor.requestId || null,
+    p_actor_user_id: user.sub, p_note_id: input.noteId, p_expected_version: input.expectedVersion, p_title: title, p_body: body, p_body_document: document, p_finalize: input.finalize, p_request_id: actor.requestId || null,
   });
   fail(error); const version = Number(data);
   return { patientId: input.patientId, version, status: input.finalize ? 'final' as const : 'draft' as const };

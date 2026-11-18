@@ -1,0 +1,6 @@
+---
+import { noteDocumentHtml } from '../../lib/noteDocument';
+interface Props { body:string; document?:unknown }
+const {body,document}=Astro.props;
+---
+<div class="client-note__content record-formatted-note" set:html={noteDocumentHtml(document,body)}></div>

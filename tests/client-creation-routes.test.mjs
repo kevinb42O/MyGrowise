@@ -64,7 +64,7 @@ test('valid offer links preselect the offer within the permitted therapist scope
 
 test('manual creation validates full details before a single atomic database call',async()=>{
  const calls=[];
- const {createPatient}=load('../src/lib/clientRecords.ts',{
+ const {createPatient}=load('../src/lib/clientRecords.ts',{'./noteDocument':{},
   './brusselsTime':{},'./patientDetails':{parsePatientDetails,patientFields},'./securityAudit':{},
   './supabase/server':{getSupabaseAdmin:()=>({rpc:async(name,args)=>{calls.push({name,args});return {data:clientId,error:null};}})},
  });

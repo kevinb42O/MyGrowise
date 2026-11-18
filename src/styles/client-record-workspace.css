@@ -1,0 +1,300 @@
+/* Dossier workspace: scoped to the shared admin/practice record surface. */
+.record-workspace { --record-muted:#5d7069; --record-line:#dce5e0; max-width:1480px; color:var(--admin-text); }
+.record-workspace ::selection { background:#d7e8e0; color:#173d35; }
+.record-workspace :is(input,textarea) { caret-color:var(--admin-green); }
+.record-workspace :is(a,button,input,textarea,select,summary):focus-visible { outline:2px solid var(--admin-green); outline-offset:4px; }
+.record-back { display:inline-flex; align-items:center; gap:9px; margin:0 0 24px; color:var(--record-muted); font-size:12px; font-weight:500; }
+.record-back:hover { color:var(--admin-green); }
+.record-identity { display:flex; align-items:center; gap:18px; padding:0 0 26px; }
+.record-identity__initials { display:grid; place-items:center; flex:0 0 58px; height:58px; border-radius:16px; background:#e7efeb; color:var(--admin-green); font-size:20px; font-weight:600; }
+.record-identity__main { min-width:0; flex:1; }
+.record-identity__title { display:flex; align-items:center; flex-wrap:wrap; gap:12px; }
+.record-identity__title h1 { margin:0; font-size:28px; font-weight:650; line-height:1.25; letter-spacing:-.025em; overflow-wrap:anywhere; }
+.record-status { display:inline-flex; align-items:center; flex:0 0 auto; gap:6px; padding:5px 9px; border-radius:6px; background:#e7f0e9; color:#275b46; font-size:11px; font-weight:600; }
+.record-status i { width:5px; height:5px; border-radius:50%; background:currentColor; }
+.record-status.is-archived { background:#e9ecea; color:#5c6861; }
+.record-identity__meta { display:flex; flex-wrap:wrap; gap:6px 18px; margin-top:8px; color:var(--record-muted); font-size:12px; line-height:1.6; overflow-wrap:anywhere; }
+.record-confidential { display:flex; align-items:center; gap:6px; color:var(--record-muted); font-size:11px; }
+.record-nav { display:flex; gap:26px; margin-bottom:24px; border-bottom:1px solid #cfdcd5; }
+.record-nav > a { position:relative; display:flex; align-items:center; gap:8px; min-height:51px; padding:0 2px 14px; color:var(--record-muted); font-size:13px; font-weight:550; text-decoration:none; }
+.record-nav > a::after { content:''; position:absolute; right:0; bottom:-1px; left:0; height:2px; background:transparent; transition:background-color 160ms ease-out; }
+.record-nav > a:hover { color:var(--admin-green); }
+.record-nav > a[aria-current] { color:var(--admin-green); font-weight:650; }
+.record-nav > a[aria-current]::after { background:var(--admin-green); }
+.record-nav__count { display:grid; place-items:center; min-width:22px; height:20px; padding:0 5px; border-radius:5px; background:#e6ece8; color:#52675c; font-size:10px; font-variant-numeric:tabular-nums; }
+.record-nav > a[aria-current] .record-nav__count { background:#d9e7de; color:#214e3d; }
+.record-notice,.record-archive-notice { display:flex; align-items:center; gap:10px; margin-bottom:18px; padding:13px 16px; border-radius:8px; background:#e9f3ed; color:#25573f; font-size:13px; line-height:1.5; }
+.record-notice.is-error { color:#8c343a; background:#faedef; }
+.record-archive-notice { background:#e9eeeb; color:#52645a; }
+.record-archive-notice a { text-decoration:underline; text-underline-offset:3px; }
+.record-notes { display:grid; grid-template-columns:290px minmax(0,1fr); min-height:550px; border:1px solid var(--record-line); border-radius:12px; background:#fff; overflow:clip; }
+.record-note-index { display:flex; flex-direction:column; min-width:0; border-right:1px solid var(--record-line); background:#f8faf8; }
+.record-note-index__heading { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:24px 20px 18px; }
+.record-note-index__heading h2 { margin:0 0 5px; font-size:16px; font-weight:650; }
+.record-note-index__heading p { margin:0; color:var(--record-muted); font-size:11px; }
+.record-compose { display:grid; width:32px; height:32px; place-items:center; border:1px solid #cedbd3; border-radius:7px; color:var(--admin-green); }
+.record-compose:hover { background:#e5eee8; }
+.record-new-note { display:flex; align-items:center; justify-content:center; gap:8px; margin:0 18px 18px; min-height:40px; border:1px solid #c9d9ce; border-radius:7px; color:#254f3b; background:#fff; font-size:12px; font-weight:600; }
+.record-new-note:hover,.record-new-note.is-selected { background:#e5eee8; border-color:#a8c1b1; }
+.record-note-index__list { display:grid; align-content:start; border-top:1px solid var(--record-line); }
+.record-note-item { position:relative; display:grid; gap:8px; padding:19px 20px; border-bottom:1px solid #e3eae5; color:var(--admin-text); transition:background-color 160ms ease-out; }
+.record-note-item:hover { background:#eef3ef; }
+.record-note-item.is-selected { background:#e5eee7; }
+.record-note-item.is-selected::before { position:absolute; top:20px; left:8px; width:4px; height:4px; border-radius:50%; background:#2f6649; content:''; }
+.record-note-item__meta { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:6px; color:var(--record-muted); font-size:10px; font-variant-numeric:tabular-nums; }
+.record-note-item__status { color:#456454; font-size:10px; }
+.record-note-item__status.is-draft { color:#82602c; }
+.record-note-item strong { font-size:13px; font-weight:600; line-height:1.5; overflow-wrap:anywhere; }
+.record-note-item__type { color:var(--record-muted); font-size:11px; }
+.record-note-pages { display:flex; justify-content:space-between; align-items:center; gap:12px; margin-top:auto; padding:16px 20px; color:var(--record-muted); font-size:11px; font-variant-numeric:tabular-nums; }
+.record-note-pages > div { display:flex; gap:8px; }
+.record-note-pages a { display:grid; width:32px; height:32px; place-items:center; border:1px solid #cfdbd3; border-radius:6px; color:var(--admin-green); }
+.record-index-empty { margin:0; padding:22px 20px; color:var(--record-muted); font-size:12px; line-height:1.7; }
+.record-note-detail { min-width:0; }
+.record-note-back { display:none; }
+.record-workspace .client-note { display:block; padding:32px 36px; }
+.record-workspace .client-note__body { padding:0; margin:0; border:0; border-radius:0; }
+.record-workspace .client-note__header { flex-wrap:wrap; padding-bottom:23px; border-color:var(--record-line); }
+.record-note-meta { margin:0 0 10px; color:var(--record-muted); font-size:12px; line-height:1.5; }
+.record-workspace .client-note__header h3 { margin:0 0 10px; font-size:22px; font-weight:600; line-height:1.35; letter-spacing:-.02em; overflow-wrap:anywhere; }
+.record-workspace .client-note__header > div { min-width:0; flex:1 1 240px; }
+.record-workspace .client-note__header > div > small { color:var(--record-muted); font-size:11px; line-height:1.6; }
+.record-workspace .client-note-status { padding:5px 8px; font-size:10px; }
+.record-workspace .client-note__content { max-width:74ch; padding:25px 0; color:#34483e; font-size:14px; line-height:1.85; }
+.record-workspace .client-note__footer { flex-wrap:wrap; padding-top:18px; margin-top:15px; color:var(--record-muted); font-size:11px; line-height:1.6; }
+.record-workspace .client-note__footer > div { justify-content:flex-start; }
+.record-workspace .client-note-action { font-size:12px; }
+.record-workspace .client-note-history { padding:18px; margin-top:24px; border-radius:8px; }
+.record-workspace .client-note-history h4,.record-workspace .client-note-history summary { font-size:12px; }
+.record-workspace .client-note-edit { margin-top:24px; padding-top:20px; }
+.record-workspace .client-note-edit summary { font-size:13px; }
+.record-workspace .client-note-edit form { margin-top:20px; gap:18px; }
+.record-workspace .client-note-create { border:0; border-radius:0; box-shadow:none; background:transparent; }
+.record-workspace .admin-panel__header { padding:25px 28px; }
+.record-workspace .admin-panel__header h2 { font-size:19px; font-weight:600; letter-spacing:-.015em; }
+.record-workspace .admin-panel__header p { max-width:65ch; margin-top:7px; color:var(--record-muted); font-size:12px; line-height:1.7; }
+.record-workspace .client-note-create form { padding:24px 28px; gap:20px; }
+.record-workspace :is(.client-note-create,.client-note-edit) label { gap:8px; font-size:12px; }
+.record-workspace :is(.client-note-create,.client-note-edit) label small { font-size:11px; color:var(--record-muted); line-height:1.6; }
+.record-workspace :is(.client-note-create,.client-note-edit) :is(input,select,textarea) { min-height:44px; padding:11px 12px; border-color:#c7d5cc; border-radius:6px; font-size:13px; }
+.record-workspace :is(.client-note-create,.client-note-edit) textarea { min-height:280px; font-size:14px; line-height:1.8; }
+.record-workspace [data-note-status] { margin:0; color:var(--record-muted); font-size:12px; line-height:1.6; }
+.record-workspace [data-note-status][role='alert'] { color:#993d43; }
+.record-workspace .client-note-create__actions { padding-top:5px; }
+.record-workspace .admin-button { min-height:40px; font-size:12px; }
+.record-workspace .admin-button:disabled { opacity:.55; cursor:wait; }
+.record-editor-next { display:flex; align-items:center; padding:0 28px 25px; }
+.record-editor-next a { color:var(--record-muted); font-size:11px; }
+.record-reading-empty { display:flex; min-height:490px; align-items:center; justify-content:center; flex-direction:column; text-align:center; padding:40px; }
+.record-reading-empty > span { display:grid; place-items:center; width:66px; height:66px; margin-bottom:24px; background:#eef3ef; color:#527561; border-radius:16px; }
+.record-reading-empty h2 { margin:0 0 12px; font-size:23px; font-weight:600; letter-spacing:-.02em; }
+.record-reading-empty p { max-width:38ch; margin:0 0 24px; color:var(--record-muted); font-size:13px; line-height:1.8; }
+.record-footnote { display:flex; align-items:flex-start; gap:7px; margin:18px 0 0; color:var(--record-muted); font-size:10px; line-height:1.7; }
+.record-footnote svg { flex-shrink:0; margin-top:2px; }
+.record-details { padding:0 0 28px; border:1px solid var(--record-line); border-radius:12px; background:#fff; }
+.record-details .practice-kv { padding:8px 28px 22px; display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:0 32px; }
+.record-details .practice-kv > div { display:grid; grid-template-columns:160px minmax(0,1fr); gap:14px; padding:16px 0; border-bottom:1px solid #e5ebe7; }
+.record-details .practice-kv dt { color:var(--record-muted); font-size:12px; }
+.record-details .practice-kv dd { margin:0; font-size:13px; overflow-wrap:anywhere; }
+.record-details .practice-details { margin:0 28px; padding:18px 0 0; border-top:1px solid var(--record-line); }
+.record-details .practice-details > summary { color:var(--admin-green); font-size:13px; font-weight:600; cursor:pointer; }
+.record-details .practice-stack { margin-top:24px; }
+.record-workspace .client-account-link-panel { margin-top:20px; }
+.record-access-layout { display:grid; grid-template-columns:minmax(0,1.5fr) minmax(260px,1fr); align-items:start; gap:24px; }
+.record-access-layout > div { min-width:0; }
+.record-workspace .record-access-layout .admin-panel { border-radius:12px; box-shadow:none; }
+.record-workspace .client-assignment-list { padding:0 28px; }
+.record-workspace .client-assignment-row { gap:14px; padding:20px 0; }
+.record-staff-photo { position:relative; display:grid; place-items:center; flex:0 0 44px; width:44px; height:44px; overflow:hidden; border-radius:50%; background:#e9efea; color:#365b46; font-size:14px; font-weight:600; }
+.record-staff-photo img { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; object-position:center 25%; }
+.record-staff-photo img[hidden] { display:none; }
+.record-workspace .client-assignment-row strong { font-size:14px; white-space:normal; overflow-wrap:anywhere; }
+.record-workspace .client-assignment-row small { color:var(--record-muted); font-size:12px; }
+.record-workspace .client-assignment-remove { display:flex; align-items:center; gap:7px; width:auto; min-height:36px; height:auto; padding:8px 10px; border:1px solid #dce3de; border-radius:6px; color:var(--record-muted); font-size:11px; }
+.record-workspace .client-assignment-remove:hover { color:#943b42; background:#fbf0f1; border-color:#e7c9cd; }
+.record-workspace .client-assignment-add { grid-template-columns:minmax(0,1fr) auto; gap:12px; align-items:end; padding:24px 0; }
+.record-workspace .client-assignment-add label { font-size:12px; gap:9px; }
+.record-workspace .client-assignment-add select { min-height:44px; font-size:13px; }
+.record-workspace .client-assignment-add .admin-button { min-height:44px; }
+.record-workspace .client-security-note { margin-top:18px; padding:16px 0; border:0; background:transparent; border-radius:0; }
+.record-workspace .client-security-note strong { font-size:12px; }
+.record-workspace .client-security-note p { margin:5px 0 0; color:var(--record-muted); font-size:12px; line-height:1.7; }
+.record-access-history { margin-top:20px; padding:20px 0; border-top:1px solid var(--record-line); }
+.record-access-history summary { color:var(--record-muted); font-size:12px; cursor:pointer; }
+.record-access-history > div { display:grid; gap:5px; margin-top:16px; font-size:12px; }
+.record-access-history > div > span { color:var(--record-muted); }
+.record-management { padding:25px 28px; border:1px solid var(--record-line); border-radius:12px; background:#fff; }
+.record-management > h2 { margin:0 0 8px; font-size:17px; font-weight:600; }
+.record-management > p { margin:0 0 24px; color:var(--record-muted); font-size:12px; line-height:1.6; }
+.record-management .practice-card { margin:0; padding:0; border:0; box-shadow:none; background:transparent; }
+.record-management summary { font-size:13px; font-weight:550; cursor:pointer; }
+.record-management .practice-stack { margin-top:18px; gap:24px; }
+.record-management .practice-stack details { padding-top:20px; border-top:1px solid var(--record-line); }
+.record-management .practice-stack p { color:var(--record-muted); font-size:12px; line-height:1.7; }
+.record-workspace .practice-filter { display:flex; flex-wrap:wrap; align-items:end; gap:14px; margin:0; padding:22px 28px; border:0; border-bottom:1px solid var(--record-line); border-radius:0; background:#fafcf9; }
+.record-workspace .practice-filter label { display:grid; gap:8px; color:var(--record-muted); font-size:12px; }
+.record-workspace .practice-filter :is(input,select) { min-height:40px; font-size:12px; }
+.record-workspace .client-booking-list { padding:0 28px; }
+.record-workspace .client-booking-list article { gap:16px; padding:22px 0; }
+.record-workspace .client-booking-list article .client-record-icon { width:44px; height:44px; border-radius:10px; }
+.record-workspace .client-booking-list article > div:last-child { gap:7px; }
+.record-workspace .client-booking-list strong { font-size:14px; }
+.record-workspace .client-booking-list :is(small,a) { color:var(--record-muted); font-size:12px; }
+.record-workspace .client-booking-list a { color:var(--admin-green); text-decoration:underline; text-underline-offset:3px; }
+.record-workspace .client-inline-empty { padding:24px; color:var(--record-muted); font-size:13px; }
+.record-recovery { padding:24px; }
+.record-recovery label { display:grid; gap:8px; margin-top:16px; }
+.record-recovery :is(input,textarea) { width:100%; padding:12px; }
+@media (min-width:1200px) {
+  .record-note-index__list { max-height:calc(100dvh - 390px); min-height:260px; overflow:auto; }
+}
+@media (max-width:1100px) {
+  .record-notes { grid-template-columns:250px minmax(0,1fr); }
+  .record-workspace .client-note { padding:26px; }
+  .record-access-layout { grid-template-columns:minmax(0,1fr); }
+  .record-details .practice-kv { grid-template-columns:minmax(0,1fr); }
+  .record-confidential { display:none; }
+}
+@media (max-width:760px) {
+  .record-back { margin-bottom:20px; }
+  .record-identity { align-items:flex-start; gap:12px; padding-bottom:20px; }
+  .record-identity__initials { flex-basis:44px; height:44px; border-radius:12px; font-size:16px; }
+  .record-identity__title { gap:8px; }
+  .record-identity__title h1 { font-size:22px; }
+  .record-identity__meta { font-size:11px; gap:4px 12px; }
+  .record-status { font-size:10px; }
+  .record-nav { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:0; margin-bottom:20px; border:1px solid var(--record-line); border-radius:9px; overflow:clip; background:#fff; }
+  .record-nav > a { gap:7px; justify-content:flex-start; min-height:48px; padding:12px; font-size:12px; }
+  .record-nav > a:nth-child(odd) { border-right:1px solid var(--record-line); }
+  .record-nav > a:nth-child(-n+2) { border-bottom:1px solid var(--record-line); }
+  .record-nav > a[aria-current] { background:#e5eee7; }
+  .record-nav > a::after { display:none; }
+  .record-nav__count { margin-left:auto; min-width:19px; height:18px; font-size:9px; }
+  .record-notes { display:block; min-height:0; }
+  .record-note-index { border:0; }
+  .record-note-index__heading { padding:20px; }
+  .record-note-index__list { max-height:none; }
+  .record-note-detail { display:none; }
+  .record-notes[data-reading='true'] .record-note-index { display:none; }
+  .record-notes[data-reading='true'] .record-note-detail { display:block; }
+  .record-notes:not([data-reading='true']) .record-note-detail:has(.record-reading-empty):not(:has(.client-note)) { display:block; border-top:1px solid var(--record-line); }
+  .record-note-back { display:flex; padding:18px 20px; border-bottom:1px solid var(--record-line); color:var(--admin-green); font-size:12px; }
+  .record-workspace .client-note { padding:24px 20px; }
+  .record-workspace .client-note__header h3 { font-size:20px; }
+  .record-workspace .client-note__content { font-size:14px; line-height:1.8; }
+  .record-workspace .client-note__footer { display:grid; gap:14px; }
+  .record-workspace .admin-panel__header { padding:22px 20px; }
+  .record-workspace .client-note-create form { padding:22px 20px; }
+  .record-workspace .client-note-create__grid { grid-template-columns:minmax(0,1fr); }
+  .record-editor-next { padding:0 20px 22px; }
+  .record-workspace .client-note-create__actions { flex-direction:column-reverse; }
+  .record-workspace .client-note-edit__actions { flex-direction:column; }
+  .record-workspace :is(.client-note-create__actions,.client-note-edit__actions) .admin-button { width:100%; justify-content:center; min-height:44px; }
+  .record-reading-empty { min-height:300px; padding:32px 20px; }
+  .record-reading-empty h2 { font-size:21px; }
+  .record-details .practice-kv { padding:0 20px 22px; }
+  .record-details .practice-kv > div { grid-template-columns:minmax(0,1fr); gap:6px; }
+  .record-details .practice-details { margin:0 20px; }
+  .record-workspace .client-assignment-list { padding:0 20px; }
+  .record-workspace .client-assignment-row { flex-wrap:wrap; }
+  .record-workspace .client-assignment-row > span:nth-child(2) { flex-basis:calc(100% - 60px); }
+  .record-workspace .client-assignment-row > form { margin-left:58px; }
+  .record-workspace .client-assignment-remove { min-height:40px; }
+  .record-workspace .client-assignment-add { grid-template-columns:minmax(0,1fr); }
+  .record-workspace .client-assignment-add .admin-button { width:100%; justify-content:center; }
+  .record-management { padding:22px 20px; }
+  .record-workspace .practice-filter { padding:20px; }
+  .record-workspace .practice-filter label { flex:1 1 120px; min-width:0; }
+  .record-workspace .practice-filter label :is(input,select) { width:100%; min-width:0; }
+  .record-workspace .practice-filter .admin-button { white-space:normal; height:auto; padding:10px 12px; }
+  .record-workspace .client-booking-list { padding:0 20px; }
+  .record-footnote { font-size:10px; }
+}
+@media (prefers-reduced-motion:reduce) {
+  .record-nav > a::after,.record-note-item { transition:none; }
+}
+/* Explicit actions and typography must win over the shared legacy dossier rules. */
+.admin-body .record-workspace .admin-button--primary { border-color:#173d35; background:#173d35; color:#fff; }
+.admin-body .record-workspace .admin-button--primary:hover { border-color:#244f40; background:#244f40; color:#fff; }
+.admin-body .record-workspace .admin-button--primary:focus-visible { color:#fff; }
+.admin-body .record-workspace .admin-button--primary:disabled { background:#647a6e; border-color:#647a6e; color:#fff; opacity:.7; }
+.admin-body .record-workspace .client-note__header h3 { font-size:22px; line-height:1.4; }
+.admin-body .record-workspace :is(.client-note-create,.client-note-edit) :is(input,select,textarea) { font-weight:400; }
+.record-form-meta { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,2fr); align-items:start; gap:14px; }
+.record-form-meta .client-note-create__grid { gap:14px; }
+.record-workspace .client-note-create form { gap:18px; }
+.record-workspace .client-note-create > .admin-panel__header { padding-block:22px; }
+.record-account-status { display:flex; align-items:flex-start; gap:12px; padding:22px 4px; color:var(--record-muted); }
+.record-account-status svg { margin-top:2px; flex-shrink:0; }
+.admin-body .record-workspace .record-account-status strong { color:var(--admin-text); font-size:13px; font-weight:550; }
+.record-account-status p { margin:6px 0 0; color:var(--record-muted); font-size:12px; line-height:1.7; }
+.record-access-layout[data-manage='false'] { grid-template-columns:minmax(0,800px); }
+.record-workspace > .admin-panel > .practice-actions { margin:0; border:0; border-top:1px solid var(--record-line); padding:18px 28px; border-radius:0; background:#fafcf9; color:var(--record-muted); font-size:12px; }
+@media (max-width:1350px) {
+  .record-form-meta { grid-template-columns:minmax(0,1fr); }
+}
+@media (max-width:760px) {
+  .record-form-meta .client-note-create__grid { grid-template-columns:minmax(0,1fr); }
+  .admin-body .record-workspace .client-note__header h3 { font-size:20px; }
+  .record-workspace > .admin-panel > .practice-actions { padding:18px 20px; }
+}
+.record-form-meta > label { display:grid; min-width:0; gap:8px; color:var(--admin-text); font-size:12px; font-weight:600; }
+.record-edit-draft { display:flex; align-items:center; gap:12px; margin-top:24px; padding-top:20px; border-top:1px solid var(--record-line); color:var(--admin-green); font-size:13px; font-weight:600; }
+.record-draft-heading { display:flex; align-items:center; flex-wrap:wrap; gap:10px; justify-content:space-between; }
+.record-draft-heading h4 { margin:0; font-size:14px; font-weight:600; }
+.record-draft-heading a { color:var(--record-muted); font-size:12px; text-decoration:underline; text-underline-offset:3px; }
+@media (max-width:760px) {
+  /* Keep native phone controls readable and prevent focus zoom in mobile Safari. */
+  .admin-body .record-workspace :is(.client-note-create,.client-note-edit) :is(input,select,textarea) { font-size:16px; }
+}
+
+/* A compact writing surface, shared by new notes and versioned drafts. */
+.record-workspace .record-editor { min-width:0; margin-top:18px; }
+.record-editor__label { display:block; margin-bottom:8px; color:var(--admin-text); font-size:12px; font-weight:600; }
+.record-editor__frame { border:1px solid #b9cdc0; border-radius:9px; background:#fff; }
+.record-editor__frame:focus-within { border-color:var(--admin-green); outline:2px solid #d7e8de; outline-offset:2px; }
+.record-editor__toolbar { display:flex; flex-wrap:wrap; gap:4px 0; padding:7px 8px; border-bottom:1px solid var(--record-line); border-radius:9px 9px 0 0; background:#f6f9f6; }
+.record-editor [hidden] { display:none !important; }
+.record-editor__group { display:flex; gap:3px; padding:0 7px; border-right:1px solid #d9e4dc; }
+.record-editor__group:first-child { padding-left:0; }
+.record-editor__group:last-child { border:0; padding-right:0; }
+.record-workspace .record-editor__tool { position:relative; display:grid; place-items:center; width:34px; height:34px; min-width:34px; padding:0; border:1px solid transparent; border-radius:5px; color:#3b594a; background:transparent; cursor:pointer; }
+.record-workspace .record-editor__tool:hover:not(:disabled) { background:#e5eee7; }
+.record-workspace .record-editor__tool[aria-pressed=true] { background:#dceae0; border-color:#a9c5b1; color:#204e37; }
+.record-workspace .record-editor__tool:disabled { color:#899a90; cursor:default; opacity:.65; }
+.record-editor__tool::after { position:absolute; z-index:5; top:calc(100% + 8px); left:0; width:max-content; max-width:200px; padding:7px 9px; border-radius:5px; background:#233e31; color:#fff; font-size:11px; font-weight:500; line-height:1.4; pointer-events:none; opacity:0; content:attr(data-tooltip); }
+.record-editor__group:last-child .record-editor__tool::after { right:0; left:auto; }
+@media (hover:hover) { .record-editor__tool:hover:not(:disabled)::after { opacity:1; } }
+.record-editor__tool:focus-visible::after { opacity:1; }
+.record-workspace .record-editor textarea { display:block; width:100%; min-height:260px; margin:0; padding:20px; border:0; border-radius:9px; background:transparent; resize:vertical; box-shadow:none; font-size:14px; line-height:1.85; }
+.record-workspace .record-editor__document { min-height:280px; padding:20px 22px; outline:none; color:#34483e; font-size:14px; line-height:1.85; overflow-wrap:anywhere; caret-color:var(--admin-green); }
+.record-editor__document[contenteditable=false] { background:#f7f9f7; }
+.record-editor__footer { display:flex; justify-content:space-between; flex-wrap:wrap; gap:6px 16px; padding:11px 16px; border-top:1px solid #e5ece7; color:var(--record-muted); font-size:10px; line-height:1.6; }
+.record-editor__footer [data-editor-count] { flex-shrink:0; margin-left:auto; font-variant-numeric:tabular-nums; }
+.record-workspace .record-editor__error { margin:9px 0 0; color:#913a42; font-size:12px; line-height:1.6; }
+.record-editor__fallback-note { color:var(--record-muted); font-size:12px; }
+.record-workspace .record-formatted-note { white-space:pre-wrap; }
+.record-workspace :is(.record-formatted-note,.record-editor__document) :is(p,h2,h4) { white-space:pre-wrap; }
+.record-workspace :is(.record-formatted-note,.record-editor__document) p { margin:0 0 1em; }
+.record-workspace :is(.record-formatted-note,.record-editor__document) :is(h2,h4) { margin:1.6em 0 .55em; color:#254c37; font-size:1.1em; font-weight:650; line-height:1.5; letter-spacing:-.01em; }
+.record-workspace :is(.record-formatted-note,.record-editor__document) > :first-child { margin-top:0; }
+.record-workspace :is(.record-formatted-note,.record-editor__document) > :last-child { margin-bottom:0; }
+.record-workspace :is(.record-formatted-note,.record-editor__document) :is(ul,ol) { margin:.7em 0 1em; padding-left:1.6em; }
+.record-workspace :is(.record-formatted-note,.record-editor__document) ul { list-style:disc; }
+.record-workspace :is(.record-formatted-note,.record-editor__document) ol { list-style:decimal; }
+.record-workspace :is(.record-formatted-note,.record-editor__document) li { margin:.3em 0; padding-left:.2em; }
+.record-workspace :is(.record-formatted-note,.record-editor__document) li > p { margin:0; }
+.record-workspace :is(.record-formatted-note,.record-editor__document) li > :is(ul,ol) { margin:.4em 0; }
+.record-workspace :is(.record-formatted-note,.record-editor__document) strong { font-weight:700; }
+@media (max-width:760px) {
+ .record-workspace .record-editor__document,.record-workspace .record-editor textarea { padding:17px 16px; font-size:16px; }
+ .record-editor__toolbar { padding:7px 6px; }
+ .record-editor__group { gap:2px; padding:0 5px; }
+ .record-editor__tool::after { display:none; }
+ .record-editor__footer { padding:10px 13px; }
+}
+@media (pointer:coarse) {
+ .record-workspace .record-editor__tool { min-width:40px; width:40px; height:40px; }
+}
+
+.record-editor__document:has(> p:only-child > br:only-child)::before { content:attr(data-placeholder); float:left; max-width:100%; height:0; color:#64766b; pointer-events:none; }

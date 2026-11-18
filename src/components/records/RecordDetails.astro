@@ -1,0 +1,17 @@
+---
+import AdminIcon from '../admin/AdminIcon.astro';
+import PatientFields from '../practice/PatientFields.astro';
+import { recordHref } from '../../lib/clientRecordWorkspace';
+import type { ClientDetailData } from '../../lib/clientDetailPage';
+interface Props { data: ClientDetailData }
+const { patient, detailsError, submittedDetails, canWrite, overview, matchingCustomerAccounts, practice, recordsBase } = Astro.props.data;
+const base = `${recordsBase}/${patient.id}`;
+
+---
+<section class="record-details"><header class="admin-panel__header"><div><h2>Cliëntgegevens</h2><p>Persoonsgegevens, contact en aanmelding</p></div></header>
+      <dl class="practice-kv">{overview.map(([label,value])=><div><dt>{label}</dt><dd>{value||'Niet opgegeven'}</dd></div>)}</dl>
+      {detailsError&&<div class="practice-alert is-error" role="alert">{detailsError}</div>}
+      {canWrite&&patient.status==='active'&&<details class="practice-details" open={Boolean(detailsError)}><summary>Gegevens bewerken</summary><form method="post" action={recordHref(base, 'gegevens')} class="practice-stack" data-unsaved-form data-unsaved-pending={Boolean(detailsError)}><input type="hidden" name="expected_updated_at" value={patient.updatedAt}/><>{(!patient.details.first_name||!patient.details.last_name)&&<p>Opgeslagen naam: <strong>{patient.fullName}</strong>. Controleer de naam hierboven en vul voornaam en achternaam aan.</p>}<PatientFields values={submittedDetails||patient.details}/></><div class="practice-actions"><button class="admin-button admin-button--primary" type="submit">Gegevens opslaan</button><a class="admin-button" href={recordHref(base, 'gegevens')}>Annuleren</a></div></form></details>}
+    </section>
+    <section class="record-account-status"><AdminIcon name="customers" size={18}/><div><strong>{patient.linkedCustomer ? 'Online account verbonden' : 'Geen online account verbonden'}</strong><p>{patient.linkedCustomer ? patient.linkedCustomer.fullName : 'Dit dossier kan ook zonder online cliëntaccount worden gebruikt.'}</p></div></section>
+        {patient.canManageAssignments && !patient.customerUserId && patient.status === 'active' && matchingCustomerAccounts.length > 0 && <section class="admin-panel client-account-link-panel"><header class="admin-panel__header"><div><h2>Online account verbinden</h2><p>Het e-mailadres komt exact overeen. Controleer de identiteit voordat je koppelt.</p></div></header><div class="client-account-link-list">{matchingCustomerAccounts.map((account) => <form method="post" action={`/api/admin/clienten/${patient.id}/account?werkruimte=${practice ? 'praktijk' : 'admin'}`}><input type="hidden" name="customer_user_id" value={account.id}/><span><strong>{account.fullName}</strong><small>{account.email}</small></span><button class="admin-button" type="submit">Koppel account</button></form>)}</div></section>}

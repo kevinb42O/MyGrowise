@@ -1,0 +1,35 @@
+---
+import AdminIcon from '../admin/AdminIcon.astro';
+import RecordNoteCreate from './RecordNoteCreate.astro';
+import RecordNoteView from './RecordNoteView.astro';
+import { recordHref } from '../../lib/clientRecordWorkspace';
+import type { ClientDetailData } from '../../lib/clientDetailPage';
+interface Props { data: ClientDetailData }
+const { data } = Astro.props;
+const { patient, recordsBase, canWrite, selectedNoteId, submittedNote, noteError, user, formatDate, noteLabel, correctionTarget } = data;
+const base = `${recordsBase}/${patient.id}`;
+const canCreate = canWrite && patient.status==='active';
+const creating = canCreate && (selectedNoteId==='nieuw' || correctionTarget || submittedNote?.operation==='create_note');
+const selected = creating ? null : selectedNoteId ? patient.notes.find(note=>note.id===selectedNoteId) : patient.notes[0];
+const canResume = submittedNote && patient.status==='active' && (submittedNote.operation==='create_note' ? canWrite : patient.notes.some(note=>note.id===submittedNote.note_id && note.status==='draft' && (patient.canManageAssignments || note.createdBy===user.sub)));
+const noteHref = (id:string) => recordHref(base,'verslagen',{verslag:id,pagina:patient.notePage});
+---
+<section class="record-notes" aria-label="Verslagenwerkplek" data-reading={Boolean(selectedNoteId || creating)}>
+  <aside class="record-note-index">
+    <header class="record-note-index__heading"><div><h2>Verslagen</h2><p>{patient.noteCount} {patient.noteCount===1?'verslag':'verslagen'} in dit dossier</p></div><AdminIcon name="content" size={19}/></header>
+    {canCreate && <a class:list={['record-new-note',creating && 'is-selected']} href={noteHref('nieuw')} aria-current={creating?'page':undefined}><AdminIcon name="plus" size={17}/> Nieuw verslag</a>}
+    <nav class="record-note-index__list" aria-label="Kies een verslag">
+      {patient.notes.map(note=><a class:list={['record-note-item',selected?.id===note.id && 'is-selected']} href={noteHref(note.id)} aria-current={selected?.id===note.id?'page':undefined}>
+        <span class="record-note-item__meta"><time datetime={note.occurredAt}>{formatDate(note.occurredAt)}</time><span class:list={['record-note-item__status',note.status==='draft' && 'is-draft']}>{note.status==='draft'?'Concept':'Definitief'}</span></span>
+        <strong>{note.current.title}</strong><span class="record-note-item__type">{noteLabel(note.type)}</span>
+      </a>)}
+    </nav>
+    {!patient.notes.length && <p class="record-index-empty">Hier verschijnen de verslagen van deze cliënt.</p>}
+    {patient.notePageCount>1 && <nav class="record-note-pages" aria-label="Verslagenpagina’s"><span>{patient.notePage} / {patient.notePageCount}</span><div>{patient.notePage>1 && <a href={recordHref(base,'verslagen',{pagina:patient.notePage-1})} aria-label="Nieuwere verslagen">←</a>}{patient.notePage<patient.notePageCount && <a href={recordHref(base,'verslagen',{pagina:patient.notePage+1})} aria-label="Oudere verslagen">→</a>}</div></nav>}
+  </aside>
+  <div class="record-note-detail">
+    {(selected || creating) && <a class="record-note-back" href={recordHref(base,'verslagen',{pagina:patient.notePage})}>← Alle verslagen</a>}
+    {submittedNote && !canResume && <section class="record-recovery" role="alert"><h2>Je verslag is niet opgeslagen</h2><p>{noteError} Bewaar de tekst hieronder voordat je deze pagina verlaat.</p><label>Titel<input readonly value={submittedNote.title}/></label><label>Je niet-opgeslagen tekst<textarea readonly rows="9">{submittedNote.body}</textarea></label></section>}
+    {creating ? <RecordNoteCreate data={data}/> : selected ? <RecordNoteView data={data} note={selected}/> : <div class="record-reading-empty"><span><AdminIcon name="content" size={28}/></span><h2>{selectedNoteId && selectedNoteId!=='nieuw'?'Verslag niet beschikbaar':patient.notes.length?'Ruimte voor het verhaal':'Het eerste verslag begint hier'}</h2><p>{selectedNoteId && selectedNoteId!=='nieuw'?'Dit verslag is niet gevonden in dit dossier. Kies een verslag uit de lijst.':patient.notes.length?'Kies een verslag om het te lezen of ga verder met een concept.':'Leg het gesprek, je observaties en de volgende stappen vast. Je kunt eerst een concept bewaren.'}</p>{canCreate && <a class="admin-button admin-button--primary" href={noteHref('nieuw')}><AdminIcon name="plus" size={16}/> Nieuw verslag</a>}</div>}
+  </div>
+</section>

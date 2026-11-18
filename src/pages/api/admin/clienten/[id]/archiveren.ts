@@ -12,9 +12,9 @@ export const POST: APIRoute = async ({ request, params, locals, redirect }) => {
   const archived = String(form.get('operation') || 'archive') !== 'restore';
   try {
     await archivePatient(patientId, user, auditActor(user, locals.requestId, `/api/admin/clienten/${patientId}/archiveren`), archived);
-    return redirect(`${recordsBase}/${encodeURIComponent(patientId)}?melding=${archived ? 'gearchiveerd' : 'hersteld'}`, 303);
+    return redirect(`${recordsBase}/${encodeURIComponent(patientId)}?onderdeel=toegang&melding=${archived ? 'gearchiveerd' : 'hersteld'}`, 303);
   } catch {
-    return redirect(`${recordsBase}/${encodeURIComponent(patientId)}?fout=archiveren_mislukt`, 303);
+    return redirect(`${recordsBase}/${encodeURIComponent(patientId)}?onderdeel=toegang&fout=archiveren_mislukt`, 303);
   }
 };
 export const ALL: APIRoute = () => new Response('Methode niet toegestaan.', { status: 405 });

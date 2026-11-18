@@ -14,13 +14,13 @@ export const POST: APIRoute = async ({ request, params, locals, redirect }) => {
     const form = await request.formData();
     await linkPatientCustomerAccount(patientId, String(form.get('customer_user_id') || ''), locals.currentUser!,
       auditActor(locals.currentUser!, locals.requestId, `/api/admin/clienten/${patientId}/account`));
-    return redirect(`${recordsBase}/${encodeURIComponent(patientId)}?melding=account_gekoppeld`, 303);
+    return redirect(`${recordsBase}/${encodeURIComponent(patientId)}?onderdeel=gegevens&melding=account_gekoppeld`, 303);
   } catch (error) {
     const message = error instanceof Error ? error.message : '';
     const code = message.includes('patient_account_mismatch') ? 'account_komt_niet_overeen'
       : message.includes('patient_account_already_linked') ? 'klantaccount_al_gekoppeld'
         : message.includes('patient_archived') ? 'dossier_gearchiveerd' : 'account_koppelen_mislukt';
-    return redirect(`${recordsBase}/${encodeURIComponent(patientId)}?fout=${code}`, 303);
+    return redirect(`${recordsBase}/${encodeURIComponent(patientId)}?onderdeel=gegevens&fout=${code}`, 303);
   }
 };
 

@@ -18,7 +18,7 @@ export const POST: APIRoute = async ({ request, params, locals, redirect }) => {
     parentPatientId = note.patientId;
     const form = await request.formData();
     const finalize = String(form.get('submit_status') || 'draft') === 'final';
-    const result = await savePatientNoteVersion({ noteId, patientId: note.patientId, expectedVersion: Number(form.get('expected_version')), title: form.get('title'), body: form.get('body'), finalize }, user, auditActor(user, locals.requestId, `/api/admin/notities/${noteId}`));
+    const result = await savePatientNoteVersion({ noteId, patientId: note.patientId, expectedVersion: Number(form.get('expected_version')), title: form.get('title'), body: form.get('body'), document: form.get('body_document'), finalize }, user, auditActor(user, locals.requestId, `/api/admin/notities/${noteId}`));
     const destination = new URLSearchParams({ melding: finalize ? 'definitief' : 'concept', concept: noteId });
     if (returnPage > 1) destination.set('pagina', String(returnPage));
     return redirect(`${recordsBase}/${encodeURIComponent(result.patientId)}?${destination}#verslag-${encodeURIComponent(noteId)}`, 303);

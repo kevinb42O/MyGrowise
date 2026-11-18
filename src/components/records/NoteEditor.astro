@@ -1,0 +1,39 @@
+---
+import { parseNoteDocument, NOTE_TEXT_LIMIT } from '../../lib/noteDocument';
+interface Props { id:string; value:string; document?:unknown; placeholder?:string }
+const {id,value,document,placeholder='Leg relevante observaties, afspraken en opvolging zorgvuldig vast.'}=Astro.props;
+let initial='';
+try {const parsed=parseNoteDocument(document);if(parsed)initial=JSON.stringify(parsed);}catch{/* Retain the searchable text if legacy formatting is unavailable. */}
+const tools=[
+ {command:'bold',label:'Vet',shortcut:'Ctrl/⌘ B',keys:'Control+b Meta+b',icon:'M6 4h7a4 4 0 0 1 0 8H6zm0 8h8a4 4 0 0 1 0 8H6z',group:0},
+ {command:'italic',label:'Cursief',shortcut:'Ctrl/⌘ I',keys:'Control+i Meta+i',icon:'M11 4h8M5 20h8M15 4 9 20',group:0},
+ {command:'paragraph',label:'Normale tekst',shortcut:'Ctrl/⌘ Alt 0',keys:'Control+Alt+0 Meta+Alt+0',icon:'M4 5h16M12 5v15M8 20h8',group:1},
+ {command:'heading',label:'Tussenkop',shortcut:'Ctrl/⌘ Alt 2',keys:'Control+Alt+2 Meta+Alt+2',icon:'M4 5v14M13 5v14M4 12h9M17 14c0-3 5-3 5 0 0 2-5 3-5 6h5',group:1},
+ {command:'bulletList',label:'Opsomming',shortcut:'Ctrl/⌘ Shift 8',keys:'Control+Shift+8 Meta+Shift+8',icon:'M9 6h12M9 12h12M9 18h12M3 6h.01M3 12h.01M3 18h.01',group:2},
+ {command:'orderedList',label:'Genummerde lijst',shortcut:'Ctrl/⌘ Shift 7',keys:'Control+Shift+7 Meta+Shift+7',icon:'M10 6h11M10 12h11M10 18h11M3 3h1v6M3 9h2M2 15c0-3 4-3 4 0 0 2-4 3-4 6h4',group:2},
+ {command:'undo',label:'Ongedaan maken',shortcut:'Ctrl/⌘ Z',keys:'Control+z Meta+z',icon:'M9 4 4 9l5 5M4 9h10a6 6 0 0 1 0 12',group:3},
+ {command:'redo',label:'Opnieuw',shortcut:'Ctrl/⌘ Shift Z',keys:'Control+Shift+z Meta+Shift+z',icon:'m15 4 5 5-5 5M20 9H10a6 6 0 0 0 0 12',group:3},
+];
+---
+<div class="record-editor" data-note-editor>
+  <label class="record-editor__label" id={`${id}-label`} for={id}>Verslag</label>
+  <div class="record-editor__frame">
+    <div class="record-editor__toolbar" role="toolbar" aria-label="Tekstopmaak" aria-controls={`${id}-surface`} hidden data-editor-toolbar>
+      {[0,1,2,3].map(group=><div class="record-editor__group" role="group" aria-label={['Nadruk','Tekststijl','Lijsten','Geschiedenis'][group]}>{tools.filter(tool=>tool.group===group).map((tool,index)=><button type="button" class="record-editor__tool" data-editor-command={tool.command} data-tooltip={`${tool.label} · ${tool.shortcut}`} aria-label={tool.label} aria-keyshortcuts={tool.keys} aria-pressed={group<3?'false':undefined} tabindex={group===0&&index===0?0:-1}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d={tool.icon}/></svg></button>)}</div>)}
+    </div>
+    <textarea id={id} name="body" required maxlength={NOTE_TEXT_LIMIT} rows="9" placeholder={placeholder} data-editor-fallback>{value}</textarea>
+    <input type="hidden" name="body_document" value={initial} disabled data-editor-document/>
+    <div id={`${id}-surface`} class="record-editor__mount" data-editor-mount hidden></div>
+    <div class="record-editor__footer"><span data-editor-hint id={`${id}-hint`}>Alleen bevoegde teamleden kunnen dit verslag lezen.</span><span id={`${id}-count`} data-editor-count aria-label="Aantal tekens">{value.trim().length.toLocaleString('nl-BE')} / 20.000</span></div>
+  </div>
+  <p class="record-editor__error" data-editor-error role="status" aria-live="polite" hidden></p>
+  <noscript><p class="record-editor__fallback-note">Tekstopmaak vereist JavaScript. Je kunt hieronder gewone tekst bewaren.</p></noscript>
+</div>
+<script>
+  if(document.querySelector('[data-note-editor]'))import('../../scripts/noteEditor').catch(()=>{
+    document.querySelectorAll<HTMLElement>('[data-note-editor]:not([data-editor-ready]) [data-editor-error]').forEach(error=>{
+      error.hidden=false;
+      error.textContent='Tekstopmaak kon niet laden. Je kunt je verslag als gewone tekst schrijven en bewaren. Herlaad de pagina vóór je begint als je opmaak wilt gebruiken.';
+    });
+  });
+</script>

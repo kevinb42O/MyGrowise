@@ -1,4 +1,5 @@
 import {saveNoteForm} from './noteForm';
+import {recordWorkspace} from './clientRecordWorkspace';
 import {patientAgeLabel} from './patientAge';
 import {salutationLabels} from './patientSalutation';
 import { getBookingForNote } from './clientRecords';
@@ -17,6 +18,7 @@ export async function loadClientDetailPage(context: Pick<AstroGlobal, 'locals' |
   const patientId = context.params.id || '';
   const historyNoteId = context.url.searchParams.get('geschiedenis') || '';
   const requestedNotePage = Number(context.url.searchParams.get('pagina') || '1');
+  const workspace = recordWorkspace(context.url);
   let detailsError='';
   let noteError='';
   let submittedNote:Record<string,string>|null=null;
@@ -42,12 +44,14 @@ export async function loadClientDetailPage(context: Pick<AstroGlobal, 'locals' |
    const details=parsePatientDetails(submittedDetails);
    const {error}=await getSupabaseAdmin().rpc('save_patient_details',{p_actor:user.sub,p_patient:patientId,p_details:details,p_expected:String(form.get('expected_updated_at')||'')});
    if(error)throw new Error(error.code==='40001'?'Het dossier is intussen gewijzigd. Herlaad en controleer de gegevens.':'De gegevens konden niet worden opgeslagen. Controleer je toegang en invoer.');
-   return context.redirect(`${recordsBase}/${patientId}?melding=gegevens`,303);
+   return context.redirect(`${recordsBase}/${patientId}?onderdeel=gegevens&melding=gegevens`,303);
    }catch(cause){detailsError=cause instanceof Error?cause.message:'Opslaan is niet gelukt.';}
    }
   }
   const bookingStatus=context.url.searchParams.get('status')||'',bookingFrom=context.url.searchParams.get('van')||'',bookingTo=context.url.searchParams.get('tot')||'';
-  const patient = await getPatientDetail(user, patientId, historyNoteId, context.locals.requestId, submittedNote?.pagina ? Number(submittedNote.pagina) : requestedNotePage,Number(context.url.searchParams.get('afsprakenpagina')||1),bookingStatus,bookingFrom,bookingTo,submittedNote?.note_id || submittedNote?.corrects_note_id || context.url.searchParams.get('concept') || '');
+  const section = submittedNote ? 'verslagen' : detailsError ? (submittedDetails?.operation==='delete_empty' ? 'toegang' : 'gegevens') : workspace.section;
+  const selectedNoteId = submittedNote?.operation==='create_note' ? 'nieuw' : submittedNote?.note_id || workspace.note;
+  const patient = await getPatientDetail(user, patientId, historyNoteId, context.locals.requestId, submittedNote?.pagina ? Number(submittedNote.pagina) : requestedNotePage,Number(context.url.searchParams.get('afsprakenpagina')||1),bookingStatus,bookingFrom,bookingTo,submittedNote?.note_id || submittedNote?.corrects_note_id || context.url.searchParams.get('correctie') || context.url.searchParams.get('geschiedenis') || workspace.note, section==='verslagen');
 
   if (!patient) return context.redirect(`${recordsBase}?fout=dossier_niet_gevonden`);
   const { error: visitError } = await getSupabaseAdmin().rpc('record_patient_visit', { p_actor: user.sub, p_patient: patientId });
@@ -55,8 +59,8 @@ export async function loadClientDetailPage(context: Pick<AstroGlobal, 'locals' |
   const deletion = patient.canArchive ? await getSupabaseAdmin().rpc('patient_deletion_blocker',{p_actor:user.sub,p_patient:patientId}) : null;
   const deletionBlockers: Record<string,string> = { archive_first:'Archiveer het dossier eerst.',linked_account:'Er is een cliëntaccount gekoppeld. Accountverwijdering vraagt een afzonderlijke beoordeling.',appointments:'Het dossier bevat afspraken. De administratieve en boekhoudkundige historiek moet behouden blijven.',care_data:'Het dossier bevat zorggegevens of verslagen. Verwijdering vereist eerst beoordeling van de bewaarplicht.',not_found:'Dit dossier bestaat niet meer.' };
   const deletionBlocker = deletion?.error ? 'De controle is niet beschikbaar. Probeer later opnieuw.' : deletionBlockers[String(deletion?.data||'')]||'';
-  const staff = patient.canManageAssignments ? await getPatientStaff() : [];
-  const matchingCustomerAccounts = patient.canManageAssignments && !patient.customerUserId && patient.email
+  const staff = section==='toegang' && patient.canManageAssignments ? await getPatientStaff() : [];
+  const matchingCustomerAccounts = section==='gegevens' && patient.canManageAssignments && !patient.customerUserId && patient.email
     ? (await listUnlinkedCustomerAccounts(user, patient.email)).filter((account) => account.email?.toLowerCase() === patient.email?.toLowerCase())
     : [];
   const canWrite = hasPermission(user, 'client_records.write');
@@ -111,6 +115,6 @@ export async function loadClientDetailPage(context: Pick<AstroGlobal, 'locals' |
    ['Reden van aanmelding',patient.details.registration_reason],['Doorverwijzer',patient.details.referrer],
   ];
 
-  return { noteError, submittedNote, user, patient, deletionBlocker, detailsError, submittedDetails, bookingStatus, bookingFrom, bookingTo, staff, matchingCustomerAccounts, canWrite, assignedIds, correctionTarget, message, errorCode, messages, errors, formatDate, formatDateTime, formatLocalNow, noteLabel, statusLabel, bookingId, selectedBooking, overview, practice, recordsBase, noteBooking, noteBookings };
+  return { section, selectedNoteId, noteError, submittedNote, user, patient, deletionBlocker, detailsError, submittedDetails, bookingStatus, bookingFrom, bookingTo, staff, matchingCustomerAccounts, canWrite, assignedIds, correctionTarget, message, errorCode, messages, errors, formatDate, formatDateTime, formatLocalNow, noteLabel, statusLabel, bookingId, selectedBooking, overview, practice, recordsBase, noteBooking, noteBookings };
 }
 export type ClientDetailData = Exclude<Awaited<ReturnType<typeof loadClientDetailPage>>, Response>;

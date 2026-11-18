@@ -1,0 +1,27 @@
+---
+import NoteEditor from './NoteEditor.astro';
+import NoteContent from './NoteContent.astro';
+import { recordHref } from '../../lib/clientRecordWorkspace';
+import type { PatientNote } from '../../lib/clientRecords';
+import type { ClientDetailData } from '../../lib/clientDetailPage';
+interface Props { data: ClientDetailData; note: PatientNote }
+const { patient, noteError, submittedNote, user, canWrite, formatDateTime, noteLabel, recordsBase } = Astro.props.data;
+const base = `${recordsBase}/${patient.id}`;
+const { note } = Astro.props;
+const canEditDraft = patient.status === 'active' && note.status === 'draft' && (patient.canManageAssignments || note.createdBy === user.sub);
+const linkedBooking = patient.bookings.find(item=>item.id===note.bookingId);
+const editing = canEditDraft && (Astro.url.searchParams.get('bewerken') === '1' || Astro.url.searchParams.get('concept') === note.id || submittedNote?.note_id === note.id);
+---
+            <article class="client-note" >
+              <div class="client-note__body">
+                <header class="client-note__header"><div><p class="record-note-meta">{noteLabel(note.type)} · {formatDateTime(note.occurredAt)}</p><h3>{note.current.title}</h3>{note.bookingId && <small>{linkedBooking ? `Gekoppeld aan afspraak van ${formatDateTime(linkedBooking.startsAt)}` : 'Gekoppeld aan een afspraak'}</small>}{note.correctsNoteTitle && <small>Aanvulling bij: {note.correctsNoteTitle}</small>}</div><span class:list={['client-note-status', note.status === 'final' && 'is-final']}>{note.status === 'final' ? 'Definitief opgeslagen' : 'Concept'}</span></header>
+                {!editing && <NoteContent body={note.current.body} document={note.current.document}/>}
+                <footer class="client-note__footer"><span>{note.status === 'final' && note.finalizedAt ? `Definitief gemaakt ${formatDateTime(note.finalizedAt)}` : `Laatst opgeslagen ${formatDateTime(note.updatedAt)}`}</span><div>
+                  {note.currentVersion > 1 && <a class="client-note-action" href={recordHref(base, 'verslagen', {verslag:note.id, geschiedenis:note.id, pagina:patient.notePage})}>Versiegeschiedenis</a>}
+                  {note.status === 'final' && canWrite && patient.status === 'active' && <a class="client-note-action" href={recordHref(base, 'verslagen', {verslag:'nieuw', correctie:note.id, pagina:patient.notePage})}>Aanvulling/correctie</a>}
+                </div></footer>
+                {note.versions.length > 0 && <section class="client-note-history" aria-label="Eerdere versies"><h4>Eerdere versies</h4>{note.versions.filter((version) => version.versionNumber < note.currentVersion).map((version) => <details><summary>Versie {version.versionNumber} · {formatDateTime(version.createdAt)} · {version.title}</summary><NoteContent body={version.body} document={version.document}/></details>)}</section>}
+                {canEditDraft && !editing && <a class="record-edit-draft" href={recordHref(base, 'verslagen', {verslag:note.id, bewerken:'1', pagina:patient.notePage})}>Concept bewerken <span aria-hidden="true">→</span></a>}
+                {editing && <section class="client-note-edit"><header class="record-draft-heading"><h4>Concept bewerken</h4><a href={recordHref(base, 'verslagen', {verslag:note.id, pagina:patient.notePage})}>Terug naar verslag</a></header><form method="post" action={recordHref(base, 'verslagen', {verslag:note.id, bewerken:'1', pagina:patient.notePage})} data-note-form data-unsaved-form data-unsaved-pending={submittedNote?.note_id===note.id}><input type="hidden" name="operation" value="save_note"/><input type="hidden" name="note_id" value={note.id}/><input type="hidden" name="pagina" value={patient.notePage}/><input type="hidden" name="expected_version" value={submittedNote?.note_id===note.id ? submittedNote.expected_version : note.currentVersion}/><p data-note-status role="status" aria-live="polite">{submittedNote?.note_id===note.id ? noteError : ''}</p><label><span>Titel</span><input name="title" required minlength="2" maxlength="120" value={submittedNote?.note_id===note.id ? submittedNote.title : note.current.title}/></label><NoteEditor id={`note-body-${note.id}`} value={submittedNote?.note_id===note.id ? submittedNote.body : note.current.body} document={submittedNote?.note_id===note.id ? submittedNote.body_document : note.current.document}/><div class="client-note-edit__actions"><button class="admin-button" name="submit_status" value="draft" type="submit">Concept opslaan</button><button class="admin-button admin-button--primary" name="submit_status" value="final" type="submit">Definitief maken</button></div></form></section>}
+              </div>
+            </article>

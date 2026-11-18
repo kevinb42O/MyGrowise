@@ -6,6 +6,7 @@ document.querySelectorAll<HTMLFormElement>('form[data-note-form]').forEach(form 
     if (status && !saving) status.textContent = 'Niet opgeslagen. Bewaar je wijzigingen als concept.';
   });
   form.addEventListener('submit', async event => {
+    if (event.defaultPrevented) return;
     event.preventDefault();
     if (saving) return;
     const button = (event as SubmitEvent).submitter as HTMLButtonElement | null;
@@ -13,6 +14,7 @@ document.querySelectorAll<HTMLFormElement>('form[data-note-form]').forEach(form 
     const body = new FormData(form);
     if (button?.name) body.set(button.name, button.value);
     saving = true;
+    form.dispatchEvent(new Event('note-saving'));
     const controls = [...form.querySelectorAll<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement | HTMLButtonElement>('input, textarea, select, button')].filter(item=>!item.disabled);
     controls.forEach(item => item.disabled = true);
     form.setAttribute('aria-busy', 'true');
@@ -31,6 +33,7 @@ document.querySelectorAll<HTMLFormElement>('form[data-note-form]').forEach(form 
       saving = false;
       controls.forEach(item => item.disabled = false);
       form.removeAttribute('aria-busy');
+      form.dispatchEvent(new Event('note-save-failed'));
     }
   });
 });

@@ -1,0 +1,25 @@
+---
+import NoteEditor from './NoteEditor.astro';
+import AdminIcon from '../admin/AdminIcon.astro';
+import { toBrusselsLocalInput } from '../../lib/brusselsTime';
+import { noteTypeLabels } from '../../lib/clientRecords';
+import { recordHref } from '../../lib/clientRecordWorkspace';
+import type { ClientDetailData } from '../../lib/clientDetailPage';
+interface Props { data: ClientDetailData }
+const { patient, noteError, submittedNote, canWrite, correctionTarget, formatDateTime, formatLocalNow, bookingId, practice, recordsBase, noteBooking, noteBookings } = Astro.props.data;
+const base = `${recordsBase}/${patient.id}`;
+const newNote = submittedNote?.operation === 'create_note' ? submittedNote : null;
+---
+        {canWrite && patient.status === 'active' && <section class="admin-panel client-note-create" >
+          <header class="admin-panel__header"><div><h2>{correctionTarget ? 'Aanvulling of correctie' : 'Nieuw verslag'}</h2><p>{correctionTarget ? `Wordt als afzonderlijk item gekoppeld aan “${correctionTarget.current.title}”.` : 'Bewaar de tekst als concept of maak het verslag definitief.'}</p></div></header>
+          <form method="post" action={recordHref(base, 'verslagen', {verslag:'nieuw', correctie:correctionTarget?.id})} data-note-form data-unsaved-form data-unsaved-pending={Boolean(newNote)}>
+            <input type="hidden" name="operation" value="create_note"/><p data-note-status role="status" aria-live="polite">{newNote ? noteError : 'Nog niet opgeslagen. Bewaar je verslag als concept voordat je verdergaat.'}</p>
+            <div class="record-form-meta">{correctionTarget ? <><input type="hidden" name="note_type" value="correction"/><input type="hidden" name="corrects_note_id" value={correctionTarget.id}/></> : <label><span>Type verslag</span><select name="note_type">{Object.entries(noteTypeLabels).filter(([key]) => key !== 'correction').map(([key, label]) => <option value={key} selected={key === (newNote?.note_type || 'session')}>{label}</option>)}</select></label>}
+            <div class="client-note-create__grid"><label><span>Datum en tijd</span><input type="datetime-local" name="occurred_at" required value={newNote?.occurred_at ?? (noteBooking ? toBrusselsLocalInput(noteBooking.startsAt) : formatLocalNow())}/></label>{noteBookings.length > 0 && <label><span>Koppel een afspraak <small>optioneel</small></span><select name="booking_id"><option value="">Geen afspraak koppelen</option>{noteBookings.map((item) => <option value={item.id} selected={item.id === (newNote?.booking_id ?? bookingId)}>{formatDateTime(item.startsAt)} · {item.practitionerName}</option>)}</select></label>}</div>
+            </div>
+            <label><span>Titel</span><input name="title" required minlength="2" maxlength="120" placeholder="Bijvoorbeeld: Sessie — thema en voortgang" value={newNote?.title ?? (correctionTarget ? `Aanvulling op: ${correctionTarget.current.title}` : undefined)}/></label>
+            <NoteEditor id="new-note-body" value={newNote?.body||''} document={newNote?.body_document}/>
+            <div class="client-note-create__actions"><button class="admin-button" name="submit_status" value="draft" type="submit">Opslaan als concept</button><button class="admin-button admin-button--primary" name="submit_status" value="final" type="submit"><AdminIcon name="check" size={15}/> Definitief opslaan</button></div>
+          </form>
+          <div class="record-editor-next"><a class="admin-button" href={`${practice ? '/praktijk' : '/admin'}/afspraken/nieuw?client=${patient.id}`}>Vervolgafspraak plannen</a></div>
+        </section>}

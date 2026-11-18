@@ -21,7 +21,7 @@ export const POST: APIRoute = async ({ request, params, locals, redirect }) => {
       bookingId: String(form.get('booking_id') || '') || null,
       type: requestedType as PatientNote['type'],
       occurredAt: String(form.get('occurred_at') || ''),
-      title: form.get('title'), body: form.get('body'),
+      title: form.get('title'), body: form.get('body'), document: form.get('body_document'),
       status: finalize ? 'final' : 'draft',
       correctsNoteId: String(form.get('corrects_note_id') || '') || null,
     }, user, auditActor(user, locals.requestId, `/api/admin/clienten/${patientId}/notities`));

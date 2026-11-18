@@ -12,9 +12,9 @@ export const POST: APIRoute = async ({ request, params, locals, redirect }) => {
   const assign = String(form.get('operation') || '') === 'assign';
   try {
     await changePatientAssignment({ patientId, assigneeUserId: String(form.get('user_id') || ''), assign }, user, auditActor(user, locals.requestId, `/api/admin/clienten/${patientId}/toewijzingen`));
-    return redirect(`${recordsBase}/${encodeURIComponent(patientId)}?melding=${assign ? 'toegewezen' : 'toewijzing_beeindigd'}`, 303);
+    return redirect(`${recordsBase}/${encodeURIComponent(patientId)}?onderdeel=toegang&melding=${assign ? 'toegewezen' : 'toewijzing_beeindigd'}`, 303);
   } catch {
-    return redirect(`${recordsBase}/${encodeURIComponent(patientId)}?fout=toewijzing_mislukt`, 303);
+    return redirect(`${recordsBase}/${encodeURIComponent(patientId)}?onderdeel=toegang&fout=toewijzing_mislukt`, 303);
   }
 };
 export const ALL: APIRoute = () => new Response('Methode niet toegestaan.', { status: 405 });
