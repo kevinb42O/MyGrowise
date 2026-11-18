@@ -56,6 +56,7 @@ const paidOrders = orders.filter((order) => order.status === 'paid' || order.sta
     </section>
 
     {message === 'bevestigd' && <div class="orders-flash" role="status"><AdminIcon name="check" size={17}/> Betaling bevestigd. De bestelling is geactiveerd.</div>}
+    {message === 'bevestigd-mail' && <div class="orders-flash orders-flash--error" role="alert"><AdminIcon name="warning" size={17}/> Betaling bevestigd en inhoud vrijgegeven. De e-mailverwerking vraagt aandacht. Controleer de verzendstatus bij de bestelling en de mailwachtrij. De klant kan ook een nieuwe aankooplink aanvragen.{hasPermission(Astro.locals.adminUser,'integrations.read')&&<a href="/admin/mail?queue=commerce_mail_jobs&status=pending">Bekijk de mailwachtrij →</a>}</div>}
     {message === 'fout' && <div class="orders-flash orders-flash--error" role="alert"><AdminIcon name="warning" size={17}/> Betaling kon niet worden bevestigd. Vernieuw de pagina en probeer opnieuw.</div>}
 
     <section class="admin-catalog-stats orders-stats" aria-label="Bestellingsoverzicht">
@@ -85,7 +86,7 @@ const paidOrders = orders.filter((order) => order.status === 'paid' || order.sta
                 <td data-label="Bedrag"><strong class="admin-table-price">{formatMoney(order.totalCents, order.currency)}</strong></td>
                 <td data-label="Datum"><time datetime={order.createdAt}>{formatDate(order.createdAt)}</time></td>
                 <td data-label="Status"><span class={`orders-status orders-status--${statusTone(order)}`}><i></i>{statusText(order)}</span>{order.paymentClaimedAt && order.status === 'pending_payment' && <small class="orders-status-detail">Gemeld {formatDate(order.paymentClaimedAt)}</small>}{order.paymentVerifiedAt && <small class="orders-status-detail">Bevestigd {formatDate(order.paymentVerifiedAt)}</small>}</td>
-                <td data-label="Actie">{isManualWise(order) && order.status === 'pending_payment' && canVerify ? <form action={`/api/admin/wise-reconciliation/${order.id}`} method="post"><button type="submit" class="admin-button admin-button--primary orders-confirm">Bevestig betaling</button></form> : <span class="orders-no-action" aria-hidden="true">—</span>}</td>
+                <td data-label="Actie">{isManualWise(order) && order.status === 'pending_payment' && canVerify ? <a href={`/admin/bestellingen/${order.id}`} class="admin-button admin-button--primary orders-confirm">Controleer betaling</a> : <span class="orders-no-action" aria-hidden="true">—</span>}</td>
               </tr>;
             })}
           </tbody>

@@ -1,6 +1,6 @@
 /** The same dated text is shown before purchase and included in the order email. */
-export const termsVersion = '9 november 2026 — versie 3';
-export const termsRevision = '2026-11-09.3';
+export const termsVersion = '18 november 2026 — versie 4';
+export const termsRevision = '2026-11-18.4';
 export const digitalDeliveryStatement = 'Ik stem uitdrukkelijk in met levering van de digitale e-books, modules, werkboeken en audio vóór het einde van de bedenktijd, zodra mijn betaling is bevestigd. Ik erken dat ik mijn herroepingsrecht voor die digitale inhoud verlies zodra de uitvoering van de levering begint.';
 export const digitalContentItems = <T extends { type: string }>(items: readonly T[]) => items.filter(item => ['module', 'guide'].includes(item.type));
 export const termsSections = [
@@ -19,7 +19,7 @@ export const termsSections = [
     'MyGrowise controleert de ontvangen overschrijving voordat de betaling wordt bevestigd en betaalde toegang wordt verleend. Bij een fout bedrag, dubbele betaling of verkeerde referentie kan je ons met je bestelreferentie contacteren. Je hoeft niet opnieuw te betalen om een administratieve fout te laten nakijken.',
   ] },
   { id: 'levering', title: 'Digitale levering en toegang', paragraphs: [
-    'Na bevestiging van de betaling worden beschikbare digitale materialen via Mijn aankopen toegankelijk gemaakt. Een veilige link per e-mail geeft je toegang zonder verplicht account. Voor het e-book van Fien ontvang je na betaalbevestiging een persoonlijke activatiecode. Die code werkt één keer. Daarna kun je het boek opnieuw openen via je aankooptoegang. Een verlopen link beëindigt je aankoop niet; je kan een nieuwe toegangslink aanvragen met het contactadres van de bestelling.',
+    'Na bevestiging van de betaling worden beschikbare digitale materialen via Mijn aankopen toegankelijk gemaakt. Een veilige link per e-mail geeft je toegang zonder verplicht account. Voor het e-book van Fien controleert Virginie de overschrijving binnen 1 werkdag na ontvangst. Pas na haar handmatige betaalbevestiging krijg je toegang tot het volledige boek en de downloads. Je ontvangt een persoonlijke e-maillink om je boek te openen; een activatiecode is niet nodig. Een verlopen link beëindigt je aankoop niet; je kan een nieuwe toegangslink aanvragen met het contactadres van de bestelling.',
     'Vragenlijstafnames en persoonlijke rapporten vragen voorbereiding of verwerking door een professional. Een betaalbevestiging betekent daarom niet dat het rapport al klaar is. De afgesproken vervolgstappen en eventuele specifieke leveringstermijn staan bij het aanbod of in je persoonlijke afname-instructies. We leveren zonder onnodige vertraging en informeren je bij een probleem. Bij uitblijvende levering kan je ons vragen alsnog binnen een redelijke aanvullende termijn te leveren; je wettelijke recht op ontbinding en terugbetaling blijft gelden.',
     'Je hebt een internetverbinding, toegang tot je contactmail en een actuele browser nodig. Voor downloads heb je een programma nodig dat het vermelde bestandsformaat kan openen, bijvoorbeeld een PDF-lezer of audiospeler. Externe afnames kunnen een afzonderlijke beveiligde omgeving gebruiken; de instructies vermelden hoe je die opent. Specifieke technische beperkingen of een beperkte toegangsduur worden vóór aankoop bij het aanbod vermeld. Deze voorwaarden voeren geen aanvullende vervaldatum voor bestaande aankooptoegang in.',
   ] },

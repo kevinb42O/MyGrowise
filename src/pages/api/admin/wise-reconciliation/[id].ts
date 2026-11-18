@@ -1,6 +1,6 @@
 import {deliverCommerceMail} from '../../../../lib/catalog/mail';
 import type { APIRoute } from 'astro';
-import { isTrustedFormOrigin } from '../../../../lib/adminAuth';
+import { isTrustedFormOrigin, hasPermission } from '../../../../lib/adminAuth';
 import { getSupabaseAdmin } from '../../../../lib/supabase/server';
 
 export const prerender = false;
@@ -11,10 +11,15 @@ export const POST: APIRoute = async ({ request, params, locals }) => {
   if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id)) return new Response('Bestelling niet gevonden.', { status: 404 });
   const actor = locals.adminUser;
   if (!actor?.sub) return new Response('Niet aangemeld.', { status: 401 });
+  if (!hasPermission(actor,'orders.verify')) return new Response('Geen toegang.', { status: 403 });
+  let confirmation:FormData;
+  try{confirmation=await request.formData();}catch{return new Response('Controleer eerst de ontvangen overschrijving op de bestelpagina.',{status:400});}
+  if(confirmation.get('payment_received')!=='confirmed')return new Response('Bevestig eerst dat bedrag en mededeling overeenkomen met de ontvangen overschrijving.',{status:400});
   const { error } = await getSupabaseAdmin().rpc('confirm_wise_manual_payment', { p_order_id: id, p_actor_id: actor.sub });
   if (error) return Response.redirect(new URL('/admin/bestellingen?melding=fout', request.url), 303);
-  await deliverCommerceMail(4,id).catch(()=>undefined);
-  return Response.redirect(new URL('/admin/bestellingen?melding=bevestigd', request.url), 303);
+  const mail=await deliverCommerceMail(4,id).catch(()=>null);
+  const notice=!mail||mail.configured===false||mail.failed>0?'bevestigd-mail':'bevestigd';
+  return Response.redirect(new URL(`/admin/bestellingen?melding=${notice}`, request.url), 303);
 };
 
 export const ALL: APIRoute = () => new Response('Methode niet toegestaan.', { status: 405 });

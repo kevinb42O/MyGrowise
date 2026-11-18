@@ -8,7 +8,7 @@ test('sales are closed by default in production and only explicit approval opens
 });
 test('closed checkout rejects new guest orders before parsing personal information or contacting the database',async()=>{
  let touched=false;const {POST}=load('pages/api/checkout/catalog-order.ts',{
-  '../../../lib/ebooks/book':{isEbook:()=>false},'../../../lib/commerce/readiness':{salesEnabled:()=>false,salesPausedMessage:'Verkoop gepauzeerd'},
+  '@vercel/functions':{waitUntil:()=>{}},'../../../lib/ebooks/book':{isEbook:()=>false},'../../../lib/commerce/readiness':{salesEnabled:()=>false,salesPausedMessage:'Verkoop gepauzeerd'},
   '../../../lib/catalog/mail':{},'../../../lib/catalog/server':{},'../../../lib/commerce/terms':{},'../../../lib/adminAuth':{isTrustedFormOrigin:()=>true},'../../../lib/catalog/pricing':{},
   '../../../lib/supabase/server':{getSupabaseAdmin:()=>{touched=true;throw new Error('Must not run');}},'../../../lib/wiseCheckout':{},'../../../lib/supportMail':{},'../../../lib/commerce/purchases':{privateHeaders:{'cache-control':'private, no-store'}},
  });
@@ -24,11 +24,11 @@ test('mail recovery requires a trusted origin and administrative integration per
 });
 test('order confirmation sends a durable copy of the terms only to the buyer at order creation',async()=>{
  const sent=[];const terms=load('lib/commerce/terms.ts');
- const order={status:'paid',provider_reference:'TEST-REFERENCE',total_cents:2500,contact_snapshot:{email:'buyer@example.invalid',terms_text:terms.termsForEmail(),digital_delivery_consent:{statement:terms.digitalDeliveryStatement}},commerce_buyers:{email:'buyer@example.invalid',first_name:'Test',last_name:'Buyer'},order_items:[{product_type:'module',product_title:'Module'}]};
+ const order={status:'paid',payment_verified_at:'2026-11-18T09:00:00Z',provider_reference:'TEST-REFERENCE',total_cents:2500,contact_snapshot:{email:'buyer@example.invalid',terms_text:terms.termsForEmail(),digital_delivery_consent:{statement:terms.digitalDeliveryStatement}},commerce_buyers:{email:'buyer@example.invalid',first_name:'Test',last_name:'Buyer'},order_items:[{product_type:'module',product_title:'Module'}]};
  const db={rpc:async()=>({data:[{id:'created',event:'created',target:'buyer'},{id:'team',event:'created',target:'team'},{id:'paid',event:'paid',target:'buyer'},{id:'delivery',event:'delivery',target:'buyer'}].map(job=>({...job,order_id:'test-order',lease_token:'lease'})),error:null}),from:table=>table==='orders'?{select:()=>({eq:()=>({single:async()=>({data:order,error:null})})})}:{update:()=>({eq:()=>({eq:async()=>({error:null})})})}};
  const {deliverCommerceMail}=load('lib/catalog/mail.ts',{
-  '../ebooks/book':{isEbook:item=>item.product_slug==='test-book'},'../ebooks/server':{issueBookCode:async id=>{assert.equal(id,'book-item');return 'FIEN-TESTCODE';}},'../commerce/websiteMail':{websiteMailReady:()=>true,sendWebsiteEmail:async(to,subject,text,_replyTo,_messageId,html,attachments)=>{sent.push({to,subject,text,html,attachments});}},
-  '../commerce/purchases':{makePurchaseLink:async()=> 'https://example.invalid/aankopen'},
+  '../ebooks/book':{BOOK_LIBRARY_PATH:'/aankopen/boeken/test-book',isEbook:item=>item.product_slug==='test-book'},'../ebooks/server':{issueBookCode:async id=>{assert.equal(id,'book-item');return 'FIEN-TESTCODE';}},'../commerce/websiteMail':{websiteMailReady:()=>true,sendWebsiteEmail:async(to,subject,text,_replyTo,_messageId,html,attachments)=>{sent.push({to,subject,text,html,attachments});}},
+  '../commerce/purchases':{makePurchaseLink:async(_email,next='/aankopen')=> 'https://example.invalid'+next},
   '../supabase/server':{getSupabaseAdmin:()=>db},'./pricing':{money:()=> '€25,00'},'../commerce/termsArchive':load('lib/commerce/termsArchive.ts'),
   '../emailTemplate':load('lib/emailTemplate.ts'),
  },{PUBLIC_SITE_URL:'https://example.invalid'});
@@ -58,12 +58,12 @@ test('order confirmation sends a durable copy of the terms only to the buyer at 
  sent.length=0;
  order.order_items=[{id:'book-item',product_type:'guide',product_slug:'test-book',product_title:'Testboek'}];
  await deliverCommerceMail();
- assert.match(sent[0].text,/Na bevestiging van je overschrijving ontvang je je persoonlijke activatiecode/);
+ assert.match(sent[0].text,/Pas na haar bevestiging ontvang je een persoonlijke link/);
  assert.doesNotMatch(sent[0].text,/FIEN-TESTCODE/);
  assert.doesNotMatch(sent[1].text,/FIEN-TESTCODE/);
- assert.match(sent[2].text,/FIEN-TESTCODE/);
- assert.match(sent[2].html,/Activeer mijn boek/);
- assert.match(sent[2].html,/https:\/\/example.invalid\/boeken\/activeren/);
+ assert.doesNotMatch(sent[2].text,/FIEN-TESTCODE/);
+ assert.match(sent[2].html,/Open mijn boek/);
+ assert.match(sent[2].html,/https:\/\/example.invalid\/aankopen\/boeken\/test-book/);
 
 });
 test('digital delivery consent is separately required and stored with agreed text for guest and account checkout',async()=>{
@@ -73,7 +73,7 @@ test('digital delivery consent is separately required and stored with agreed tex
   let snapshot;let calls=0;
   const form=new FormData();for(const [key,value] of Object.entries({terms:'accepted',ids:product,mode:'custom',hash:'a'.repeat(32),submission,email:'test@example.invalid'}))form.set(key,value);
   const {POST}=load('pages/api/checkout/catalog-order.ts',{
-   '../../../lib/ebooks/book':{isEbook:()=>false},'../../../lib/commerce/readiness':{salesEnabled:()=>true},'../../../lib/catalog/mail':{deliverCommerceMail:async()=>{}},
+   '@vercel/functions':{waitUntil:()=>{}},'../../../lib/ebooks/book':{isEbook:()=>false},'../../../lib/commerce/readiness':{salesEnabled:()=>true},'../../../lib/catalog/mail':{deliverCommerceMail:async()=>{}},
    '../../../lib/catalog/server':{quoteCatalog:async()=>({items:[{id:product,type:'module'}]})},'../../../lib/commerce/terms':terms,
    '../../../lib/adminAuth':{isTrustedFormOrigin:()=>true,isCustomerAccount:()=>signedIn},'../../../lib/catalog/pricing':{isUuid:()=>true},
    '../../../lib/supabase/server':{getSupabaseAdmin:()=>({rpc:async(name,args)=>{calls++;snapshot=args.p_contact;assert.equal(name,signedIn?'create_account_checkout':'create_guest_catalog_order');return {data:'test-order'};}})},

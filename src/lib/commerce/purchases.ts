@@ -54,7 +54,7 @@ export async function purchaseOrders(owner:PurchaseOwner){
 }
 export async function purchaseOrder(id:string,cookies:AstroCookies,user?:UserSession|null){
  if(!isUuid(id))return null;
- const {data,error}=await getSupabaseAdmin().from('orders').select('id,buyer_id,customer_user_id,checkout_hash,contact_snapshot,status,total_cents,currency,provider_reference,order_items(product_title,price_cents,product_type,product_id)').eq('id',id).maybeSingle();
+ const {data,error}=await getSupabaseAdmin().from('orders').select('id,buyer_id,customer_user_id,checkout_hash,contact_snapshot,status,payment_verified_at,total_cents,currency,provider_reference,order_items(product_title,price_cents,product_type,product_id,product_slug)').eq('id',id).maybeSingle();
  if(error)throw new Error('purchase_unavailable');if(!data)return null;
  if(isCustomerAccount(user)&&data.customer_user_id===user!.sub)return data;
  const checkout=cookies.get(CHECKOUT_COOKIE)?.value;
@@ -77,5 +77,5 @@ export async function makePurchaseLink(email:string,next='/aankopen'){
  const token=secret();const {error}=await getSupabaseAdmin().from('commerce_access_tokens').insert({token_hash:digest(token),email,expires_at:new Date(Date.now()+30*60000).toISOString()});if(error)throw new Error('access_unavailable');
  const configured=import.meta.env.PUBLIC_SITE_URL?.trim();if(import.meta.env.PROD&&!configured)throw new Error('origin_unavailable');
  const origin=new URL(configured||'http://localhost:4321').origin;
- return `${origin}/aankopen/toegang#token=${encodeURIComponent(token)}&next=${encodeURIComponent(purchaseNext(next))}`;
+ return `${origin}/aankopen/toegang?next=${encodeURIComponent(purchaseNext(next))}#token=${encodeURIComponent(token)}&next=${encodeURIComponent(purchaseNext(next))}`;
 }

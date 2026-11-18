@@ -2,7 +2,7 @@ import type {AstroCookies} from 'astro';
 import type {UserSession} from '../adminAuth';
 import {createHmac} from 'node:crypto';
 import {getSupabaseAdmin} from '../supabase/server';
-import {digest,tokenValid,purchaseOwner,hasPurchase,purchaseOrders,type PurchaseOwner} from '../commerce/purchases';
+import {digest,tokenValid,purchaseOwner,purchaseOrders,type PurchaseOwner} from '../commerce/purchases';
 import {signR2BookUrl} from './r2';
 import {BOOK_SLUG,BOOK_LIBRARY_PATH} from './book';
 const alphabet='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -39,11 +39,16 @@ export async function isBookPublic(): Promise<boolean> {
   return false;
  }
 }
-export async function ebookActivated(owner:PurchaseOwner,productId:string){
- if(!await hasPurchase(owner,productId))return false;
+/** A verified identity is not payment proof. Only staff-confirmed, active purchases unlock the book. */
+export async function hasPaidBook(owner:PurchaseOwner,productId:string){
  const orders=(await purchaseOrders(owner)).filter(o=>['paid','fulfilled'].includes(o.status)).map(o=>o.id);
  if(!orders.length)return false;
- const {data,error}=await getSupabaseAdmin().from('ebook_licenses').select('order_item_id,order_items!inner(order_id,product_id)').in('order_items.order_id',orders).eq('order_items.product_id',productId).not('activated_at','is',null).limit(1);
+ const {data,error}=await getSupabaseAdmin().from('entitlements')
+  .select('id,order_items!inner(orders!inner(status,payment_verified_at,provider))')
+  .in('order_items.order_id',orders).eq('product_id',productId).eq('status','active')
+  .in('order_items.orders.status',['paid','fulfilled'])
+  .eq('order_items.orders.provider','wise_manual')
+  .not('order_items.orders.payment_verified_at','is',null).limit(1);
  if(error)throw new Error('ebook_unavailable');return Boolean(data?.length);
 }
 export async function ebookDownload(productId:string,format:'pdf'|'epub',download=true){
@@ -65,9 +70,11 @@ export async function hasBookSession(cookies:AstroCookies,productId:string){
  if(error)throw new Error('ebook_unavailable');
  if(!data)return false;
  const {data:right,error:accessError}=await db.from('entitlements')
-  .select('id,order_items!inner(orders!inner(status))')
+  .select('id,order_items!inner(orders!inner(status,payment_verified_at,provider))')
   .eq('order_item_id',data.order_item_id).eq('product_id',productId).eq('status','active')
-  .in('order_items.orders.status',['paid','fulfilled']).limit(1);
+  .in('order_items.orders.status',['paid','fulfilled'])
+  .eq('order_items.orders.provider','wise_manual')
+  .not('order_items.orders.payment_verified_at','is',null).limit(1);
  if(accessError)throw new Error('ebook_unavailable');
  return Boolean(right?.length);
 }
@@ -77,5 +84,5 @@ export async function canReadBook(cookies:AstroCookies,user?:UserSession|null) {
  if(!product)return false;
  if(await hasBookSession(cookies,product.id))return true;
  const owner=await purchaseOwner(cookies,user);
- return !!owner&&await ebookActivated(owner,product.id);
+ return !!owner&&await hasPaidBook(owner,product.id);
 }

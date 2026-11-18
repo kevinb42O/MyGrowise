@@ -56,7 +56,7 @@ try {
   const recoveryCookie=recovery.headers.getSetCookie().find(value=>value.startsWith('mg_purchase=')).split(';')[0];
 
   assert.equal((await request('/api/boeken/download/pdf')).status,401);
-  assert.equal((await request('/api/boeken/download/pdf',{cookie:recoveryCookie})).status,404);
+  assert.equal((await request('/api/boeken/download/pdf',{cookie:recoveryCookie})).status,303);
   assert.equal((await request(`/api/aankopen/material/${book.id}?download=1`,{cookie:recoveryCookie})).status,404);
   const attempts=await Promise.all([1,2].map(()=>request('/api/boeken/activeren',{form:{code}})));
   const accepted=attempts.filter(r=>r.headers.get('location')===`/aankopen/boeken/${slug}`);
@@ -81,7 +81,7 @@ try {
   await query("update public.orders set status='refunded' where id=$1",[orderId]);
   assert.equal((await request('/api/boeken/download/pdf',{cookie})).status,401);
   assert.equal((await request('/api/boeken/download/pdf',{cookie:recoveryCookie})).status,404);
-  console.log('E-book checks passed: €14.95 quote, checkout without birth date, payment gate, concurrent one-time redemption, book-only session, PDF/EPUB, email recovery and refund revocation.');
+  console.log('E-book checks passed: €14.95 quote, checkout without birth date, payment gate, concurrent one-time redemption, book-only session, PDF/EPUB, email recovery without a code and refund revocation.');
 } finally {
   await query('rollback').catch(()=>{});
   if(orderId){

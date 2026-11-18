@@ -10,5 +10,5 @@ export const POST:APIRoute=async({request,cookies,url})=>{
   const {data,error}=await getSupabaseAdmin().rpc('consume_purchase_token',{p_token:digest(token),p_session:digest(session)});if(error||data!==true)throw new Error('invalid_token');
   cookies.set(PURCHASE_COOKIE,session,purchaseCookieOptions(url.protocol==='https:'));
   return new Response(null,{status:303,headers:{...privateHeaders,location:purchaseNext(f.get('next'))}});
- }catch{return new Response(null,{status:303,headers:{...privateHeaders,location:'/aankopen/toegang?error=expired'}});}
+ }catch{return new Response(null,{status:303,headers:{...privateHeaders,location:`/aankopen/toegang?error=expired&next=${encodeURIComponent(purchaseNext(f.get('next')))}`}});}
 };

@@ -2,8 +2,8 @@
 import AppIcons from '../components/astro/AppIcons.astro';
 import '../styles/global.css';
 import '../styles/purchases.css';
-interface Props { title: string; access?: boolean }
-const { title, access = false } = Astro.props;
+interface Props { title: string; access?: boolean; bookOnly?: boolean }
+const { title, access = false, bookOnly = false } = Astro.props;
 Astro.response.headers.set('Cache-Control', 'private, no-store');
 Astro.response.headers.set('Referrer-Policy', 'no-referrer');
 ---
@@ -23,7 +23,7 @@ Astro.response.headers.set('Referrer-Policy', 'no-referrer');
     <header class="purchase-header">
       <a class="purchase-brand" href="/" aria-label="MyGrowise, naar de startpagina"><img src="/images/logo-lelie.webp" alt="" width="382" height="289" /><span><em>My</em>Growise</span></a>
       <nav aria-label="Aankoopnavigatie">
-        {!access && <a href="/aankopen" aria-current={Astro.url.pathname === '/aankopen' ? 'page' : undefined}>Mijn aankopen</a>}
+        {!access && !bookOnly && <a href="/aankopen" aria-current={Astro.url.pathname === '/aankopen' ? 'page' : undefined}>Mijn aankopen</a>}
         <a href="/contact">Hulp nodig?</a>
         <a class="purchase-site-link" href="/">Naar de website <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17 17 7M7 7h10v10" /></svg></a>
       </nav>

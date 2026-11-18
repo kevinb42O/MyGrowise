@@ -10,8 +10,8 @@ export const POST:APIRoute=async({request})=>{
  const f=await request.formData();const email=String(f.get('email')||'').trim().toLowerCase(),next=purchaseNext(f.get('next'));
  try{const ip=request.headers.get('x-forwarded-for')?.split(',')[0]||'unknown';
   if(email.length<=254&&/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)&&await rateLimitSupport('purchase-access-ip',ip,10,3600)&&await rateLimitSupport('purchase-access-email',email,4,3600)){
-   await queueWebsiteMail('purchase_access',{email,next});
-   waitUntil(deliverWebsiteMail(5).catch(()=>undefined));
+   const job=await queueWebsiteMail('purchase_access',{email,next});
+   waitUntil(deliverWebsiteMail(1,job).catch(()=>undefined));
   }
  }catch{/* Neutral response never reveals whether an address has bought something. */}
  // A queue task is processed by cron; response timing must not reveal existence.

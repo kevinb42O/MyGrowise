@@ -1,24 +1,26 @@
 ---
 import PurchaseLayout from '../../layouts/PurchaseLayout.astro';
 import Icon from '../../components/purchases/PurchaseIcon.astro';
+import {BOOK_LIBRARY_PATH,BOOK_COVER} from '../../lib/ebooks/book';
 import {privateHeaders,purchaseNext} from '../../lib/commerce/purchases';
 Object.entries(privateHeaders).forEach(([k,v])=>Astro.response.headers.set(k,v));
 const next=purchaseNext(Astro.url.searchParams.get('next'));
+const book=next===BOOK_LIBRARY_PATH;
 const sent=Astro.url.searchParams.has('sent');
 const error=Astro.url.searchParams.has('error');
 ---
-<PurchaseLayout title="Toegang tot je aankopen" access>
+<PurchaseLayout title={book?'Open jouw boek':'Toegang tot je aankopen'} access>
   <div class="purchase-access">
     <section class="purchase-welcome" aria-labelledby="welcome-title">
-      <div class="purchase-welcome-copy"><h1 id="welcome-title">Jouw volgende stap.<br /><em>Op jouw tempo.</em></h1><p>Je werkboeken, audio en persoonlijke resultaten. Bij elkaar, zodat je verder kunt waar jij wilt.</p></div>
-      <div class="purchase-welcome-photo"><img src="/images/modules/zelfreflectie-hero-v2.webp" alt="" width="1120" height="1400" /><p>Ruimte om even<br /><em>bij jezelf stil te staan.</em></p></div>
+      <div class="purchase-welcome-copy"><h1 id="welcome-title">{book?<>Jouw boek.<br/><em>Altijd weer verder.</em></>:<>Jouw volgende stap.<br /><em>Op jouw tempo.</em></>}</h1><p>{book?'Open Fien met het e-mailadres van je bestelling. Je hebt geen account of activatiecode nodig.':'Je werkboeken, audio en persoonlijke resultaten. Bij elkaar, zodat je verder kunt waar jij wilt.'}</p></div>
+      <div class:list={['purchase-welcome-photo',{'purchase-welcome-photo--book':book}]}><img src={book?BOOK_COVER:'/images/modules/zelfreflectie-hero-v2.webp'} alt="" width="1120" height="1400" />{!book&&<p>Ruimte om even<br /><em>bij jezelf stil te staan.</em></p>}</div>
     </section>
     <section class="purchase-access-panel" aria-label="Toegang tot je aankopen">
       <div class="purchase-access-inner">
         <div class="purchase-access-symbol"><Icon name={sent ? 'check' : 'mail'} /></div>
         <div data-purchase-request>
-          <h2 id="access-title">{sent ? 'Bekijk je e-mail.' : 'Open je aankopen.'}</h2>
-          <p class="purchase-lead">{sent ? 'Als er aankopen bij dit adres horen, ontvang je een e-mail met een toegangslink.' : 'Vul het e-mailadres van je bestelling in. Je ontvangt een link waarmee je direct verder kunt, zonder wachtwoord.'}</p>
+          <h2 id="access-title">{sent ? 'Bekijk je e-mail.' : book?'Open je boek.':'Open je aankopen.'}</h2>
+          <p class="purchase-lead">{sent ? 'Als er een bestelling bij dit adres hoort, ontvang je een e-mail met een persoonlijke link. Dit kan enkele minuten duren.' : 'Vul het e-mailadres van je bestelling in. Je ontvangt een link waarmee je direct verder kunt, zonder wachtwoord.'}</p>
           {error && <div class="purchase-notice purchase-notice--error" role="alert"><strong>Deze link kon niet worden geopend.</strong><p>De link is mogelijk verlopen of al gebruikt. Vraag hieronder een nieuwe aan.</p></div>}
           {sent ? <div class="purchase-sent" role="status"><p>Open de mail van MyGrowise en gebruik de toegangslink. Kijk ook in je spammap.</p><a class="purchase-text-link" href={`/aankopen/toegang?next=${encodeURIComponent(next)}`}>Geen mail ontvangen? Probeer opnieuw <Icon name="arrow" /></a></div> : <form class="purchase-form" action="/api/aankopen/aanvragen" method="post" data-purchase-request-form>
             <input type="hidden" name="next" value={next}/>
@@ -29,12 +31,13 @@ const error=Astro.url.searchParams.has('error');
           </form>}
         </div>
         <form class="purchase-token-form" data-purchase-token hidden action="/api/aankopen/toegang" method="post">
-          <h2 tabindex="-1" data-purchase-token-title>Je kunt verder.</h2><p class="purchase-lead">Open je aankopen via de link uit je e-mail. Je hebt geen wachtwoord nodig.</p>
+          <h2 tabindex="-1" data-purchase-token-title>{book?'Open jouw boek.':'Je kunt verder.'}</h2><p class="purchase-lead">{book?'Gebruik de knop hieronder om naar je boek te gaan. Toegang tot het volledige boek volgt alleen na Virginies handmatige betaalbevestiging.':'Open je aankopen via de link uit je e-mail. Je hebt geen wachtwoord nodig.'}</p>
           <input type="hidden" name="token"/><input type="hidden" name="next" value={next}/>
-          <button class="purchase-button" type="submit">Open mijn aankopen <Icon name="arrow" /></button>
+          <button class="purchase-button" type="submit">{book?'Open mijn boek':'Open mijn aankopen'} <Icon name="arrow" /></button>
         </form>
         <noscript><div class="purchase-notice">Schakel JavaScript in om je e-maillink te openen, of <a href="/contact">neem contact op voor hulp</a>.</div></noscript>
         <p class="purchase-access-note">Een toegangslink is 30 minuten geldig. Je betaalde inhoud blijft ook daarna bereikbaar via een nieuwe link.</p>
+        {book&&<p class="purchase-access-note">Virginie controleert je betaling binnen 1 werkdag na ontvangst. Een toegangslink bevestigt je e-mailadres; je boek wordt pas na haar betaalbevestiging beschikbaar.</p>}
         <div class="purchase-account-link"><p>Gebruik je liever je account?</p><a class="purchase-text-link" href={`/account/inloggen?next=${encodeURIComponent(next)}`}>Inloggen met wachtwoord <Icon name="arrow" /></a><span>Een account aanmaken is niet nodig.</span></div>
       </div>
     </section>
@@ -45,6 +48,13 @@ const error=Astro.url.searchParams.has('error');
   const openLink=()=>{
    const params=new URLSearchParams(location.hash.slice(1)),token=params.get('token');
    if(!token)return;
+   const next=params.get('next');
+   if(next){
+    const target=new URL(location.href);
+    // This value only controls recovery navigation; the server validates it again.
+    target.searchParams.set('next',next.slice(0,2000));
+    history.replaceState(null,'',target.pathname+target.search+location.hash);
+   }
    // Remove the secret from browser history, including malformed or expired links.
    history.replaceState(null,'',location.pathname+location.search);
    if(!/^[A-Za-z0-9_-]{43}$/.test(token)){
@@ -62,8 +72,12 @@ const error=Astro.url.searchParams.has('error');
   const forms=document.querySelectorAll('[data-purchase-request-form], [data-purchase-token]');
   forms.forEach(form=>{
    const button=form.querySelector('button'),label=button.innerHTML;
-   form.addEventListener('submit',()=>{button.disabled=true;button.textContent=form.hasAttribute('data-purchase-token')?'Je aankopen worden geopend…':'Je link wordt aangevraagd…';});
+   form.addEventListener('submit',()=>{button.disabled=true;button.textContent=form.hasAttribute('data-purchase-token')?'Je toegang wordt geopend…':'Je link wordt aangevraagd…';});
    window.addEventListener('pageshow',()=>{button.disabled=false;button.innerHTML=label;});
   });
  })();
 </script>
+
+<style>
+.purchase-welcome-photo--book{background:var(--purchase-rose)}.purchase-welcome-photo--book img{position:relative;display:block;width:100%;height:auto;object-fit:contain;padding:1.5rem}
+</style>
