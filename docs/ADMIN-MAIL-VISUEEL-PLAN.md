@@ -47,9 +47,9 @@ Bij wijziging direct toepassen, met behoud van de andere selectie en terugkeer n
 
 Voor verzonden mails zijn de primaire gegevens:
 
-| E-mail | Categorie | Verzonden op | Details |
+| E-mail | Ontvanger | Verzonden op | Details |
 |---|---|---|---|
-| Herkenbaar type, zoals Afspraakbevestiging | Afspraken | 18 nov 2026, 11:00 | Uitklappen |
+| Afspraakbevestiging, met categorie eronder | Cliëntnaam en e-mailadres | 18 nov 2026, 11:00 | Uitklappen |
 
 De voorbeeldrij beschrijft de indeling, geen actuele verzending. Toon herkenbare typen op basis van bestaande `kind`- en `event`-velden met een vaste, veilige labelmapping. Onbekende typen krijgen een algemeen categorielabel. Geen onderwerpregels uit mailinhoud reconstrueren.
 
@@ -89,7 +89,7 @@ De historiek wordt een compacte lijst met per mail een herkenbare titel, categor
 2. Breid de leeslaag uit voor **Alle categorieën**, herkenbare typelabels en globale paginering. De huidige leesfunctie werkt per afzonderlijke wachtrij; simpelweg vier losse pagina's samenvoegen geeft geen correcte totaalvolgorde of paginering.
 3. Maak voor dit gecombineerde overzicht een server-side databaseprojectie van de vier wachtrijen met een beperkt operationeel veldenset. Alleen de serverrol mag die lezen. Centraliseer daarin dezelfde succes-/onbevestigdindeling die de huidige tellingen en lijsten gebruiken; laat aantallen en lijst uit dezelfde selectie komen. Een eventuele migratie is additief en bewaart alle bestaande taken.
 4. Behoud bestaande deep links met `queue`, `status` en `pagina`; normaliseer nieuwe categoriekeuzes en bestaande URL's naar dezelfde filters. Behoud `integrations.manage`, CSRF-/origincontrole en het retryendpoint.
-5. Verzendworkers, planning, retrybeleid, bewaartermijnen en de recent ingevoerde registratie van succesvolle verzendingen blijven behouden. Geen ontvangergegevens, mailinhoud of persoonlijke links toevoegen.
+5. Verzendworkers, planning, retrybeleid, bewaartermijnen en de recent ingevoerde registratie van succesvolle verzendingen blijven behouden. Naam en e-mailadres van de ontvanger staan rechtstreeks in de lijst; mailinhoud en persoonlijke links blijven buiten het overzicht. Zie [ontvangers](ADMIN-MAIL-ONTVANGERS-2026-11-18.md).
 
 ## Acceptatie
 
@@ -109,7 +109,7 @@ Dit ontwerp is uitgevoerd. De verificatie en uitrol worden hieronder vastgelegd.
 - `AdminMailWorkspace.astro` groepeert kop, gezondheidsmelding, statusnavigatie, categoriefilter, lijst en uitleg. Lokale stijlen staan in `admin-mail.css`; de gedeelde beheeromgeving blijft behouden.
 - Standaard alle categorieën en Verzonden; statusaantallen volgen het categoriefilter. Meer bewaart de actieve extra status. Bestaande categorie-/statuslinks en paginering blijven bruikbaar.
 - Native uitklapbare details blijven zonder JavaScript werken. De JavaScript-verbetering voegt automatisch filteren, expliciete uitklapstatus, sluiten met Escape en dubbele-inzendingsbeveiliging toe. Browser-terug herstelt de categorie bij de getoonde lijst.
-- Leesprojectie `admin_mail_overview` en tellingsfunctie `admin_mail_counts()` delen één statusclassificatie. Alleen de serverrol heeft lees-/uitvoerrechten. De projectie bevat geen ontvanger, payload, persoonlijke link, lease-token of ongeschoonde providerfout.
+- Leesprojectie `admin_mail_overview` en tellingsfunctie `admin_mail_counts()` delen één statusclassificatie. Alleen de serverrol heeft lees-/uitvoerrechten. De projectie bevat expliciete ontvangergegevens, maar geen payload, persoonlijke link, lease-token of ongeschoonde providerfout. De aanvulling van 18 november staat in [ontvangers](ADMIN-MAIL-ONTVANGERS-2026-11-18.md).
 - Globale paginering en sortering gebeuren in de database; categorie plus taak-ID bepaalt de vaste volgorde bij gelijke tijdstippen. Mailtypen komen uit een veilige labelmapping.
 - De bestaande herstelautorisatie en bevestiging blijven behouden; een herstelactie keert terug naar de geselecteerde categorie en status. Groepsherstel vermeldt expliciet dat alle categorieën worden verwerkt.
 - Alle 194 lokale tests en TypeScript slagen in een aparte checkout van de mailwijziging. De gedeelde werkmap bevat gelijktijdige cliëntendossierwijzigingen; die zijn buiten deze wijzigingsset gehouden.

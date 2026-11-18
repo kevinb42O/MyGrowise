@@ -18,7 +18,7 @@ const emptyCopy = {
 <div id="mailtaken" class="mail-history" aria-label="E-mailoverzicht">
   {result.status==='unconfirmed'&&<p class="mail-context">Deze taken zijn overgeslagen of hebben geen betrouwbare historische verzendbevestiging. Ze tellen niet mee bij Verzonden.</p>}
   {result.items.length?<>
-    <div class="mail-list-heading" aria-hidden="true"><span>E-mail</span><span>Categorie</span><span>{timeLabel}</span><span></span></div>
+    <div class="mail-list-heading" aria-hidden="true"><span>E-mail</span><span>Ontvanger</span><span>{timeLabel}</span><span></span></div>
     <ul class="mail-list">
       {result.items.map(job=>{
         const key=`${job.queue}-${job.id}`;
@@ -26,20 +26,24 @@ const emptyCopy = {
         return <li class="mail-job">
           <div class="mail-job__row">
             <div class="mail-job__identity"><span class="mail-job__title">{job.title}</span>
+              <span class="mail-job__category">{job.category}</span>
+              {job.client_name&&job.client_name!==job.recipient_name&&<span class="mail-job__client">Over {job.client_name}</span>}
               {result.status==='failed'&&<span class="mail-job__reason">{job.diagnosis}</span>}
               {result.status==='unconfirmed'&&<span class="mail-job__reason">{job.diagnosis}</span>}
             </div>
-            <span class="mail-job__category">{job.category}</span>
+            <div class="mail-job__recipient"><span class="mail-job__recipient-name">{job.recipient_name||'Naam niet geregistreerd'}</span><span class="mail-job__recipient-email">{job.recipient_email||'E-mailadres niet geregistreerd'}</span></div>
             {result.status==='sending'?<span class:list={['mail-job__time',{'mail-job__time--warning':expired(job)}]}>{expired(job)?'Verwerking onderbroken':'Wordt verwerkt'}</span>:<time class="mail-job__time" datetime={timestamp||undefined}>{date(timestamp)}</time>}
           </div>
           <details class="mail-job__details" data-mail-disclosure>
-            <summary aria-controls={`detail-${key}`} aria-label={`Details van ${job.title}, ${date(timestamp)}`}><span>Details</span><svg viewBox="0 0 16 16" width="14" height="14" fill="none" aria-hidden="true"><path d="m6 4 4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></summary>
+            <summary aria-controls={`detail-${key}`} aria-label={`Details van ${job.title}, ${job.recipient_email||job.recipient_name||'ontvanger onbekend'}, ${date(timestamp)}`}><span>Details</span><svg viewBox="0 0 16 16" width="14" height="14" fill="none" aria-hidden="true"><path d="m6 4 4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></summary>
             <div class="mail-job__detail-body" id={`detail-${key}`}>
               <dl class="mail-job__facts"><div class="mail-job__reference"><dt>Taakreferentie</dt><dd><code>{job.id}</code></dd></div><div><dt>Aangemaakt</dt><dd>{date(job.created_at)}</dd></div><div><dt>Verzendpogingen</dt><dd>{job.attempts}</dd></div>
                 {result.status==='sent'&&<div><dt>Verzonden</dt><dd>{date(job.sent_at)}</dd></div>}
                 {result.status==='pending'&&<div><dt>Volgende poging</dt><dd>{date(job.next_attempt_at)}</dd></div>}
                 {result.status==='sending'&&<div><dt>{expired(job)?'Verwerking onderbroken sinds':'In verwerking tot'}</dt><dd>{date(job.lease_until)}</dd></div>}
               </dl>
+              {result.status==='sent'&&(job.recipient_source==='current'||job.recipient_source==='order')&&<p class="mail-recipient-source">De ontvanger is gebaseerd op de huidige {job.recipient_source==='order'?'bestelgegevens':'gespreks- en accountgegevens'}. Het gebruikte adres werd bij deze oudere verzending niet afzonderlijk bewaard.</p>}
+              {job.queue==='website_mail_jobs'&&job.recipient_source==='job'&&<p class="mail-recipient-source">Het adres komt uit de oorspronkelijke mailtaak. Een cliëntnaam wordt waar beschikbaar uit de huidige aankoopgegevens aangevuld.</p>}
               {result.status==='sending'&&expired(job)&&<p>De vorige verwerking is niet afgerond. Controleer of de mail al is aangekomen voordat je verdere actie onderneemt.</p>}
               {job.status==='failed'&&<form class="mail-retry" method="post" action="/api/admin/mail" data-mail-action>
                 <input type="hidden" name="retry_failed" value="1"/><input type="hidden" name="queue" value={job.queue}/><input type="hidden" name="job_id" value={job.id}/>

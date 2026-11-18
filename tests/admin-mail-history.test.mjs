@@ -51,7 +51,7 @@ function database(tables) {
  return {db,calls};
 }
 function history(tables){const h=database({admin_mail_overview:Object.entries(tables).flatMap(([queue,rows])=>rows.map(row=>({...row,queue})))});return {...h,service:load('lib/adminMail.ts',{'./supabase/server':{getSupabaseAdmin:()=>h.db},'./adminPagination':pagination})};}
-const sent=(id,extra={})=>({id,status:'sent',display_status:'sent',kind:'confirmation',sent_at:'2026-11-18T10:00:00Z',created_at:'2026-11-17T10:00:00Z',attempts:1,...extra});
+const sent=(id,extra={})=>({id,status:'sent',display_status:'sent',kind:'confirmation',recipient_email:'synthetic@example.invalid',recipient_name:'Noor Voorbeeld',client_name:'Noor Voorbeeld',recipient_source:'snapshot',sent_at:'2026-11-18T10:00:00Z',created_at:'2026-11-17T10:00:00Z',attempts:1,...extra});
 
 test('history and summary partition completed tasks consistently across every queue',async()=>{
  const tables={
@@ -68,7 +68,7 @@ test('history and summary partition completed tasks consistently across every qu
   assert.equal(successful.total,queue.states.sent);
   assert.equal(uncertain.total,queue.states.unconfirmed);
   assert.equal(successful.items.length,1);
-  assert.ok(successful.items[0].sent_at);
+  assert.ok(successful.items[0].sent_at);assert.equal(successful.items[0].recipient_email,'synthetic@example.invalid');assert.equal(successful.items[0].recipient_name,'Noor Voorbeeld');
   assert.equal(successful.total+uncertain.total,tables[queue.table].filter(row=>row.status==='sent').length);
   assert.ok(successful.items.every(row=>!Object.hasOwn(row,'last_error')&&!Object.hasOwn(row,'delivery_outcome')));
  }
@@ -125,7 +125,7 @@ function websiteWorker({known=false,kind='purchase_access',fail=false,updateFail
  const job={id:'synthetic',kind,payload:{email:'synthetic@example.invalid',name:'Test',category:'Test',body:'Test'},attempts:1,lease_token:'lease'};
  const db={rpc:async()=>({data:[job]}),from(table){
   const q={update(value){updates.push(value);return q;},delete(){return q;},eq(){return q;},lt(){return q;},gte(){return q;},select(){return q;},limit(){return q;},
-   then(resolve){return Promise.resolve({data:table==='commerce_buyers'&&known?[{id:'buyer'}]:[],error:updateFail&&updates.at(-1)?.status==='sent'?{message:'status failed'}:null}).then(resolve);}};
+   then(resolve){return Promise.resolve({data:table==='commerce_buyers'&&known?[{id:'buyer',first_name:'Noor',last_name:'Voorbeeld'}]:[],error:updateFail&&updates.at(-1)?.status==='sent'?{message:'status failed'}:null}).then(resolve);}};
   return q;
  }};
  const service=load('lib/commerce/websiteMail.ts',{
@@ -139,7 +139,7 @@ function websiteWorker({known=false,kind='purchase_access',fail=false,updateFail
 test('known buyer and contact mail record a real transmission and timestamp',async()=>{
  for(const args of [{known:true},{kind:'contact'}]){
   const h=websiteWorker(args);const result=await h.run();
-  assert.equal(result.sent,1);assert.equal(h.messages.length,1);assert.equal(h.updates[1].delivery_outcome,'sent');assert.ok(h.updates[1].sent_at);
+  assert.equal(result.sent,1);assert.equal(h.messages.length,1);assert.equal(h.updates[1].delivery_outcome,'sent');assert.ok(h.updates[1].sent_at);assert.equal(h.updates[1].recipient_email_snapshot,args.kind==='contact'?'info@mygrowise.be':'synthetic@example.invalid');assert.equal(h.updates[1].recipient_name_snapshot,args.kind==='contact'?'MyGrowise-team':'Noor Voorbeeld');
  }
 });
 test('an unknown buyer completes without sending, counting or dating a transmission',async()=>{
@@ -151,5 +151,43 @@ test('transport and status persistence failures remain retryable and never count
  for(const args of [{known:true,fail:true},{known:true,updateFail:true}]){
   const h=websiteWorker(args);const result=await h.run();
   assert.equal(result.sent,0);assert.equal(result.failed,1);assert.equal(h.updates.at(-1).status,'pending');assert.ok(h.updates.at(-1).next_attempt_at);
+ }
+});
+
+test('commerce stores the actual customer or team destination with client context',async()=>{
+ for(const target of ['customer','team']){
+  const updates=[],destinations=[];
+  const order={status:'paid',contact_snapshot:{email:'checkout@example.invalid',first_name:'Noor',last_name:'Voorbeeld'},commerce_buyers:{email:'other@example.invalid',first_name:'Andere',last_name:'Naam'},order_items:[{id:'item',product_type:'module',product_title:'Module'}],provider_reference:'SYNTHETIC',total_cents:100};
+  const job={id:'job',event:'paid',target,attempts:1,lease_token:'lease',order_id:'order'};
+  const db={rpc:async()=>({data:[job]}),from:table=>{
+   const q={select:()=>q,eq:()=>q,single:()=>q,update:value=>{updates.push(value);return q;},then:resolve=>Promise.resolve({data:table==='orders'?order:null,error:null}).then(resolve)};return q;
+  }};
+  const service=load('lib/catalog/mail.ts',{
+   '../ebooks/server':{},'../ebooks/book':{isEbook:()=>false},'../commerce/websiteMail':{websiteMailReady:()=>true,sendWebsiteEmail:async to=>destinations.push(to)},
+   '../commerce/purchases':{makePurchaseLink:async()=>'https://example.invalid/test'},'../supabase/server':{getSupabaseAdmin:()=>db},'./pricing':{money:()=> '€1'},'../commerce/termsArchive':{legacyTerms20261029:'Test'},'../emailTemplate':{renderEmail:()=>'<p>Test</p>'},
+  });
+  const result=await service.deliverCommerceMail();assert.equal(result.sent,1);
+  assert.equal(updates[0].recipient_email_snapshot,destinations[0]);
+  assert.equal(destinations[0],target==='team'?'info@mygrowise.be':'checkout@example.invalid');
+  assert.equal(updates[0].recipient_name_snapshot,target==='team'?'MyGrowise-team':'Noor Voorbeeld');
+  assert.equal(updates[0].client_name_snapshot,'Noor Voorbeeld');
+ }
+});
+
+test('support records the address passed to SMTP for guests and accounts',async()=>{
+ for(const guest of [true,false]){
+  const updates=[],destinations=[];
+  const conversation={id:'conversation',guest_email:guest?'guest@example.invalid':null,guest_name:guest?'Gast Cliënt':null,customer_user_id:guest?null:'account'};
+  const db={rpc:async()=>({data:[{id:'job',conversation_id:'conversation',kind:'reply',attempts:1}]}),auth:{admin:{getUserById:async()=>({data:{user:{email:'account@example.invalid',user_metadata:{full_name:'Account Cliënt'}}}})}},from:table=>{
+   const q={select:()=>q,eq:()=>q,single:()=>q,insert:()=>q,update:value=>{updates.push(value);return q;},then:resolve=>Promise.resolve({data:table==='support_conversations'?conversation:null,error:null}).then(resolve)};return q;
+  }};
+  const service=load('lib/supportMail.ts',{
+   'node:crypto':{createHash:()=>({update:()=>({digest:()=> 'hash'})}),randomBytes:()=>({toString:()=> 'synthetic'})},
+   nodemailer:{default:{createTransport:()=>({sendMail:async({to})=>destinations.push(to),close(){}})}},
+   './supabase/server':{getSupabaseAdmin:()=>db},'./emailTemplate':{renderEmail:()=>'<p>Test</p>'},
+  },{SUPPORT_SMTP_VERIFIED:'true',SUPPORT_SMTP_USER:'test',SUPPORT_SMTP_PASSWORD:'test',SUPPORT_FROM_EMAIL:'test@example.invalid'});
+  const result=await service.deliverSupportMail();assert.equal(result.sent,1);
+  assert.equal(updates[0].recipient_email_snapshot,destinations[0]);
+  assert.equal(updates[0].recipient_name_snapshot,guest?'Gast Cliënt':'Account Cliënt');
  }
 });

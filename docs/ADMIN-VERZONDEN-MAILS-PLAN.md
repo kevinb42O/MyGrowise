@@ -47,7 +47,7 @@ Dit is een beperkte aanpassing van verzendregistratie; geen nieuwe maildienst of
 - Toon bij verzonden taken geen volgende poging, foutdiagnose of herstelknop. Toon bij overige statussen informatie die bij die toestand past.
 - Geef een gerichte lege toestand: “Geen verzonden e-mails in deze wachtrij”.
 - Vermeld dat de historiek de nog bewaarde taken omvat en dat oudere website-mailtaken worden opgeruimd. Pas de bestaande bewaartermijn in deze opdracht niet aan.
-- Behoud de huidige beperking tot operationele gegevens: geen mailinhoud, persoonlijke toegangslinks of ontvangergegevens toevoegen.
+- Toon operationele gegevens, inclusief cliëntnaam en bestemmingsadres. Mailinhoud en persoonlijke toegangslinks blijven buiten het overzicht. Dit is aangevuld op expliciet verzoek van Kevin; zie [ontvangers](ADMIN-MAIL-ONTVANGERS-2026-11-18.md).
 
 ### 4. Lokaal controleren
 

@@ -25,7 +25,7 @@ const all=Array.from({length:71},(_,i)=>{
  const category=ADMIN_MAIL_QUEUES[i%4];
  const status=i<62?'sent':i<65?'pending':i<67?'failed':i<69?'sending':'unconfirmed';
  const kind=category.table==='booking_mail_jobs'?'confirmation':category.table==='commerce_mail_jobs'?'created':category.table==='support_mail_jobs'?'reply':'purchase_access';
- return {id:'00000000-0000-4000-8000-'+String(i).padStart(12,'0'),queue:category.table,title:mailTitle(category.table,kind),category:category.label,status,created_at:'2026-11-17T10:00:00Z',sent_at:'2026-11-18T10:00:00Z',next_attempt_at:'2026-11-20T09:00:00Z',lease_until:i===68?'2020-01-01T10:00:00Z':'2099-01-01T10:00:00Z',attempts:status==='failed'?6:1,diagnosis:status==='unconfirmed'?'Voor deze historische taak is succesvolle verzending niet bevestigd.':status==='failed'?'Verzenden mislukt. Controleer de mailconfiguratie.':'Geen aanvullende foutcode geregistreerd.'};
+ return {id:'00000000-0000-4000-8000-'+String(i).padStart(12,'0'),queue:category.table,title:mailTitle(category.table,kind),category:category.label,recipient_name:'Noor Voorbeeld',recipient_email:'noor.voorbeeld@example.invalid',client_name:'Noor Voorbeeld',recipient_source:'snapshot',status,created_at:'2026-11-17T10:00:00Z',sent_at:'2026-11-18T10:00:00Z',next_attempt_at:'2026-11-20T09:00:00Z',lease_until:i===68?'2020-01-01T10:00:00Z':'2099-01-01T10:00:00Z',attempts:status==='failed'?6:1,diagnosis:status==='unconfirmed'?'Voor deze historische taak is succesvolle verzending niet bevestigd.':status==='failed'?'Verzenden mislukt. Controleer de mailconfiguratie.':'Geen aanvullende foutcode geregistreerd.'};
 }).filter(()=>!Astro.url.searchParams.has('empty'));
 const counts=ADMIN_MAIL_QUEUES.map(category=>{const states=emptyMailStates();for(const row of all.filter(j=>j.queue===category.table))states[row.status]++;return {table:category.table,label:category.label,states};});
 const selected=all.filter(job=>job.status===status&&(!queue||job.queue===queue.table));
@@ -51,6 +51,8 @@ const result={queue,status,items:selected.slice((page-1)*25,page*25),page,pages,
  assert.equal(await page.locator('.mail-job').count(),25);
  assert.equal(await page.getByLabel('Categorie',{exact:true}).inputValue(),'');
  assert.equal(await page.locator('.mail-status[aria-current]').innerText(),'Verzonden\n62');
+ assert.equal(await page.locator('.mail-job__recipient-name').first().innerText(),'Noor Voorbeeld');
+ assert.equal(await page.locator('.mail-job__recipient-email').first().innerText(),'noor.voorbeeld@example.invalid');
  assert.equal(await page.locator('.mail-job__reference').first().isVisible(),false);
  assert.equal(await page.locator('.mail-job').first().boundingBox().then(b=>b.y<500),true);
  const disclosure=page.locator('[data-mail-disclosure] summary').first();

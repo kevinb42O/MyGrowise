@@ -56,6 +56,7 @@ export function mailTitle(queue: string, kind: unknown) {
 export interface AdminMailJob {
   id:string; queue:string; status:string; attempts:number; created_at:string; sent_at:string|null;
   next_attempt_at:string|null; lease_until:string|null; title:string; category:string; diagnosis:string;
+  recipient_email:string|null; recipient_name:string|null; client_name:string|null; recipient_source:string|null;
 }
 interface MailProjection extends Omit<AdminMailJob,'title'|'category'|'diagnosis'> {
   kind:string; diagnosis_code:string|null; completion_outcome:string|null;
@@ -76,7 +77,7 @@ export async function getAdminMailPage(queueName: string, status: string, page: 
   const selectedStatus = (ADMIN_MAIL_STATES.some(state=>state.value===status) ? status : 'sent') as AdminMailStatus;
   const result = await readAdminPage<MailProjection>((start,end)=>{
     let query = getSupabaseAdmin().from('admin_mail_overview')
-      .select('id,queue,kind,status,attempts,created_at,sent_at,next_attempt_at,lease_until,diagnosis_code,completion_outcome',{count:'exact'})
+      .select('id,queue,kind,status,attempts,created_at,sent_at,next_attempt_at,lease_until,diagnosis_code,completion_outcome,recipient_email,recipient_name,client_name,recipient_source',{count:'exact'})
       .eq('display_status',selectedStatus);
     if (queue) query=query.eq('queue',queue.table);
     const dateColumn = selectedStatus==='sent'?'sent_at':selectedStatus==='pending'?'next_attempt_at':selectedStatus==='sending'?'lease_until':'created_at';

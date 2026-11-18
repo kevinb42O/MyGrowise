@@ -54,10 +54,57 @@ try {
  const counts=(await db.query('select * from admin_mail_counts()')).rows;
  assert.equal(counts.reduce((sum,row)=>sum+Number(row.total),0),12,'suppressed and superseded jobs do not enter active history totals');
  for(const row of counts)assert.equal(Number(row.total),all.filter(job=>job.queue===row.queue&&job.display_status===row.status).length);
+ // Add identity sources used by the recipient projection, without real records.
+ await db.exec(`create schema auth;
+ create table auth.users(id uuid primary key,email text,raw_user_meta_data jsonb);
+ create table public.profiles(id uuid primary key,full_name text);
+ create table public.support_conversations(id uuid primary key,guest_email text,guest_name text,customer_user_id uuid);
+ create table public.commerce_buyers(id uuid primary key,email text,first_name text,last_name text,created_at timestamptz);
+ create table public.orders(id uuid primary key,buyer_id uuid,contact_snapshot jsonb,created_at timestamptz default now());
+ alter table support_mail_jobs add column conversation_id uuid;
+ alter table commerce_mail_jobs add column order_id uuid,add column target text default 'customer';
+ alter table booking_mail_jobs add column recipient text default 'noor@example.invalid',add column payload jsonb default '{"name":"Noor Voorbeeld"}';
+ alter table website_mail_jobs add column payload jsonb default '{"name":"Mila Voorbeeld","email":"mila@example.invalid","private_link":"SECRET-NOT-EXPOSED"}';
+ grant usage on schema auth to service_role;
+ grant select on profiles,support_conversations,commerce_buyers,orders to service_role;
+ insert into auth.users values('00000000-0000-4000-8000-000000000101','account@example.invalid','{"full_name":"Account Naam"}');
+ insert into profiles values('00000000-0000-4000-8000-000000000101','Account Cliënt');
+ insert into support_conversations values('00000000-0000-4000-8000-000000000102','gast@example.invalid','Gast Cliënt',null),('00000000-0000-4000-8000-000000000103',null,null,'00000000-0000-4000-8000-000000000101');
+ update support_mail_jobs set conversation_id=case when id::text like '%000001' then '00000000-0000-4000-8000-000000000102'::uuid else '00000000-0000-4000-8000-000000000103'::uuid end;
+ insert into commerce_buyers values('00000000-0000-4000-8000-000000000201','mila@example.invalid','Mila','Voorbeeld',now());
+ insert into orders(id,buyer_id,contact_snapshot) values('00000000-0000-4000-8000-000000000202','00000000-0000-4000-8000-000000000201','{"email":"bestelling@example.invalid","first_name":"Bestel","last_name":"Cliënt"}');
+ update commerce_mail_jobs set order_id='00000000-0000-4000-8000-000000000202';
+ update commerce_mail_jobs set target='team' where id::text like '%000003';`);
+ await db.exec(readFileSync(new URL('../supabase/migrations/20261118180000_admin_mail_recipients.sql',import.meta.url),'utf8'));
+ let recipients=(await db.query('select * from admin_mail_overview')).rows;
+ const find=(queue,n)=>recipients.find(row=>row.queue===queue&&row.id.endsWith(String(n).padStart(6,'0')));
+ assert.equal(find('support_mail_jobs',1).recipient_email,'gast@example.invalid');
+ assert.equal(find('support_mail_jobs',1).recipient_name,'Gast Cliënt');
+ assert.equal(find('support_mail_jobs',2).recipient_email,'account@example.invalid');
+ assert.equal(find('support_mail_jobs',2).recipient_name,'Account Cliënt');
+ assert.equal(find('commerce_mail_jobs',1).recipient_email,'bestelling@example.invalid');
+ assert.equal(find('commerce_mail_jobs',1).recipient_name,'Bestel Cliënt');
+ assert.equal(find('commerce_mail_jobs',3).recipient_email,'info@mygrowise.be');
+ assert.equal(find('commerce_mail_jobs',3).recipient_name,'MyGrowise-team');
+ assert.equal(find('commerce_mail_jobs',3).client_name,'Bestel Cliënt');
+ assert.equal(find('booking_mail_jobs',1).recipient_email,'noor@example.invalid');
+ assert.equal(find('booking_mail_jobs',1).recipient_name,'Noor Voorbeeld');
+ assert.equal(find('website_mail_jobs',1).recipient_email,'info@mygrowise.be');
+ assert.equal(find('website_mail_jobs',1).client_name,'Mila Voorbeeld');
+ assert.equal(find('website_mail_jobs',2).recipient_email,'mila@example.invalid');
+ assert.equal(find('website_mail_jobs',2).recipient_name,'Mila Voorbeeld');
+ assert.ok(!JSON.stringify(recipients).includes('SECRET-NOT-EXPOSED'));
+ await db.exec("update support_mail_jobs set recipient_email_snapshot='destijds@example.invalid',recipient_name_snapshot='Historische Cliënt',client_name_snapshot='Historische Cliënt' where id::text like '%000001'; update support_conversations set guest_email='gewijzigd@example.invalid';");
+ recipients=(await db.query('select * from admin_mail_overview')).rows;
+ assert.equal(find('support_mail_jobs',1).recipient_email,'destijds@example.invalid');
+ assert.equal(find('support_mail_jobs',1).recipient_name,'Historische Cliënt');
+ assert.equal(find('support_mail_jobs',1).recipient_source,'snapshot');
+ assert.equal(recipients.length,14);
  for(const role of ['anon','authenticated']){
   await db.exec(`set role ${role}`);
   await assert.rejects(db.query('select * from public.admin_mail_overview'),/permission denied/);
   await assert.rejects(db.query('select * from public.admin_mail_counts()'),/permission denied/);
+  await assert.rejects(db.query("select * from public.admin_support_mail_identity('00000000-0000-4000-8000-000000000102')"),/permission denied/);
   await db.exec('reset role');
  }
  await db.exec('set role service_role');
@@ -65,5 +112,5 @@ try {
  assert.equal((await db.query('select * from public.admin_mail_counts()')).rows.length,counts.length);
  await assert.rejects(db.query("update public.admin_mail_overview set attempts=0"),/permission denied|not automatically updatable|cannot update view/);
  await db.exec('reset role');
- console.log('PASS actual migration SQL: all queues, safe projection, correct historical outcomes, counts, composite identities and server-only privileges.');
+ console.log('PASS actual migration SQL: status counts, recipient identity across all queues, actual team destinations, durable snapshots, no payload leakage and server-only privileges.');
 } finally {await db.close();}

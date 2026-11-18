@@ -55,13 +55,15 @@ export const deliverSupportMail = async (limit = 10) => {
   for (const job of (jobs || []) as Row[]) {
     try {
       const { data: conversation, error: conversationError } = await client.from('support_conversations')
-        .select('id,customer_user_id,guest_email,public_reference').eq('id', job.conversation_id).single();
+        .select('id,customer_user_id,guest_email,guest_name,public_reference').eq('id', job.conversation_id).single();
       if (conversationError || !conversation) throw new Error('conversation_missing');
       let recipient = String(conversation.guest_email || '');
+      let recipientName = String(conversation.guest_name || '');
       if (!recipient && conversation.customer_user_id) {
         const { data, error: userError } = await client.auth.admin.getUserById(String(conversation.customer_user_id));
         if (userError || !data.user?.email) throw new Error('recipient_missing');
         recipient = data.user.email;
+        recipientName = String(data.user.user_metadata?.full_name || data.user.user_metadata?.name || '').trim();
       }
       const link = conversation.guest_email
         ? await makeGuestLink(String(conversation.id))
@@ -72,7 +74,7 @@ export const deliverSupportMail = async (limit = 10) => {
         ? `Er staat een antwoord van MyGrowise voor je klaar.\n\n${reference}Lees het antwoord en reageer veilig via:\n${link}\n\nEen antwoord op deze e-mail wordt niet automatisch aan je gesprek toegevoegd. Gebruik de link om in hetzelfde gesprek te reageren. Deel geen medische gegevens via gewone e-mail.\n\nMyGrowise`
         : `Je vraag aan MyGrowise is ontvangen.\n\n${reference}Bekijk je gesprek en onze antwoorden via:\n${link}\n\nEen antwoord op deze e-mail wordt niet automatisch aan je gesprek toegevoegd. Gebruik de link om in hetzelfde gesprek te reageren. Deel geen medische gegevens via gewone e-mail.\n\nMyGrowise`;
       await sendEmail(recipient, isReply ? 'Er staat een antwoord voor je klaar — MyGrowise' : 'Je vraag is ontvangen — MyGrowise', body, renderEmail({title:isReply?'Er staat een antwoord voor je klaar.':'Je vraag is ontvangen.',preheader:isReply?'Lees het antwoord in je beveiligde gesprek.':'Bekijk je vraag en volg het gesprek veilig op.',paragraphs:[isReply?'We hebben een antwoord voor je klaargezet. Open je gesprek om het te lezen en eventueel te reageren.':'Bedankt voor je bericht. Je vraag is ontvangen. Via de knop hieronder kun je het gesprek en eventuele antwoorden bekijken.'],details:conversation.public_reference?[['Referentie',String(conversation.public_reference)]]:undefined,action:{label:isReply?'Lees mijn antwoord':'Open mijn gesprek',url:link},note:'Reageer via het beveiligde gesprek. Een antwoord op deze e-mail wordt niet automatisch aan je gesprek toegevoegd. Deel je persoonlijke toegangslink niet met anderen.'}));
-      const { error: updateError } = await client.from('support_mail_jobs').update({ status: 'sent', sent_at: new Date().toISOString(), lease_until: null, last_error: null }).eq('id', job.id);
+      const { error: updateError } = await client.from('support_mail_jobs').update({ status: 'sent', recipient_email_snapshot: recipient, recipient_name_snapshot: recipientName||null, client_name_snapshot: recipientName||null, sent_at: new Date().toISOString(), lease_until: null, last_error: null }).eq('id', job.id);
       if (updateError) throw new Error('mail_status_failed');
       sent++;
     } catch (cause) {
