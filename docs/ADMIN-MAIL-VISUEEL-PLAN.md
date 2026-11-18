@@ -1,6 +1,6 @@
 # Mailopvolging — rustig en professioneel
 
-Datum: 18 november 2026. Status: geïmplementeerd en lokaal gecontroleerd; databasemigratie toegepast; applicatie-uitrol volgt via Vercel.
+Datum: 18 november 2026. Status: geïmplementeerd, lokaal gecontroleerd en via Vercel uitgerold; databasemigratie toegepast.
 
 ## Ontwerpbesluit
 
@@ -120,3 +120,6 @@ Dit ontwerp is uitgevoerd. De verificatie en uitrol worden hieronder vastgelegd.
 - De bestaande brede admin-browserproef slaagt na aanpassing aan de nieuwe mailcomponenten; ook de aangrenzende content-, product- en modulecontroles blijven groen.
 - Productiebuild en artifactcontrole slagen in de geïsoleerde checkout. De build bevat geen tijdelijke browserfixtures.
 - Migratie `20261118150000_admin_mail_overview.sql` toegepast en geregistreerd, met behoud van alle 24 bestaande taken. Anonieme en ingelogde publieke databaserollen hebben geen toegang tot de nieuwe projectie of tellingsfunctie.
+- Live PostgREST-verificatie na migratie: alle vijf statuslijsten en hun tellingen komen overeen, zowel globaal als per categorie. Op dat moment 18 verzonden, 3 gepland, 3 onbevestigd en geen mislukte/lopende taken.
+- Implementatiecommit `c2b494f` naar `origin/main` gepusht. De bestaande Vercel-integratie bevestigt **Deployment has completed**: [deployment](https://vercel.com/lanternnetworks-projects/mygrowise/5eqxHa6M8arxWacxdVzoEQ81CYyz).
+- Productie-HTTP-controle bevestigt dat de standaardpagina en de onbevestigd-filterlink zonder sessie met 303 naar de adminlogin gaan, met behoud van de vervolg-URL. De ingelogde productiepagina is in deze ronde niet opnieuw visueel beoordeeld; de visuele acceptatie betreft de echte componenten met synthetische gegevens lokaal.
