@@ -16,5 +16,6 @@ declare namespace App {
     adminUser?: import('./lib/adminAuth').UserSession;
     currentUser?: import('./lib/adminAuth').UserSession;
     requestId?: string;
+    authAccessToken?: string;
   }
 }

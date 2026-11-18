@@ -172,8 +172,8 @@ export const updateOwnPassword = async (userId: string, password: string) => {
   if (error) throw error;
   await getSupabaseAdmin().from('security_audit_log').insert({ actor_user_id: userId, action: 'account.password_updated', object_type: 'user', object_id: userId });
 };
-export const revokeAllUserSessions = async (userId: string) => {
-  const { error } = await getSupabaseAdmin().auth.admin.signOut(userId, 'global');
+export const revokeAllUserSessions = async (userId: string, accessToken: string) => {
+  const { error } = await getSupabaseAdmin().auth.admin.signOut(accessToken, 'global');
   if (error) throw error;
   await getSupabaseAdmin().from('security_audit_log').insert({ actor_user_id: userId, action: 'account.sessions_revoked', object_type: 'user', object_id: userId });
 };

@@ -1,5 +1,6 @@
+import { setAuthSession } from '../../../lib/authSession';
 import type { APIRoute } from 'astro';
-import { SUPABASE_SESSION_COOKIE, authenticateSupabaseUser, isCustomerAccount, isTrustedFormOrigin, sanitizeAppRedirect, supabaseSessionCookieOptions } from '../../../lib/adminAuth';
+import { authenticateSupabaseUser, isCustomerAccount, isTrustedFormOrigin, sanitizeAppRedirect } from '../../../lib/adminAuth';
 
 type Attempt = { count: number; resetAt: number }; const attempts = new Map<string, Attempt>();
 const redirect303 = (url: URL) => new Response(null, { status: 303, headers: { location: `${url.pathname}${url.search}` } });
@@ -25,6 +26,6 @@ export const POST: APIRoute = async ({ request, cookies }) => {
   }
   if (!authenticated) { attempts.set(key, { count: (attempt?.count || 0) + 1, resetAt: attempt?.resetAt && attempt.resetAt > now ? attempt.resetAt : now + 15 * 60 * 1000 }); return loginRedirect(request, 'invalid', next); }
   if (!isCustomerAccount(authenticated.user)) return loginRedirect(request, 'customer_required', next);
-  attempts.delete(key); cookies.set(SUPABASE_SESSION_COOKIE, authenticated.accessToken, supabaseSessionCookieOptions()); return redirect303(new URL(next || '/account', request.url));
+  attempts.delete(key); setAuthSession(cookies, authenticated, form.get('remember') === 'on'); return redirect303(new URL(next || '/account', request.url));
 };
 export const ALL: APIRoute = () => new Response('Methode niet toegestaan.', { status: 405 });

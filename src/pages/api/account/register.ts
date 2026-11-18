@@ -1,5 +1,6 @@
+import { setAuthSession } from '../../../lib/authSession';
 import type { APIRoute } from 'astro';
-import { SUPABASE_SESSION_COOKIE, isTrustedFormOrigin, registerSupabaseCustomer, sanitizeAppRedirect, supabaseSessionCookieOptions } from '../../../lib/adminAuth';
+import { isTrustedFormOrigin, registerSupabaseCustomer, sanitizeAppRedirect } from '../../../lib/adminAuth';
 
 export const prerender = false;
 const redirect303 = (url: URL) => new Response(null, { status: 303, headers: { location: `${url.pathname}${url.search}` } });
@@ -22,7 +23,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       if (next) login.searchParams.set('next', next);
       return redirect303(login);
     }
-    cookies.set(SUPABASE_SESSION_COOKIE, result.accessToken, supabaseSessionCookieOptions());
+    setAuthSession(cookies, result);
     return redirect303(new URL(next || '/account', request.url));
   } catch (error) {
     const code = error instanceof Error && ['email_taken', 'configuration', 'invalid'].includes(error.message) ? error.message : 'signup_unavailable';

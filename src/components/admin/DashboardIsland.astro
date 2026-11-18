@@ -1,11 +1,12 @@
 ---
+import { resolveAuthSession } from '../../lib/authSession';
 import DashboardContent from './DashboardContent.astro';
-import { SUPABASE_SESSION_COOKIE, hasPermission, verifySupabaseSession } from '../../lib/adminAuth';
+import { hasPermission } from '../../lib/adminAuth';
 
 interface Props { period: string }
 const { period } = Astro.props;
-const sessionResult = await verifySupabaseSession(Astro.cookies.get(SUPABASE_SESSION_COOKIE)?.value)
-  .then((session) => ({ session, unavailable: false }))
+const sessionResult = await resolveAuthSession(Astro.cookies)
+  .then((resolved) => ({ session: resolved?.user ?? null, unavailable: false }))
   .catch(() => ({ session: null, unavailable: true }));
 const allowed = hasPermission(sessionResult.session, 'dashboard.read');
 Astro.response.headers.set('Cache-Control', 'private, no-store');

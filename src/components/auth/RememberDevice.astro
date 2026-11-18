@@ -1,0 +1,15 @@
+<label class="remember-device">
+  <input type="checkbox" name="remember" />
+  <span class="remember-device__copy">
+    <span class="remember-device__title">Ingelogd blijven op dit toestel</span>
+    <span class="remember-device__help">30 dagen bij geen gebruik. Kies dit alleen op een persoonlijk toestel.</span>
+  </span>
+</label>
+<style>
+  label.remember-device { display: flex; align-items: flex-start; gap: 12px; min-height: 44px; padding-block: 5px; cursor: pointer; }
+  label.remember-device input[type="checkbox"] { appearance: auto; flex: 0 0 18px; width: 18px; height: 18px; min-height: 0; margin: 2px 0 0; padding: 0; accent-color: #173d35; box-shadow: none; cursor: pointer; }
+  label.remember-device input[type="checkbox"]:focus-visible { outline: 2px solid #173d35; outline-offset: 4px; box-shadow: none; }
+  .remember-device__copy { display: grid; gap: 5px; min-width: 0; }
+  .remember-device__title { color: #173d35; font-size: 14px; font-weight: 600; line-height: 1.5; }
+  .remember-device__help { max-width: 42ch; color: #59635e; font-size: 12px; font-weight: 400; line-height: 1.6; }
+</style>

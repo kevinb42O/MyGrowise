@@ -1,4 +1,5 @@
 ---
+import RememberDevice from '../../components/auth/RememberDevice.astro';
 import AppIcons from '../../components/astro/AppIcons.astro';
 import AdminIcon from '../../components/admin/AdminIcon.astro';
 import '../../styles/admin.css';
@@ -34,7 +35,7 @@ const next = requestedNext.startsWith('/praktijk') && !requestedNext.startsWith(
           <h1>Jouw praktijk, zorgvuldig op één plek.</h1>
           <p>Beheer alleen je eigen agenda, afspraken en professioneel profiel.</p>
         </div>
-        <div class="admin-login__trust"><AdminIcon name="lock" size={15} /><span>Server-side beveiligd<br/><small>Sessie verloopt automatisch na 8 uur</small></span></div>
+        <div class="admin-login__trust"><AdminIcon name="lock" size={15} /><span>Server-side beveiligd<br/><small>Jij kiest of dit toestel je login bewaart</small></span></div>
       </section>
 
       <section class="admin-login__panel" aria-labelledby="login-title">
@@ -51,6 +52,7 @@ const next = requestedNext.startsWith('/praktijk') && !requestedNext.startsWith(
             <input type="hidden" name="next" value={next} />
             <label><span>E-mailadres</span><input type="email" name="email" placeholder="naam@mygrowise.com" autocomplete="username" inputmode="email" required maxlength="254" autofocus /></label>
             <label><span>Wachtwoord</span><span class="admin-password-field"><input id="practice-password" type="password" name="password" autocomplete="current-password" required maxlength="256" /><button type="button" aria-label="Wachtwoord tonen" aria-pressed="false" data-password-toggle><AdminIcon name="eye" size={17} /></button></span></label>
+            <RememberDevice />
             <button class="admin-login__submit" type="submit">Aanmelden <AdminIcon name="arrow" size={16} /></button>
           </form>
 

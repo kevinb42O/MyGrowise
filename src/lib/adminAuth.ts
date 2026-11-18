@@ -19,7 +19,6 @@ export const isCustomerAccount = (session: UserSession | null | undefined) =>
   Boolean(session && session.roles.includes('customer') && !session.roles.some((role) => ['super_admin', 'support', 'employee', 'practitioner'].includes(role)));
 export const hasPermission = (session: UserSession | null | undefined, permission: AdminPermission) =>
   Boolean(session && (hasAdminPermission(session.roles, permission) || (permission === 'practice.manage' && session.practiceManager)));
-export const supabaseSessionCookieOptions = () => ({ httpOnly: true, secure: import.meta.env.PROD, sameSite: 'strict' as const, path: '/', maxAge: SESSION_TTL_SECONDS });
 const trustedAppOrigins = new Set(['https://mygrowise.be', 'https://www.mygrowise.be', 'https://mygrowise.vercel.app']);
 export const isTrustedFormOrigin = (request: Request) => {
   const originHeader = request.headers.get('origin');
@@ -62,7 +61,7 @@ const toSession = async (user: { id: string; email?: string | null; email_confir
     client.from('user_roles').select('role').eq('user_id', user.id),
     client.from('practitioners').select('id').eq('user_id', user.id).maybeSingle(),
   ]);
-  if (roleError || practitionerError) return null;
+  if (roleError || practitionerError) throw roleError || practitionerError;
   const roles = (roleRows || []).map((row: { role: string }) => row.role).filter(isUserRole);
   if (!roles.length) return null;
   const { data: manager, error: managerError } = requiresPracticeManagerLookup(roles)
@@ -85,7 +84,7 @@ export const authenticateSupabaseUser = async (email: string, password: string, 
   if (error || !data.user || !data.session) return null;
   const user = await toSession(data.user, data.session.expires_at);
   if (user && recordAudit) await getSupabaseAdmin().from('security_audit_log').insert({ actor_user_id: user.sub, action: 'account.login', object_type: 'user', object_id: user.sub, request_id: requestId || null, metadata: { surface: user.roles.some((role) => role !== 'customer') ? 'staff' : 'account' } });
-  return user ? { user, accessToken: data.session.access_token } : null;
+  return user ? { user, accessToken: data.session.access_token, refreshToken: data.session.refresh_token } : null;
 };
 
 export const registerSupabaseCustomer = async (name: string, email: string, password: string, emailRedirectTo: string) => {
@@ -103,7 +102,7 @@ export const registerSupabaseCustomer = async (name: string, email: string, pass
   }
   if (!data.session) return { confirmationRequired: true as const };
   const user = await toSession(data.user, data.session.expires_at);
-  return user ? { confirmationRequired: false as const, user, accessToken: data.session.access_token } : { confirmationRequired: true as const };
+  return user ? { confirmationRequired: false as const, user, accessToken: data.session.access_token, refreshToken: data.session.refresh_token } : { confirmationRequired: true as const };
 };
 
 export const resendSupabaseCustomerConfirmation = async (email: string, emailRedirectTo: string) => {
@@ -125,7 +124,7 @@ export const verifySupabaseSession = async (token?: string): Promise<UserSession
   const { data, error } = await getSupabaseAdmin().auth.getUser(token);
   if (error) {
     // A network failure must not erase a valid cookie and masquerade as logout.
-    if (!error.status || error.status >= 500) throw error;
+    if (!error.status || error.status === 429 || error.status >= 500) throw error;
     return null;
   }
   if (!data.user) return null;
@@ -137,4 +136,22 @@ export const requestSupabasePasswordReset = async (email: string, redirectTo: st
   if (!configured()) throw new Error('configuration');
   const { error } = await publicAuthClient().auth.resetPasswordForEmail(email, { redirectTo });
   if (error) throw error;
+};
+
+// Each request owns its auth client; rotating tokens never leak across users.
+export const refreshSupabaseSession = async (refreshToken: string) => {
+  const { data, error } = await publicAuthClient().auth.refreshSession({ refresh_token: refreshToken });
+  if (error) {
+    // Rate limits, transport errors and provider outages must preserve cookies.
+    if (!error.status || error.status === 429 || error.status >= 500) throw error;
+    return null;
+  }
+  if (!data.session || !data.user) return null;
+  const user = await toSession(data.user, data.session.expires_at);
+  return user ? { user, accessToken: data.session.access_token, refreshToken: data.session.refresh_token } : null;
+};
+
+export const revokeSupabaseSession = async (accessToken: string) => {
+  const { error } = await getSupabaseAdmin().auth.admin.signOut(accessToken, 'local');
+  if (error && error.status !== 401 && error.status !== 403 && error.status !== 404) throw error;
 };

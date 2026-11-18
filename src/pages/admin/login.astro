@@ -1,4 +1,5 @@
 ---
+import RememberDevice from '../../components/auth/RememberDevice.astro';
 import AppIcons from '../../components/astro/AppIcons.astro';
 import AdminIcon from '../../components/admin/AdminIcon.astro';
 import '../../styles/admin.css';
@@ -60,6 +61,7 @@ const next = requestedNext.startsWith('/admin') && !requestedNext.startsWith('//
                 <button type="button" aria-label="Wachtwoord tonen" aria-pressed="false" data-password-toggle><AdminIcon name="eye" size={17} /></button>
               </span>
             </label>
+            <RememberDevice />
             <button class="admin-login__submit" type="submit">Aanmelden <AdminIcon name="arrow" size={16} /></button>
           </form>
 

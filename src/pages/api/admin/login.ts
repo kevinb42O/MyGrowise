@@ -1,5 +1,6 @@
+import { setAuthSession } from '../../../lib/authSession';
 import type { APIRoute } from 'astro';
-import { SUPABASE_SESSION_COOKIE, authenticateSupabaseUser, hasPermission, isSupabaseAuthConfigured, isTrustedFormOrigin, sanitizeAppRedirect, supabaseSessionCookieOptions } from '../../../lib/adminAuth';
+import { authenticateSupabaseUser, hasPermission, isSupabaseAuthConfigured, isTrustedFormOrigin, sanitizeAppRedirect } from '../../../lib/adminAuth';
 import { firstAccessibleAdminPath, requiredAdminPermission } from '../../../lib/adminPermissions';
 
 export const prerender = false;
@@ -18,7 +19,7 @@ export const POST: APIRoute = async ({ request, cookies, url, locals }) => {
   const authenticated = email.length <= 254 && password.length > 0 && password.length <= 256 ? await authenticateSupabaseUser(email, password, true, locals.requestId) : null;
   const adminDestination = authenticated ? firstAccessibleAdminPath(authenticated.user.roles) : null;
   if (!authenticated || (!adminDestination && !(authenticated.user.roles.includes('practitioner') && authenticated.user.practitionerId))) { const current = attempts.get(clientKey); attempts.set(clientKey, { count: (current?.count || 0) + 1, resetAt: current?.resetAt && current.resetAt > now ? current.resetAt : now + WINDOW_MS }); await new Promise((resolve) => setTimeout(resolve, 250)); return redirectToLogin(url, 'invalid', requestedNext || '/admin'); }
-  attempts.delete(clientKey); cookies.set(SUPABASE_SESSION_COOKIE, authenticated.accessToken, supabaseSessionCookieOptions());
+  attempts.delete(clientKey); setAuthSession(cookies, authenticated, form.get('remember') === 'on');
   const requestedPath = requestedNext ? new URL(requestedNext, url.origin).pathname : '';
   const requestedPermission = requestedPath ? requiredAdminPermission(requestedPath) : null;
   const canOpenPracticeDestination = requestedNext.startsWith('/praktijk') && authenticated.user.roles.includes('practitioner') && Boolean(authenticated.user.practitionerId);

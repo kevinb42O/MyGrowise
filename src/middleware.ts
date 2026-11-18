@@ -1,6 +1,7 @@
+import { resolveAuthSession, clearAuthSession } from './lib/authSession';
 import {legacyRoutes,retiredLegacyRoutes} from './lib/legacyRoutes';
 import { defineMiddleware } from 'astro:middleware';
-import { SUPABASE_SESSION_COOKIE, hasPermission, hasRole, isCustomerAccount, isSupabaseAuthConfigured, isTrustedFormOrigin, sanitizeAppRedirect, verifySupabaseSession } from './lib/adminAuth';
+import { SUPABASE_SESSION_COOKIE, hasPermission, hasRole, isCustomerAccount, isSupabaseAuthConfigured, isTrustedFormOrigin, sanitizeAppRedirect } from './lib/adminAuth';
 import { firstAccessibleAdminPath, requiredAdminPermission } from './lib/adminPermissions';
 import { hasInternalMessagingAccess } from './lib/adminPermissions';
 
@@ -32,14 +33,22 @@ export const onRequest = defineMiddleware(async (context, next) => {
   const isCheckoutApi = path === '/api/checkout' || path.startsWith('/api/checkout/');
   const isBookingPage = path === '/afspraak' || path.startsWith('/afspraak/') || /^\/begeleiding\/[a-z0-9]+(?:-[a-z0-9]+)*$/.test(path);
   const isBookingApi = path === '/api/bookings';
-  const isOptionalSessionPath = path === '/aankopen' || path.startsWith('/aankopen/') || path.startsWith('/api/aankopen/') || path.startsWith('/api/boeken/') || path === '/api/checkout/catalog-order' || path === '/verdieping' || path.startsWith('/verdieping/') || path === '/zelf-aan-de-slag' || path === '/modules' || path.startsWith('/modules/') || isBookingPage || isBookingApi || path === '/bestellen' || path === '/samenstellen' || path === '/vragenlijsten' || path === '/profielen' || path.startsWith('/vragenlijsten/') || path.startsWith('/profielen/') || path === '/contact' || path === '/api/contact' || path === '/berichten/gesprek';
+  const isOptionalSessionPath = path.startsWith('/aanbod/') || path === '/aankopen' || path.startsWith('/aankopen/') || path.startsWith('/api/aankopen/') || path.startsWith('/api/boeken/') || path === '/api/checkout/catalog-order' || path === '/verdieping' || path.startsWith('/verdieping/') || path === '/zelf-aan-de-slag' || path === '/modules' || path.startsWith('/modules/') || isBookingPage || isBookingApi || path === '/bestellen' || path === '/samenstellen' || path === '/vragenlijsten' || path === '/profielen' || path.startsWith('/vragenlijsten/') || path.startsWith('/profielen/') || path === '/contact' || path === '/api/contact' || path === '/berichten/gesprek';
   if (!isAdminPage && !isAdminApi && !isPracticePage && !isPracticeApi && !isAccountPage && !isAccountApi && !isProfileApi && !isInternalApi && !isCheckoutApi && !isOptionalSessionPath) return next();
 
-  if (path === '/praktijk/activeren' || path === '/api/admin/login' || path === '/api/admin/logout' || path === '/api/account/login' || path === '/api/account/register' || path === '/api/account/logout' || path === '/api/account/password-reset' || path === '/api/account/verification-resend' || path === '/account/bevestigingslink' || path === '/account/wachtwoord-vergeten' || path === '/account/wachtwoord-herstellen') return next();
+  const privateNext = async () => {
+    const response = await next();
+    response.headers.set('Cache-Control', 'private, no-store');
+    return response;
+  };
+
+  if (path === '/praktijk/activeren' || path === '/api/admin/login' || path === '/api/admin/logout' || path === '/api/account/login' || path === '/api/account/register' || path === '/api/account/logout' || path === '/api/account/password-reset' || path === '/api/account/verification-resend' || path === '/account/bevestigingslink' || path === '/account/wachtwoord-vergeten' || path === '/account/wachtwoord-herstellen') return privateNext();
 
   let session;
   try {
-    session = isSupabaseAuthConfigured() ? await verifySupabaseSession(context.cookies.get(SUPABASE_SESSION_COOKIE)?.value) : null;
+    const resolved = isSupabaseAuthConfigured() ? await resolveAuthSession(context.cookies) : null;
+    session = resolved?.user ?? null;
+    context.locals.authAccessToken = resolved?.accessToken;
   } catch (error) {
     console.error('[auth] Session verification unavailable', { requestId: context.locals.requestId, path, error: error instanceof Error ? error.name : 'unknown' });
     return new Response('De beveiligde omgeving is tijdelijk niet bereikbaar. Probeer het over enkele seconden opnieuw.', {
@@ -49,8 +58,8 @@ export const onRequest = defineMiddleware(async (context, next) => {
   }
   if (isOptionalSessionPath) {
     if (session) context.locals.currentUser = session;
-    else if (context.cookies.has(SUPABASE_SESSION_COOKIE)) context.cookies.delete(SUPABASE_SESSION_COOKIE, { path: '/' });
-    return next();
+    else if (context.cookies.has(SUPABASE_SESSION_COOKIE)) clearAuthSession(context.cookies);
+    return privateNext();
   }
   if (path === '/admin/login') {
     if (session) {
@@ -60,7 +69,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
       // organisation dashboard. Keep this login page available to show the
       // access error instead of silently sending the user to /praktijk.
     }
-    return next();
+    return privateNext();
   }
   if (path === '/praktijk/login') {
     if (session) {
@@ -68,19 +77,19 @@ export const onRequest = defineMiddleware(async (context, next) => {
       // A superadmin without a practitioner profile must not be routed into
       // the practice workspace.
     }
-    return next();
+    return privateNext();
   }
   if (path === '/account/inloggen' || path === '/account/aanmaken') {
     if (isCustomerAccount(session)) {
       const nextPath = sanitizeAppRedirect(context.url.searchParams.get('next'));
       return context.redirect(nextPath || '/account', 303);
     }
-    return next();
+    return privateNext();
   }
 
   if (!session) {
     if (path.startsWith('/account/modules/')) return context.redirect(path.replace('/account/modules/','/aankopen/modules/'),303);
-    context.cookies.delete(SUPABASE_SESSION_COOKIE, { path: '/' });
+    clearAuthSession(context.cookies);
     if (isAdminApi || isPracticeApi || isAccountApi || isProfileApi || isInternalApi || isCheckoutApi) {
       return new Response(JSON.stringify({ error: 'Niet aangemeld.' }), {
         status: 401,
@@ -114,5 +123,5 @@ export const onRequest = defineMiddleware(async (context, next) => {
 
   context.locals.adminUser = session;
   context.locals.currentUser = session;
-  return next();
+  return privateNext();
 });

@@ -1,4 +1,5 @@
 ---
+import RememberDevice from '../../components/auth/RememberDevice.astro';
 import AuthLayout from '../../layouts/AuthLayout.astro';
 import PasswordField from '../../components/auth/PasswordField.astro';
 import Icon from '../../components/purchases/PurchaseIcon.astro';
@@ -33,6 +34,7 @@ const needsConfirmationHelp = error === 'registered' || error === 'email_confirm
     <div class="auth-field"><label for="login-email">E-mailadres</label><input id="login-email" name="email" type="email" autocomplete="email" inputmode="email" placeholder="jij@voorbeeld.be" required maxlength="254" /></div>
     <PasswordField id="login-password" label="Wachtwoord" autocomplete="current-password" minimum={1}/>
     <a class="auth-recovery-link" href={`/account/wachtwoord-vergeten?next=${encodeURIComponent(next)}`}>Wachtwoord vergeten?</a>
+    <RememberDevice />
     <button class="purchase-button" type="submit">Inloggen <Icon name="arrow" /></button>
   </form>
   <div class="auth-links"><p>Nog geen account? <a href={createAccount}>Maak er één aan</a></p><p>Alleen je aankopen openen? <a href="/aankopen/toegang">Ontvang een toegangslink</a></p></div>
