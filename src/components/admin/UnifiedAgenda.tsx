@@ -1,3 +1,4 @@
+import { agendaRefreshDelay } from '../../lib/agendaRefresh';
 import NavigationToggleIcon from './NavigationToggleIcon';
 import AdminSkeleton from './AdminSkeleton';
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
@@ -36,7 +37,7 @@ type Editor =
   | { type: 'block'; fields: TimeRange & { reason: string } }
   | { type: 'booking'; fields: { startsAt: string; patientId: string; offerId: string; practitionerId?: string; newPatient?: NewPatient }; original?: Item };
 type CalendarSync = { enabled: boolean; lastSuccessAt: string | null; lastError: string | null; pendingMissing: number;
-  coverageUncertain: number; coverageUntil: string | null };
+  coverageUncertain: number; coverageUntil: string | null; nextCheckAt?: string | null; retryAfterSeconds?: number | null };
 type Payload = { events: Item[]; practitioners?: { id: string; name: string; active: boolean }[];
   canUseItransform?: boolean; sync?: CalendarSync | null; availabilityUnknown?: boolean };
 
@@ -204,6 +205,8 @@ export default function UnifiedAgenda({ mode = 'admin', allowItransform = false,
   const [data, setData] = useState<{ key: string; payload: Payload }>();
   const [loadState, setLoadState] = useState<{ key: string; error?: string }>();
   const [reload, setReload] = useState(0);
+  const agendaRequestPending = useRef(false);
+  const lastAutomaticRefresh = useRef(0);
   const [notice, setNotice] = useState('');
   const [editor, setEditor] = useState<Editor | null>(null);
   const [dirty, setDirty] = useState(false);
@@ -221,6 +224,7 @@ export default function UnifiedAgenda({ mode = 'admin', allowItransform = false,
     if (!query) return;
     const controller = new AbortController();
     setLoadState(undefined);
+    agendaRequestPending.current = true;
     fetchJson(`${endpoint}?${query}`, { signal: controller.signal }).then((payload: Payload) => {
       if (controller.signal.aborted) return;
       setData({ key: query, payload });
@@ -230,25 +234,38 @@ export default function UnifiedAgenda({ mode = 'admin', allowItransform = false,
       else setProfessionals(payload.practitioners || []);
     }).catch(error => {
       if (!controller.signal.aborted) setLoadState({ key: query, error: error.message });
-    });
-    return () => controller.abort();
+    }).finally(() => { if (!controller.signal.aborted) agendaRequestPending.current = false; });
+    return () => { controller.abort(); agendaRequestPending.current = false; };
   }, [endpoint, practice, query, reload]);
 
   useEffect(() => {
-    let lastRefresh = Date.now();
+    let timer: number;
     const update = () => {
       const now = Date.now();
       setClock(now);
-      if (document.visibilityState === 'visible' && now - lastRefresh >= 4000) {
-        lastRefresh = now;
+      if (document.visibilityState === 'visible' && navigator.onLine !== false &&
+          !agendaRequestPending.current && now - lastAutomaticRefresh.current >= 4000) {
+        lastAutomaticRefresh.current = now;
         refresh();
       }
     };
-    const timer = window.setInterval(update, practice ? 300000 : 600000);
+    const tick = () => {
+      update();
+      // Hidden/offline pages perform no network work. Visibility/online events
+      // pick up immediately on return; the fallback also handles failed loads.
+      timer = window.setTimeout(tick, agendaRefreshDelay(practice, hasItransform));
+    };
+    timer = window.setTimeout(tick, agendaRefreshDelay(practice, hasItransform, sync));
     window.addEventListener('focus', update);
+    window.addEventListener('online', update);
     document.addEventListener('visibilitychange', update);
-    return () => { window.clearInterval(timer); window.removeEventListener('focus', update); document.removeEventListener('visibilitychange', update); };
-  }, [practice, refresh]);
+    return () => {
+      window.clearTimeout(timer);
+      window.removeEventListener('focus', update);
+      window.removeEventListener('online', update);
+      document.removeEventListener('visibilitychange', update);
+    };
+  }, [practice, hasItransform, sync, query, reload, refresh]);
 
   useEffect(() => {
     if (!range) return;
@@ -406,7 +423,7 @@ export default function UnifiedAgenda({ mode = 'admin', allowItransform = false,
         refreshed: 'MijnDiAd is bijgewerkt.', recent: 'MijnDiAd is kort geleden gecontroleerd.', in_progress: 'MijnDiAd wordt al gecontroleerd.',
         inactive: 'De MijnDiAd-koppeling is inactief.', failed: 'MijnDiAd kon niet worden bijgewerkt. De laatst bekende gegevens blijven zichtbaar.',
       };
-      setNotice(outcomes[result.outcome] || 'De status van MijnDiAd is onbekend.');
+      setNotice(result.sync?.pendingMissing ? 'Een verdwenen afspraak wordt automatisch nogmaals gecontroleerd. Tot die bevestiging blijft de tijd geblokkeerd.' : outcomes[result.outcome] || 'De status van MijnDiAd is onbekend.');
       refresh();
     } catch (error) { setNotice(error instanceof Error ? error.message : 'MijnDiAd kon niet worden gecontroleerd.'); }
     finally { setSyncBusy(false); }
@@ -417,8 +434,8 @@ export default function UnifiedAgenda({ mode = 'admin', allowItransform = false,
   const loading = !loadState || loadState.key !== query;
   const coverageWarning = Boolean(hasItransform && range && Date.parse(range.to) > clock &&
     (!sync?.coverageUntil || Date.parse(range.to) > Date.parse(sync.coverageUntil)));
-  const syncWarning = Boolean(!sync?.enabled || !sync.lastSuccessAt || sync.lastError || clock - Date.parse(sync.lastSuccessAt) > 300000 || sync.pendingMissing || sync.coverageUncertain || coverageWarning);
-  const syncLabel = !sync ? 'MijnDiAd · status onbekend' : !sync.enabled ? 'MijnDiAd · inactief' : syncWarning ? 'MijnDiAd · controleren' : 'MijnDiAd · bijgewerkt';
+  const syncWarning = Boolean(!sync?.enabled || !sync.lastSuccessAt || sync.lastError || clock - Date.parse(sync.lastSuccessAt) > 120000 || sync.pendingMissing || sync.coverageUncertain || coverageWarning);
+  const syncLabel = !sync ? 'MijnDiAd · status onbekend' : !sync.enabled ? 'MijnDiAd · inactief' : sync.pendingMissing ? 'MijnDiAd · wijziging controleren' : syncWarning ? 'MijnDiAd · controleren' : 'MijnDiAd · bijgewerkt';
 
   return <div className={`unified-agenda${filterOpen ? ' has-open-filters' : ''}${practice ? ' unified-agenda--practice' : ''}`}>
     <div className="agenda-toolbar" aria-label="Agendabediening">
@@ -475,9 +492,11 @@ export default function UnifiedAgenda({ mode = 'admin', allowItransform = false,
             <p>{sync?.lastSuccessAt ? `Laatst opgehaald op ${dateTime.format(new Date(sync.lastSuccessAt))}` : 'Nog geen geslaagde controle.'}</p>
             {sync?.coverageUntil && <p>Beschikbaarheid gecontroleerd tot {dateTime.format(new Date(sync.coverageUntil))}.</p>}
             {sync?.lastError && <p className="is-warning">{sync.lastError === 'unsupported_recurrence' ? 'Een herhalend moment kon niet veilig worden verwerkt.' : 'De laatste controle is mislukt.'} De vorige gegevens zijn behouden.</p>}
-            {!!sync?.pendingMissing && <p className="is-warning">{sync.pendingMissing} verdwenen momenten wachten op bevestiging.</p>}
+            {!!sync?.pendingMissing && <p className="is-warning">{sync.pendingMissing} verdwenen momenten worden automatisch nogmaals gecontroleerd. Tot die bevestiging blijven hun tijden geblokkeerd.</p>}
             {coverageWarning && <p className="is-warning">Een deel van deze periode valt buiten de gecontroleerde periode.</p>}
             <p>{imported.length} zichtbare momenten uit MijnDiAd, waarvan {imported.filter(item => item.kind === 'appointment' && /\bonline\b/i.test(`${item.title} ${item.location}`)).length} online afspraken.</p>
+            <p>Deze agenda controleert MijnDiAd ongeveer elke minuut zolang het tabblad zichtbaar is. Bij een storing wachten we langer.</p>
+            {sync?.enabled && sync.nextCheckAt && <p>Volgende broncontrole vanaf {new Intl.DateTimeFormat('nl-BE', { timeStyle: 'medium', timeZone: zone }).format(new Date(sync.nextCheckAt))}{sync.lastError ? ', met extra wachttijd na de mislukte controle' : ''}.</p>}
             <p>Pas externe afspraken aan in MijnDiAd. De agenda haalt wijzigingen op nadat MijnDiAd ze publiceert.</p>
             <button type="button" disabled={syncBusy} onClick={syncNow}>{syncBusy ? 'Controleren…' : 'Nu verversen'}</button>
           </div>

@@ -4,6 +4,7 @@ export type MijndiadSyncStatus = {
   enabled: boolean; lastAttemptAt?: string | null; lastSuccessAt: string | null;
   lastError: string | null; failureCount: number; eventCount: number;
   pendingMissing: number; coverageUncertain: number; intervalMinutes: number; mode: 'on_demand';
+  nextCheckAt?: string | null; retryAfterSeconds?: number | null;
   coverageFrom: string | null; coverageUntil: string | null;
 };
 export const CALENDAR_UNAVAILABLE_MESSAGE = 'De externe agenda kon niet recent genoeg worden gecontroleerd. Probeer over enkele minuten opnieuw. Er is geen nieuwe afspraak opgeslagen.';

@@ -35,7 +35,7 @@ export const GET: APIRoute = async ({ url, locals }) => {
     const to = url.searchParams.get('to');
     if (!agendaRange(from, to)) return invalid();
     const { canUseItransform } = await getPracticeAgendaAccess(practitionerId, user.sub);
-    const state = canUseItransform ? await ensurePracticeCalendarFresh(practitionerId, { required: false }) : null;
+    const state = canUseItransform ? await ensurePracticeCalendarFresh(practitionerId, { required: false, maxAgeSeconds: 60 }) : null;
     const result = await listPracticeAgenda(practitionerId, from!, to!, canUseItransform, user.sub, user.roles.includes('super_admin'));
     return json({ ...result, canUseItransform, sync: state?.sync ?? null });
   } catch {

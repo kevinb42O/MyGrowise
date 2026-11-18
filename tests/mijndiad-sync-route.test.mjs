@@ -30,7 +30,7 @@ test('refresh failures return a safe explanation and never upstream details',asy
  const {route,context}=setup({failure:true});const r=await route.POST(context);assert.equal(r.status,503);const text=await r.text();assert.match(text,/vorige gegevens zijn behouden/);assert.doesNotMatch(text,/private upstream/);
 });
 test('agenda status is owner-scoped and excluded for users without Itransform access',async()=>{
- const yes=setup();const payload=await(await yes.route.GET(yes.context)).json();assert.equal(payload.sync.enabled,true);assert.equal(yes.calls[0].args.p_practitioner_id,'owner');
+ const yes=setup();const payload=await(await yes.route.GET(yes.context)).json();assert.equal(payload.sync.enabled,true);assert.equal(yes.calls[0].args.p_practitioner_id,'owner');assert.equal(yes.calls[0].options.maxAgeSeconds,60);
  const no=setup({allowed:false});assert.equal((await(await no.route.GET(no.context)).json()).sync,null);assert.equal(no.calls.length,0);
 });
 test('a failed source refresh keeps the existing agenda readable with a warning',async()=>{

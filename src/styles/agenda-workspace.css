@@ -136,3 +136,10 @@ html[data-navigation-state="collapsed"] .agenda-workspace .agenda-navigation-too
   .agenda-toolbar__view-select { width:70px; }
   .agenda-toolbar .agenda-toolbar__filter { padding-inline:7px; }
 }
+
+/* Keep source status and its refresh action reachable on short screens. */
+.agenda-workspace .unified-agenda__sync .unified-agenda__popover {
+  max-height:calc(100dvh - 250px);
+  overflow-y:auto;
+  overscroll-behavior:contain;
+}
