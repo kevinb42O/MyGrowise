@@ -16,6 +16,7 @@ const { practice, user } = Astro.props;
   <AttentionStatus surface={practice ? 'practice' : 'admin'} compact />
 </div>
 <script>
+  import { setupAgendaTooltips } from './agendaTooltips';
   const body = document.body;
   if (body.classList.contains('agenda-workspace')) {
     const sidebar = document.querySelector<HTMLElement>('.admin-sidebar')!;
@@ -57,5 +58,6 @@ const { practice, user } = Astro.props;
     });
     mobile.addEventListener('change', () => setNavigation(false));
     setNavigation(false);
+    setupAgendaTooltips(sidebar, mobile);
   }
 </script>
