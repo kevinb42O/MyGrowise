@@ -1,6 +1,6 @@
 # Updates voor Virginie — uitvoering
 
-18 november 2026. Applicatie lokaal gebouwd en getest. De drie gerichte databasemigraties zijn na een teruggedraaide repetitie op de gekoppelde productiedatabase toegepast en geregistreerd. De applicatiewijziging is nog niet uitgerold.
+18 november 2026. Applicatie lokaal gebouwd en getest. De drie gerichte databasemigraties zijn na een teruggedraaide repetitie op de gekoppelde productiedatabase toegepast en geregistreerd. De applicatie is via de bestaande Vercel-integratie uitgerold en op productie gecontroleerd.
 
 ## Wat is gebouwd
 
@@ -47,7 +47,7 @@ Standaard gebruikt de proef `http://localhost:4321`; UPDATES_TEST_ORIGIN kan dat
 5. Controleer met een echte superadminsessie overzicht, detail, een feedbackreactie, antwoord en gelezen-status op een tweede toestel. Controleer dat medewerkers en niet-aangemelde bezoekers geen toegang hebben.
 6. Voeg pas na die productiecontrole een mijlpaal Beschikbaar toe aan het onderwerp over de Updates-sectie.
 
-De bestaande werkboom bevat gelijktijdig ander werk aan mail en cliëntendossiers. Dat is niet automatisch onderdeel van deze oplevering. Er is geen commit of deployment uitgevoerd vanuit deze taak.
+De bestaande werkboom bevat gelijktijdig ander werk aan mail en cliëntendossiers. Dat is niet automatisch onderdeel van deze oplevering. Alleen de Updates-wijzigingsset is opgenomen in implementatiecommit bf89aa1 en uitgerold; het gelijktijdige dossierwerk is buiten die commit gebleven.
 
 ## Aanvulling: mail naar de webdesigner
 
@@ -68,3 +68,13 @@ Eerst gerepeteerd en teruggedraaid; vervolgens toegepast en geregistreerd; daarn
 `scripts/test-update-feedback-email.mjs --send` heeft één duidelijk gemarkeerde testmail via de echte worker en de nieuwe databasewachtrij naar het afgesproken Gmail-adres verstuurd. De server registreerde status sent, één poging, op 18 november 2026 om 13:53:42 Belgische tijd. Onderwerp: “Feedback van Kevin (technische test) · [TEST] Feedbackmeldingen voor de webdesigner — MyGrowise”. Dit bewijst SMTP-acceptatie; de ontvanger kan de daadwerkelijke inbox-/spamplaatsing controleren. De tijdelijke conceptupdate, testreactie, mailtaak en gegenereerde testruntime zijn verwijderd. Er is geen echte feedback namens Virginie geplaatst.
 
 De scriptvariant zonder --send genereert uitsluitend een lokale HTML-/tekstpreview onder output/updates. De mail is visueel beoordeeld op desktop en op 390px. De SQL-proef controleert ook één taak per reactie, het uitsluiten van eigen designerantwoorden, leaseherstel en het Website-filter. De browserproef controleert beide omgevingsfilters samen met status, zoeken, reacties en foutbehoud.
+
+## Oplevering en productiecontrole
+
+Implementatiecommit `bf89aa13ff4b6aecb51cab0559ef8a66f1498bca` is naar `origin/main` gepusht. Vercel meldt **Deployment has completed** voor [deze uitrol](https://vercel.com/lanternnetworks-projects/mygrowise/BERk2sUCKYf3riouPQT2eA493kdW). Er zijn geen GitHub Actions gebruikt.
+
+De exacte release is in een aparte checkout gecontroleerd, zonder het gelijktijdige dossierwerk: 206 tests, TypeScript, productiebuild en artifactcontrole geslaagd. De volledige gedeelde werkboom had op de laatste controle 216 geslaagde tests. De SQL-proef en lokale browserproef zijn eerder geslaagd voor het datamodel, feedback, foutbehoud, redactie en filters.
+
+Op de live website is een tijdelijk, synthetisch testaccount gebruikt. Gecontroleerd: tien onderwerpen; Website- en Dashboard-filter; detail met mijlpalen; gelezen-status die in een tweede browsercontext behouden blijft; echte schermen op 1440px en 390px zonder horizontale overloop. Het intrekken van de tijdelijke superadminrol geeft 403 op de API; niet aangemeld geeft 401. De tijdelijke gebruiker en gelezen-status zijn verwijderd. Er is tijdens deze nacontrole geen extra feedback of mail verstuurd. De eerder beschreven SMTP-proef bewijst de echte feedbackverzending.
+
+Na deze controles is het onderwerp `updates-samen-verder` via de bestaande transactiefunctie op Beschikbaar gezet met een nieuwe mijlpaal over de oplevering. Lokale productiescreenshots staan onder `output/updates/production-*.png`; die zijn van vóór deze laatste statuswijziging. Virginies eigen feedback en gelezen-status zijn niet aangepast.

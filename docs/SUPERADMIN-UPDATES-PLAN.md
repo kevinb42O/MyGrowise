@@ -108,7 +108,7 @@ De precieze schermcompositie en eerste historische berichten zijn nog niet goedg
 
 ## Uitvoering gestart op 18 november 2026
 
-De lokale implementatie en het redactieproces zijn gebouwd. Zie [SUPERADMIN-UPDATES-UITVOERING.md](SUPERADMIN-UPDATES-UITVOERING.md) voor de schermen, tests en uitrolvolgorde. De eerste inhoud omvat tien onderwerpen en een expliciet gelabelde terugblik. De drie productiemigraties zijn na rollbackrepetitie toegepast. De applicatie-uitrol is nog niet uitgevoerd.
+De lokale implementatie en het redactieproces zijn gebouwd. Zie [SUPERADMIN-UPDATES-UITVOERING.md](SUPERADMIN-UPDATES-UITVOERING.md) voor de schermen, tests en uitrolvolgorde. De eerste inhoud omvat tien onderwerpen en een expliciet gelabelde terugblik. De drie productiemigraties zijn na rollbackrepetitie toegepast. De applicatie is via Vercel uitgerold en op productie gecontroleerd; het onderwerp over de Updates-sectie is als Beschikbaar gemarkeerd.
 
 ## Aanvullend bevestigd door Kevin
 
