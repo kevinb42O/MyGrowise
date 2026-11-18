@@ -1,34 +1,26 @@
 ---
 import AdminMailSummary from '../../components/admin/AdminMailSummary.astro';
 import AdminLayout from '../../layouts/AdminLayout.astro';
-import AdminPagination from '../../components/admin/AdminPagination.astro';
-import {getSupabaseAdmin} from '../../lib/supabase/server';
+import AdminMailTasks from '../../components/admin/AdminMailTasks.astro';
 import {websiteMailReady} from '../../lib/commerce/websiteMail';
-import {ADMIN_MAIL_QUEUES, getAdminMailPage} from '../../lib/adminMail';
-const db=getSupabaseAdmin();
-const states = [{value:'pending',label:'Gepland of wachtend'},{value:'sending',label:'Bezig'},{value:'failed',label:'Mislukt'}];
+import {getAdminMailCounts, getAdminMailPage} from '../../lib/adminMail';
 const [counts,result]=await Promise.all([
- Promise.all(ADMIN_MAIL_QUEUES.map(async queue=>({ ...queue, states: await Promise.all(states.map(async ({value})=>{const {count,error}=await db.from(queue.table).select('id',{count:'exact',head:true}).eq('status',value);if(error)throw new Error('Mailwachtrij tijdelijk niet beschikbaar.');return count||0;}))}))),
+ getAdminMailCounts(),
  getAdminMailPage(Astro.url.searchParams.get('queue')||'',Astro.url.searchParams.get('status')||'failed',Astro.url.searchParams.get('pagina')),
 ]);
-const failed = counts.reduce((sum,queue)=>sum+queue.states[2],0);
-const sending = counts.reduce((sum,queue)=>sum+queue.states[1],0);
+const failed = counts.reduce((sum,queue)=>sum+queue.states.failed,0);
+const sending = counts.reduce((sum,queue)=>sum+queue.states.sending,0);
 const ready = websiteMailReady();
-const date=(value:unknown)=>value?new Intl.DateTimeFormat('nl-BE',{dateStyle:'medium',timeStyle:'short',timeZone:'Europe/Brussels'}).format(new Date(String(value))):'—';
 Astro.response.headers.set('Cache-Control','private, no-store');
 ---
 <AdminLayout title="Mailopvolging"><div class="admin-page">
- <section class="admin-page-heading"><div><h1>Mailopvolging</h1><p>Controleer bezorging, planning en mislukte verzendpogingen.</p></div></section>
+ <section class="admin-page-heading"><div><h1>Mailopvolging</h1><p>Bekijk verzonden e-mails, planning en mislukte verzendpogingen.</p></div></section>
  {Astro.url.searchParams.has('processed')&&<p class="admin-form-notice" role="status">De verzendronde is uitgevoerd. Controleer de resterende aantallen hieronder.</p>}
  {Astro.url.searchParams.has('error')&&<p class="admin-form-alert" role="alert">De verwerking is niet volledig afgerond. Controleer de actuele taken hieronder voordat je opnieuw probeert.</p>}
  {!ready&&<p role="alert">E-mail is nog niet volledig ingesteld en geverifieerd. Taken blijven bewaard tot de configuratie hersteld is.</p>}
  <section class="practice-card" role="status"><h2>{failed ? `${failed} ${failed===1?'e-mail vraagt':'e-mails vragen'} aandacht` : ready ? 'Geen mislukte e-mails' : 'E-mailinstellingen controleren'}</h2><p>{failed?'Bekijk de taken hieronder en controleer de oorzaak vóór je opnieuw probeert.':'Herinneringen kunnen al klaarstaan voor een later verzendmoment.'}</p>{sending>0&&<p>{sending} e-mail(s) worden momenteel verwerkt.</p>}</section>
  <AdminMailSummary counts={counts}/>
- <section class="admin-panel" id="mailtaken"><header class="admin-panel__header"><div><h2>Verzendtaken</h2><p>Referentie, pogingen en planning; zonder mailinhoud of ontvangergegevens.</p></div></header>
- <form class="admin-filterbar" method="get"><label>Wachtrij<select name="queue">{ADMIN_MAIL_QUEUES.map(queue=><option value={queue.table} selected={result.queue.table===queue.table}>{queue.label}</option>)}</select></label><label>Status<select name="status">{states.map(state=><option value={state.value} selected={result.status===state.value}>{state.label}</option>)}</select></label><button class="admin-button">Tonen</button></form>
- {result.items.length?<div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>Taak</th><th>Aangemaakt</th><th>Pogingen</th><th>Planning</th><th>Diagnose</th><th>Herstel</th></tr></thead><tbody>{result.items.map(job=><tr><td data-label="Taak"><code>{job.id}</code></td><td data-label="Aangemaakt">{date(job.created_at)}</td><td data-label="Pogingen">{job.attempts}</td><td data-label="Planning">{result.status==='sending'?`In verwerking tot ${date(job.lease_until)}`:`Volgende poging ${date(job.next_attempt_at)}`}</td><td data-label="Diagnose">{job.diagnosis}</td><td data-label="Herstel">{job.status==='failed'?<form method="post" action="/api/admin/mail"><input type="hidden" name="retry_failed" value="1"/><input type="hidden" name="queue" value={result.queue.table}/><input type="hidden" name="job_id" value={job.id}/><label class="admin-mail-confirm"><input type="checkbox" required name="checked" value="yes"/> Oorzaak gecontroleerd; een eerdere mail kan al aangekomen zijn.</label><button class="admin-button" type="submit">Deze taak opnieuw proberen</button></form>:'Geen handmatig herstel nodig'}</td></tr>)}</tbody></table></div>:<div class="admin-empty-row"><div><strong>Geen taken met deze status</strong><p>Kies een andere status of wachtrij om de planning te bekijken.</p></div></div>}
- <AdminPagination {...result} hash="#mailtaken" label="Verzendtaken"/>
- </section>
+ <AdminMailTasks result={result}/>
  <section class="practice-card"><h2>Verzendronde uitvoeren</h2><form method="post" action="/api/admin/mail"><button class="admin-button admin-button--primary">Verwerk wachtende mail</button><p>Verwerkt een beperkte ronde van taken die nu aan de beurt zijn. Toekomstige herinneringen blijven gepland.</p></form>
  {failed>0&&<details><summary>Alle mislukte taken opnieuw klaarzetten</summary><form method="post" action="/api/admin/mail"><input type="hidden" name="retry_failed" value="1"/><label class="admin-mail-confirm"><input type="checkbox" required name="checked" value="yes"/> Ik heb de mailconfiguratie en oorzaak voor alle mislukte taken gecontroleerd. Een eerdere mail kan alsnog aangekomen zijn.</label><button class="admin-button" type="submit">Alle mislukte taken opnieuw proberen</button></form></details>}
  <p>Er is geen garantie op verzending binnen vijf minuten. Zonder directe succesvolle verzending of handmatige actie volgt de volgende automatische poging tijdens de dagelijkse ronde. Supabase Auth-mails hebben hun eigen verzendvoorziening.</p></section>

@@ -20,6 +20,8 @@ import {submitContentForm} from '../lib/adminContentForm';
 import ProductForm from '../components/admin/ProductForm.astro';
 import ModuleEditor from '../components/modules/ModuleEditor.astro';
 import AdminMailSummary from '../components/admin/AdminMailSummary.astro';
+import AdminMailTasks from '../components/admin/AdminMailTasks.astro';
+import {ADMIN_MAIL_QUEUES} from '../lib/adminMail';
 import AdminPagination from '../components/admin/AdminPagination.astro';
 import '../styles/catalog-admin.css';
 import '../styles/modules.css';
@@ -39,7 +41,7 @@ if(Astro.request.method==='POST'){
 const current={product:{id:'test-module',title:'Testmodule',slug:'testmodule',type:'module',summary:'Een volledige omschrijving voor de controle.',status:'draft',availability:'upcoming',image:'/images/editorial/mygrowise-50.jpg',priceCents:8900},module:{revision:7,number:1,subtitle:'Inzicht',tagline:'',introduction:['Een inleiding'],topics:['Rust'],audience_text:'Volwassenen',access_text:'Online toegang',support_text:'Zelfstandig',image_alt:'Cover',current_release_id:null},draft:{id:'release',revision:3},assets:[{id:'asset-1',title:'Werkboek',kind:'pdf',status:'verified',byte_size:100,sort_order:1}],recommendationOptions:[{id:'recommendation',title:'Verdieping',status:'draft',availability:'upcoming'}],recommendations:[],releases:[]};
 ---
 <AdminLayout title="Admincontrole"><div class="admin-page"><h1>Admincontrole</h1>
-{view==='mail'&&<><AdminMailSummary counts={[{table:'booking_mail_jobs',label:'Afspraken',states:[2,0,1]},{table:'commerce_mail_jobs',label:'Bestellingen en afnames',states:[0,1,0]}]}/><AdminPagination page={2} pages={4} total={83} label="Taken"/></>}
+{view==='mail'&&<><AdminMailSummary counts={[{table:'booking_mail_jobs',label:'Afspraken',states:{pending:2,sending:0,failed:1,sent:83,unconfirmed:2}},{table:'commerce_mail_jobs',label:'Bestellingen en afnames',states:{pending:0,sending:1,failed:0,sent:14,unconfirmed:1}}]}/><AdminMailTasks result={{queue:ADMIN_MAIL_QUEUES[0],status:'sent',items:[{id:'11111111-1111-4111-8111-111111111111',created_at:'2026-11-17T10:00:00Z',sent_at:'2026-11-18T10:00:00Z',attempts:1,status:'sent',diagnosis:''}],page:2,pages:4,total:83,pageSize:25}}/></>}
 {view==='content'&&<ContentForm draft={submission?.draft} error={submission?.error} action="/audit-admin-browser-fixture?view=content" canPublish={true}/>}
 {view==='product'&&<ProductForm action="/unused" submitLabel="Aanmaken"/>}
 {view==='book-product'&&<ProductForm product={{id:'book',type:'guide',title:'Bestaand boek',slug:'boek',summary:'Een voldoende lange omschrijving',status:'draft'}} action="/unused" submitLabel="Bewaren"/>}
@@ -98,14 +100,23 @@ document.documentElement.dataset.appointmentReady='true';</script>
 
  page.on('dialog',dialog=>dialog.accept());
  await page.setViewportSize({width:390,height:844});await go('mail');
- assert.equal(await page.locator('.admin-table thead').isVisible(),false);
+ for(const head of await page.locator('.admin-table thead').all())assert.equal(await head.isVisible(),false);
  for(const cell of await page.locator('.admin-table td').all())assert.ok(await cell.getAttribute('data-label'));
  const planned=page.locator('td[data-label="Gepland of wachtend"]').first();
  assert.equal(await planned.evaluate(el=>getComputedStyle(el,'::before').content),'"Gepland of wachtend"');
- for(const label of ['Gepland of wachtend','Bezig','Mislukt'])assert.notEqual(await page.locator(`td[data-label="${label}"]`).first().evaluate(el=>getComputedStyle(el,'::before').display),'none');
+ for(const label of ['Gepland of wachtend','Bezig','Mislukt','Verzonden','Overgeslagen of onbevestigd'])assert.notEqual(await page.locator(`td[data-label="${label}"]`).first().evaluate(el=>getComputedStyle(el,'::before').display),'none');
  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
  await page.screenshot({path:output+'/mail-mobile.png',fullPage:true});
  console.log('PASS mobile table retains status labels with no page overflow');
+ assert.match(await page.locator('td[data-label="Verzonden op"]').innerText(),/11:00/);
+ assert.equal(await page.locator('#mailtaken button').count(),1);
+ assert.equal(await page.locator('#mailtaken td[data-label="Planning"], #mailtaken td[data-label="Herstel"]').count(),0);
+ const sentLink=page.locator('.admin-mail-summary td[data-label="Verzonden"] a').first();
+ assert.equal(await sentLink.getAttribute('href'),'/admin/mail?queue=booking_mail_jobs&status=sent#mailtaken');
+ await sentLink.focus();assert.equal(await sentLink.evaluate(el=>document.activeElement===el),true);
+ await page.setViewportSize({width:1440,height:1000});await page.screenshot({path:output+'/mail-desktop.png',fullPage:true});
+ console.log('PASS sent history timestamps, links and keyboard focus without retry controls');
+ await page.setViewportSize({width:390,height:844});
  await go('content');const body=page.locator('textarea[name="body"]');assert.equal(await body.getAttribute('id'),'content-body');assert.equal(await body.evaluate(el=>getComputedStyle(el).fontSize),'16px');
  await page.getByLabel(/^Titel/).fill('Een zorgvuldig geschreven artikel');
  await body.fill('Inhoud die niet verloren mag gaan.');

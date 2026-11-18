@@ -1,0 +1,46 @@
+---
+import {ADMIN_MAIL_QUEUES, ADMIN_MAIL_STATES, type getAdminMailPage} from '../../lib/adminMail';
+import AdminPagination from './AdminPagination.astro';
+interface Props {result: Awaited<ReturnType<typeof getAdminMailPage>>}
+const {result} = Astro.props;
+const sent = result.status === 'sent';
+const unconfirmed = result.status === 'unconfirmed';
+const active = !sent && !unconfirmed;
+const date=(value:unknown)=>value?new Intl.DateTimeFormat('nl-BE',{dateStyle:'medium',timeStyle:'short',timeZone:'Europe/Brussels'}).format(new Date(String(value))):'—';
+---
+<section class="admin-panel" id="mailtaken">
+  <header class="admin-panel__header"><div><h2>{sent?'Verzonden e-mails':'Verzendtaken'}</h2><p>Referentie, pogingen en verzendmoment; zonder mailinhoud of ontvangergegevens.</p></div></header>
+  <p class="mail-history-note">Verzonden betekent dat de mailserver de e-mail heeft aanvaard. Ontvangst in de inbox en lezen worden niet bevestigd. De historiek bevat de bewaarde taken; website-mailtaken worden vanaf 365 dagen na aanmaak opgeruimd.</p>
+  <form class="admin-filterbar" method="get">
+    <label>Wachtrij<select name="queue">{ADMIN_MAIL_QUEUES.map(queue=><option value={queue.table} selected={result.queue.table===queue.table}>{queue.label}</option>)}</select></label>
+    <label>Status<select name="status">{ADMIN_MAIL_STATES.map(state=><option value={state.value} selected={result.status===state.value}>{state.label}</option>)}</select></label>
+    <button class="admin-button">Tonen</button>
+  </form>
+  {unconfirmed&&<p class="mail-history-note">Deze taken zijn afgerond zonder verzending of hebben geen betrouwbare historische verzendbevestiging. Ze tellen niet mee bij Verzonden.</p>}
+  {result.items.length?<div class="admin-table-wrap"><table class="admin-table"><thead><tr>
+    <th scope="col">Taak</th><th scope="col">Aangemaakt</th><th scope="col">Pogingen</th>
+    {sent?<th scope="col">Verzonden op</th>:unconfirmed?<th scope="col">Toelichting</th>:<><th scope="col">Planning</th><th scope="col">Diagnose</th><th scope="col">Herstel</th></>}
+  </tr></thead><tbody>{result.items.map(job=><tr>
+    <td data-label="Taak"><code>{job.id}</code></td>
+    <td data-label="Aangemaakt">{date(job.created_at)}</td>
+    <td data-label="Pogingen">{job.attempts}</td>
+    {sent&&<td data-label="Verzonden op">{date(job.sent_at)}</td>}
+    {unconfirmed&&<td data-label="Toelichting">{job.diagnosis}</td>}
+    {active&&<>
+      <td data-label="Planning">{result.status==='sending'?`In verwerking tot ${date(job.lease_until)}`:result.status==='failed'?'Geen automatische poging gepland':`Volgende poging ${date(job.next_attempt_at)}`}</td>
+      <td data-label="Diagnose">{job.diagnosis}</td>
+      <td data-label="Herstel">{job.status==='failed'?<form method="post" action="/api/admin/mail">
+        <input type="hidden" name="retry_failed" value="1"/><input type="hidden" name="queue" value={result.queue.table}/><input type="hidden" name="job_id" value={job.id}/>
+        <label class="admin-mail-confirm"><input type="checkbox" required name="checked" value="yes"/> Oorzaak gecontroleerd; een eerdere mail kan al aangekomen zijn.</label>
+        <button class="admin-button" type="submit">Deze taak opnieuw proberen</button>
+      </form>:'Geen handmatig herstel nodig'}</td>
+    </>}
+  </tr>)}</tbody></table></div>:<div class="admin-empty-row"><div>
+    <strong>{sent?'Geen verzonden e-mails in deze wachtrij':'Geen taken met deze status'}</strong>
+    <p>Kies een andere status of wachtrij om meer e-mails te bekijken.</p>
+  </div></div>}
+  <AdminPagination {...result} hash="#mailtaken" label={sent?'Verzonden e-mails':'Verzendtaken'}/>
+</section>
+<style>
+  .mail-history-note { max-width:75ch; margin:0; padding:14px 18px; color:var(--admin-muted); font-size:13px; line-height:1.6; }
+</style>

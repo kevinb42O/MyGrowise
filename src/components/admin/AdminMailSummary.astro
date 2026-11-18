@@ -1,7 +1,11 @@
 ---
-interface Props {counts: {table:string;label:string;states:number[]}[]}
+import {ADMIN_MAIL_STATES, type AdminMailCounts} from '../../lib/adminMail';
+interface Props {counts: AdminMailCounts}
 const {counts} = Astro.props;
-const states=['Gepland of wachtend','Bezig','Mislukt'];
-const statuses=['pending','sending','failed'];
 ---
-<section class="admin-panel"><div class="admin-table-wrap"><table class="admin-table admin-mail-summary"><thead><tr><th>Wachtrij</th>{states.map(label=><th>{label}</th>)}</tr></thead><tbody>{counts.map(queue=><tr><td data-label="Wachtrij"><strong>{queue.label}</strong></td>{queue.states.map((n,index)=><td data-label={states[index]}><a class="admin-text-link" href={`/admin/mail?queue=${queue.table}&status=${statuses[index]}#mailtaken`}>{n} <span class="sr-only">{states[index]} in {queue.label}</span></a></td>)}</tr>)}</tbody></table></div></section>
+<section class="admin-panel" aria-label="E-mails per wachtrij"><div class="admin-table-wrap"><table class="admin-table admin-mail-summary"><thead><tr><th scope="col">Wachtrij</th>{ADMIN_MAIL_STATES.map(state=><th scope="col">{state.label}</th>)}</tr></thead><tbody>{counts.map(queue=><tr><td data-label="Wachtrij"><strong>{queue.label}</strong></td>{ADMIN_MAIL_STATES.map(state=><td data-label={state.label}><a class="admin-text-link" href={`/admin/mail?queue=${queue.table}&status=${state.value}#mailtaken`}>{queue.states[state.value]} <span class="sr-only">{state.label} in {queue.label}</span></a></td>)}</tr>)}</tbody></table></div></section>
+<style>
+  @media (max-width:760px) {
+    .admin-mail-summary td:last-child { grid-column:span 2; }
+  }
+</style>

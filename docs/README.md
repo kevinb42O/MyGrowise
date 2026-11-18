@@ -21,6 +21,7 @@ De [MijnDiAd-agendakoppeling](MIJNDIAD-AGENDA-IMPORT.md) beschrijft de 262 overg
 |---|---|
 | [APPOINTMENT-FLOW-ACCEPTANCE.md](APPOINTMENT-FLOW-ACCEPTANCE.md) | Productieacceptatie van afspraken/dossiers op 30 oktober, inclusief bevestigde ontvangst van drie afspraakmails. |
 | [AANKOPEN-ERVARING.md](AANKOPEN-ERVARING.md) | Nieuwe aankoopwerkruimte, lokale visuele controles en grenzen van het bewijs. |
+| [ADMIN-VERZONDEN-MAILS-PLAN.md](ADMIN-VERZONDEN-MAILS-PLAN.md) | Verzonden mails in superadmin: uitvoering, eerlijke statusindeling, migratie en verificatie op 18 november 2026. |
 | [TRANSACTIONELE-MAILS.md](TRANSACTIONELE-MAILS.md) | HTML/plain text, zes opgeslagen Auth-templates, migratieregistratie en lokale mailcontroles. |
 | [MOBILE-HERSTEL-2026-10-29.md](MOBILE-HERSTEL-2026-10-29.md) | Mobiel herstel, nacorrecties en nog open fysieke toestelproeven. |
 | [HOMEPAGE-VISUEEL-PLAN.md](HOMEPAGE-VISUEEL-PLAN.md) | Goedgekeurde homepageproef lokaal geïntegreerd op 29 oktober, met alle hoofdstukken, scrolltransities en Virginies foto in de hero; lokale browsercontroles en bewijsgrenzen vastgelegd. |
