@@ -1,46 +1,57 @@
 ---
-import {ADMIN_MAIL_QUEUES, ADMIN_MAIL_STATES, type getAdminMailPage} from '../../lib/adminMail';
+import type {getAdminMailPage} from '../../lib/adminMail';
 import AdminPagination from './AdminPagination.astro';
 interface Props {result: Awaited<ReturnType<typeof getAdminMailPage>>}
 const {result} = Astro.props;
-const sent = result.status === 'sent';
-const unconfirmed = result.status === 'unconfirmed';
-const active = !sent && !unconfirmed;
 const date=(value:unknown)=>value?new Intl.DateTimeFormat('nl-BE',{dateStyle:'medium',timeStyle:'short',timeZone:'Europe/Brussels'}).format(new Date(String(value))):'—';
+const timeLabel = result.status==='sent'?'Verzonden op':result.status==='pending'?'Gepland voor':result.status==='sending'?'Verwerking':'Aangemaakt';
+const currentTime = Date.now();
+const expired=(job:typeof result.items[number])=>!job.lease_until||new Date(job.lease_until).getTime()<currentTime;
+const emptyCopy = {
+ sent:['Nog geen verzonden e-mails','Zodra er een mail is verzonden, verschijnt die hier.'],
+ pending:['Geen geplande e-mails','Er staan momenteel geen e-mails in deze selectie klaar.'],
+ failed:['Geen mislukte verzendingen','Er zijn geen mislukte mails die je aandacht vragen.'],
+ sending:['Geen e-mails in verwerking','Er wordt momenteel geen mail in deze selectie verwerkt.'],
+ unconfirmed:['Geen overgeslagen of onbevestigde taken','Alle afgeronde taken in deze selectie hebben een bevestigde verzending.'],
+}[result.status];
 ---
-<section class="admin-panel" id="mailtaken">
-  <header class="admin-panel__header"><div><h2>{sent?'Verzonden e-mails':'Verzendtaken'}</h2><p>Referentie, pogingen en verzendmoment; zonder mailinhoud of ontvangergegevens.</p></div></header>
-  <p class="mail-history-note">Verzonden betekent dat de mailserver de e-mail heeft aanvaard. Ontvangst in de inbox en lezen worden niet bevestigd. De historiek bevat de bewaarde taken; website-mailtaken worden vanaf 365 dagen na aanmaak opgeruimd.</p>
-  <form class="admin-filterbar" method="get">
-    <label>Wachtrij<select name="queue">{ADMIN_MAIL_QUEUES.map(queue=><option value={queue.table} selected={result.queue.table===queue.table}>{queue.label}</option>)}</select></label>
-    <label>Status<select name="status">{ADMIN_MAIL_STATES.map(state=><option value={state.value} selected={result.status===state.value}>{state.label}</option>)}</select></label>
-    <button class="admin-button">Tonen</button>
-  </form>
-  {unconfirmed&&<p class="mail-history-note">Deze taken zijn afgerond zonder verzending of hebben geen betrouwbare historische verzendbevestiging. Ze tellen niet mee bij Verzonden.</p>}
-  {result.items.length?<div class="admin-table-wrap"><table class="admin-table"><thead><tr>
-    <th scope="col">Taak</th><th scope="col">Aangemaakt</th><th scope="col">Pogingen</th>
-    {sent?<th scope="col">Verzonden op</th>:unconfirmed?<th scope="col">Toelichting</th>:<><th scope="col">Planning</th><th scope="col">Diagnose</th><th scope="col">Herstel</th></>}
-  </tr></thead><tbody>{result.items.map(job=><tr>
-    <td data-label="Taak"><code>{job.id}</code></td>
-    <td data-label="Aangemaakt">{date(job.created_at)}</td>
-    <td data-label="Pogingen">{job.attempts}</td>
-    {sent&&<td data-label="Verzonden op">{date(job.sent_at)}</td>}
-    {unconfirmed&&<td data-label="Toelichting">{job.diagnosis}</td>}
-    {active&&<>
-      <td data-label="Planning">{result.status==='sending'?`In verwerking tot ${date(job.lease_until)}`:result.status==='failed'?'Geen automatische poging gepland':`Volgende poging ${date(job.next_attempt_at)}`}</td>
-      <td data-label="Diagnose">{job.diagnosis}</td>
-      <td data-label="Herstel">{job.status==='failed'?<form method="post" action="/api/admin/mail">
-        <input type="hidden" name="retry_failed" value="1"/><input type="hidden" name="queue" value={result.queue.table}/><input type="hidden" name="job_id" value={job.id}/>
-        <label class="admin-mail-confirm"><input type="checkbox" required name="checked" value="yes"/> Oorzaak gecontroleerd; een eerdere mail kan al aangekomen zijn.</label>
-        <button class="admin-button" type="submit">Deze taak opnieuw proberen</button>
-      </form>:'Geen handmatig herstel nodig'}</td>
-    </>}
-  </tr>)}</tbody></table></div>:<div class="admin-empty-row"><div>
-    <strong>{sent?'Geen verzonden e-mails in deze wachtrij':'Geen taken met deze status'}</strong>
-    <p>Kies een andere status of wachtrij om meer e-mails te bekijken.</p>
-  </div></div>}
-  <AdminPagination {...result} hash="#mailtaken" label={sent?'Verzonden e-mails':'Verzendtaken'}/>
-</section>
-<style>
-  .mail-history-note { max-width:75ch; margin:0; padding:14px 18px; color:var(--admin-muted); font-size:13px; line-height:1.6; }
-</style>
+<div id="mailtaken" class="mail-history" aria-label="E-mailoverzicht">
+  {result.status==='unconfirmed'&&<p class="mail-context">Deze taken zijn overgeslagen of hebben geen betrouwbare historische verzendbevestiging. Ze tellen niet mee bij Verzonden.</p>}
+  {result.items.length?<>
+    <div class="mail-list-heading" aria-hidden="true"><span>E-mail</span><span>Categorie</span><span>{timeLabel}</span><span></span></div>
+    <ul class="mail-list">
+      {result.items.map(job=>{
+        const key=`${job.queue}-${job.id}`;
+        const timestamp=result.status==='sent'?job.sent_at:result.status==='pending'?job.next_attempt_at:job.created_at;
+        return <li class="mail-job">
+          <div class="mail-job__row">
+            <div class="mail-job__identity"><span class="mail-job__title">{job.title}</span>
+              {result.status==='failed'&&<span class="mail-job__reason">{job.diagnosis}</span>}
+              {result.status==='unconfirmed'&&<span class="mail-job__reason">{job.diagnosis}</span>}
+            </div>
+            <span class="mail-job__category">{job.category}</span>
+            {result.status==='sending'?<span class:list={['mail-job__time',{'mail-job__time--warning':expired(job)}]}>{expired(job)?'Verwerking onderbroken':'Wordt verwerkt'}</span>:<time class="mail-job__time" datetime={timestamp||undefined}>{date(timestamp)}</time>}
+          </div>
+          <details class="mail-job__details" data-mail-disclosure>
+            <summary aria-controls={`detail-${key}`} aria-label={`Details van ${job.title}, ${date(timestamp)}`}><span>Details</span><svg viewBox="0 0 16 16" width="14" height="14" fill="none" aria-hidden="true"><path d="m6 4 4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></summary>
+            <div class="mail-job__detail-body" id={`detail-${key}`}>
+              <dl class="mail-job__facts"><div class="mail-job__reference"><dt>Taakreferentie</dt><dd><code>{job.id}</code></dd></div><div><dt>Aangemaakt</dt><dd>{date(job.created_at)}</dd></div><div><dt>Verzendpogingen</dt><dd>{job.attempts}</dd></div>
+                {result.status==='sent'&&<div><dt>Verzonden</dt><dd>{date(job.sent_at)}</dd></div>}
+                {result.status==='pending'&&<div><dt>Volgende poging</dt><dd>{date(job.next_attempt_at)}</dd></div>}
+                {result.status==='sending'&&<div><dt>{expired(job)?'Verwerking onderbroken sinds':'In verwerking tot'}</dt><dd>{date(job.lease_until)}</dd></div>}
+              </dl>
+              {result.status==='sending'&&expired(job)&&<p>De vorige verwerking is niet afgerond. Controleer of de mail al is aangekomen voordat je verdere actie onderneemt.</p>}
+              {job.status==='failed'&&<form class="mail-retry" method="post" action="/api/admin/mail" data-mail-action>
+                <input type="hidden" name="retry_failed" value="1"/><input type="hidden" name="queue" value={job.queue}/><input type="hidden" name="job_id" value={job.id}/>
+                <input type="hidden" name="return_queue" value={result.queue?.table||''}/><input type="hidden" name="return_status" value={result.status}/>
+                <p>{job.diagnosis}</p><label><input type="checkbox" required name="checked" value="yes"/> Ik heb de oorzaak gecontroleerd. Een eerdere mail kan al aangekomen zijn.</label>
+                <button class="mail-button" type="submit">Opnieuw proberen</button>
+              </form>}
+            </div>
+          </details>
+        </li>;
+      })}
+    </ul>
+  </>:<div class="mail-empty"><svg viewBox="0 0 24 24" width="28" height="28" fill="none" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="3" stroke="currentColor" stroke-width="1.4"/><path d="m4 7 8 6 8-6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg><h2>{emptyCopy[0]}</h2><p>{emptyCopy[1]}{result.queue&&' Je kunt ook alle categorieën bekijken.'}</p></div>}
+  <AdminPagination {...result} hash="#mailtaken" label="E-mails"/>
+</div>

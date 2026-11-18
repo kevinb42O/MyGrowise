@@ -2,11 +2,13 @@ import type {APIRoute} from 'astro';
 import {hasPermission,isTrustedFormOrigin} from '../../../lib/adminAuth';
 import {deliverQueuedMail} from '../../../lib/mailWorker';
 import {getSupabaseAdmin} from '../../../lib/supabase/server';
-import {ADMIN_MAIL_QUEUES} from '../../../lib/adminMail';
+import {ADMIN_MAIL_QUEUES, adminMailHref} from '../../../lib/adminMail';
 export const POST:APIRoute=async({request,locals})=>{
  if(!isTrustedFormOrigin(request)||!hasPermission(locals.adminUser,'integrations.manage'))return new Response('Geen toegang.',{status:403});
+ let returnTo='/admin/mail';
  try{
   const form=await request.formData();
+  if(form.has('return_status')) returnTo=adminMailHref(new URL('/admin/mail',request.url),String(form.get('return_queue')||''),String(form.get('return_status')||'sent'));
   if(form.get('retry_failed')==='1'){
    if(form.get('checked')!=='yes')return new Response('Controleer eerst de oorzaak en bevestig dat opnieuw proberen nodig is.',{status:400});
    const queue = String(form.get('queue') || '');
@@ -25,7 +27,7 @@ export const POST:APIRoute=async({request,locals})=>{
   }
   const outcome = await deliverQueuedMail();
   if (outcome && Object.values(outcome).some(queue => 'unavailable' in queue && queue.unavailable)) throw new Error('queue_unavailable');
-  return Response.redirect(new URL('/admin/mail?processed=1',request.url),303);
- }catch{return Response.redirect(new URL('/admin/mail?error=processing_failed',request.url),303);}
+  return Response.redirect(new URL(`${returnTo}${returnTo.includes('?')?'&':'?'}processed=1`,request.url),303);
+ }catch{return Response.redirect(new URL(`${returnTo}${returnTo.includes('?')?'&':'?'}error=processing_failed`,request.url),303);}
 };
 export const ALL:APIRoute=()=>new Response('Methode niet toegestaan.',{status:405});

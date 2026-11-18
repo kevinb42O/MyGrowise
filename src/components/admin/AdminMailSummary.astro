@@ -1,11 +1,20 @@
 ---
-import {ADMIN_MAIL_STATES, type AdminMailCounts} from '../../lib/adminMail';
-interface Props {counts: AdminMailCounts}
-const {counts} = Astro.props;
+import {adminMailHref, ADMIN_MAIL_STATES, type AdminMailStatus} from '../../lib/adminMail';
+interface Props {counts:Record<AdminMailStatus,number>; status:AdminMailStatus; queue:string}
+const {counts,status,queue} = Astro.props;
+const primary = ['sent','pending','failed'] as const;
+const extra = ADMIN_MAIL_STATES.filter(state=>!primary.includes(state.value as typeof primary[number]));
+const moreActive = extra.find(state=>state.value===status);
 ---
-<section class="admin-panel" aria-label="E-mails per wachtrij"><div class="admin-table-wrap"><table class="admin-table admin-mail-summary"><thead><tr><th scope="col">Wachtrij</th>{ADMIN_MAIL_STATES.map(state=><th scope="col">{state.label}</th>)}</tr></thead><tbody>{counts.map(queue=><tr><td data-label="Wachtrij"><strong>{queue.label}</strong></td>{ADMIN_MAIL_STATES.map(state=><td data-label={state.label}><a class="admin-text-link" href={`/admin/mail?queue=${queue.table}&status=${state.value}#mailtaken`}>{queue.states[state.value]} <span class="sr-only">{state.label} in {queue.label}</span></a></td>)}</tr>)}</tbody></table></div></section>
-<style>
-  @media (max-width:760px) {
-    .admin-mail-summary td:last-child { grid-column:span 2; }
-  }
-</style>
+<nav class="mail-statuses" aria-label="Verzendstatus">
+  <div class="mail-statuses__primary">
+    {primary.map(value=><a href={adminMailHref(Astro.url,queue,value)} aria-current={status===value?'page':undefined} class:list={['mail-status',{ 'is-selected':status===value }]}>
+      <span>{ADMIN_MAIL_STATES.find(state=>state.value===value)!.label}</span>
+      <span class:list={['mail-count',{'mail-count--attention':value==='failed'&&counts.failed>0}]}>{counts[value]}</span>
+    </a>)}
+  </div>
+  <details class="mail-more" data-mail-menu>
+    <summary class:list={['mail-status',{'is-selected':Boolean(moreActive)}]}>{moreActive?.label||'Meer'}{moreActive&&<span class="mail-count">{counts[moreActive.value]}</span>}<svg viewBox="0 0 16 16" width="14" height="14" fill="none" aria-hidden="true"><path d="m4 6 4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></summary>
+    <div class="mail-more__options">{extra.map(state=><a href={adminMailHref(Astro.url,queue,state.value)} aria-current={status===state.value?'page':undefined}><span>{state.label}</span><span>{counts[state.value]}</span></a>)}</div>
+  </details>
+</nav>

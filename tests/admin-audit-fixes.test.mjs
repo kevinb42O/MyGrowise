@@ -167,10 +167,17 @@ test('legacy mail endpoint only redirects to the central recovery UI',async()=>{
   assert.equal(response.status,303);assert.equal(response.headers.get('location'),'http://localhost/admin/mail');
 });
 test('mail diagnostics never expose arbitrary provider messages or require missing website error columns',async()=>{
-  const fixture=store({website_mail_jobs:[{id,status:'failed',attempts:6,created_at:'2026-01-01',last_error:'smtp://secret@private.invalid'}]});const mail=mailService(fixture);
+  const fixture=store({admin_mail_overview:[{id,queue:'website_mail_jobs',status:'failed',display_status:'failed',kind:'contact',attempts:6,created_at:'2026-01-01',diagnosis_code:'unknown_error'}]});const mail=mailService(fixture);
   assert.doesNotMatch(mail.mailDiagnosis('smtp://secret@private.invalid'),/secret|private/);
   const result=await mail.getAdminMailPage('website_mail_jobs','failed',1);
   assert.equal(result.total,1);assert.ok(!fixture.calls[0].selection.includes('last_error'));assert.ok(!Object.hasOwn(result.items[0],'last_error'));
+});
+test('mail action return filters remain local and valid',async()=>{
+ const fixture=store();const route=mailRoute(fixture);
+ const response=await route.POST({request:request({return_queue:'booking_mail_jobs',return_status:'sent'}),locals:{adminUser:owner}});
+ assert.equal(response.headers.get('location'),'http://localhost/admin/mail?queue=booking_mail_jobs&status=sent&processed=1');
+ const invalid=await route.POST({request:request({return_queue:'https://private.invalid',return_status:'bad'}),locals:{adminUser:owner}});
+ assert.equal(invalid.headers.get('location'),'http://localhost/admin/mail?status=sent&processed=1');
 });
 test('privacy summary counts every record while the default page only contains open requests',async()=>{
   const rows=Array.from({length:150},(_,i)=>({id:String(i),status:'resolved',due_at:'2025-01-01'}));rows.push({id,status:'received',due_at:'2026-01-01'});

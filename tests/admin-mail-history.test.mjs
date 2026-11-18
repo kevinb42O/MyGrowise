@@ -14,7 +14,16 @@ function load(path,deps,env={}) {
 const pagination=load('lib/adminPagination.ts',{});
 function database(tables) {
  const calls=[];
- const db={from(table){
+ const db={rpc:async name=>{
+  assert.equal(name,'admin_mail_counts');
+  const groups=new Map();
+  for(const row of tables.admin_mail_overview||[]){
+   if(!['sent','pending','sending','failed','unconfirmed'].includes(row.display_status))continue;
+   const key=row.queue+':'+row.display_status;
+   const group=groups.get(key)||{queue:row.queue,status:row.display_status,total:0};group.total++;groups.set(key,group);
+  }
+  return {data:[...groups.values()],error:null};
+ },from(table){
   const call={table,filters:[],orders:[],start:0,end:Infinity};calls.push(call);
   const simple=(row,expression)=>{
    const [key,op,...parts]=expression.split('.');const value=parts.join('.');
@@ -41,15 +50,15 @@ function database(tables) {
  }};
  return {db,calls};
 }
-function history(tables){const h=database(tables);return {...h,service:load('lib/adminMail.ts',{'./supabase/server':{getSupabaseAdmin:()=>h.db},'./adminPagination':pagination})};}
-const sent=(id,extra={})=>({id,status:'sent',sent_at:'2026-11-18T10:00:00Z',created_at:'2026-11-17T10:00:00Z',attempts:1,...extra});
+function history(tables){const h=database({admin_mail_overview:Object.entries(tables).flatMap(([queue,rows])=>rows.map(row=>({...row,queue})))});return {...h,service:load('lib/adminMail.ts',{'./supabase/server':{getSupabaseAdmin:()=>h.db},'./adminPagination':pagination})};}
+const sent=(id,extra={})=>({id,status:'sent',display_status:'sent',kind:'confirmation',sent_at:'2026-11-18T10:00:00Z',created_at:'2026-11-17T10:00:00Z',attempts:1,...extra});
 
 test('history and summary partition completed tasks consistently across every queue',async()=>{
  const tables={
-  support_mail_jobs:[sent('support'),sent('no-date',{sent_at:null})],
-  booking_mail_jobs:[sent('booking'),sent('superseded',{status:'superseded'}),sent('suppressed',{status:'suppressed'})],
-  commerce_mail_jobs:[sent('commerce',{last_error:null}),sent('skip',{last_error:'delivery_access_inactive'}),sent('no-date',{sent_at:null})],
-  website_mail_jobs:[sent('website',{delivery_outcome:'sent'}),sent('skip',{delivery_outcome:'skipped',sent_at:null}),sent('legacy',{delivery_outcome:null}),sent('invalid',{delivery_outcome:'sent',sent_at:null})],
+  support_mail_jobs:[sent('support'),sent('no-date',{sent_at:null,display_status:'unconfirmed'})],
+  booking_mail_jobs:[sent('booking'),sent('superseded',{status:'superseded',display_status:'superseded'}),sent('suppressed',{status:'suppressed',display_status:'suppressed'})],
+  commerce_mail_jobs:[sent('commerce',{diagnosis_code:null}),sent('skip',{diagnosis_code:'delivery_access_inactive',display_status:'unconfirmed',completion_outcome:'skipped'}),sent('no-date',{sent_at:null,display_status:'unconfirmed'})],
+  website_mail_jobs:[sent('website',{completion_outcome:'sent'}),sent('skip',{display_status:'unconfirmed',completion_outcome:'skipped',sent_at:null}),sent('legacy',{display_status:'unconfirmed',completion_outcome:'unconfirmed'}),sent('invalid',{display_status:'unconfirmed',sent_at:null})],
  };
  const h=history(tables);const counts=await h.service.getAdminMailCounts();
  for(const queue of counts){
@@ -81,11 +90,34 @@ test('recent transmissions lead, tied dates have stable IDs and all pages remain
 });
 
 test('invalid filters fall back safely and an empty successful history is valid',async()=>{
- const h=history({support_mail_jobs:[sent('failed',{status:'failed'})]});
+ const h=history({support_mail_jobs:[sent('failed',{status:'failed',display_status:'failed'})]});
  const invalid=await h.service.getAdminMailPage('not_a_table','bogus',1);
- assert.equal(invalid.queue.table,'support_mail_jobs');assert.equal(invalid.status,'failed');assert.equal(invalid.total,1);
+ assert.equal(invalid.queue,null);assert.equal(invalid.status,'sent');assert.equal(invalid.total,0);
  const empty=await h.service.getAdminMailPage('support_mail_jobs','sent',1);
  assert.equal(empty.total,0);assert.equal(empty.pages,1);
+});
+
+test('combined pagination orders all categories together and uses queue plus ID for ties',async()=>{
+ const queues=['support_mail_jobs','commerce_mail_jobs','booking_mail_jobs','website_mail_jobs'];
+ const tables=Object.fromEntries(queues.map((queue,index)=>[queue,Array.from({length:17},(_,i)=>sent(String(i),{kind:'unknown',sent_at:new Date(Date.UTC(2026,10,1+i, index)).toISOString()}))]));
+ const h=history(tables);const pages=await Promise.all([1,2,3].map(n=>h.service.getAdminMailPage('','sent',n)));
+ const all=pages.flatMap(page=>page.items);
+ assert.equal(pages[0].total,68);assert.equal(all.length,68);
+ assert.equal(new Set(all.map(row=>row.queue+row.id)).size,68);
+ assert.equal(all[0].queue,'website_mail_jobs');assert.equal(all[0].id,'16');
+ for(let i=1;i<all.length;i++)assert.ok(all[i-1].sent_at>=all[i].sent_at);
+ const counts=await h.service.getAdminMailCounts();
+ assert.equal(h.service.scopedMailCounts(counts,'').sent,68);
+ assert.equal(h.service.scopedMailCounts(counts,'booking_mail_jobs').sent,17);
+});
+
+test('safe labels and filter links preserve scope while removing old page and outcome flags',()=>{
+ const {service}=history({});
+ assert.equal(service.mailTitle('booking_mail_jobs','confirmation'),'Afspraakbevestiging');
+ assert.equal(service.mailTitle('website_mail_jobs','private text'),'Contact en aankooplinks');
+ assert.equal(service.mailTitle('booking_mail_jobs','constructor'),'Afspraken');
+ assert.equal(service.adminMailHref(new URL('https://example.invalid/admin/mail?pagina=5&processed=1'),'booking_mail_jobs','pending'),'/admin/mail?queue=booking_mail_jobs&status=pending');
+ assert.equal(service.adminMailHref(new URL('https://example.invalid/admin/mail'),'unsafe','invalid'),'/admin/mail?status=sent');
 });
 
 function websiteWorker({known=false,kind='purchase_access',fail=false,updateFail=false}={}) {

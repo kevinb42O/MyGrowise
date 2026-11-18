@@ -1,0 +1,85 @@
+---
+import AdminMailSummary from './AdminMailSummary.astro';
+import AdminMailTasks from './AdminMailTasks.astro';
+import {ADMIN_MAIL_QUEUES, adminMailHref, scopedMailCounts, type AdminMailCounts, type getAdminMailPage} from '../../lib/adminMail';
+import '../../styles/admin-mail.css';
+interface Props {counts:AdminMailCounts; result:Awaited<ReturnType<typeof getAdminMailPage>>; ready:boolean; processed?:boolean; processingError?:boolean}
+const {counts,result,ready,processed=false,processingError=false}=Astro.props;
+const queue=result.queue?.table||'';
+const totals=scopedMailCounts(counts,queue);
+const failed=scopedMailCounts(counts,'').failed;
+---
+<div class="admin-page mail-workspace" data-mail-queue={queue}>
+  <header class="mail-heading"><div><h1>Mailopvolging</h1><p>Bekijk je verzendingen en volg problemen op.</p></div>
+    <details class="mail-actions" data-mail-menu>
+      <summary class="mail-button">Beheeracties<svg viewBox="0 0 16 16" width="14" height="14" fill="none" aria-hidden="true"><path d="m4 6 4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></summary>
+      <div class="mail-actions__panel"><h2>Verzending beheren</h2>
+        <form method="post" action="/api/admin/mail" data-mail-action><input type="hidden" name="return_queue" value={queue}/><input type="hidden" name="return_status" value={result.status}/><p>Verwerk een beperkte ronde van e-mails die nu aan de beurt zijn, in alle categorieën. Toekomstige herinneringen blijven gepland.</p><button class="mail-button" type="submit">Verwerk wachtende mail</button></form>
+        {failed>0&&<details class="mail-actions__retry"><summary>Alle mislukte taken opnieuw klaarzetten</summary><form method="post" action="/api/admin/mail" data-mail-action><input type="hidden" name="retry_failed" value="1"/><input type="hidden" name="return_queue" value={queue}/><input type="hidden" name="return_status" value={result.status}/><p>Dit betreft alle {failed} mislukte taken, in alle categorieën.</p><label><input type="checkbox" required name="checked" value="yes"/> Ik heb de oorzaak voor alle mislukte taken gecontroleerd. Een eerdere mail kan alsnog aangekomen zijn.</label><button class="mail-button" type="submit">Alle mislukte taken opnieuw proberen</button></form></details>}
+        <p class="mail-actions__feedback" role="status" data-mail-action-feedback></p>
+      </div>
+    </details>
+  </header>
+  {processed&&<p class="mail-notice" role="status">De verzendronde is uitgevoerd. De actuele resultaten staan hieronder.</p>}
+  {processingError&&<p class="mail-notice mail-notice--warning" role="alert">De verwerking is niet volledig afgerond. Controleer de actuele taken voordat je opnieuw probeert.</p>}
+  {!ready&&<p class="mail-notice mail-notice--warning" role="alert">E-mail is nog niet volledig ingesteld. Taken blijven bewaard tot de configuratie hersteld is.</p>}
+  <div class="mail-health">{failed>0?<p class="mail-health__attention"><span>{failed===1?'1 verzending vraagt':`${failed} verzendingen vragen`} aandacht.</span><a href={adminMailHref(Astro.url,'','failed')}>Bekijk mislukte mails<svg viewBox="0 0 16 16" width="14" height="14" fill="none" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></a></p>:ready?<p><svg viewBox="0 0 16 16" width="15" height="15" fill="none" aria-hidden="true"><path d="m3 8 3 3 7-7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>Geen mislukte verzendingen</p>:null}</div>
+  <section class="mail-panel" aria-label="Mailhistoriek">
+    <div class="mail-toolbar"><AdminMailSummary counts={totals} status={result.status} queue={queue}/>
+      <form class="mail-category" method="get" data-mail-filter><input type="hidden" name="status" value={result.status}/><label for="mail-category">Categorie</label><select id="mail-category" name="queue"><option value="">Alle categorieën</option>{ADMIN_MAIL_QUEUES.map(item=><option value={item.table} selected={queue===item.table}>{item.label}</option>)}</select><button type="submit" class="mail-button" data-mail-filter-apply>Toepassen</button></form>
+    </div>
+    <AdminMailTasks result={result}/>
+  </section>
+  <details class="mail-explanation"><summary>Over verzendstatussen</summary><div><p>Verzonden betekent dat de mailserver de e-mail heeft aanvaard. Ontvangst in de inbox en lezen worden niet bevestigd. Overgeslagen en historisch onbevestigde taken tellen niet mee als verzonden.</p><p>De historiek toont de bewaarde taken. Afgeronde website-mailtaken worden vanaf 365 dagen na aanmaak opgeruimd. Supabase Auth-mails hebben een eigen verzendvoorziening en staan niet in dit overzicht.</p><p>Er is geen garantie op verzending binnen vijf minuten. Geplande herinneringen hebben een eigen verzendmoment; overige wachtende taken worden direct geprobeerd of tijdens een automatische verzendronde verwerkt.</p></div></details>
+  <p class="mail-filter-feedback sr-only" role="status" data-mail-filter-feedback></p>
+</div>
+<script>
+  function setupMailWorkspace() {
+    const root=document.querySelector<HTMLElement>('.mail-workspace');
+    if(!root||root.dataset.enhanced)return;
+    root.dataset.enhanced='true';
+    const filter=root.querySelector<HTMLFormElement>('[data-mail-filter]');
+    const select=filter?.querySelector<HTMLSelectElement>('select');
+    const apply=filter?.querySelector<HTMLButtonElement>('[data-mail-filter-apply]');
+    if(filter&&select&&apply){
+      apply.hidden=true;
+      select.addEventListener('change',()=>{
+        const feedback=root.querySelector<HTMLElement>('[data-mail-filter-feedback]');
+        if(feedback)feedback.textContent='Mailoverzicht laden…';
+        filter.requestSubmit();
+      });
+    }
+    root.querySelectorAll<HTMLDetailsElement>('[data-mail-disclosure]').forEach(details=>{
+      const summary=details.querySelector('summary');
+      const sync=()=>summary?.setAttribute('aria-expanded',String(details.open));
+      sync();details.addEventListener('toggle',sync);
+    });
+    const menus=[...root.querySelectorAll<HTMLDetailsElement>('[data-mail-menu]')];
+    root.addEventListener('keydown',event=>{if(event.key==='Escape')menus.filter(menu=>menu.open).forEach(menu=>{menu.open=false;menu.querySelector('summary')?.focus();});});
+    document.addEventListener('click',event=>menus.forEach(menu=>{if(event.target instanceof Node&&!menu.contains(event.target))menu.open=false;}));
+    root.querySelectorAll<HTMLFormElement>('[data-mail-action]').forEach(form=>{
+      let submitting=false;
+      form.addEventListener('submit',event=>{
+        if(submitting){event.preventDefault();return;}
+        submitting=true;form.setAttribute('aria-busy','true');
+        const button=form.querySelector<HTMLButtonElement>('button[type="submit"]');
+        if(button){button.disabled=true;button.textContent='Bezig met verwerken…';}
+        const feedback=root.querySelector<HTMLElement>('[data-mail-action-feedback]');
+        if(feedback)feedback.textContent='De verzendronde wordt verwerkt.';
+      });
+    });
+  }
+  setupMailWorkspace();
+  document.addEventListener('astro:page-load',setupMailWorkspace);
+  window.addEventListener('pageshow',event=>{
+    if(event.persisted&&document.querySelector('[data-mail-action][aria-busy="true"]')){window.location.reload();return;}
+    // History may restore a select's pre-navigation value. Match the visible
+    // category to the server-rendered list when returning to a cached page.
+    const restore=()=>{
+      const workspace=document.querySelector<HTMLElement>('.mail-workspace');
+      const category=workspace?.querySelector<HTMLSelectElement>('[data-mail-filter] select');
+      if(category)category.value=workspace?.dataset.mailQueue||'';
+    };
+    restore();requestAnimationFrame(restore);
+  });
+</script>

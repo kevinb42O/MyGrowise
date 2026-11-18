@@ -1,27 +1,12 @@
 ---
-import AdminMailSummary from '../../components/admin/AdminMailSummary.astro';
 import AdminLayout from '../../layouts/AdminLayout.astro';
-import AdminMailTasks from '../../components/admin/AdminMailTasks.astro';
+import AdminMailWorkspace from '../../components/admin/AdminMailWorkspace.astro';
 import {websiteMailReady} from '../../lib/commerce/websiteMail';
 import {getAdminMailCounts, getAdminMailPage} from '../../lib/adminMail';
 const [counts,result]=await Promise.all([
  getAdminMailCounts(),
- getAdminMailPage(Astro.url.searchParams.get('queue')||'',Astro.url.searchParams.get('status')||'failed',Astro.url.searchParams.get('pagina')),
+ getAdminMailPage(Astro.url.searchParams.get('queue')||'',Astro.url.searchParams.get('status')||'sent',Astro.url.searchParams.get('pagina')),
 ]);
-const failed = counts.reduce((sum,queue)=>sum+queue.states.failed,0);
-const sending = counts.reduce((sum,queue)=>sum+queue.states.sending,0);
-const ready = websiteMailReady();
 Astro.response.headers.set('Cache-Control','private, no-store');
 ---
-<AdminLayout title="Mailopvolging"><div class="admin-page">
- <section class="admin-page-heading"><div><h1>Mailopvolging</h1><p>Bekijk verzonden e-mails, planning en mislukte verzendpogingen.</p></div></section>
- {Astro.url.searchParams.has('processed')&&<p class="admin-form-notice" role="status">De verzendronde is uitgevoerd. Controleer de resterende aantallen hieronder.</p>}
- {Astro.url.searchParams.has('error')&&<p class="admin-form-alert" role="alert">De verwerking is niet volledig afgerond. Controleer de actuele taken hieronder voordat je opnieuw probeert.</p>}
- {!ready&&<p role="alert">E-mail is nog niet volledig ingesteld en geverifieerd. Taken blijven bewaard tot de configuratie hersteld is.</p>}
- <section class="practice-card" role="status"><h2>{failed ? `${failed} ${failed===1?'e-mail vraagt':'e-mails vragen'} aandacht` : ready ? 'Geen mislukte e-mails' : 'E-mailinstellingen controleren'}</h2><p>{failed?'Bekijk de taken hieronder en controleer de oorzaak vóór je opnieuw probeert.':'Herinneringen kunnen al klaarstaan voor een later verzendmoment.'}</p>{sending>0&&<p>{sending} e-mail(s) worden momenteel verwerkt.</p>}</section>
- <AdminMailSummary counts={counts}/>
- <AdminMailTasks result={result}/>
- <section class="practice-card"><h2>Verzendronde uitvoeren</h2><form method="post" action="/api/admin/mail"><button class="admin-button admin-button--primary">Verwerk wachtende mail</button><p>Verwerkt een beperkte ronde van taken die nu aan de beurt zijn. Toekomstige herinneringen blijven gepland.</p></form>
- {failed>0&&<details><summary>Alle mislukte taken opnieuw klaarzetten</summary><form method="post" action="/api/admin/mail"><input type="hidden" name="retry_failed" value="1"/><label class="admin-mail-confirm"><input type="checkbox" required name="checked" value="yes"/> Ik heb de mailconfiguratie en oorzaak voor alle mislukte taken gecontroleerd. Een eerdere mail kan alsnog aangekomen zijn.</label><button class="admin-button" type="submit">Alle mislukte taken opnieuw proberen</button></form></details>}
- <p>Er is geen garantie op verzending binnen vijf minuten. Zonder directe succesvolle verzending of handmatige actie volgt de volgende automatische poging tijdens de dagelijkse ronde. Supabase Auth-mails hebben hun eigen verzendvoorziening.</p></section>
-</div></AdminLayout>
+<AdminLayout title="Mailopvolging"><AdminMailWorkspace counts={counts} result={result} ready={websiteMailReady()} processed={Astro.url.searchParams.has('processed')} processingError={Astro.url.searchParams.has('error')}/></AdminLayout>
