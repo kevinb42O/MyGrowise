@@ -37,7 +37,13 @@ export const GET: APIRoute = async ({ url, locals }) => {
     const { canUseItransform } = await getPracticeAgendaAccess(practitionerId, user.sub);
     const state = canUseItransform ? await ensurePracticeCalendarFresh(practitionerId, { required: false, maxAgeSeconds: 60 }) : null;
     const result = await listPracticeAgenda(practitionerId, from!, to!, canUseItransform, user.sub, user.roles.includes('super_admin'));
-    return json({ ...result, canUseItransform, sync: state?.sync ?? null });
+    // A five-minute availability cache must not overrule the stricter source check.
+    const sourceUnavailable = state !== null && !state.usable;
+    return json({ ...result,
+      events: sourceUnavailable ? result.events.filter(event => event.source !== 'availability') : result.events,
+      availabilityUnknown: result.availabilityUnknown || sourceUnavailable,
+      canUseItransform, sync: state?.sync ?? null,
+    });
   } catch {
     return json({ error: 'De gevraagde agendagegevens konden niet worden geladen. Probeer opnieuw.' }, 502);
   }

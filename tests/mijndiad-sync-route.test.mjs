@@ -4,11 +4,11 @@ import {readFileSync} from 'node:fs';
 import vm from 'node:vm';
 import ts from 'typescript';
 
-function setup({allowed=true,trusted=true,failure=false}={}) {
+function setup({allowed=true,trusted=true,failure=false,staleSlots=false}={}) {
  const calls=[];const exports={};
  const deps={
   '../../../lib/appointmentCatalog':{},'../../../lib/bookingMail':{},
-  '../../../lib/practiceAgenda':{getPracticeAgendaAccess:async()=>({canUseItransform:allowed}),listPracticeAgenda:async()=>({events:[],availabilityUnknown:false})},
+  '../../../lib/practiceAgenda':{getPracticeAgendaAccess:async()=>({canUseItransform:allowed}),listPracticeAgenda:async()=>({events:staleSlots?[{id:'cached-slot',source:'availability'},{id:'existing-appointment',source:'mygrowise'}]:[],availabilityUnknown:false})},
   '../../../lib/staffBooking':{},
   '../../../lib/adminAuth':{isTrustedFormOrigin:()=>trusted},'../../../lib/practiceStore':{},'../../../lib/staffBooking':{},
   '../../../lib/clientRecords':{},'../../../lib/securityAudit':{auditActor:()=>({userId:'user'})},
@@ -35,4 +35,11 @@ test('agenda status is owner-scoped and excluded for users without Itransform ac
 });
 test('a failed source refresh keeps the existing agenda readable with a warning',async()=>{
  const {route,context}=setup({failure:true});const response=await route.GET(context);assert.equal(response.status,200);const payload=await response.json();assert.deepEqual(payload.events,[]);assert.equal(payload.sync.lastError,'feed_unavailable_or_invalid');
+});
+
+test('a failed strict source check cannot leave cached green availability visible',async()=>{
+ const {route,context}=setup({failure:true,staleSlots:true});
+ const response=await route.GET(context);assert.equal(response.status,200);
+ const payload=await response.json();assert.equal(payload.availabilityUnknown,true);
+ assert.deepEqual(payload.events,[{id:'existing-appointment',source:'mygrowise'}]);
 });

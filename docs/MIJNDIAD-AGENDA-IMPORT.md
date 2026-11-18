@@ -93,3 +93,11 @@ Deze aanvulling vervangt voor de geopende praktijkagenda het hierboven beschreve
 Migratie: `20261118202000_mijndiad_active_refresh.sql`. `node scripts/apply-mijndiad-active-refresh.mjs` repeteert en rolt terug; `--apply` registreert de gecontroleerde functiewijzigingen. Het script controleert de live uitgangsfuncties en behoud van afspraken, boekingen, configuratie, rechten en de inactieve syncjob. Geen schema-/tabelwijziging of nieuwe scheduler.
 
 Gerichte controles: `node tests/mijndiad-active-refresh-database.mjs` (transactionele snapshots en tijdelijke fetchstub; alles teruggedraaid), `tests/agenda-refresh.test.ts`, de bestaande route-/agenda-/servicetests en `tests/agenda-active-refresh-browser.mjs` (echte kalendercomponent, synthetische API, versnelde browserklok, desktop/mobiel). De browsertest maakt uitsluitend tijdelijk een DEV-fixture aan en verwijdert die weer; geen databasewrites of mails.
+
+### Aanvullende foutcontrole — 18 november 2026
+
+- Bij een mislukte strikte broncontrole verwijdert de praktijkroute eventueel nog aanwezige groene beschikbaarheid uit de ruimere vijfminutencache en markeert beschikbaarheid als onbekend. Bestaande afspraken blijven leesbaar; de boekingscontrole bleef al beschermd. Een regressietest bootst deze cachecombinatie na.
+- De begrenzing van automatische herlaadacties gebruikt de monotone browserklok (`performance.now()`), zodat een achteruitgezette toestelklok het verversen niet onderbreekt. De browsertest zet de klok een uur terug en controleert de volgende broncontrole.
+- Agenda-GET-aanvragen worden na 45 seconden afgebroken. De laatste afspraken blijven met een waarschuwing zichtbaar en de automatische verversing kan opnieuw proberen. Na een transportfout gebruikt de browser het normale herhaalinterval in plaats van een oude bronwachttijd. Mutatieaanvragen worden hierdoor niet afgebroken. De browsertest simuleert een vastgelopen aanvraag, controleert de waarschuwing en vervolgens automatisch herstel.
+
+Deze correcties vereisen geen databasemigratie, nieuwe scheduler of abonnementswijziging.

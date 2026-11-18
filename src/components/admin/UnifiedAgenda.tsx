@@ -206,7 +206,7 @@ export default function UnifiedAgenda({ mode = 'admin', allowItransform = false,
   const [loadState, setLoadState] = useState<{ key: string; error?: string }>();
   const [reload, setReload] = useState(0);
   const agendaRequestPending = useRef(false);
-  const lastAutomaticRefresh = useRef(0);
+  const lastAutomaticRefresh = useRef(Number.NEGATIVE_INFINITY);
   const [notice, setNotice] = useState('');
   const [editor, setEditor] = useState<Editor | null>(null);
   const [dirty, setDirty] = useState(false);
@@ -223,9 +223,13 @@ export default function UnifiedAgenda({ mode = 'admin', allowItransform = false,
   useEffect(() => {
     if (!query) return;
     const controller = new AbortController();
+    let disposed = false;
+    let timedOut = false;
+    const timeout = window.setTimeout(() => { timedOut = true; controller.abort(); }, 45_000);
     setLoadState(undefined);
     agendaRequestPending.current = true;
     fetchJson(`${endpoint}?${query}`, { signal: controller.signal }).then((payload: Payload) => {
+      if (timedOut) throw new Error('Het verversen duurt te lang. Probeer opnieuw.');
       if (controller.signal.aborted) return;
       setData({ key: query, payload });
       setLoadState({ key: query });
@@ -233,9 +237,12 @@ export default function UnifiedAgenda({ mode = 'admin', allowItransform = false,
       if (practice) { setSync(payload.sync ?? null); setHasItransform(payload.canUseItransform === true); }
       else setProfessionals(payload.practitioners || []);
     }).catch(error => {
-      if (!controller.signal.aborted) setLoadState({ key: query, error: error.message });
-    }).finally(() => { if (!controller.signal.aborted) agendaRequestPending.current = false; });
-    return () => { controller.abort(); agendaRequestPending.current = false; };
+      if (!disposed) setLoadState({ key: query, error: timedOut ? 'Het verversen duurt te lang. Probeer opnieuw.' : error.message });
+    }).finally(() => {
+      window.clearTimeout(timeout);
+      if (!disposed) agendaRequestPending.current = false;
+    });
+    return () => { disposed = true; window.clearTimeout(timeout); controller.abort(); agendaRequestPending.current = false; };
   }, [endpoint, practice, query, reload]);
 
   useEffect(() => {
@@ -243,9 +250,10 @@ export default function UnifiedAgenda({ mode = 'admin', allowItransform = false,
     const update = () => {
       const now = Date.now();
       setClock(now);
+      const elapsed = performance.now();
       if (document.visibilityState === 'visible' && navigator.onLine !== false &&
-          !agendaRequestPending.current && now - lastAutomaticRefresh.current >= 4000) {
-        lastAutomaticRefresh.current = now;
+          !agendaRequestPending.current && elapsed - lastAutomaticRefresh.current >= 4000) {
+        lastAutomaticRefresh.current = elapsed;
         refresh();
       }
     };
@@ -255,7 +263,7 @@ export default function UnifiedAgenda({ mode = 'admin', allowItransform = false,
       // pick up immediately on return; the fallback also handles failed loads.
       timer = window.setTimeout(tick, agendaRefreshDelay(practice, hasItransform));
     };
-    timer = window.setTimeout(tick, agendaRefreshDelay(practice, hasItransform, sync));
+    timer = window.setTimeout(tick, agendaRefreshDelay(practice, hasItransform, loadState?.error ? null : sync));
     window.addEventListener('focus', update);
     window.addEventListener('online', update);
     document.addEventListener('visibilitychange', update);
@@ -265,7 +273,7 @@ export default function UnifiedAgenda({ mode = 'admin', allowItransform = false,
       window.removeEventListener('online', update);
       document.removeEventListener('visibilitychange', update);
     };
-  }, [practice, hasItransform, sync, query, reload, refresh]);
+  }, [practice, hasItransform, sync, query, reload, loadState?.error, refresh]);
 
   useEffect(() => {
     if (!range) return;
