@@ -44,6 +44,9 @@ export const ADMIN_PERMISSIONS = [
   'support.write',
   'privacy.read',
   'privacy.manage',
+  'updates.read',
+  'updates.feedback',
+  'updates.manage',
   'operations.manage',
   'integrations.read',
   'integrations.manage',
@@ -87,6 +90,8 @@ export const firstAccessibleAdminPath = (roles: readonly UserRole[]) => {
 /** Null is deliberate: unregistered admin routes are denied by default. */
 export const requiredAdminPermission = (path: string, method = 'GET'): AdminPermission | null => {
   if (path.startsWith('/admin/afspraken/') || path === '/admin/afspraaktypes' || path === '/admin/boekingslinks' || path.startsWith('/admin/therapeuten') || path.startsWith('/api/admin/practice')) return 'practice.manage';
+  if (path === '/admin/updates' || path.startsWith('/admin/updates/')) return 'updates.read';
+  if (path === '/api/admin/updates') return method === 'GET' ? 'updates.read' : 'updates.feedback';
   if (path === '/admin/account') return 'account.manage';
   if (path === '/admin') return 'dashboard.read';
   if (path === '/admin/analytics') return 'analytics.read';

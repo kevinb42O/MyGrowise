@@ -1,0 +1,26 @@
+---
+interface Props { dashboard?:boolean }
+const {dashboard=false}=Astro.props;
+---
+{dashboard&&<a href="/admin/updates" class="up-dashboard-teaser" data-updates-teaser hidden><div><strong>Er groeit iets nieuws in MyGrowise.</strong><span data-updates-latest></span></div><span>Bekijk de updates →</span></a>}
+<script>
+ const updateSignals=async()=>{
+  const link=document.querySelector<HTMLAnchorElement>('.admin-nav a[href="/admin/updates"]');
+  if(!link)return;
+  try{
+   const response=await fetch('/api/admin/updates?unread=1');if(!response.ok)return;
+   const data=await response.json();
+   let badge=link.querySelector<HTMLElement>('[data-updates-badge]');
+   if(data.total&&!badge){badge=document.createElement('span');badge.dataset.updatesBadge='';badge.className='up-menu-new';badge.setAttribute('role','img');badge.setAttribute('aria-label','Nieuwe updates');link.append(badge);}
+   if(badge)badge.hidden=!data.total;
+   link.setAttribute('aria-label',data.total?'Updates · nieuwe berichten':'Updates');
+   const teaser=document.querySelector<HTMLElement>('[data-updates-teaser]');if(teaser){teaser.hidden=!data.total;const text=teaser.querySelector('[data-updates-latest]');if(text)text.textContent=data.items?.[0]?.title||'';}
+  }catch{/* This secondary signal never blocks the workspace. */}
+ };
+ updateSignals();window.addEventListener('updates-read',updateSignals);
+</script>
+<style is:global>
+.up-menu-new{display:inline-block;width:6px;height:6px;border-radius:50%;background:#823f49;margin-left:auto;flex:none}
+.up-dashboard-teaser{display:flex;align-items:center;justify-content:space-between;gap:20px;margin:20px 30px 0;padding:16px 22px;background:#eaf0e9;border-radius:8px;color:#173d35;font-size:13px}.up-dashboard-teaser strong{font-weight:500}.up-dashboard-teaser span{display:block;color:#586b63;font-size:12px}@media(max-width:700px){.up-dashboard-teaser{margin:16px}}
+@media(min-width:821px){html[data-navigation-state="collapsed"] .navigation-shell .admin-nav a>.up-menu-new{display:block!important;position:absolute;top:5px;right:5px}html[data-navigation-state="collapsed"] .navigation-shell .admin-nav a>.up-menu-new[hidden]{display:none!important}}
+</style>

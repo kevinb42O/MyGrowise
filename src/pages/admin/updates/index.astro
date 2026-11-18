@@ -1,0 +1,8 @@
+---
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+import UpdatesWorkspace from '../../../components/updates/UpdatesWorkspace';
+import {hasPermission} from '../../../lib/adminAuth';
+---
+<AdminLayout title="Updates" description="Volg de verbeteringen aan MyGrowise, van idee tot beschikbaar.">
+ <UpdatesWorkspace initialParams={Astro.url.search} client:load userId={Astro.locals.adminUser!.sub} canManage={hasPermission(Astro.locals.adminUser,'updates.manage')}/>
+</AdminLayout>

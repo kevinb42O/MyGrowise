@@ -1,4 +1,6 @@
 ---
+import UpdatesSignal from '../../components/updates/UpdatesSignal.astro';
+import {hasPermission} from '../../lib/adminAuth';
 import AdminLoadingPanel from '../../components/admin/AdminLoadingPanel.astro';
 import AdminSkeleton from '../../components/admin/AdminSkeleton';
 import AdminLayout from '../../layouts/AdminLayout.astro';
@@ -8,6 +10,7 @@ const period = ['alles', '30d', '7d', 'jaar'].includes(Astro.url.searchParams.ge
 const periodLabel: Record<string, string> = { alles: 'Alle tijd', '30d': 'Laatste 30 dagen', '7d': 'Laatste 7 dagen', jaar: 'Dit jaar' };
 ---
 <AdminLayout title="Dashboard" description="Operationeel overzicht voor MyGrowise">
+  {hasPermission(Astro.locals.adminUser,'updates.read') && <UpdatesSignal dashboard />}
   <DashboardIsland server:defer period={period}>
     <div slot="fallback" class="admin-page dashboard-home" aria-busy="true">
       <header class="admin-page-heading dashboard-home__heading">

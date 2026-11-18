@@ -1,3 +1,4 @@
+import {deliverUpdateFeedbackMail} from './updateFeedbackMail';
 import {deliverBookingMail} from './bookingMail';
 import {deliverCommerceMail} from './catalog/mail';
 import {deliverWebsiteMail} from './commerce/websiteMail';
@@ -8,7 +9,7 @@ import {deliverSupportMail} from './supportMail';
  * A failed queue must not prevent the other queues from being processed.
  */
 export async function deliverQueuedMail() {
-  const entries = Object.entries({support:deliverSupportMail, commerce:deliverCommerceMail, booking:deliverBookingMail, website:deliverWebsiteMail});
+  const entries = Object.entries({support:deliverSupportMail, commerce:deliverCommerceMail, booking:deliverBookingMail, website:deliverWebsiteMail,updateFeedback:deliverUpdateFeedbackMail});
   const results = await Promise.allSettled(entries.map(([name,deliver]) => deliver(name === 'booking' ? 100 : 2)));
   return Object.fromEntries(results.map((result,index) => [entries[index][0],result.status === 'fulfilled' ? result.value : {unavailable:true}]));
 }

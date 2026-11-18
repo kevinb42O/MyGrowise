@@ -1,4 +1,5 @@
 ---
+import UpdatesSignal from '../components/updates/UpdatesSignal.astro';
 import AdminLoadingMotion from '../components/admin/AdminLoadingMotion.astro';
 import AgendaNavigation from '../components/admin/AgendaNavigation.astro';
 import AdminNavigation from '../components/admin/AdminNavigation.astro';
@@ -40,6 +41,7 @@ const navGroups = [
     label: 'Overzicht',
     items: [
       { label: 'Dashboard', href: '/admin', icon: 'overview', exact: true },
+      { label: 'Updates', href: '/admin/updates', icon: 'content' },
       { label: 'Mailopvolging', href: '/admin/mail', icon: 'messages' },
       { label: 'Analytics', href: '/admin/analytics', icon: 'analytics' },
     ],
@@ -124,6 +126,7 @@ const canOpen = (href: string) => {
           </button>
         </div>
 
+        {hasPermission(adminUser, 'updates.read') && <UpdatesSignal />}
         <nav class="admin-nav">
           {navGroups.filter((group) => group.items.some((item) => canOpen(item.href))).map((group) => (
             <section class="admin-nav__group" aria-labelledby={`nav-${group.label.toLowerCase().replaceAll(' ', '-')}`}>

@@ -3,6 +3,7 @@ export type EmailContent = {
   preheader: string;
   greeting?: string;
   paragraphs: string[];
+  highlight?: {label:string;body:string};
   details?: [string, string][];
   action?: { label: string; url: string };
   sections?: { title: string; body: string }[];
@@ -35,6 +36,7 @@ export function renderEmail(content: EmailContent) {
 <tr><td class="email-brand" style="padding:30px 40px;border-bottom:1px solid #e5e4d9;"><table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr><td style="padding-right:12px;"><img src="https://www.mygrowise.be/images/logo-lelie.png" width="38" height="29" alt="" style="display:block;border:0;"></td><td style="font-family:Georgia,'Times New Roman',serif;font-size:26px;color:#173d35;">MyGrowise</td></tr></table></td></tr>
 <tr><td class="email-content" style="padding:38px 40px 40px;"><h1 class="email-heading" style="margin:0 0 24px;font-family:Georgia,'Times New Roman',serif;font-size:36px;font-weight:normal;line-height:1.17;color:#173d35;">${escapeEmailHtml(content.title)}</h1>
 ${content.greeting?paragraph(content.greeting):''}${content.paragraphs.map(paragraph).join('')}
+${content.highlight?`<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:24px 0;background:#f8eef0;"><tr><td style="padding:24px;"><p style="margin:0 0 12px;font-size:12px;font-weight:bold;line-height:1.6;color:#823f49;">${escapeEmailHtml(content.highlight.label)}</p><blockquote style="margin:0;font-size:17px;line-height:1.8;color:#173d35;overflow-wrap:anywhere;">${escapeEmailHtml(content.highlight.body).replace(/\n/g,'<br>')}</blockquote></td></tr></table>`:''}
 ${details?`<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:24px 0;background:#f2f4ed;"><tr><td style="padding:12px 20px;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">${details}</table></td></tr></table>`:''}
 ${actionUrl?`<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:28px 0 20px;"><tr><td bgcolor="#173d35" style="border-radius:6px;mso-padding-alt:16px 24px;"><a href="${escapeEmailHtml(actionUrl)}" style="display:inline-block;padding:16px 24px;color:#fffdf9;font-size:15px;line-height:1.4;font-weight:bold;text-decoration:none;border-radius:6px;">${escapeEmailHtml(content.action!.label)}</a></td></tr></table><p style="margin:0 0 28px;font-size:12px;line-height:1.6;color:#526d63;">Werkt de knop niet? <a href="${escapeEmailHtml(actionUrl)}" style="color:#173d35;text-decoration:underline;">Open dezelfde link in je browser</a>.</p>`:''}
 ${content.sections?.map(section=>`<h2 style="margin:30px 0 12px;font-size:17px;line-height:1.4;color:#173d35;">${escapeEmailHtml(section.title)}</h2>${paragraph(section.body)}`).join('')||''}

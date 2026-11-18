@@ -6,13 +6,13 @@ import {renderEmail,renderTextEmail} from '../emailTemplate';
 export const captureMail=()=>!import.meta.env.PROD&&import.meta.env.WEBSITE_MAIL_MODE==='capture';
 export const websiteMailReady=()=>captureMail()||supportMailReady();
 export type WebsiteMailAttachment = {filename:string;content:string;contentType:string};
-export async function sendWebsiteEmail(to:string,subject:string,text:string,replyTo='info@mygrowise.be',messageId?:string,html=renderTextEmail(subject,text),attachments:WebsiteMailAttachment[]=[]){
+export async function sendWebsiteEmail(to:string,subject:string,text:string,replyTo='info@mygrowise.be',messageId?:string,html=renderTextEmail(subject,text),attachments:WebsiteMailAttachment[]=[],smtpPort:465|587=465){
  if(import.meta.env.DEV&&captureMail()){
   const {captureEmail}=await import('./captureMail');
   return captureEmail(to,subject,text,replyTo,messageId,html,attachments);
  }
  if(!supportMailReady())throw new Error('mail_unavailable');
- const transport=nodemailer.createTransport({host:'smtp.mail.webnode.com',port:465,secure:true,auth:{user:import.meta.env.SUPPORT_SMTP_USER,pass:import.meta.env.SUPPORT_SMTP_PASSWORD},connectionTimeout:10000,greetingTimeout:10000,socketTimeout:10000});
+ const transport=nodemailer.createTransport({host:'smtp.mail.webnode.com',port:smtpPort,secure:smtpPort===465,...(smtpPort===587?{requireTLS:true}:{}),auth:{user:import.meta.env.SUPPORT_SMTP_USER,pass:import.meta.env.SUPPORT_SMTP_PASSWORD},connectionTimeout:10000,greetingTimeout:10000,socketTimeout:10000});
  try{await transport.sendMail({from:`MyGrowise <${import.meta.env.SUPPORT_FROM_EMAIL}>`,to,replyTo,subject,text,html,messageId,attachments});}finally{transport.close();}
 }
 export async function queueWebsiteMail(kind:'contact'|'purchase_access',payload:Record<string,string>,submission?:string){
