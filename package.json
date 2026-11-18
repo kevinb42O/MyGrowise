@@ -34,7 +34,9 @@
     "test": "node --experimental-strip-types --test tests/*.test.ts tests/*.test.mjs",
     "test:profiles:db": "node tests/profiles-database.mjs",
     "check:artifact": "node scripts/check-release-artifact.mjs",
-    "reminders:configure": "dotenv -e .env -- node scripts/configure-booking-reminders.mjs"
+    "reminders:configure": "dotenv -e .env -- node scripts/configure-booking-reminders.mjs",
+    "test:admin:audit": "node --experimental-strip-types --test tests/admin-audit-fixes.test.mjs",
+    "test:admin:audit:browser": "node tests/admin-audit-browser.mjs"
   },
   "dependencies": {
     "@astrojs/react": "^6.0.5",
@@ -55,6 +57,7 @@
     "qrcode": "^1.5.4",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
+    "sharp": "^0.35.5",
     "tus-js-client": "4.3.1"
   },
   "devDependencies": {

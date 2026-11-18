@@ -1,6 +1,8 @@
 ---
+import AdminLoadingMotion from '../components/admin/AdminLoadingMotion.astro';
 import FormProtection from '../components/practice/FormProtection.astro';
 import AgendaNavigation from '../components/admin/AgendaNavigation.astro';
+import AdminNavigation from '../components/admin/AdminNavigation.astro';
 import ClientSearch from '../components/admin/ClientSearch';
 import AppIcons from '../components/astro/AppIcons.astro';
 import AdminIcon from '../components/admin/AdminIcon.astro';
@@ -10,11 +12,13 @@ import '../styles/admin.css';
 import '../styles/practice-management.css';
 import '../styles/practice-improvements.css';
 import '../styles/agenda-workspace.css';
+import { userPortrait } from '../lib/headshotPresentation';
 import { hasPermission } from '../lib/adminAuth';
 
 interface Props { title: string; description?: string; agendaWorkspace?: boolean }
 const { title, agendaWorkspace = false, description = 'Mijn praktijk bij MyGrowise' } = Astro.props;
 const user = Astro.locals.currentUser;
+const portrait = userPortrait(user);
 const currentPath = Astro.url.pathname.replace(/\/$/, '') || '/praktijk';
 const initials = (user?.name || '?').split(/\s+/).map((part) => part[0]).join('').slice(0, 2).toUpperCase();
 const nav = [
@@ -46,9 +50,10 @@ const active = (item: { href: string; exact?: boolean }) => item.exact ? current
     <meta name="theme-color" content="#173d35" />
     <meta name="description" content={description} />
     <AppIcons />
+    {agendaWorkspace && <AdminNavigation agenda persist={false} />}
     <title>{title} · Mijn praktijk</title>
   </head>
-  <body class:list={["admin-body", "practice-body", { "agenda-workspace": agendaWorkspace }]}>
+  <body class:list={["admin-body", "practice-body", { "agenda-workspace": agendaWorkspace, "navigation-shell": agendaWorkspace }]}>
     <a class="admin-skip-link" href="#practice-main">Naar de hoofdinhoud</a>
     <div class="admin-shell">
       <div class="admin-sidebar-scrim" data-sidebar-close></div>
@@ -59,7 +64,7 @@ const active = (item: { href: string; exact?: boolean }) => item.exact ? current
         <div class="admin-sidebar__footer">
           {user?.roles.includes('super_admin') && <a class="practice-switch" href="/admin" aria-label="Naar organisatiebeheer" title="Naar organisatiebeheer"><AdminIcon name="overview" /> Naar organisatiebeheer</a>}
           <a href="/begeleiding" aria-label="Publiek profiel bekijken" title="Publiek profiel bekijken" target="_blank" rel="noreferrer"><AdminIcon name="external" /> Publiek profiel bekijken</a>
-          <div class="admin-user"><span>{initials}</span><span><strong>{user?.name}</strong><small>Professional</small></span><form action="/api/admin/logout" method="post"><button type="submit" aria-label="Afmelden" title="Afmelden"><AdminIcon name="logout" size={16} /></button></form></div>
+          <div class="admin-user"><span class="admin-user__avatar" role="img" aria-label={`Profielfoto van ${user?.name}`} >{portrait ? <img class:list={{ 'user-headshot--original': portrait.original }} src={portrait.src} alt="" width="30" height="30" /> : initials}</span><span><strong>{user?.name}</strong><small>Professional</small></span><form action="/api/admin/logout" method="post"><button type="submit" aria-label="Afmelden" title="Afmelden"><AdminIcon name="logout" size={16} /></button></form></div>
         </div>
       </aside>
       <div class="admin-workspace">
@@ -78,5 +83,6 @@ const active = (item: { href: string; exact?: boolean }) => item.exact ? current
     </script>}
 
   <FormProtection/>
+    <AdminLoadingMotion />
   </body>
 </html>

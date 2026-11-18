@@ -1,0 +1,79 @@
+---
+import { HEADSHOT_ACCEPT } from '../../lib/headshotImage';
+interface Props { src?: string; original?: boolean; name?: string; id?: string; optional?: boolean }
+const { src, original = false, name = 'headshot', id = 'headshot-file', optional = false } = Astro.props;
+---
+<div class="headshot-field" data-headshot-field>
+  <span class:list={['headshot-field__preview', { 'headshot-field__preview--original': original }]}>
+    <img src={src} alt="Voorvertoning profielfoto" width="80" height="80" hidden={!src} data-headshot-preview />
+    <svg hidden={Boolean(src)} data-headshot-placeholder viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21v-2a8 8 0 0 1 16 0v2"/></svg>
+  </span>
+  <div class="headshot-field__control">
+    <label for={id}>Profielfoto {optional && <small>(optioneel)</small>}</label>
+    <input id={id} name={name} type="file" accept={HEADSHOT_ACCEPT} aria-describedby={`${id}-help ${id}-error`} data-headshot-input />
+    <p id={`${id}-help`}>JPG, PNG of WebP · maximaal 3 MB. Kies een duidelijk portret; je foto wordt vierkant bijgesneden.</p>
+    <p id={`${id}-error`} class="headshot-field__error" role="alert" hidden data-headshot-error></p>
+  </div>
+</div>
+<style>
+.headshot-field { display:flex; align-items:center; gap:1.25rem; min-width:0; }
+.headshot-field__preview { display:grid; flex:0 0 80px; width:80px; height:80px; place-items:center; overflow:hidden; border-radius:50%; background:var(--admin-green-soft, var(--pink-soft)); color:var(--admin-green, var(--ink)); }
+.headshot-field__preview img { display:block; width:100%; height:100%; object-fit:cover; }
+.headshot-field__preview img[hidden], .headshot-field__preview svg[hidden] { display:none; }
+.headshot-field__preview--original img { object-position:60% 20%; transform:scale(1.65); transform-origin:60% 20%; }
+.headshot-field__preview svg { width:32px; height:32px; }
+.headshot-field__control { min-width:0; flex:1; }
+.headshot-field label { display:block; margin-bottom:.5rem; color:inherit; font-size:.875rem; font-weight:600; }
+.headshot-field label small { font-size:.75rem; font-weight:400; }
+.headshot-field input { display:block; width:100%; min-width:0; max-width:100%; font:inherit; font-size:.8125rem; }
+.headshot-field input::file-selector-button { margin-right:.65rem; padding:.5rem .75rem; border:1px solid var(--admin-border-strong, var(--line)); border-radius:6px; background:var(--admin-surface, var(--white)); color:var(--admin-green, var(--ink)); font:inherit; cursor:pointer; }
+.headshot-field input:focus-visible { outline:2px solid var(--admin-green, var(--ink)); outline-offset:4px; }
+.headshot-field p { margin:.5rem 0 0; color:inherit; font-size:.75rem; line-height:1.5; }
+.headshot-field .headshot-field__error { color:var(--admin-danger, #b42318); }
+@media(max-width:480px) { .headshot-field { align-items:flex-start; gap:.75rem; } .headshot-field__preview { flex-basis:56px; width:56px; height:56px; } .headshot-field label small { display:block; } }
+</style>
+<script>
+  document.querySelectorAll<HTMLElement>('[data-headshot-field]').forEach(field => {
+    const input = field.querySelector<HTMLInputElement>('[data-headshot-input]')!;
+    const preview = field.querySelector<HTMLImageElement>('[data-headshot-preview]')!;
+    const placeholder = field.querySelector<SVGElement>('[data-headshot-placeholder]')!;
+    const error = field.querySelector<HTMLElement>('[data-headshot-error]')!;
+    const initialSrc = preview.getAttribute('src');
+    const original = preview.parentElement!.classList.contains('headshot-field__preview--original');
+    let objectUrl: string | null = null;
+    const restore = () => {
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+      objectUrl = null;
+      if (initialSrc) preview.src = initialSrc; else preview.removeAttribute('src');
+      preview.hidden = !initialSrc;
+      placeholder.toggleAttribute('hidden', Boolean(initialSrc));
+      preview.parentElement!.classList.toggle('headshot-field__preview--original', original);
+    };
+    const invalidate = (message: string) => {
+      restore(); error.textContent = message; error.hidden = false;
+      input.setCustomValidity(message);
+    };
+    input.addEventListener('change', () => {
+      input.setCustomValidity(''); error.hidden = true; error.textContent = '';
+      restore();
+      const file = input.files?.[0];
+      if (!file) return;
+      if (file.size > 3 * 1024 * 1024) { invalidate('Kies een foto van maximaal 3 MB.'); return; }
+      if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) { invalidate('Kies een JPG-, PNG- of WebP-foto.'); return; }
+      const pendingUrl = URL.createObjectURL(file);
+      objectUrl = pendingUrl;
+      const check = new Image();
+      check.onload = () => {
+        if (objectUrl !== pendingUrl) return;
+        if (check.naturalWidth * check.naturalHeight > 20_000_000) { invalidate('Kies een foto van maximaal 20 megapixels.'); return; }
+        preview.src = pendingUrl; preview.hidden = false;
+        placeholder.setAttribute('hidden', '');
+        preview.parentElement!.classList.remove('headshot-field__preview--original');
+      };
+      check.onerror = () => { if (objectUrl === pendingUrl) invalidate('Deze foto kan niet worden geopend. Kies een ander bestand.'); };
+      check.src = pendingUrl;
+    });
+    input.form?.addEventListener('reset', () => { restore(); input.setCustomValidity(''); error.hidden = true; });
+    window.addEventListener('pagehide', () => { if (objectUrl) URL.revokeObjectURL(objectUrl); });
+  });
+</script>

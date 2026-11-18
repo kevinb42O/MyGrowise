@@ -1,0 +1,22 @@
+---
+import '../../styles/admin-navigation.css';
+interface Props { agenda?: boolean; persist?: boolean }
+const { agenda = false, persist = true } = Astro.props;
+---
+<!-- Apply the preference before the shell paints; storage may be unavailable. -->
+<script is:inline define:vars={{ agenda, persist }}>
+  (() => {
+    let state = agenda ? 'collapsed' : 'expanded';
+    if (persist) {
+      try {
+        const saved = localStorage.getItem('mygrowise.admin.navigation');
+        if (saved === 'collapsed' || saved === 'expanded') state = saved;
+      } catch {}
+    }
+    document.documentElement.dataset.navigationState = state;
+  })();
+</script>
+<script>
+  import { setupAdminNavigation } from './adminNavigation';
+  setupAdminNavigation();
+</script>

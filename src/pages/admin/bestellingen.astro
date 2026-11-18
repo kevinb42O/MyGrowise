@@ -137,26 +137,26 @@ const paidOrders = orders.filter((order) => order.status === 'paid' || order.sta
   .orders-stats { margin-bottom: 18px; }
   .orders-panel { overflow: hidden; }
   .orders-filterbar { gap: 12px; }
-  .orders-status-filter select { height: 36px; padding: 0 30px 0 10px; border: 1px solid var(--admin-border); border-radius: 6px; background: #fff; color: var(--admin-text); font-size: 10px; }
+  .orders-status-filter select { height: 36px; padding: 0 30px 0 10px; border: 1px solid var(--admin-border); border-radius: 6px; background: #fff; color: var(--admin-text); font-size: 12px; }
   .orders-table { min-width: 1050px; }
   .orders-table th, .orders-table td { white-space: nowrap; }
   .orders-table td:first-child { max-width: 260px; white-space: normal; }
-  .orders-product, .orders-customer { display: block; max-width: 245px; overflow: hidden; color: var(--admin-text); font-size: 11px; font-weight: 600; text-overflow: ellipsis; }
-  .orders-number, .orders-status-detail { display: block; margin-top: 4px; color: var(--admin-faint); font-size: 9px; }
-  .orders-method { display: block; color: var(--admin-text); font-size: 10px; font-weight: 600; }
+  .orders-product, .orders-customer { display: block; max-width: 245px; overflow: hidden; color: var(--admin-text); font-size: 13px; font-weight: 600; text-overflow: ellipsis; }
+  .orders-number, .orders-status-detail { display: block; margin-top: 4px; color: var(--admin-faint); font-size: 12px; }
+  .orders-method { display: block; color: var(--admin-text); font-size: 12px; font-weight: 600; }
   .orders-reference { display: flex; align-items: center; gap: 4px; margin-top: 5px; }
-  .orders-reference code { color: var(--admin-muted); font-size: 9px; }
-  .orders-copy { display: grid; width: 23px; height: 23px; place-items: center; border: 0; border-radius: 5px; background: var(--admin-subtle); color: var(--admin-muted); cursor: pointer; }
+  .orders-reference code { color: var(--admin-muted); font-size: 12px; }
+  .orders-copy { display: grid; width: 36px; height: 36px; place-items: center; border: 0; border-radius: 5px; background: var(--admin-subtle); color: var(--admin-muted); cursor: pointer; }
   .orders-copy:hover { background: var(--admin-green-soft); color: var(--admin-green); }
-  .orders-status { display: inline-flex; min-height: 25px; align-items: center; gap: 6px; padding: 4px 8px; border: 1px solid var(--admin-border); border-radius: 999px; background: var(--admin-subtle); color: var(--admin-muted); font-size: 9px; font-weight: 600; white-space: nowrap; }
+  .orders-status { display: inline-flex; min-height: 25px; align-items: center; gap: 6px; padding: 4px 8px; border: 1px solid var(--admin-border); border-radius: 999px; background: var(--admin-subtle); color: var(--admin-muted); font-size: 12px; font-weight: 600; white-space: nowrap; }
   .orders-status i { width: 6px; height: 6px; border-radius: 50%; background: var(--admin-faint); }
   .orders-status--pending, .orders-status--reported { border-color: #ead9a8; background: var(--admin-yellow-soft); color: var(--admin-warning-text); }
   .orders-status--pending i, .orders-status--reported i { background: var(--admin-yellow); }
   .orders-status--paid { border-color: #cbded3; background: var(--admin-green-soft); color: var(--admin-green); }
   .orders-status--paid i { background: var(--admin-success); }
-  .orders-confirm { min-height: 33px; padding: 6px 10px; font-size: 10px; white-space: nowrap; }
+  .orders-confirm { min-height: 33px; padding: 6px 10px; font-size: 12px; white-space: nowrap; }
   .orders-no-action { color: var(--admin-faint); }
-  .orders-empty-filter { margin: 0; padding: 20px; color: var(--admin-muted); font-size: 11px; }
+  .orders-empty-filter { margin: 0; padding: 20px; color: var(--admin-muted); font-size: 13px; }
   .orders-table tr[hidden] { display: none; }
   @media (max-width: 620px) {
     .orders-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }

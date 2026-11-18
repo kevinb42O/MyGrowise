@@ -1,4 +1,5 @@
 ---
+import AdminSkeleton from '../../components/admin/AdminSkeleton';
 import AdminLayout from '../../layouts/AdminLayout.astro';
 import UnifiedAgenda from '../../components/admin/UnifiedAgenda';
 Astro.response.headers.set('Cache-Control', 'private, no-store');
@@ -7,6 +8,6 @@ Astro.response.headers.set('Cache-Control', 'private, no-store');
 <AdminLayout agendaWorkspace title="Agenda" description="Beheer de planning en afspraken van MyGrowise">
   <div class="admin-page agenda-page">
     <h1 class="sr-only" id="agenda-title">Agenda</h1>
-    <UnifiedAgenda preferenceKey={Astro.locals.currentUser!.sub} client:only="react"><p slot="fallback" role="status">Agenda laden…</p></UnifiedAgenda>
+    <UnifiedAgenda preferenceKey={Astro.locals.currentUser!.sub} client:only="react"><div slot="fallback" class="admin-agenda-loading"><span class="sr-only" role="status">Agenda laden…</span><AdminSkeleton variant="calendar" toolbar /></div></UnifiedAgenda>
   </div>
 </AdminLayout>

@@ -1,3 +1,4 @@
+import AdminSkeleton from './AdminSkeleton';
 import { useEffect, useId, useState } from 'react';
 export type NewPatient = { firstName: string; lastName: string; email: string; birthDate: string; key: string };
 type ClientChoice = { id: string; name: string; email: string; accountLinked?: boolean };
@@ -60,14 +61,15 @@ export default function AgendaClientPicker({ mode, value, onChange, initial, nam
         if(event.key==='ArrowDown'||event.key==='ArrowUp'){event.preventDefault();setOpen(true);setActive(value=>Math.max(0,Math.min(result.clients.length-1,value+(event.key==='ArrowDown'?1:-1))));}
         if(event.key==='Enter'&&open){event.preventDefault();if(active>=0&&result.clients[active])choose(result.clients[active]);}
       }}/>
-    {open&&<ul id={`${id}-options`} role="listbox" aria-label="Cliënten">
+    {open && loading && <AdminSkeleton variant="rows" />}
+    {open&&<ul aria-busy={loading} id={`${id}-options`} role="listbox" aria-label="Cliënten">
       {result.clients.map((client,index)=><li key={client.id} id={`${id}-option-${index}`} role="option" aria-selected={active===index}>
         <button type="button" onClick={()=>choose(client)}><strong>{client.name}</strong><small>{client.email}</small></button>
       </li>)}
     </ul>}
     <p role="status">{selected&&activeId ? `Geselecteerd: ${selected.name} · ${selected.email}` : 'Kies een cliënt om de afspraak te plannen.'}</p>
     {selected&&activeId&&selected.accountLinked===false&&<p>Dit dossier heeft nog geen gekoppeld cliëntaccount. Koppel het account in het dossier, zodat de afspraak ook in ‘Mijn begeleiding’ verschijnt. <a href={`${mode==='practice'?'/praktijk':'/admin'}/clienten/${selected.id}`}>Dossier openen</a></p>}
-    {open && <div className="agenda-client-picker__status" role="status">{loading ? 'Cliënten laden…' : error || (!result.clients.length ? 'Geen cliënten gevonden.' : '')}</div>}
+    {open && <div className={loading ? 'sr-only' : 'agenda-client-picker__status'} role="status">{loading ? 'Cliënten laden…' : error || (!result.clients.length ? 'Geen cliënten gevonden.' : '')}</div>}
       {open && error && <button type="button" onClick={() => setRetry(retry + 1)}>Opnieuw laden</button>}
       {open && !loading && (page > 0 || result.hasMore) && <div className="agenda-client-picker__pages">
         <button type="button" disabled={!page} onClick={() => setPage(page - 1)}>Vorige</button><span>Pagina {page + 1}</span>

@@ -1,8 +1,12 @@
 ---
 import AdminLayout from '../../../layouts/AdminLayout.astro';
 import ContentForm from '../../../components/admin/ContentForm.astro';
+import { submitContentForm } from '../../../lib/adminContentForm';
 import { hasPermission } from '../../../lib/adminAuth';
 const canPublish = hasPermission(Astro.locals.adminUser, 'content.publish');
-const error = Astro.url.searchParams.get('error') || '';
+const result = Astro.request.method === 'POST' ? await submitContentForm(Astro.request, Astro.locals.adminUser, Astro.locals.requestId) : null;
+if (result?.redirect) return Astro.redirect(result.redirect, 303);
+if (result) Astro.response.status = result.status;
+const error = result?.error || Astro.url.searchParams.get('error') || '';
 ---
-<AdminLayout title="Nieuwe content" description="Maak een versieerbaar artikel of pagina"><div class="admin-page admin-page--form"><a class="admin-back-link" href="/admin/content">← Terug naar website & blogs</a><section class="admin-page-heading"><div><p class="admin-eyebrow">Aanbod & content</p><h1>Nieuwe content</h1><p>Maak een artikel of pagina in een rustige, overzichtelijke werkruimte. Elke opslag krijgt automatisch een eigen versie.</p></div></section><section class="admin-panel admin-form-panel"><ContentForm action="/api/admin/content" canPublish={canPublish} error={error}/></section></div></AdminLayout>
+<AdminLayout title="Nieuwe content" description="Maak een versieerbaar artikel of pagina"><div class="admin-page admin-page--form"><a class="admin-back-link" href="/admin/content">← Terug naar website & blogs</a><section class="admin-page-heading"><div><p class="admin-eyebrow">Aanbod & content</p><h1>Nieuwe content</h1><p>Maak een artikel of pagina in een rustige, overzichtelijke werkruimte. Elke opslag krijgt automatisch een eigen versie.</p></div></section><section class="admin-panel admin-form-panel"><ContentForm draft={result?.draft} action="/admin/content/nieuw" canPublish={canPublish} error={error}/></section></div></AdminLayout>

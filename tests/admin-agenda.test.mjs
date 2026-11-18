@@ -192,6 +192,7 @@ const { default: Agenda, AgendaEventCard, ImportedAgendaDetails, eventForeground
   '../../lib/bookingOutcome': load('../src/lib/bookingOutcome.ts',{}),
   '../../lib/appointmentChoices': load('../src/lib/appointmentChoices.ts',{}),
   './AgendaClientPicker': {}, './AgendaDialog': {},
+  './AdminSkeleton': load('../src/components/admin/AdminSkeleton.tsx', {}),
 });
 
 test('admin UI has no Itransform filter, even if practice access is supplied', () => {

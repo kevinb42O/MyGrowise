@@ -1,5 +1,7 @@
 ---
+import AdminLoadingMotion from '../components/admin/AdminLoadingMotion.astro';
 import AgendaNavigation from '../components/admin/AgendaNavigation.astro';
+import AdminNavigation from '../components/admin/AdminNavigation.astro';
 import ClientSearch from '../components/admin/ClientSearch';
 import AppIcons from '../components/astro/AppIcons.astro';
 import FormProtection from '../components/practice/FormProtection.astro';
@@ -12,6 +14,7 @@ import '../styles/practice-improvements.css';
 import '../styles/agenda-workspace.css';
 import { hasPermission } from '../lib/adminAuth';
 import { requiredAdminPermission } from '../lib/adminPermissions';
+import { userPortrait } from '../lib/headshotPresentation';
 
 interface Props {
   title: string;
@@ -22,6 +25,8 @@ interface Props {
 const { title, agendaWorkspace = false, description = 'Beheer MyGrowise' } = Astro.props;
 const currentPath = Astro.url.pathname.replace(/\/$/, '') || '/';
 const adminUser = Astro.locals.adminUser;
+const portrait = userPortrait(adminUser);
+const userInitials = (adminUser?.name || 'MyGrowise').split(/\s+/).filter(Boolean).map((part) => part[0]).join('').slice(0, 2).toUpperCase();
 if (currentPath.startsWith('/admin')) {
   Astro.response.headers.set('Cache-Control', 'private, no-store, max-age=0');
   Astro.response.headers.set('Referrer-Policy', 'no-referrer');
@@ -43,9 +48,7 @@ const navGroups = [
     items: [
       { label: 'Bestellingen', href: '/admin/bestellingen', icon: 'orders' },
       { label: 'Klanten', href: '/admin/klanten', icon: 'customers' },
-      { label: 'Vragenlijsten & profielen', href: '/admin/vragenlijsten', icon: 'profiles' },
       { label: 'Afnames & rapporten', href: '/admin/afnames', icon: 'content' },
-      { label: 'Producten', href: '/admin/producten', icon: 'products' },
     ],
   },
   {
@@ -62,7 +65,8 @@ const navGroups = [
   {
     label: 'Aanbod & content',
     items: [
-      { label: 'Profielen', href: '/admin/profielen', icon: 'profiles' },
+      { label: 'Vragenlijsten & profielen', href: '/admin/vragenlijsten', icon: 'profiles' },
+      { label: 'Productoverzicht', href: '/admin/producten', icon: 'products' },
       { label: 'Modules', href: '/admin/modules', icon: 'modules' },
       { label: 'Website & blogs', href: '/admin/content', icon: 'content' },
     ],
@@ -72,6 +76,7 @@ const navGroups = [
     items: [
       { label: 'Berichten', href: '/admin/berichten', icon: 'messages' },
       { label: 'Privacy & retentie', href: '/admin/privacy', icon: 'lock' },
+      { label: 'Mijn account', href: '/admin/account', icon: 'professionals' },
       { label: 'Instellingen', href: '/admin/instellingen', icon: 'settings' },
     ],
   },
@@ -99,10 +104,11 @@ const canOpen = (href: string) => {
     <meta name="robots" content="noindex, nofollow, noarchive" />
     <meta name="theme-color" content="#173d35" />
     <AppIcons />
+    <AdminNavigation agenda={agendaWorkspace} />
     <meta name="description" content={description} />
     <title>{title} · MyGrowise Admin</title>
   </head>
-  <body class:list={["admin-body", { "agenda-workspace": agendaWorkspace }]}>
+  <body class:list={["admin-body", "navigation-shell", { "agenda-workspace": agendaWorkspace }]} data-navigation-scope="admin">
     <a class="admin-skip-link" href="#admin-main">Naar de hoofdinhoud</a>
     <div class="admin-shell">
       <div class="admin-sidebar-scrim" data-sidebar-close></div>
@@ -144,7 +150,9 @@ const canOpen = (href: string) => {
             Website bekijken
           </a>
           <div class="admin-user">
-            <span>VM</span>
+            <span class="admin-user__avatar" role="img" aria-label={`Profielfoto van ${adminUser?.name || 'MyGrowise'}`}>
+              {portrait ? <img class:list={{ 'user-headshot--original': portrait.original }} src={portrait.src} alt="" width="30" height="30" /> : userInitials}
+            </span>
             <span><strong>{adminUser?.name || 'MyGrowise'}</strong><small>{adminUser ? roleLabel[adminUser.roles.find((role) => roleLabel[role]) || ''] || 'Medewerker' : 'Beheerder'}</small></span>
             <form action="/api/admin/logout" method="post">
               <button type="submit" aria-label="Afmelden" title="Afmelden"><AdminIcon name="logout" size={16} /></button>
@@ -165,10 +173,6 @@ const canOpen = (href: string) => {
           </div>
           <div class="admin-topbar__right">{hasPermission(adminUser, 'client_records.read') && <ClientSearch practice={false} client:only="react" />}
             {adminUser && <NotificationBell userId={adminUser.sub} basePath="/admin/berichten" />}
-            <a class="admin-topbar__site-link" href="/" target="_blank" rel="noreferrer">
-              <AdminIcon name="external" size={16} />
-              <span>Website</span>
-            </a>
           </div>
         </header>}
 
@@ -179,20 +183,7 @@ const canOpen = (href: string) => {
       </div>
     </div>
 
-    {!agendaWorkspace && <script is:inline>
-      const body = document.body;
-      const openButton = document.querySelector('[data-sidebar-open]');
-      const closeButtons = document.querySelectorAll('[data-sidebar-close]');
-      const setSidebar = (open) => {
-        body.classList.toggle('admin-menu-open', open);
-        openButton?.setAttribute('aria-expanded', String(open));
-      };
-      openButton?.addEventListener('click', () => setSidebar(true));
-      closeButtons.forEach((button) => button.addEventListener('click', () => setSidebar(false)));
-      document.addEventListener('keydown', (event) => {
-        if (event.key === 'Escape') setSidebar(false);
-      });
-    </script>}
     <FormProtection/>
+    <AdminLoadingMotion />
   </body>
 </html>

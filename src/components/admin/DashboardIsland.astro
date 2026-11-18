@@ -10,4 +10,6 @@ const sessionResult = await verifySupabaseSession(Astro.cookies.get(SUPABASE_SES
 const allowed = hasPermission(sessionResult.session, 'dashboard.read');
 Astro.response.headers.set('Cache-Control', 'private, no-store');
 ---
-{sessionResult.unavailable ? <p class="admin-load-error" role="alert">De beveiligde verbinding is tijdelijk niet beschikbaar. <a href="/admin">Probeer opnieuw</a>.</p> : allowed ? <DashboardContent period={period} user={sessionResult.session!} /> : <p class="admin-load-error" role="alert">Je sessie is verlopen. <a href="/admin/login">Meld je opnieuw aan</a>.</p>}
+<div class="admin-data-arrival">
+  {sessionResult.unavailable ? <p class="admin-load-error" role="alert">De beveiligde verbinding is tijdelijk niet beschikbaar. <a href="/admin">Probeer opnieuw</a>.</p> : allowed ? <DashboardContent period={period} user={sessionResult.session!} /> : <p class="admin-load-error" role="alert">Je sessie is verlopen. <a href="/admin/login">Meld je opnieuw aan</a>.</p>}
+</div>

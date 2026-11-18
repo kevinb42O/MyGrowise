@@ -184,7 +184,7 @@ test('shared report queue excludes cancellations, no-shows, noted bookings and o
 
 test('support dashboard does not read tasks, product statistics or analytics with the service key', async () => {
   const { db, calls } = storage();
-  const service = load('../src/lib/superAdmin.ts', { './supabase/server': { getSupabaseAdmin: () => db }, './adminAuth': auth });
+  const service = load('../src/lib/superAdmin.ts', { './adminPagination': load('../src/lib/adminPagination.ts'), './supabase/server': { getSupabaseAdmin: () => db }, './adminAuth': auth });
   const result = await service.getSuperadminOverview(user('support'));
   assert.equal(result.tasks.length, 0);
   assert.equal(result.analyticsEvents, 0);

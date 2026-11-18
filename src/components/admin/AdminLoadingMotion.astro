@@ -1,0 +1,35 @@
+<script>
+  // Animate only visible placeholders. Also covers server-island replacement and React mounts.
+  const selector = '.admin-skeleton, .admin-loading-status';
+  const visible = new Set<HTMLElement>();
+  const observed = new Set<HTMLElement>();
+  const sync = (element: HTMLElement) => {
+    element.dataset.loadingMotion = !document.hidden && visible.has(element) ? 'running' : 'paused';
+  };
+  if ('IntersectionObserver' in window) {
+    const observer = new IntersectionObserver(entries => {
+      entries.forEach(entry => {
+        const element = entry.target as HTMLElement;
+        if (entry.isIntersecting) visible.add(element); else visible.delete(element);
+        sync(element);
+      });
+    });
+    const scan = (root: ParentNode) => {
+      const elements = [...root.querySelectorAll<HTMLElement>(selector)];
+      if (root instanceof HTMLElement && root.matches(selector)) elements.push(root);
+      elements.forEach(element => {
+        if (observed.has(element)) return;
+        observed.add(element); observer.observe(element);
+      });
+    };
+    scan(document);
+    new MutationObserver(records => {
+      records.forEach(record => record.addedNodes.forEach(node => { if (node instanceof Element) scan(node); }));
+      observed.forEach(element => {
+        if (element.isConnected) return;
+        observer.unobserve(element); observed.delete(element); visible.delete(element);
+      });
+    }).observe(document.body, { childList: true, subtree: true });
+    document.addEventListener('visibilitychange', () => observed.forEach(sync));
+  }
+</script>

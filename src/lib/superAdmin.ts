@@ -1,3 +1,4 @@
+import {readAdminPage, readAllAdminRows} from './adminPagination';
 import { getSupabaseAdmin } from './supabase/server';
 import { hasPermission, type UserSession } from './adminAuth';
 import type { AuditActor } from './securityAudit';
@@ -116,9 +117,9 @@ export const updateAdminBookingStatus = async (id: string, nextStatus: string, a
   return String(data);
 };
 
-export const listAdminTasks = async (limit = 12): Promise<AdminTask[]> => {
+export const listAdminTasks = async (limit = 12, offset = 0): Promise<AdminTask[]> => {
   const client = getSupabaseAdmin();
-  const { data, error } = await client.from('admin_work_items').select('id,title,category,priority,status,due_at,created_at,assigned_to').in('status', ['open', 'in_progress', 'blocked']).order('priority', { ascending: true }).order('due_at', { ascending: true, nullsFirst: false }).limit(limit);
+  const { data, error } = await client.from('admin_work_items').select('id,title,category,priority,status,due_at,created_at,assigned_to').in('status', ['open', 'in_progress', 'blocked']).order('priority', { ascending: true }).order('due_at', { ascending: true, nullsFirst: false }).order('id').range(offset, offset + limit - 1);
   fail(error);
   const rows = (data || []) as RecordRow[];
   const assignedIds = [...new Set(rows.map((row) => row.assigned_to ? String(row.assigned_to) : '').filter(Boolean))];
@@ -156,35 +157,33 @@ export const getSuperadminOverview = async (user: UserSession) => {
   };
 };
 
-export const listAdminCustomers = async () => {
+export const listAdminCustomers = async (requestedPage: unknown = 1, search = '') => {
   const client = getSupabaseAdmin();
-  const orders = await listAdminOrders(500);
-  const profiles: RecordRow[] = [];
-  for (let offset = 0; ; offset += 500) {
-    const { data, error } = await client.from('admin_customer_profiles').select('id,full_name,created_at').order('created_at', { ascending: false }).range(offset, offset + 499);
-    fail(error);
-    const page = (data || []) as RecordRow[];
-    profiles.push(...page);
-    if (page.length < 500) break;
-  }
-  const totals = new Map<string, { orders: number; spent: number }>();
-  orders.forEach((order) => { const current = totals.get(order.customerId) || { orders: 0, spent: 0 }; current.orders += 1; current.spent += order.status === 'paid' || order.status === 'fulfilled' ? order.totalCents : 0; totals.set(order.customerId, current); });
-  const customerIds = new Set(profiles.map((profile) => String(profile.id)));
-  const users: RecordRow[] = [];
-  for (let page = 1; ; page += 1) {
-    const { data, error } = await client.auth.admin.listUsers({ page, perPage: 100 });
-    if (error) throw new Error('users_unavailable');
-    users.push(...data.users.filter((user) => customerIds.has(user.id)));
-    if (data.users.length < 100) break;
-  }
-  const emails = new Map(users.map((user) => [String(user.id), String(user.email || 'E-mail ontbreekt')]));
-  return profiles.map((profile) => {
-    const id = String(profile.id);
-    return { id, name: String(profile.full_name || 'Naam niet ingevuld'), email: emails.get(id) || 'E-mail ontbreekt', createdAt: String(profile.created_at), orderCount: totals.get(id)?.orders || 0, totalCents: totals.get(id)?.spent || 0 };
+  // Filter before paging; never derive lifetime spend from a global recent-order window.
+  const result = await readAdminPage<RecordRow>((start, end) => {
+    const query = client.from('admin_customer_profiles').select('id,full_name,created_at', {count: 'exact'}).order('created_at', {ascending: false}).order('id');
+    if (search) query.ilike('full_name', `%${search.replace(/[%_\\]/g, '')}%`);
+    return query.range(start, end);
+  }, requestedPage);
+  const ids = result.items.map(profile => String(profile.id));
+  const orders = ids.length ? await readAllAdminRows<RecordRow>((start, end) => client.from('orders').select('id,customer_user_id,status,total_cents').in('customer_user_id', ids).order('id').range(start, end)) : [];
+  const totals = new Map<string, {orders: number; spent: number}>();
+  orders.forEach(order => {
+    const total = totals.get(order.customer_user_id) || {orders: 0, spent: 0};
+    total.orders++;
+    if (['paid', 'fulfilled'].includes(order.status)) total.spent += Number(order.total_cents);
+    totals.set(order.customer_user_id, total);
   });
+  const users = await Promise.all(ids.map(async id => {
+    const {data, error} = await client.auth.admin.getUserById(id);
+    if (error) throw new Error('users_unavailable');
+    return [id, data.user?.email || 'E-mail ontbreekt'] as const;
+  }));
+  const emails = new Map(users);
+  return {...result, items: result.items.map(profile => ({id: String(profile.id), name: String(profile.full_name || 'Naam niet ingevuld'), email: emails.get(String(profile.id)) || 'E-mail ontbreekt', createdAt: String(profile.created_at), orderCount: totals.get(String(profile.id))?.orders || 0, totalCents: totals.get(String(profile.id))?.spent || 0}))};
 };
 
-export const getAdminCustomer = async (id: string) => {
+export const getAdminCustomer = async (id: string, pages: Record<string, unknown> = {}) => {
   const client = getSupabaseAdmin();
   const { data: customerProfile, error: customerError } = await client.from('admin_customer_profiles').select('id').eq('id', id).maybeSingle();
   fail(customerError);
@@ -192,19 +191,20 @@ export const getAdminCustomer = async (id: string) => {
   const [{ data: profile, error: profileError }, { data: authData, error: authError }, ordersResult, entitlementsResult, bookingsResult, requestsResult] = await Promise.all([
     client.from('profiles').select('id,full_name,timezone,created_at').eq('id', id).maybeSingle(),
     client.auth.admin.getUserById(id),
-    client.from('orders').select('id,status,total_cents,currency,created_at,order_items(product_title,product_slug,product_type,price_cents)').eq('customer_user_id', id).order('created_at', { ascending: false }).limit(100),
-    client.from('entitlements').select('id,product_title,product_slug,product_type,status,granted_at,revoked_at').eq('customer_user_id', id).order('granted_at', { ascending: false }).limit(100),
-    client.from('bookings').select('id,starts_at,ends_at,status,cancellation_category,no_show_billing,practitioners(name)').eq('customer_user_id', id).order('starts_at', { ascending: false }).limit(100),
-    client.from('data_subject_requests').select('id,request_type,status,received_at,due_at,resolved_at').eq('customer_user_id', id).order('received_at', { ascending: false }).limit(50),
+    readAdminPage<RecordRow>((start,end) => client.from('orders').select('id,status,total_cents,currency,created_at,order_items(product_title,product_slug,product_type,price_cents)', {count:'exact'}).eq('customer_user_id', id).order('created_at', {ascending:false}).order('id').range(start,end), pages.orders),
+    readAdminPage<RecordRow>((start,end) => client.from('entitlements').select('id,product_title,product_slug,product_type,status,granted_at,revoked_at', {count:'exact'}).eq('customer_user_id', id).order('granted_at', {ascending:false}).order('id').range(start,end), pages.entitlements),
+    readAdminPage<RecordRow>((start,end) => client.from('bookings').select('id,starts_at,ends_at,status,cancellation_category,no_show_billing,practitioners(name)', {count:'exact'}).eq('customer_user_id', id).order('starts_at', {ascending:false}).order('id').range(start,end), pages.bookings),
+    readAdminPage<RecordRow>((start,end) => client.from('data_subject_requests').select('id,request_type,status,received_at,due_at,resolved_at', {count:'exact'}).eq('customer_user_id', id).order('received_at', {ascending:false}).order('id').range(start,end), pages.privacy),
   ]);
-  fail(profileError); fail(ordersResult.error); fail(entitlementsResult.error); fail(bookingsResult.error); fail(requestsResult.error);
+  fail(profileError);
   if (!profile || authError || !authData.user) return null;
   return {
     id: String(profile.id), name: String(profile.full_name || 'Naam niet ingevuld'), email: authData.user.email || 'E-mail ontbreekt', timezone: String(profile.timezone), createdAt: String(profile.created_at),
-    orders: ((ordersResult.data || []) as RecordRow[]).map((item) => ({ id: String(item.id), status: String(item.status), totalCents: Number(item.total_cents), currency: String(item.currency), createdAt: String(item.created_at), items: Array.isArray(item.order_items) ? item.order_items.map((line: RecordRow) => ({ title: String(line.product_title), slug: String(line.product_slug), type: String(line.product_type), priceCents: Number(line.price_cents) })) : [] })),
-    entitlements: ((entitlementsResult.data || []) as RecordRow[]).map((item) => ({ id: String(item.id), title: String(item.product_title), slug: String(item.product_slug), type: String(item.product_type), status: String(item.status), grantedAt: String(item.granted_at), revokedAt: item.revoked_at ? String(item.revoked_at) : null })),
-    bookings: ((bookingsResult.data || []) as RecordRow[]).map((item) => ({ id: String(item.id), startsAt: String(item.starts_at), endsAt: String(item.ends_at), status: String(item.status), practitionerName: String(item.practitioners?.name || 'Onbekend') })),
-    privacyRequests: ((requestsResult.data || []) as RecordRow[]).map((item) => ({ id: String(item.id), type: String(item.request_type), status: String(item.status), receivedAt: String(item.received_at), dueAt: String(item.due_at), resolvedAt: item.resolved_at ? String(item.resolved_at) : null })),
+    pagination: {orders: ordersResult, entitlements: entitlementsResult, bookings: bookingsResult, privacy: requestsResult},
+    orders: ((ordersResult.items || []) as RecordRow[]).map((item) => ({ id: String(item.id), status: String(item.status), totalCents: Number(item.total_cents), currency: String(item.currency), createdAt: String(item.created_at), items: Array.isArray(item.order_items) ? item.order_items.map((line: RecordRow) => ({ title: String(line.product_title), slug: String(line.product_slug), type: String(line.product_type), priceCents: Number(line.price_cents) })) : [] })),
+    entitlements: ((entitlementsResult.items || []) as RecordRow[]).map((item) => ({ id: String(item.id), title: String(item.product_title), slug: String(item.product_slug), type: String(item.product_type), status: String(item.status), grantedAt: String(item.granted_at), revokedAt: item.revoked_at ? String(item.revoked_at) : null })),
+    bookings: ((bookingsResult.items || []) as RecordRow[]).map((item) => ({ id: String(item.id), startsAt: String(item.starts_at), endsAt: String(item.ends_at), status: String(item.status), practitionerName: String(item.practitioners?.name || 'Onbekend') })),
+    privacyRequests: ((requestsResult.items || []) as RecordRow[]).map((item) => ({ id: String(item.id), type: String(item.request_type), status: String(item.status), receivedAt: String(item.received_at), dueAt: String(item.due_at), resolvedAt: item.resolved_at ? String(item.resolved_at) : null })),
   };
 };
 
@@ -219,8 +219,26 @@ export const listAdminPractitioners = async () => {
   }));
 };
 
-export const listDataSubjectRequests = async () => {
-  const { data, error } = await getSupabaseAdmin().from('data_subject_requests').select('id,request_type,status,received_at,due_at,resolved_at,customer_user_id').order('due_at').limit(100);
-  fail(error);
-  return ((data || []) as RecordRow[]).map((row) => ({ id: String(row.id), type: String(row.request_type), status: String(row.status), receivedAt: String(row.received_at), dueAt: String(row.due_at), resolvedAt: row.resolved_at ? String(row.resolved_at) : null, customerId: row.customer_user_id ? String(row.customer_user_id) : null }));
+export const listDataSubjectRequests = async (requestedPage: unknown = 1, view = 'open') => {
+  const db = getSupabaseAdmin();
+  const result = await readAdminPage<RecordRow>((start, end) => {
+    const query = db.from('data_subject_requests').select('id,request_type,status,received_at,due_at,resolved_at,customer_user_id', {count:'exact'}).order('due_at').order('id');
+    if (view === 'open') query.in('status', ['received','in_progress']);
+    if (view === 'closed') query.in('status', ['resolved','rejected']);
+    return query.range(start,end);
+  }, requestedPage);
+  const counts = await Promise.all([
+    db.from('data_subject_requests').select('id',{count:'exact',head:true}).in('status',['received','in_progress']),
+    db.from('data_subject_requests').select('id',{count:'exact',head:true}).in('status',['received','in_progress']).lt('due_at',new Date(Date.now()+7*86400000).toISOString()),
+    db.from('data_subject_requests').select('id',{count:'exact',head:true}).eq('status','resolved'),
+  ]);
+  counts.forEach(result=>fail(result.error));
+  return {...result, open:counts[0].count||0, due:counts[1].count||0, resolved:counts[2].count||0, items:result.items.map(row=>({id:String(row.id),type:String(row.request_type),status:String(row.status),receivedAt:String(row.received_at),dueAt:String(row.due_at),resolvedAt:row.resolved_at?String(row.resolved_at):null,customerId:row.customer_user_id?String(row.customer_user_id):null}))};
+};
+
+export const listAdminTaskPage = async (requestedPage: unknown = 1) => {
+  const db = getSupabaseAdmin();
+  const result = await readAdminPage<RecordRow>((start,end)=>db.from('admin_work_items').select('id',{count:'exact'}).in('status',['open','in_progress','blocked']).order('priority').order('due_at',{nullsFirst:false}).order('id').range(start,end),requestedPage);
+  const items = await listAdminTasks(result.pageSize,(result.page-1)*result.pageSize);
+  return {...result,items};
 };

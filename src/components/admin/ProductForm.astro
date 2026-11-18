@@ -12,11 +12,12 @@ interface Props {
 }
 
 const { product, action, submitLabel, error = '', priceValue } = Astro.props;
+const editableTypes = PRODUCT_TYPES.filter(type => type === (product?.id ? product.type : 'ebook'));
 const price = priceValue ?? (product?.priceCents === null || product?.priceCents === undefined ? '' : (product.priceCents / 100).toFixed(2).replace('.', ','));
 ---
 
 {error && <div class="admin-form-alert" role="alert"><AdminIcon name="warning" size={17} />{error}</div>}
-<form class="admin-product-form" action={action} method="post">
+<form data-unsaved-form class="admin-product-form" action={action} method="post">
   <div class="admin-form-grid">
     <label class="admin-field admin-field--wide">
       <span>Productnaam <i>*</i></span>
@@ -31,7 +32,7 @@ const price = priceValue ?? (product?.priceCents === null || product?.priceCents
     <label class="admin-field">
       <span>Type <i>*</i></span>
       <select name="type" required>
-        {PRODUCT_TYPES.map((type) => <option value={type} selected={(product?.type || 'profile') === type}>{productTypeLabel[type]}</option>)}
+        {editableTypes.map((type) => <option value={type} selected={(product?.type || 'ebook') === type}>{productTypeLabel[type]}</option>)}
       </select>
     </label>
     <label class="admin-field">

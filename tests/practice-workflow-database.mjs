@@ -21,6 +21,7 @@ try {
   await q("set local lock_timeout='3s'; set local statement_timeout='20s'");
   const applied = await q("select 1 from supabase_migrations.schema_migrations where version='20261117170000'");
   if (!applied.rowCount) await q(fs.readFileSync('supabase/migrations/20261117170000_practice_workflow_fixes.sql', 'utf8'));
+  await q(fs.readFileSync('supabase/migrations/20261118100000_preserve_future_booking_reminders.sql', 'utf8'));
   const admin = randomUUID(), therapist = randomUUID(), other = randomUUID(), customer = randomUUID(), owner = randomUUID();
   for (const [id, role] of [[admin, 'super_admin'], [therapist, 'practitioner'], [other, 'practitioner'], [customer, 'customer']]) {
     await q("insert into auth.users(id,email,email_confirmed_at,raw_user_meta_data) values($1,$2,now(),'{\"full_name\":\"Synthetic workflow test\"}')", [id, `${id}@example.invalid`]);
@@ -48,6 +49,41 @@ try {
   const due = (await q("select starts_at-interval '72 hours' due from public.bookings where id=$1", [id])).rows[0].due;
   check(() => assert.equal(+reminder.scheduled_for, +due));
   check(() => assert.equal((reminder.payload.name).startsWith('Zoë'), true));
+  // A normal confirmation claim must preserve its future reminder. No SMTP.
+  assert.equal((await q('select public.booking_mail_is_relevant($1) ok',[reminder.id])).rows[0].ok,true);checks++;
+  assert.equal((await q('select public.booking_mail_is_current($1) ok',[reminder.id])).rows[0].ok,false);checks++;
+  const claimed=(await q('select * from public.claim_booking_mail(1,$1)',[id])).rows;
+  assert.deepEqual(claimed.map(j=>j.kind),['confirmation']);checks++;
+  assert.equal((await q('select status from public.booking_mail_jobs where id=$1',[reminder.id])).rows[0].status,'pending');checks++;
+  await q("update public.booking_mail_jobs set status='sent',sent_at=now(),lease_until=null where id=$1",[claimed[0].id]);
+  // Roll back global claim mutations, including any real pending work.
+  await q('savepoint global_claim');
+  await q('select * from public.claim_booking_mail(1,null)');
+  assert.equal((await q('select status from public.booking_mail_jobs where id=$1',[reminder.id])).rows[0].status,'pending');checks++;
+  await q('rollback to savepoint global_claim');
+  await q('savepoint reminder_deadline');
+  await q("update public.booking_mail_jobs set scheduled_for=now(),next_attempt_at=now() where id=$1",[reminder.id]);
+  const ready=(await q('select * from public.claim_booking_mail(1,$1)',[id])).rows;
+  assert.deepEqual(ready.map(j=>j.id),[reminder.id]);checks++;
+  assert.equal((await q('select * from public.claim_booking_mail(1,$1)',[id])).rowCount,0);checks++;
+  await q('rollback to savepoint reminder_deadline');
+  // Recovery must restore exact, never-attempted future reminders only.
+  const fixSql=fs.readFileSync('supabase/migrations/20261118100000_preserve_future_booking_reminders.sql','utf8');
+  const recovery=fixSql.slice(fixSql.indexOf('-- Restore only'),fixSql.indexOf('-- Bound'));
+  await q('savepoint reminder_recovery');
+  await q("update public.booking_mail_jobs set status='superseded',attempts=1 where id=$1",[reminder.id]);
+  await q(recovery);
+  assert.equal((await q('select status from public.booking_mail_jobs where id=$1',[reminder.id])).rows[0].status,'superseded');checks++;
+  await q("update public.booking_mail_jobs set status='suppressed',attempts=0 where id=$1",[reminder.id]);
+  await q(recovery);
+  assert.equal((await q('select status from public.booking_mail_jobs where id=$1',[reminder.id])).rows[0].status,'suppressed');checks++;
+  await q("update public.booking_mail_jobs set status='superseded',payload=jsonb_set(payload,'{startsAt}',to_jsonb(now())) where id=$1",[reminder.id]);
+  await q(recovery);
+  assert.equal((await q('select status from public.booking_mail_jobs where id=$1',[reminder.id])).rows[0].status,'superseded');checks++;
+  await q('rollback to savepoint reminder_recovery');
+  await q("update public.booking_mail_jobs set status='superseded' where id=$1",[reminder.id]);
+  await q(recovery);
+  assert.equal((await q('select status from public.booking_mail_jobs where id=$1',[reminder.id])).rows[0].status,'pending');checks++;
   await rejects(() => create(`Another ${randomUUID()}`, email, start, randomUUID()), /potential_patient_match/);
   const patientsBefore = Number((await q('select count(*) from public.patients')).rows[0].count);
   await rejects(() => create(`Conflict ${randomUUID()}`, `${randomUUID()}@example.invalid`, start, randomUUID()), /slot_unavailable|conflict|exclusion/i);
@@ -96,6 +132,8 @@ try {
   assert.equal((await q('select public.booking_mail_is_current($1) ok',[laterReminder.id])).rows[0].ok,true);checks++;
   await q("update public.booking_mail_jobs set scheduled_for=now()-interval '16 minutes' where id=$1",[laterReminder.id]);
   assert.equal((await q('select public.booking_mail_is_current($1) ok',[laterReminder.id])).rows[0].ok,false);checks++;
+  await q('select * from public.claim_booking_mail(1,$1)',[laterId]);
+  assert.equal((await q('select status from public.booking_mail_jobs where id=$1',[laterReminder.id])).rows[0].status,'superseded');checks++;
   const nextStart=new Date(Date.parse(later)+86400000).toISOString();
   await q('select public.reschedule_practice_appointment($1,$2,$3,null)',[therapist,laterId,nextStart]);
   assert.equal((await q('select status from public.booking_mail_jobs where id=$1',[laterReminder.id])).rows[0].status,'superseded');checks++;
@@ -124,6 +162,7 @@ try {
   await q('reset role'); await q('set local role anon');
   await rejects(() => q('select public.record_patient_visit($1,$2)', [therapist, booking.patient_id]), /permission denied/);
   await rejects(() => q('select * from public.patient_recent_visits'), /permission denied/);
+  await rejects(() => q('select public.booking_mail_is_relevant($1)',[reminder.id]), /permission denied/);
   await q('reset role');
   // Exercise the real dispatch SQL with a network stub; NEVER issue an HTTP request.
   const netInstalled=(await q("select 1 from pg_extension where extname='pg_net'")).rowCount;

@@ -74,12 +74,14 @@ const auditProduct = async (action: ProductAuditEvent['action'], product: AdminP
   await writeSecurityAudit({ actor, action, objectType: 'product', objectId: product.id, before, after: product });
 };
 export const createProduct = async (input: ProductInput, actor: AuditActor) => {
+  if (input.type !== 'ebook') throw new Error('specialized_editor_required');
   const { data, error } = await getSupabaseAdmin().from('products').insert({ title: input.title, slug: input.slug, type: input.type, status: input.status, summary: input.summary, price_cents: input.priceCents, wise_payment_url: input.wisePaymentUrl, currency: 'EUR', updated_by: actor.userId || null }).select(columns).single();
   databaseFailure(error); const product = rowToProduct(data as Record<string, unknown>); await auditProduct('product.created', product, actor); return product;
 };
 export const updateProduct = async (id: string, input: ProductInput, actor: AuditActor) => {
   const before = await getProduct(id);
   if (!before) throw new Error('not_found');
+  if (input.type !== before.type) throw new Error('product_type_locked');
   const { data, error } = await getSupabaseAdmin().from('products').update({ title: input.title, slug: input.slug, type: input.type, status: input.status, summary: input.summary, price_cents: input.priceCents, wise_payment_url: input.wisePaymentUrl, updated_by: actor.userId || null }).eq('id', id).select(columns).maybeSingle();
   databaseFailure(error); if (!data) throw new Error('not_found'); const product = rowToProduct(data as Record<string, unknown>); await auditProduct('product.updated', product, actor, before); return product;
 };

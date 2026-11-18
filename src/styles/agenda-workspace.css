@@ -1,7 +1,7 @@
 /* Calendar routes are workspaces: the grid owns the viewport. */
 .agenda-workspace { height:100dvh; overflow:hidden; background:var(--admin-surface); }
 .agenda-workspace .admin-shell { height:100%; min-height:0; }
-.agenda-workspace .admin-workspace { height:100%; min-height:0; margin-left:64px; }
+.agenda-workspace .admin-workspace { height:100%; min-height:0; margin-left:var(--admin-sidebar-width); }
 .agenda-workspace .admin-main { height:100%; min-height:0; padding:0; }
 .agenda-workspace.practice-body .admin-main:has(> .agenda-page) { padding:0; }
 .agenda-workspace .agenda-page { width:100%; max-width:none; height:100%; margin:0; }
@@ -61,48 +61,15 @@
 .agenda-workspace .agenda-feedback > p { padding:5px 12px; }
 .agenda-workspace .unified-agenda__weekend-notice { padding:5px 12px; }
 
-/* The rail expands without taking height away from the calendar. */
-.agenda-nav-tooltip {
-  position:fixed;
-  z-index:100;
-  max-width:calc(100vw - 88px);
-  padding:8px 12px;
-  border-radius:6px;
-  background:var(--admin-green);
-  color:#fff;
-  box-shadow:0 4px 12px rgb(18 42 33 / 16%);
-  font-size:13px;
-  font-weight:500;
-  line-height:1.4;
-  overflow-wrap:anywhere;
-}
-.agenda-nav-tooltip[hidden] { display:none; }
-.agenda-nav-tooltip::before { content:''; position:absolute; inset:0 100% 0 auto; width:12px; }
-.agenda-workspace .admin-sidebar { width:64px; box-shadow:none; }
-.agenda-workspace .admin-brand { min-height:48px; padding:6px 14px; }
-.agenda-workspace:not(.agenda-navigation-open) .admin-brand > a > span { display:none; }
-.agenda-workspace .admin-nav { padding:8px 10px; }
-.agenda-workspace .admin-nav__group + .admin-nav__group { margin-top:10px; }
-.agenda-workspace .admin-nav__group a { position:relative; min-height:36px; padding:8px 12px; }
-.agenda-workspace:not(.agenda-navigation-open) .admin-nav__group h2,
-.agenda-workspace:not(.agenda-navigation-open) .admin-nav__group a > span:not(.admin-attention-dot),
-.agenda-workspace:not(.agenda-navigation-open) .admin-user > span:nth-child(2) { display:none; }
-.agenda-workspace:not(.agenda-navigation-open) .admin-nav__group .admin-attention-dot { position:absolute; top:4px; right:4px; width:7px; height:7px; }
-.agenda-workspace .admin-sidebar__footer { padding:6px 10px; }
-.agenda-workspace:not(.agenda-navigation-open) .admin-sidebar__footer > a { justify-content:center; gap:0; padding:8px 0; font-size:0; }
-.agenda-workspace:not(.agenda-navigation-open) .admin-user { flex-wrap:wrap; justify-content:center; padding:4px 0; gap:4px; }
-.agenda-workspace:not(.agenda-navigation-open) .admin-user form { margin:0; }
-.agenda-workspace.agenda-navigation-open .admin-sidebar { width:248px; }
-.agenda-workspace.agenda-navigation-open .admin-workspace { margin-left:248px; }
-.agenda-workspace.agenda-navigation-open .admin-sidebar__close { display:inline-grid !important; }
+.agenda-workspace .admin-brand { min-height:48px; }
 .agenda-navigation-tools { display:grid; justify-items:center; gap:4px; padding:8px 10px; border-top:1px solid var(--admin-border); }
 .agenda-navigation-tools summary { display:flex; align-items:center; gap:10px; min-height:36px; padding:8px 12px; color:var(--admin-text); font-size:.875rem; cursor:pointer; list-style:none; }
 .agenda-navigation-tools summary::-webkit-details-marker { display:none; }
 .agenda-navigation-tools .admin-notifications > button { width:42px; height:36px; border:0; }
 .agenda-navigation-tools .admin-attention-overview { margin:0; padding:0; border:0; background:transparent; }
 .agenda-navigation-tools .admin-attention-overview summary { position:relative; }
-.agenda-workspace:not(.agenda-navigation-open) .agenda-navigation-tools summary > span:not(.admin-attention-dot) { display:none; }
-.agenda-workspace:not(.agenda-navigation-open) .agenda-navigation-tools summary > .admin-attention-dot { position:absolute; top:3px; right:3px; }
+html[data-navigation-state="collapsed"] .agenda-workspace .agenda-navigation-tools summary > span:not(.admin-attention-dot) { display:none; }
+html[data-navigation-state="collapsed"] .agenda-workspace .agenda-navigation-tools summary > .admin-attention-dot { position:absolute; top:3px; right:3px; }
 .agenda-client-search__panel,
 .agenda-navigation-tools .admin-attention-overview[open] > .agenda-attention-panel,
 .agenda-navigation-tools .admin-notification-panel { position:fixed; z-index:90; left:72px; right:auto; top:auto; bottom:16px; width:min(360px,calc(100vw - 88px)); background:white; }

@@ -1,15 +1,18 @@
 ---
+import HeadshotSettings from '../../components/admin/HeadshotSettings.astro';
 import {salesEnabled} from '../../lib/commerce/readiness';
+import AdminPagination from '../../components/admin/AdminPagination.astro';
 import AdminLayout from '../../layouts/AdminLayout.astro';
 import AdminIcon from '../../components/admin/AdminIcon.astro';
 import { getAdminSettingsIntegrations } from '../../lib/adminSettings';
 import { daysUntilDue, listAdminRecurringCosts, recurringIntervalLabel } from '../../lib/adminRecurringCosts';
 import { listAdminTaskAssignees } from '../../lib/adminWorkItems';
-import { listAdminTasks } from '../../lib/superAdmin';
+import { listAdminTaskPage } from '../../lib/superAdmin';
 
-const [integrations, tasks, recurringCosts, taskAssignees] = await Promise.all([
-  getAdminSettingsIntegrations(), listAdminTasks(), listAdminRecurringCosts(), listAdminTaskAssignees(),
+const [integrations, taskPage, recurringCosts, taskAssignees] = await Promise.all([
+  getAdminSettingsIntegrations(), listAdminTaskPage(Astro.url.searchParams.get('takenpagina')), listAdminRecurringCosts(), listAdminTaskAssignees(),
 ]);
+const tasks = taskPage.items;
 Astro.response.headers.set('Cache-Control', 'private, no-store, max-age=0');
 Astro.response.headers.set('Referrer-Policy', 'no-referrer');
 const costMessage = Astro.url.searchParams.get('kosten');
@@ -53,6 +56,7 @@ const actionMessages: Record<string, string> = {
       </div>
     </section>
 
+    <HeadshotSettings user={Astro.locals.adminUser!} returnTo="/admin/instellingen" />
     <section class="admin-panel" style="padding:1.5rem;margin-bottom:1.5rem"><h2>Website en verkoop</h2><p>{salesEnabled()?'Nieuwe bestellingen zijn vrijgegeven in deze omgeving.':'Nieuwe bestellingen zijn gepauzeerd. Bestaande aankopen en betaalcontrole blijven beschikbaar.'}</p><p>Hosting: Vercel Free. Mail probeert direct te verzenden; de automatische herstelronde is dagelijks.</p><a class="admin-button" href="/admin/mail">Mailopvolging bekijken →</a></section>
     <nav class="settings-section-nav" aria-label="Instellingenonderdelen">
       <a href="#overzicht">Overzicht</a>
@@ -155,6 +159,7 @@ const actionMessages: Record<string, string> = {
       </form></details>
       {actionMessage && actionMessages[actionMessage] && <div class:list={['admin-login__alert', actionMessage === 'created' ? 'admin-login__alert--success' : 'admin-login__alert--error']} role="status">{actionMessages[actionMessage]}</div>}
       {tasks.length ? <ol class="admin-setup-list">{tasks.map((task, index) => <li><span class="admin-setup-list__number">{index + 1}</span><span><strong>{task.title}</strong><small>{taskCategoryLabel[task.category] || task.category} · {priorityLabel[task.priority] || `Prioriteit ${task.priority}`}{task.dueAt ? ` · deadline ${dateLabel(task.dueAt)}` : ''}{task.assignedToName ? ` · toegewezen aan ${task.assignedToName}` : ' · niet toegewezen'}</small></span><form method="post" action={`/api/admin/work-items/${task.id}`}><input type="hidden" name="status" value={task.status === 'open' ? 'in_progress' : 'resolved'}/><button class="admin-button" type="submit">{task.status === 'open' ? 'Start' : 'Afronden'}</button></form></li>)}</ol> : <div class="admin-empty-row"><div><span><AdminIcon name="check" size={17}/></span><strong>Geen openstaande acties</strong><p>Maak een actie aan als er iets operationeel opgevolgd moet worden.</p></div></div>}
+      <AdminPagination {...taskPage} parameter="takenpagina" hash="#acties" label="Acties"/>
     </section>
   </div>
 </AdminLayout>

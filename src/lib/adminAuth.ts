@@ -1,3 +1,4 @@
+import { ownHeadshotPath } from './headshotPresentation';
 import { createClient } from '@supabase/supabase-js';
 import { getSupabaseAdmin, supabaseFetch } from './supabase/server';
 import { hasAdminPermission, requiresPracticeManagerLookup, isUserRole, type AdminPermission, type UserRole } from './adminPermissions';
@@ -8,6 +9,7 @@ export type { UserRole } from './adminPermissions';
 export type UserSession = {
   sub: string; email: string; name: string; roles: UserRole[]; practitionerId: string | null;
   practiceManager?: boolean; emailConfirmed: boolean; issuedAt: number; expiresAt: number;
+  headshotPath?: string | null;
 };
 
 const configured = () => Boolean(import.meta.env.PUBLIC_SUPABASE_URL?.trim() && import.meta.env.PUBLIC_SUPABASE_PUBLISHABLE_KEY?.trim() && import.meta.env.SUPABASE_SECRET_KEY?.trim());
@@ -53,7 +55,7 @@ export const sanitizeAppRedirect = (value: unknown) => {
   return '';
 };
 
-const toSession = async (user: { id: string; email?: string | null; email_confirmed_at?: string | null; user_metadata?: Record<string, unknown>; banned_until?: string | null }, expiresAt?: number): Promise<UserSession | null> => {
+const toSession = async (user: { id: string; email?: string | null; email_confirmed_at?: string | null; user_metadata?: Record<string, unknown>; app_metadata?: Record<string, unknown>; banned_until?: string | null }, expiresAt?: number): Promise<UserSession | null> => {
   if (user.banned_until && new Date(user.banned_until).getTime() > Date.now()) return null;
   const client = getSupabaseAdmin();
   const [{ data: roleRows, error: roleError }, { data: practitioner, error: practitionerError }] = await Promise.all([
@@ -68,7 +70,7 @@ const toSession = async (user: { id: string; email?: string | null; email_confir
     : { data: null, error: null };
   if (managerError) throw new Error('practice_permissions_unavailable');
   const now = Math.floor(Date.now() / 1000);
-  return { practiceManager: Boolean(manager), sub: user.id, email: user.email || '', name: String(user.user_metadata?.full_name || user.email || 'MyGrowise'), roles, practitionerId: practitioner?.id || null, emailConfirmed: Boolean(user.email_confirmed_at), issuedAt: now, expiresAt: expiresAt || now + SESSION_TTL_SECONDS };
+  return { headshotPath: ownHeadshotPath(user.app_metadata?.headshot_path, user.id), practiceManager: Boolean(manager), sub: user.id, email: user.email || '', name: String(user.user_metadata?.full_name || user.email || 'MyGrowise'), roles, practitionerId: practitioner?.id || null, emailConfirmed: Boolean(user.email_confirmed_at), issuedAt: now, expiresAt: expiresAt || now + SESSION_TTL_SECONDS };
 };
 
 const publicAuthClient = () => {

@@ -1,3 +1,4 @@
+import { saveHeadshot, removeHeadshotObject } from './headshots';
 import { getSupabaseAdmin } from './supabase/server';
 import { writeSecurityAudit, type AuditActor } from './securityAudit';
 
@@ -22,14 +23,23 @@ const requireValidStaffRole = (role: string): role is StaffRole => STAFF_ROLES.i
 
 export const listAdminUsers = async (): Promise<AdminUser[]> => {
   const client = getSupabaseAdmin();
-  const [{ data: authData, error: authError }, { data: roleRows, error: roleError }] = await Promise.all([
-    client.auth.admin.listUsers({ page: 1, perPage: 100 }), client.from('user_roles').select('user_id,role'),
-  ]);
-  if (authError) throw new Error('users_unavailable');
-  if (roleError) throw new Error('roles_unavailable');
+  const roleRows: {user_id: string; role: string}[] = [];
+  for (let offset = 0; ; offset += 500) {
+    const {data, error} = await client.from('user_roles').select('user_id,role').order('user_id').order('role').range(offset,offset+499);
+    if (error) throw new Error('roles_unavailable');
+    roleRows.push(...(data || []));
+    if (!data || data.length < 500) break;
+  }
+  const authUsers = [];
+  for (let page = 1; ; page++) {
+    const {data, error} = await client.auth.admin.listUsers({page, perPage: 100});
+    if (error) throw new Error('users_unavailable');
+    authUsers.push(...data.users);
+    if (data.users.length < 100) break;
+  }
   const roles = new Map<string, string[]>();
   ((roleRows || []) as Array<{ user_id: string; role: string }>).forEach((row) => roles.set(row.user_id, [...(roles.get(row.user_id) || []), row.role]));
-  return authData.users.map((user) => ({
+  return authUsers.map((user) => ({
     id: user.id,
     email: user.email || 'E-mail ontbreekt',
     fullName: String(user.user_metadata?.full_name || ''),
@@ -41,7 +51,7 @@ export const listAdminUsers = async (): Promise<AdminUser[]> => {
   })).sort((a, b) => a.email.localeCompare(b.email));
 };
 
-export const createStaffUser = async (input: { email: string; fullName: string; temporaryPassword: string; role: StaffRole }, actor: AuditActor) => {
+export const createStaffUser = async (input: { email: string; fullName: string; temporaryPassword: string; role: StaffRole; headshot?: Buffer | null }, actor: AuditActor) => {
   const email = input.email.trim().toLowerCase();
   const fullName = input.fullName.trim().replace(/\s+/g, ' ');
   if (!validEmail(email) || fullName.length < 2 || fullName.length > 120 || input.temporaryPassword.length < 12 || input.temporaryPassword.length > 256 || !requireValidStaffRole(input.role)) throw new Error('invalid_input');
@@ -51,12 +61,21 @@ export const createStaffUser = async (input: { email: string; fullName: string; 
     if (error?.message.toLowerCase().includes('already')) throw new Error('email_taken');
     throw new Error('create_failed');
   }
-  const { error: customerRoleError } = await client.from('user_roles').delete().eq('user_id', data.user.id).eq('role', 'customer');
-  if (customerRoleError) throw new Error('role_failed');
-  const { error: roleError } = await client.from('user_roles').upsert({ user_id: data.user.id, role: input.role });
-  if (roleError) throw new Error('role_failed');
-  await writeSecurityAudit({ actor, action: 'staff.user_created', objectType: 'user', objectId: data.user.id, after: { email, full_name: fullName, role: input.role } });
-  return data.user.id;
+  let headshotPath: string | null = null;
+  try {
+    const { error: customerRoleError } = await client.from('user_roles').delete().eq('user_id', data.user.id).eq('role', 'customer');
+    if (customerRoleError) throw new Error('role_failed');
+    const { error: roleError } = await client.from('user_roles').upsert({ user_id: data.user.id, role: input.role });
+    if (roleError) throw new Error('role_failed');
+    if (input.headshot) headshotPath = await saveHeadshot(data.user.id, input.headshot);
+    await writeSecurityAudit({ actor, action: 'staff.user_created', objectType: 'user', objectId: data.user.id, after: { email, full_name: fullName, role: input.role } });
+    return data.user.id;
+  } catch (error) {
+    const { error: rollbackError } = await client.auth.admin.deleteUser(data.user.id);
+    if (rollbackError) throw new Error('create_partial');
+    if (headshotPath) await removeHeadshotObject(headshotPath);
+    throw error;
+  }
 };
 
 export const changeStaffRole = async (input: { userId: string; role: StaffRole; actorId: string }, actor: AuditActor) => {

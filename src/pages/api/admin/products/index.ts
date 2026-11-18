@@ -13,6 +13,11 @@ const back = (requestUrl: URL) => {
 export const POST: APIRoute = async ({ request, locals, cookies, url }) => {
   if (!isTrustedFormOrigin(request)) return new Response('Ongeldige aanvraag.', { status: 403 });
   const form = await request.formData();
+  const specialized = String(form.get('type') || '');
+  if (['module', 'guide', 'profile', 'questionnaire'].includes(specialized)) {
+    if (!hasPermission(locals.adminUser, 'products.write')) return new Response('Geen toegang.', { status: 403 });
+    return Response.redirect(new URL(specialized === 'module' ? '/admin/modules' : specialized === 'guide' ? '/admin/modules/nieuw' : '/admin/vragenlijsten/nieuw', url), 303);
+  }
   const validation = validateProductForm(form);
   if (!validation.value) {
     cookies.set(PRODUCT_FLASH_COOKIE, encodeProductFormFlash(form, Object.values(validation.errors)[0] || 'Controleer de invoer.'), productFlashCookieOptions());

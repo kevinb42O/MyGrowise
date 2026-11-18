@@ -1,3 +1,4 @@
+import {readAdminPage, readAllAdminRows} from './adminPagination';
 import {legacyRoutes} from './legacyRoutes';
 import { getSupabaseAdmin } from './supabase/server';
 import { writeSecurityAudit, type AuditActor } from './securityAudit';
@@ -21,7 +22,7 @@ export type AdminContent = {
   updatedAt: string;
 };
 export type ContentInput = Pick<AdminContent, 'kind' | 'status' | 'title' | 'slug' | 'excerpt' | 'bodyText' | 'seoTitle' | 'seoDescription'>;
-export type ContentVersion = Pick<AdminContent, 'status' | 'title' | 'slug' | 'excerpt' | 'seoTitle' | 'seoDescription'> & { id: string; versionNumber: number; createdAt: string };
+export type ContentVersion = ContentInput & { id: string; versionNumber: number; createdAt: string };
 
 const columns = 'id,kind,status,title,slug,excerpt,body,seo_title,seo_description,published_at,created_at,updated_at';
 const isUuid = (value: string) => /^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(value);
@@ -65,8 +66,8 @@ export const validateContentInput = (form: FormData): { value?: ContentInput; er
 };
 
 export const listContent = async (): Promise<AdminContent[]> => {
-  const { data, error } = await getSupabaseAdmin().from('content_items').select(columns).order('updated_at', { ascending: false }).limit(250);
-  failure(error); return ((data || []) as Record<string, unknown>[]).map(rowToContent);
+  const rows = await readAllAdminRows<Record<string,unknown>>((start,end)=>getSupabaseAdmin().from('content_items').select(columns).order('updated_at',{ascending:false}).order('id').range(start,end));
+  return rows.map(rowToContent);
 };
 
 export const getContent = async (id: string): Promise<AdminContent | null> => {
@@ -75,11 +76,8 @@ export const getContent = async (id: string): Promise<AdminContent | null> => {
   failure(error); return data ? rowToContent(data as Record<string, unknown>) : null;
 };
 
-export const listContentVersions = async (contentId: string): Promise<ContentVersion[]> => {
-  if (!isUuid(contentId)) return [];
-  const { data, error } = await getSupabaseAdmin().from('content_versions').select('id,version_number,status,title,slug,excerpt,seo_title,seo_description,created_at').eq('content_id', contentId).order('version_number', { ascending: false }).limit(20);
-  failure(error);
-  return ((data || []) as Record<string, unknown>[]).map((row) => ({ id: String(row.id), versionNumber: Number(row.version_number), status: row.status as ContentStatus, title: String(row.title), slug: String(row.slug), excerpt: String(row.excerpt), seoTitle: String(row.seo_title), seoDescription: String(row.seo_description), createdAt: String(row.created_at) }));
+export const listContentVersions = async (contentId: string, page: unknown = 1) => {
+  return readAdminPage<Record<string,unknown>>((start,end)=>getSupabaseAdmin().from('content_versions').select('id,version_number,status,created_at',{count:'exact'}).eq('content_id',contentId).order('version_number',{ascending:false}).order('id').range(start,end),page);
 };
 
 const body = (bodyText: string) => ({ text: bodyText });
@@ -137,4 +135,31 @@ export const resolveContentRedirect = async (path: string) => {
   const item = (data as { content_items?: Record<string, unknown> | null } | null)?.content_items;
   if (!item || item.status !== 'published') return null;
   return publicPath({ kind: item.kind as ContentKind, slug: String(item.slug) });
+};
+
+export const getContentVersion = async (contentId: string, versionId: string): Promise<ContentVersion | null> => {
+  if (!isUuid(contentId) || !isUuid(versionId)) return null;
+  const current = await getContent(contentId);
+  if (!current) return null;
+  const {data, error} = await getSupabaseAdmin().from('content_versions').select('*').eq('content_id', contentId).eq('id', versionId).maybeSingle();
+  failure(error);
+  return data ? {...rowToContent({...data, id: contentId, kind: current.kind}), id: String(data.id), versionNumber: Number(data.version_number), createdAt: String(data.created_at)} : null;
+};
+
+export const listContentPage = async (page: unknown, search = '', kind = '', status = '') => {
+  const db = getSupabaseAdmin();
+  const result = await readAdminPage<Record<string,unknown>>((start,end)=>{
+    const query = db.from('content_items').select(columns,{count:'exact'}).order('updated_at',{ascending:false}).order('id');
+    const safeSearch = search.replace(/[^\p{L}\p{N} -]/gu,'').slice(0,120);
+    if (safeSearch) query.or(`title.ilike.%${safeSearch}%,slug.ilike.%${safeSearch}%`);
+    if (CONTENT_KINDS.includes(kind as ContentKind)) query.eq('kind',kind);
+    if (CONTENT_STATUSES.includes(status as ContentStatus)) query.eq('status',status);
+    return query.range(start,end);
+  },page);
+  const counts = await Promise.all(['all','published','review','draft'].map(status=>{
+    const query = db.from('content_items').select('id',{count:'exact',head:true});
+    return status==='all'?query:query.eq('status',status);
+  }));
+  counts.forEach(result=>failure(result.error));
+  return {...result,items:result.items.map(rowToContent),totals:counts.map(result=>result.count||0)};
 };

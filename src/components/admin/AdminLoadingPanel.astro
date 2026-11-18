@@ -1,0 +1,19 @@
+---
+import AdminSkeleton, { AdminLoadingStatus } from './AdminSkeleton';
+interface Props {
+  title: string;
+  description: string;
+  variant?: 'chart' | 'rows';
+  appearance?: 'people' | 'plain' | 'rank';
+  analytics?: boolean;
+  class?: string;
+}
+const { title, description, variant = 'rows', appearance = 'plain', analytics = false, class: className } = Astro.props;
+---
+<section class:list={[analytics ? 'analytics-studio__panel' : 'admin-panel', 'admin-loading-panel', className]}>
+  <header class={analytics ? 'analytics-studio__panel-head' : 'admin-panel__header'}>
+    <div><h2>{title}</h2><p>{description}</p></div>
+    {variant === 'chart' && <AdminLoadingStatus label="Laden" />}
+  </header>
+  <AdminSkeleton variant={variant} appearance={appearance} rows={4} />
+</section>

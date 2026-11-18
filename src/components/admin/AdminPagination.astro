@@ -1,0 +1,9 @@
+---
+import {adminPageHref} from '../../lib/adminPagination';
+interface Props {page: number; pages: number; total: number; pageSize?: number; parameter?: string; hash?: string; label?: string}
+const {page, pages, total, pageSize = 25, parameter = 'pagina', hash = '', label = 'Resultaten'} = Astro.props;
+---
+<nav class="admin-pagination" aria-label={`${label}: pagina's`}>
+  <span role="status">{total ? `${(page - 1) * pageSize + 1}–${Math.min(page * pageSize, total)} van ${total}` : '0 resultaten'} · pagina {page} van {pages}</span>
+  <div>{page > 1 && <a class="admin-button" rel="prev" href={adminPageHref(Astro.url, parameter, page - 1, hash)}>← Vorige</a>}{page < pages && <a class="admin-button" rel="next" href={adminPageHref(Astro.url, parameter, page + 1, hash)}>Volgende →</a>}</div>
+</nav>

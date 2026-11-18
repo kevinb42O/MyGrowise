@@ -1,3 +1,4 @@
+import AdminSkeleton from './AdminSkeleton';
 import { useEffect, useId, useRef, useState } from 'react';
 type Client = { id: string; name: string; email: string | null; status: string };
 export default function ClientSearch({ practice = false }: { practice?: boolean }) {
@@ -44,8 +45,9 @@ export default function ClientSearch({ practice = false }: { practice?: boolean 
       }} />
     {open && <div className="client-search__panel">
       <strong>{query.trim() ? 'Cliënten' : 'Recent geraadpleegd'}</strong>
-      <p role="status">{loading ? 'Cliënten zoeken…' : error || (!clients.length ? query.trim() ? 'Geen cliënten gevonden.' : 'Nog geen recente dossiers.' : '')}</p>
-      <ul id={`${id}-results`} role="listbox" aria-label="Gevonden cliënten">
+      <p className={loading ? 'sr-only' : undefined} role="status">{loading ? 'Cliënten zoeken…' : error || (!clients.length ? query.trim() ? 'Geen cliënten gevonden.' : 'Nog geen recente dossiers.' : '')}</p>
+      {loading && <AdminSkeleton variant="rows" />}
+      <ul aria-busy={loading} id={`${id}-results`} role="listbox" aria-label="Gevonden cliënten">
         {clients.map((client, index) => <li key={client.id} id={`${id}-${index}`} role="option" aria-selected={index === active}>
           <a href={`${base}/${client.id}`}><strong>{client.name}</strong><small>{client.email || 'Geen e-mailadres'}{client.status === 'archived' ? ' · Gearchiveerd' : ''}</small></a>
           <div className="client-search__links"><a href={`${base}/${client.id}#verslagen`}>Notities</a><a href={`${base}/${client.id}#afspraken`}>Afspraken</a></div>

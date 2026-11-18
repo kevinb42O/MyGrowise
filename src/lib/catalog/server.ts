@@ -1,3 +1,4 @@
+import {readAdminPage, readAllAdminRows} from '../adminPagination';
 import {parseProfileLanding, type ProfileLanding} from './profiles';
 import {moduleImages} from '../../content/moduleImages';
 import { getSupabaseAdmin } from '../supabase/server';
@@ -35,7 +36,21 @@ export async function publicCatalog(): Promise<CatalogProduct[]> { return (await
 export async function getPricing(): Promise<PricingSettings> { const {data,error}=await getSupabaseAdmin().from('catalog_pricing').select('medium_min,medium_percent,large_min,large_percent,price_label').eq('id',true).single(); fail(error); return data ? { mediumMin:data.medium_min,mediumPercent:data.medium_percent,largeMin:data.large_min,largePercent:data.large_percent,priceLabel:data.price_label } : defaultPricing; }
 export async function quoteCatalog(ids: string[], mode: string): Promise<CatalogQuote> { if (!Array.isArray(ids) || ids.some(x=>!isUuid(x)) || !['package','custom'].includes(mode)) throw new Error('invalid_selection'); const {data,error}=await getSupabaseAdmin().rpc('catalog_quote',{p_ids:ids,p_mode:mode}); fail(error); return data as CatalogQuote; }
 export type Delivery = { id:string; title:string; status:string; instructions:string; external_url:string; report_path:string|null; customer_user_id:string|null; buyer_id:string; order_item_id:string; created_at:string; order_items:any };
-export async function listDeliveries(customerId?: string): Promise<Delivery[]> { let q=getSupabaseAdmin().from('assessment_deliveries').select('*,order_items!inner(product_title,product_id,order_id,orders!inner(status,provider_reference))').order('created_at',{ascending:false}); if(customerId) q=q.eq('customer_user_id',customerId).in('order_items.orders.status',['paid','fulfilled']); const {data,error}=await q;fail(error); return (data||[]) as Delivery[]; }
+export async function listDeliveries(customerId?: string): Promise<Delivery[]> {
+ return readAllAdminRows<Delivery>((start,end)=>{
+  const query=getSupabaseAdmin().from('assessment_deliveries').select('*,order_items!inner(product_title,product_id,order_id,orders!inner(status,provider_reference))').order('created_at',{ascending:false}).order('id');
+  if(customerId)query.eq('customer_user_id',customerId).in('order_items.orders.status',['paid','fulfilled']);
+  return query.range(start,end);
+ });
+}
+export async function listDeliveryPage(page:unknown,status='',order='') {
+ return readAdminPage<Delivery>((start,end)=>{
+  const query=getSupabaseAdmin().from('assessment_deliveries').select('*,order_items!inner(product_title,product_id,order_id,orders!inner(status,provider_reference))',{count:'exact'}).order('created_at',{ascending:false}).order('id');
+  if(status)query.eq('status',status);
+  if(order)query.eq('order_items.order_id',order);
+  return query.range(start,end);
+ },page);
+}
 export async function getDelivery(id:string,customerId?:string): Promise<Delivery|null> { if(!isUuid(id))return null;let q=getSupabaseAdmin().from('assessment_deliveries').select('*,order_items!inner(product_title,product_id,order_id,orders!inner(status,provider_reference))').eq('id',id);if(customerId)q=q.eq('customer_user_id',customerId).in('order_items.orders.status',['paid','fulfilled']);const {data,error}=await q.maybeSingle();fail(error);return data as Delivery|null; }
 export async function getCatalogOrder(id:string,customerId:string) { if(!isUuid(id))return null; const {data,error}=await getSupabaseAdmin().from('orders').select('id,status,total_cents,currency,provider_reference,catalog_quote,created_at,order_items(product_title,price_cents,list_price_cents,product_slug,product_type,product_id)').eq('id',id).eq('customer_user_id',customerId).maybeSingle(); fail(error); return data; }
 export const deliveryStatusLabel: Record<string,string>={pending:'Afname wordt voorbereid',invited:'Klaar om te starten',received:'Antwoorden ontvangen',completed:'Afgerond'};

@@ -55,9 +55,7 @@ selectedPaid.forEach((order) => {
   if (bucket) { bucket.total += order.totalCents; bucket.count++; }
 });
 const maxRevenue = Math.max(1, ...buckets.map((bucket) => bucket.total));
-const pendingTransfers = overview.orders.filter((order) => order.provider === 'wise_manual' && order.status === 'pending_payment').length;
 const pendingBookings = overview.bookings.filter((booking) => booking.status === 'pending').length;
-const openTasks = overview.tasks.filter((task) => task.status === 'open' || task.status === 'in_progress' || task.status === 'blocked');
 const upcomingBookings = overview.bookings.filter((booking) => ['pending', 'confirmed'].includes(booking.status) && new Date(booking.startsAt) >= now).slice(0, 4);
 const recentOrders = overview.orders.slice(0, 4);
 const statusLabel: Record<string, string> = { paid: 'Betaald', fulfilled: 'Geleverd', pending_payment: 'Wacht op betaling', draft: 'Concept', cancelled: 'Geannuleerd', partially_refunded: 'Deels terugbetaald', refunded: 'Terugbetaald', disputed: 'Betwist' };
@@ -78,7 +76,7 @@ const periodLabel: Record<string, string> = { alles: 'Alle tijd', '30d': 'Laatst
       {hasPermission(user, 'analytics.read') && <a href="/admin/analytics"><span>Paginaweergaven</span><strong>{number(overview.analyticsEvents)}</strong><small>Met toestemming · laatste 30 dagen <AdminIcon name="arrow" size={12}/></small></a>}
     </section>
 
-    <div class="dashboard-home__main">
+    <div class="dashboard-home__main dashboard-home__main--single">
       <section class="admin-panel dashboard-home__revenue" aria-labelledby="revenue-title">
         <header class="admin-panel__header"><div><h2 id="revenue-title">Omzetontwikkeling</h2><p>{periodLabel[period]} · betaalde en geleverde bestellingen</p></div><a class="admin-text-link" href="/admin/bestellingen">Bestellingen <AdminIcon name="arrow" size={13}/></a></header>
         {paid.length ? <div class="dashboard-home__chart">
@@ -93,25 +91,17 @@ const periodLabel: Record<string, string> = { alles: 'Alle tijd', '30d': 'Laatst
         </div> : <div class="dashboard-home__period-empty">Er zijn nog geen betaalde bestellingen geregistreerd.</div>}
       </section>
 
-      <section class="admin-panel dashboard-home__attention" aria-labelledby="attention-title">
-        <header class="admin-panel__header"><div><h2 id="attention-title">Aandacht nodig</h2><p>Open acties uit verkoop en planning</p></div></header>
-        <div class="dashboard-home__attention-list">
-          {pendingTransfers > 0 && <a href="/admin/bestellingen?status=overschrijvingen"><span class="dashboard-home__attention-count">{pendingTransfers}</span><span><strong>Open overschrijvingen</strong><small>Bekijk de bestellingen en bevestig ontvangen betalingen</small></span><AdminIcon name="arrow" size={14}/></a>}
-          {pendingBookings > 0 && <a href="/admin/boekingen"><span class="dashboard-home__attention-count">{pendingBookings}</span><span><strong>Boekingsaanvragen</strong><small>Wachten op bevestiging</small></span><AdminIcon name="arrow" size={14}/></a>}
-          {openTasks.slice(0, 3).map((task) => <a href="/admin/instellingen#acties"><span class="dashboard-home__attention-dot"></span><span><strong>{task.title}</strong><small>{task.dueAt ? `Deadline ${date(task.dueAt)}` : task.category}</small></span><AdminIcon name="arrow" size={14}/></a>)}
-          <p class="dashboard-home__calm">Bekijk ‘Op te volgen’ bovenaan voor alle actuele meldingen, klantvragen en systeemacties.</p>
-        </div>
-      </section>
+
     </div>
 
     <div class="dashboard-home__lower">
       <section class="admin-panel" aria-labelledby="orders-title">
         <header class="admin-panel__header"><div><h2 id="orders-title">Recente bestellingen</h2><p>Laatste transacties en hun status</p></div><a class="admin-text-link" href="/admin/bestellingen">Alle bestellingen <AdminIcon name="arrow" size={13}/></a></header>
-        {recentOrders.length ? <div class="dashboard-home__rows">{recentOrders.map((order) => <div class="dashboard-home__row"><span><strong>Bestelling #{order.id.slice(-8).toUpperCase()}</strong><small>{date(order.createdAt)} · {statusLabel[order.status] || order.status}</small></span><strong>{order.currency === 'EUR' ? euro(order.totalCents) : new Intl.NumberFormat('nl-BE', { style: 'currency', currency: order.currency }).format(order.totalCents / 100)}</strong></div>)}</div> : <p class="dashboard-home__calm">Nog geen bestellingen.</p>}
+        {recentOrders.length ? <div class="dashboard-home__rows">{recentOrders.map((order) => <a href={`/admin/bestellingen/${order.id}`} class="dashboard-home__row"><span><strong>Bestelling #{order.id.slice(-8).toUpperCase()}</strong><small>{date(order.createdAt)} · {statusLabel[order.status] || order.status}</small></span><strong>{order.currency === 'EUR' ? euro(order.totalCents) : new Intl.NumberFormat('nl-BE', { style: 'currency', currency: order.currency }).format(order.totalCents / 100)}</strong></a>)}</div> : <p class="dashboard-home__calm">Nog geen bestellingen.</p>}
       </section>
       <section class="admin-panel" aria-labelledby="bookings-title">
         <header class="admin-panel__header"><div><h2 id="bookings-title">Komende afspraken</h2><p>Bevestigde afspraken en aanvragen</p></div><a class="admin-text-link" href="/admin/boekingen">Alle boekingen <AdminIcon name="arrow" size={13}/></a></header>
-        {upcomingBookings.length ? <div class="dashboard-home__rows">{upcomingBookings.map((booking) => <div class="dashboard-home__row"><span><strong>{booking.clientName}</strong><small>{booking.practitionerName} · {dateTime(booking.startsAt)}</small></span><span class:list={['dashboard-home__booking-state', booking.status === 'pending' && 'is-pending']}>{booking.status === 'pending' ? 'Aanvraag' : 'Bevestigd'}</span></div>)}</div> : <p class="dashboard-home__calm">Geen komende afspraken gepland.</p>}
+        {upcomingBookings.length ? <div class="dashboard-home__rows">{upcomingBookings.map((booking) => <a href={`/admin/afspraken/${booking.id}`} class="dashboard-home__row"><span><strong>{booking.clientName}</strong><small>{booking.practitionerName} · {dateTime(booking.startsAt)}</small></span><span class:list={['dashboard-home__booking-state', booking.status === 'pending' && 'is-pending']}>{booking.status === 'pending' ? 'Aanvraag' : 'Bevestigd'}</span></a>)}</div> : <p class="dashboard-home__calm">Geen komende afspraken gepland.</p>}
       </section>
     </div>
     {hasPermission(user, 'operations.manage') && <footer class="dashboard-home__footer"><span><strong>{overview.publishedProducts}</strong> producten online</span><a href="/admin/producten">Aanbod beheren <AdminIcon name="arrow" size={12}/></a><span class="dashboard-home__footer-separator"></span><span><strong>{overview.openTaskCount}</strong> open werkpunten</span><a href="/admin/instellingen#acties">Werkpunten bekijken <AdminIcon name="arrow" size={12}/></a></footer>}

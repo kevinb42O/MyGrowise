@@ -109,3 +109,6 @@
 }
 @media (max-width: 520px) { .account-header__inner { grid-template-columns: minmax(0, 1fr) auto; column-gap: .75rem; }.account-header__context { display: none; }.account-focus__art { width: 15rem; opacity: .55; }.account-brand-emblem { right: -1.4rem; width: 12rem; }.account-focus { min-height: 25rem; }.account-dashboard h1 { font-size: clamp(2.8rem,13vw,4rem); }.account-date { display: none; }.account-secondary-route em { display: none; } }
 @media (prefers-reduced-motion: reduce) { .account-brand img, .account-sidebar nav a, .account-sidebar nav a svg, .account-button svg, .account-text-action svg, .account-section-heading > a svg, .account-summary, .account-summary::after, .account-secondary-route { transition: none !important; } }
+
+.account-header__avatar, .account-person > span { overflow: hidden; flex-shrink: 0; }
+.account-header__avatar img, .account-person > span img { display: block; width: 100%; height: 100%; object-fit: cover; }

@@ -27,12 +27,13 @@ export const onRequest = defineMiddleware(async (context, next) => {
   const isPracticeApi = path.startsWith('/api/praktijk');
   const isAccountPage = path.startsWith('/account');
   const isAccountApi = path.startsWith('/api/account');
+  const isProfileApi = path === '/api/profile/headshot';
   const isInternalApi = path.startsWith('/api/internal');
   const isCheckoutApi = path === '/api/checkout' || path.startsWith('/api/checkout/');
   const isBookingPage = path === '/afspraak' || path.startsWith('/afspraak/') || /^\/begeleiding\/[a-z0-9]+(?:-[a-z0-9]+)*$/.test(path);
   const isBookingApi = path === '/api/bookings';
   const isOptionalSessionPath = path === '/aankopen' || path.startsWith('/aankopen/') || path.startsWith('/api/aankopen/') || path.startsWith('/api/boeken/') || path === '/api/checkout/catalog-order' || path === '/verdieping' || path.startsWith('/verdieping/') || path === '/zelf-aan-de-slag' || path === '/modules' || path.startsWith('/modules/') || isBookingPage || isBookingApi || path === '/bestellen' || path === '/samenstellen' || path === '/vragenlijsten' || path === '/profielen' || path.startsWith('/vragenlijsten/') || path.startsWith('/profielen/') || path === '/contact' || path === '/api/contact' || path === '/berichten/gesprek';
-  if (!isAdminPage && !isAdminApi && !isPracticePage && !isPracticeApi && !isAccountPage && !isAccountApi && !isInternalApi && !isCheckoutApi && !isOptionalSessionPath) return next();
+  if (!isAdminPage && !isAdminApi && !isPracticePage && !isPracticeApi && !isAccountPage && !isAccountApi && !isProfileApi && !isInternalApi && !isCheckoutApi && !isOptionalSessionPath) return next();
 
   if (path === '/praktijk/activeren' || path === '/api/admin/login' || path === '/api/admin/logout' || path === '/api/account/login' || path === '/api/account/register' || path === '/api/account/logout' || path === '/api/account/password-reset' || path === '/api/account/verification-resend' || path === '/account/bevestigingslink' || path === '/account/wachtwoord-vergeten' || path === '/account/wachtwoord-herstellen') return next();
 
@@ -80,7 +81,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
   if (!session) {
     if (path.startsWith('/account/modules/')) return context.redirect(path.replace('/account/modules/','/aankopen/modules/'),303);
     context.cookies.delete(SUPABASE_SESSION_COOKIE, { path: '/' });
-    if (isAdminApi || isPracticeApi || isAccountApi || isInternalApi || isCheckoutApi) {
+    if (isAdminApi || isPracticeApi || isAccountApi || isProfileApi || isInternalApi || isCheckoutApi) {
       return new Response(JSON.stringify({ error: 'Niet aangemeld.' }), {
         status: 401,
         headers: { 'content-type': 'application/json; charset=utf-8' },

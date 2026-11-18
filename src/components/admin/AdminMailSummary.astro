@@ -1,0 +1,7 @@
+---
+interface Props {counts: {table:string;label:string;states:number[]}[]}
+const {counts} = Astro.props;
+const states=['Gepland of wachtend','Bezig','Mislukt'];
+const statuses=['pending','sending','failed'];
+---
+<section class="admin-panel"><div class="admin-table-wrap"><table class="admin-table admin-mail-summary"><thead><tr><th>Wachtrij</th>{states.map(label=><th>{label}</th>)}</tr></thead><tbody>{counts.map(queue=><tr><td data-label="Wachtrij"><strong>{queue.label}</strong></td>{queue.states.map((n,index)=><td data-label={states[index]}><a class="admin-text-link" href={`/admin/mail?queue=${queue.table}&status=${statuses[index]}#mailtaken`}>{n} <span class="sr-only">{states[index]} in {queue.label}</span></a></td>)}</tr>)}</tbody></table></div></section>

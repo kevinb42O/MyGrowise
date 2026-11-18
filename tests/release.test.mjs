@@ -20,7 +20,7 @@ test('daily worker isolates queue failures and uses bounded batches on the free 
  const results=await worker.deliverQueuedMail();assert.equal(calls.length,4);assert.ok(calls.every(([name,n])=>n===(name==='booking'?100:2)));assert.equal(results.booking.unavailable,true);assert.equal(results.website.sent,1);
 });
 test('mail recovery requires a trusted origin and administrative integration permission',async()=>{
- let called=false;for(const trusted of [true,false]){const route=load('pages/api/admin/mail.ts',{'../../../lib/adminAuth':{isTrustedFormOrigin:()=>trusted,hasPermission:()=>false},'../../../lib/mailWorker':{deliverQueuedMail:()=>{called=true;}},'../../../lib/supabase/server':{getSupabaseAdmin:()=>{called=true;}}});assert.equal((await route.POST({request:{},locals:{}})).status,403);}assert.equal(called,false);
+ let called=false;for(const trusted of [true,false]){const route=load('pages/api/admin/mail.ts',{'../../../lib/adminMail':{ADMIN_MAIL_QUEUES:[]},'../../../lib/adminAuth':{isTrustedFormOrigin:()=>trusted,hasPermission:()=>false},'../../../lib/mailWorker':{deliverQueuedMail:()=>{called=true;}},'../../../lib/supabase/server':{getSupabaseAdmin:()=>{called=true;}}});assert.equal((await route.POST({request:{},locals:{}})).status,403);}assert.equal(called,false);
 });
 test('order confirmation sends a durable copy of the terms only to the buyer at order creation',async()=>{
  const sent=[];const terms=load('lib/commerce/terms.ts');

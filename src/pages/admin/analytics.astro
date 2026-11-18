@@ -1,4 +1,6 @@
 ---
+import AdminLoadingPanel from '../../components/admin/AdminLoadingPanel.astro';
+import AdminSkeleton, { AdminLoadingStatus } from '../../components/admin/AdminSkeleton';
 import AdminLayout from '../../layouts/AdminLayout.astro';
 import AnalyticsIsland from '../../components/admin/AnalyticsIsland.astro';
 
@@ -15,12 +17,15 @@ const metric = Astro.url.searchParams.get('grafiek') === 'pageviews' ? 'pageview
 <AdminLayout title="Websiteanalytics" description="Bezoekers, paginaweergaven en landen van MyGrowise">
   <AnalyticsIsland server:defer period={period} metric={metric}>
     <div slot="fallback" class="admin-page analytics-studio" aria-busy="true">
-      <header class="analytics-studio__heading"><h1>Website in cijfers</h1><small>Gegevens laden…</small></header>
+      <header class="analytics-studio__heading"><h1>Website in cijfers</h1><AdminLoadingStatus /></header>
       <div class="analytics-studio__toolbar"><span>Periode</span><nav aria-label="Periode">{ranges.map((range) => <a href={`/admin/analytics?periode=${range.key}&grafiek=${metric}`} class:list={{ 'is-active': range.key === period }} aria-current={range.key === period ? 'page' : undefined}>{range.label}</a>)}</nav></div>
-      <p class="admin-loading-label" role="status">Analytics laden…</p>
-      <section class="analytics-studio__stats" aria-label="Kerncijfers laden">{Array.from({ length: 2 }, () => <article class="analytics-studio__stat admin-skeleton-card"><span class="admin-skeleton-line"></span><span class="admin-skeleton-number"></span><span class="admin-skeleton-line admin-skeleton-line--short"></span></article>)}</section>
-      <section class="analytics-studio__panel analytics-studio__trend admin-skeleton-panel" aria-label="Verloopgrafiek laden"><span class="admin-skeleton-line"></span><div class="admin-skeleton-chart"></div></section>
-      <div class="analytics-studio__lower">{Array.from({ length: 2 }, () => <section class="analytics-studio__panel admin-skeleton-panel" aria-label="Analyticsgegevens laden"><span class="admin-skeleton-line"></span><span class="admin-skeleton-line"></span><span class="admin-skeleton-line admin-skeleton-line--short"></span></section>)}</div>
+      <p class="sr-only" role="status">Analytics laden…</p>
+      <section class="analytics-studio__stats" aria-label="Kerncijfers laden">{['Unieke bezoekers', 'Paginaweergaven'].map((label) => <article class="analytics-studio__stat admin-skeleton-card"><h2>{label}</h2><AdminSkeleton variant="metric" /></article>)}</section>
+      <AdminLoadingPanel analytics class="analytics-studio__trend" title={`${metric === 'pageviews' ? 'Paginaweergaven' : 'Bezoekers'} doorheen de tijd`} description={`Per ${period === '1d' ? 'uur' : 'dag'} · tijdzone Brussel`} variant="chart" />
+      <div class="analytics-studio__lower">
+        <AdminLoadingPanel analytics title="Meest bekeken pagina’s" description="Paginaweergaven in deze periode" appearance="rank" />
+        <AdminLoadingPanel analytics title="Bezoekers per land" description="Schatting op basis van het netwerk" appearance="rank" />
+      </div>
     </div>
   </AnalyticsIsland>
   <script is:inline>

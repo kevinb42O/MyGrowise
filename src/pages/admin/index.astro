@@ -1,4 +1,6 @@
 ---
+import AdminLoadingPanel from '../../components/admin/AdminLoadingPanel.astro';
+import AdminSkeleton from '../../components/admin/AdminSkeleton';
 import AdminLayout from '../../layouts/AdminLayout.astro';
 import DashboardIsland from '../../components/admin/DashboardIsland.astro';
 
@@ -12,13 +14,18 @@ const periodLabel: Record<string, string> = { alles: 'Alle tijd', '30d': 'Laatst
         <div><p class="admin-eyebrow">MyGrowise</p><h1>Dashboard</h1><p>Verkoop, afspraken en wat nu aandacht vraagt.</p></div>
         <nav class="dashboard-home__period" aria-label="Periode omzet">{Object.entries(periodLabel).map(([key, label]) => <a href={`/admin?periode=${key}`} class:list={{ 'is-active': period === key }} aria-current={period === key ? 'page' : undefined}>{label}</a>)}</nav>
       </header>
-      <p class="admin-loading-label" role="status">Dashboardgegevens laden…</p>
-      <section class="dashboard-home__stats" aria-label="Kerncijfers laden">{Array.from({ length: 4 }, () => <article class="admin-skeleton-card"><span class="admin-skeleton-line"></span><span class="admin-skeleton-number"></span><span class="admin-skeleton-line admin-skeleton-line--short"></span></article>)}</section>
+      <p class="sr-only" role="status">Dashboardgegevens laden…</p>
+      <section class="dashboard-home__stats" aria-label="Kerncijfers laden">{[
+        `Omzet · ${periodLabel[period].toLowerCase()}`, 'Betaalde bestellingen', 'Open boekingsaanvragen', 'Paginaweergaven',
+      ].map((label) => <article class="admin-skeleton-card"><span>{label}</span><AdminSkeleton variant="metric" /></article>)}</section>
       <div class="dashboard-home__main">
-        <section class="admin-panel dashboard-home__revenue admin-skeleton-panel" aria-label="Omzetgrafiek laden"><span class="admin-skeleton-line"></span><div class="admin-skeleton-chart"></div></section>
-        <section class="admin-panel dashboard-home__attention admin-skeleton-panel" aria-label="Open acties laden"><span class="admin-skeleton-line"></span><span class="admin-skeleton-line"></span><span class="admin-skeleton-line admin-skeleton-line--short"></span></section>
+        <AdminLoadingPanel class="dashboard-home__revenue" title="Omzetontwikkeling" description={`${periodLabel[period]} · betaalde en geleverde bestellingen`} variant="chart" />
+        <AdminLoadingPanel class="dashboard-home__attention" title="Aandacht nodig" description="Open acties uit verkoop en planning" appearance="people" />
       </div>
-      <div class="dashboard-home__lower">{Array.from({ length: 2 }, () => <section class="admin-panel admin-skeleton-panel" aria-label="Overzicht laden"><span class="admin-skeleton-line"></span><span class="admin-skeleton-line"></span><span class="admin-skeleton-line admin-skeleton-line--short"></span></section>)}</div>
+      <div class="dashboard-home__lower">
+        <AdminLoadingPanel title="Recente bestellingen" description="Laatste transacties en hun status" />
+        <AdminLoadingPanel title="Komende afspraken" description="Bevestigde afspraken en aanvragen" appearance="people" />
+      </div>
     </div>
   </DashboardIsland>
 </AdminLayout>

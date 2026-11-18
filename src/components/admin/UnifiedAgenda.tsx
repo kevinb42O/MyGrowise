@@ -1,3 +1,4 @@
+import AdminSkeleton from './AdminSkeleton';
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
@@ -493,7 +494,7 @@ export default function UnifiedAgenda({ mode = 'admin', allowItransform = false,
     </div>
     <div className="agenda-feedback" aria-live="polite">
       {loadError && <div className="unified-agenda__notice is-warning">{payload ? 'De agenda kon niet worden ververst. Je ziet de laatst geladen afspraken.' : loadError}<button type="button" onClick={refresh}>Opnieuw laden</button></div>}
-      {loading && !payload && <p>Agenda laden…</p>}
+      {loading && <p className="sr-only">{payload ? 'Agenda verversen…' : 'Agenda laden…'}</p>}
       {!loading && !loadError && payload && !results.length && <p>{search || source !== 'all' ? 'Geen momenten die aan deze filters voldoen.' : 'Geen geplande momenten in deze periode.'}</p>}
       {!loadError && (payload?.availabilityUnknown || coverageWarning) && <p className="is-warning">{payload?.availabilityUnknown ? 'Publieke beschikbaarheid kon niet worden gecontroleerd.' : 'De externe beschikbaarheid is voor een deel van deze periode onbekend.'}</p>}
       {!loadError && outOfHours && range?.view.startsWith('timeGrid') && <p>Er zijn momenten buiten 08.00–17.00. <button type="button" className="agenda-text-button"
@@ -503,6 +504,8 @@ export default function UnifiedAgenda({ mode = 'admin', allowItransform = false,
     </div>
     {practice && range?.view === 'timeGridWeek' && !showWeekends && weekendCount > 0 &&
       <div className="unified-agenda__weekend-notice">{weekendCount} {weekendCount === 1 ? 'moment begint' : 'momenten beginnen'} in het weekend.<button type="button" onClick={() => setShowWeekends(true)}>Toon weekend</button></div>}
+    <div className="agenda-loading-surface" data-loaded={Boolean(data)}>
+      {loading && !payload && <div className="agenda-loading-surface__placeholder"><AdminSkeleton variant={(range?.view || initial.view) === 'listWeek' ? 'rows' : 'calendar'} days={(range?.view || initial.view) === 'timeGridDay' ? 1 : practice && !showWeekends && (range?.view || initial.view) === 'timeGridWeek' ? 5 : 7} /></div>}
     <div ref={calendarContainer} className={`agenda-calendar${compact ? ' is-workday' : ''}`} aria-busy={loading}>
       <FullCalendar ref={calendarRef} plugins={plugins} locale={nlLocale} timeZone={zone}
         initialView={initial.view} initialDate={initial.date} firstDay={1} nowIndicator selectable selectMirror
@@ -523,6 +526,7 @@ export default function UnifiedAgenda({ mode = 'admin', allowItransform = false,
             list={arg.view.type === 'listWeek'} onOpen={() => openItem(item)} />;
         }}
       />
+    </div>
     </div>
     {editor && <AgendaDialog key={editor.type} title={editor.type === 'choose' ? 'Wat wil je plannen?' : editor.type === 'detail' ? editor.item.title
       : editor.type === 'block' ? 'Tijd blokkeren' : editor.type === 'booking' ? editor.original ? 'Afspraak verplaatsen' : 'Cliëntafspraak plannen'

@@ -1,13 +1,15 @@
 ---
+import AdminSkeleton from './AdminSkeleton';
 import AdminIcon from './AdminIcon.astro';
 interface Props { userId: string; basePath: string; }
 const { basePath } = Astro.props;
 ---
 <div class="admin-notifications" data-notifications data-base-path={basePath}>
-  <button class="admin-icon-button" type="button" aria-label="Notificaties" aria-controls="admin-notification-panel" aria-expanded="false" data-notification-toggle><AdminIcon name="bell" size={17}/><small data-notification-count hidden>0</small></button>
+  <button class="admin-icon-button admin-notification-toggle" type="button" aria-label="Notificaties" title="Notificaties" aria-controls="admin-notification-panel" aria-expanded="false" data-notification-toggle><AdminIcon name="bell" size={20}/><small data-notification-count hidden>0</small></button>
   <section id="admin-notification-panel" class="admin-notification-panel" hidden data-notification-panel aria-label="Nieuwe notificaties">
     <header><strong>Notificaties</strong><button type="button" data-notification-read-all disabled>Alles gelezen</button></header>
     <p role="status" data-notification-status>Notificaties laden…</p>
+    <div data-notification-skeleton><AdminSkeleton variant="rows" /></div>
     <div data-notification-list></div>
   </section>
 </div>
@@ -20,6 +22,7 @@ const { basePath } = Astro.props;
     const count = root.querySelector<HTMLElement>('[data-notification-count]')!;
     const list = root.querySelector<HTMLElement>('[data-notification-list]')!;
     const status = root.querySelector<HTMLElement>('[data-notification-status]')!;
+    const skeleton = root.querySelector<HTMLElement>('[data-notification-skeleton]')!;
     const readAll = root.querySelector<HTMLButtonElement>('[data-notification-read-all]')!;
     const basePath = root.dataset.basePath || '/admin/berichten';
     type Notification = { id: string; threadId: string | null; supportConversationId: string | null; title: string; createdAt: string };
@@ -29,6 +32,8 @@ const { basePath } = Astro.props;
     let revision = 0;
     let checkedAt = '';
     const render = (notifications: Notification[], unread: number) => {
+      skeleton.hidden = true;
+      list.dataset.loaded = 'true';
       count.textContent = unread > 99 ? '99+' : String(unread);
       count.hidden = unread === 0;
       toggle.setAttribute('aria-label', unread ? `Notificaties: ${unread} ongelezen` : 'Notificaties: geen ongelezen meldingen');
@@ -59,7 +64,7 @@ const { basePath } = Astro.props;
         if (!Array.isArray(data.notifications) || !Number.isSafeInteger(data.unreadCount) || data.unreadCount < 0) throw new Error('invalid');
         if (startedRevision === revision) { checkedAt = data.checkedAt; render(data.notifications, data.unreadCount); }
       } catch {
-        if (startedRevision === revision) status.textContent = 'Notificaties konden niet worden geladen. We proberen opnieuw; je kunt de inbox openen via Berichten.';
+        if (startedRevision === revision) { skeleton.hidden = true; status.textContent = 'Notificaties konden niet worden geladen. We proberen opnieuw; je kunt de inbox openen via Berichten.'; }
       } finally {
         refreshing = false;
         if (startedRevision !== revision && !mutating) refresh();

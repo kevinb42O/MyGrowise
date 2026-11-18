@@ -1,0 +1,11 @@
+---
+import AdminLayout from '../../layouts/AdminLayout.astro';
+import HeadshotSettings from '../../components/admin/HeadshotSettings.astro';
+const user = Astro.locals.adminUser!;
+---
+<AdminLayout title="Mijn account" description="Beheer je persoonlijke profielfoto.">
+  <div class="admin-page admin-page--form">
+    <section class="admin-page-heading"><div><h1>Mijn account</h1><p>{user.name} · {user.email}</p></div></section>
+    <HeadshotSettings user={user} returnTo="/admin/account" />
+  </div>
+</AdminLayout>

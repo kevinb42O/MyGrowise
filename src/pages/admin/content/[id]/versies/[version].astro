@@ -1,0 +1,19 @@
+---
+import AdminLayout from '../../../../../layouts/AdminLayout.astro';
+import {getContent, getContentVersion} from '../../../../../lib/adminContent';
+import {hasPermission} from '../../../../../lib/adminAuth';
+const current = await getContent(Astro.params.id || '');
+const version = current ? await getContentVersion(current.id, Astro.params.version || '') : null;
+if (!current || !version) return new Response('Contentversie niet gevonden.', {status: 404});
+const canEdit = hasPermission(Astro.locals.adminUser, 'content.write') && (current.status !== 'published' || hasPermission(Astro.locals.adminUser, 'content.publish'));
+---
+<AdminLayout title={`Versie ${version.versionNumber} · ${current.title}`}>
+  <div class="admin-page admin-page--form">
+    <a class="admin-back-link" href={`/admin/content/${current.id}`}>← Terug naar de editor</a>
+    <section class="admin-page-heading"><div><h1>Versie {version.versionNumber}</h1><p>{new Intl.DateTimeFormat('nl-BE', {dateStyle: 'medium', timeStyle: 'short'}).format(new Date(version.createdAt))} · {version.status}</p></div></section>
+    <div class="admin-version-comparison">
+      {[{label: 'Gekozen versie', item: version}, {label: 'Huidige opgeslagen inhoud', item: current}].map(({label, item}) => <section class="admin-panel admin-version-preview"><h2>{label}</h2><h3>{item.title}</h3><p>/{item.slug}</p><p>{item.excerpt}</p><div class="admin-content-text">{item.bodyText}</div><dl><dt>SEO-titel</dt><dd>{item.seoTitle || 'Niet ingevuld'}</dd><dt>SEO-omschrijving</dt><dd>{item.seoDescription || 'Niet ingevuld'}</dd></dl></section>)}
+    </div>
+    {canEdit && <form method="post" action={`/admin/content/${current.id}`}><input type="hidden" name="load_version" value={version.id}/><p>De gekozen versie wordt in de editor geladen als concept. Er verandert pas iets na controleren en opslaan; bestaande versies blijven bewaard.</p><button class="admin-button admin-button--primary" type="submit">Deze versie in de editor laden</button></form>}
+  </div>
+</AdminLayout>

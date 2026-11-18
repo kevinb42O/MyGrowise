@@ -1,16 +1,17 @@
 ---
-import type { AdminContent } from '../../lib/adminContent';
+import type { AdminContent, ContentInput } from '../../lib/adminContent';
 import AdminIcon from './AdminIcon.astro';
 
 interface Props {
   content?: AdminContent;
+  draft?: ContentInput;
   action: string;
   canPublish: boolean;
   error?: string;
 }
 
-const { content, action, canPublish, error = '' } = Astro.props;
-const value = content || { kind: 'article', status: 'draft', title: '', slug: '', excerpt: '', bodyText: '', seoTitle: '', seoDescription: '' };
+const { content, draft, action, canPublish, error = '' } = Astro.props;
+const value = draft || content || { kind: 'article', status: 'draft', title: '', slug: '', excerpt: '', bodyText: '', seoTitle: '', seoDescription: '' };
 const formStatus = !canPublish && value.status === 'published' ? 'review' : value.status;
 const isArticle = value.kind === 'article';
 const publicPrefix = isArticle ? 'mygrowise.be/inspiratie/' : 'mygrowise.be/';
@@ -20,7 +21,7 @@ const statusHint = canPublish
 ---
 
 {error && <div class="admin-form-alert" role="alert"><AdminIcon name="warning" size={17} />{error}</div>}
-<form class="admin-product-form content-editor" method="post" action={action}>
+<form data-unsaved-form data-unsaved-pending={draft ? "true" : undefined} class="admin-product-form content-editor" method="post" action={action}>
   <div class="content-editor__topline">
     <div><span class="content-editor__step">01 · Basis</span><p>Geef je content een heldere titel en kies hoe je ermee verdergaat.</p></div>
     <span class={`admin-product-status admin-product-status--${formStatus}`}><i></i>{formStatus === 'draft' ? 'Concept' : formStatus === 'review' ? 'In review' : formStatus === 'published' ? 'Gepubliceerd' : 'Gearchiveerd'}</span>
@@ -32,7 +33,7 @@ const statusHint = canPublish
     <label class="admin-field"><span>Type <i>*</i></span><select name="kind" required data-content-kind><option value="article" selected={isArticle}>Artikel</option><option value="page" selected={!isArticle}>Pagina</option></select><small>Een artikel komt in Inspiratie; een pagina staat op een eigen route.</small></label>
     <label class="admin-field"><span>Status <i>*</i></span><select name="status" required><option value="draft" selected={formStatus === 'draft'}>Concept</option><option value="review" selected={formStatus === 'review'}>In review</option>{canPublish && <option value="published" selected={formStatus === 'published'}>Gepubliceerd</option>}<option value="archived" selected={formStatus === 'archived'}>Gearchiveerd</option></select><small>{statusHint}</small></label>
     <label class="admin-field admin-field--wide"><span>Korte samenvatting</span><textarea name="excerpt" maxlength="360" rows="4" placeholder="Een korte introductie die lezers helpt beslissen of dit artikel voor hen relevant is." data-content-excerpt>{value.excerpt}</textarea><small><span data-excerpt-count>{value.excerpt.length}</span>/360 tekens · verschijnt waar een samenvatting wordt getoond.</small></label>
-    <section class="content-editor__writing admin-field--wide" aria-labelledby="content-writing-heading"><div class="content-editor__writing-head"><div><span id="content-writing-heading">Inhoud <i>*</i></span><small>Gebruik lege regels voor nieuwe alinea’s. HTML en scripts worden nooit uitgevoerd.</small></div><span><span data-body-count>{value.bodyText.length}</span>/20.000</span></div><textarea name="body" maxlength="20000" rows="16" required={value.status === 'published'} placeholder="Schrijf hier de inhoud van je artikel…" data-content-body>{value.bodyText}</textarea></section>
+    <section class="content-editor__writing admin-field--wide" aria-labelledby="content-writing-heading"><div class="content-editor__writing-head"><div><label for="content-body" id="content-writing-heading">Inhoud <i>*</i></label><small>Gebruik lege regels voor nieuwe alinea’s. HTML en scripts worden nooit uitgevoerd.</small></div><span><span data-body-count>{value.bodyText.length}</span>/20.000</span></div><textarea id="content-body" name="body" maxlength="20000" rows="16" required={value.status === 'published'} placeholder="Schrijf hier de inhoud van je artikel…" data-content-body>{value.bodyText}</textarea></section>
   </div>
 
   <details class="content-editor__seo"><summary><span>SEO-instellingen</span><small>Optioneel · titel en omschrijving voor zoekmachines</small></summary><div class="content-editor__seo-fields"><label class="admin-field"><span>SEO-titel</span><input name="seo_title" maxlength="70" value={value.seoTitle} placeholder={value.title || 'Titel voor zoekmachines'} data-seo-title /><small><span data-seo-title-count>{value.seoTitle.length}</span>/70 tekens</small></label><label class="admin-field"><span>Meta description</span><textarea name="seo_description" maxlength="170" rows="3" placeholder="Een aantrekkelijke omschrijving voor in de zoekresultaten." data-seo-description>{value.seoDescription}</textarea><small><span data-seo-description-count>{value.seoDescription.length}</span>/170 tekens</small></label></div></details>

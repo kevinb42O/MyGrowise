@@ -1,0 +1,37 @@
+---
+import HeadshotField from './HeadshotField.astro';
+import { userPortrait } from '../../lib/headshotPresentation';
+import { HEADSHOT_ERRORS } from '../../lib/headshotImage';
+import type { UserSession } from '../../lib/adminAuth';
+interface Props { user: UserSession; returnTo: string }
+const { user, returnTo } = Astro.props;
+const portrait = userPortrait(user);
+const status = Astro.url.searchParams.get('headshot') || '';
+const notice = status === 'saved' ? 'Je profielfoto is opgeslagen.' : status === 'removed' ? 'Je eigen foto is verwijderd. Je standaardportret of initialen worden weer getoond.' : '';
+---
+<section id="headshot" class="headshot-settings" aria-labelledby="headshot-heading">
+  <h2 id="headshot-heading">Profielfoto</h2>
+  <p>Je foto verschijnt bij je account. Je kunt deze hier op elk moment aanpassen.</p>
+  {notice && <p class="headshot-settings__notice" role="status">{notice}</p>}
+  {HEADSHOT_ERRORS[status] && <p class="headshot-settings__error" role="alert">{HEADSHOT_ERRORS[status]}</p>}
+  <form action="/api/profile/headshot" method="post" enctype="multipart/form-data" data-unsaved-form>
+    <input type="hidden" name="return_to" value={returnTo}/>
+    <HeadshotField src={portrait?.src} original={portrait?.original} />
+    <div class="headshot-settings__actions">
+      <button type="submit" name="operation" value="save">Foto opslaan</button>
+      {user.headshotPath && <button type="submit" name="operation" value="remove" formnovalidate>Eigen foto verwijderen</button>}
+    </div>
+  </form>
+</section>
+<style>
+.headshot-settings { padding:1.5rem; margin-bottom:1.5rem; border:1px solid var(--admin-border, var(--line, #dce5df)); border-radius:12px; background:var(--admin-surface, var(--white)); color:var(--admin-text, var(--ink)); scroll-margin-top:1.5rem; }
+.headshot-settings h2 { margin:0 0 .5rem; font-size:1.25rem; font-weight:600; }
+.headshot-settings > p { margin:0 0 1.25rem; font-size:.875rem; line-height:1.6; }
+.headshot-settings__actions { display:flex; flex-wrap:wrap; gap:.75rem; margin-top:1.25rem; }
+.headshot-settings button { padding:.65rem 1rem; border:1px solid var(--admin-green, var(--ink)); border-radius:6px; background:var(--admin-green, var(--ink)); color:var(--admin-surface, var(--white)); font:inherit; font-size:.8125rem; font-weight:600; cursor:pointer; }
+.headshot-settings button[value="remove"] { background:transparent; color:var(--admin-green, var(--ink)); border-color:var(--admin-border-strong, var(--line)); }
+.headshot-settings button:hover { background:var(--admin-green, var(--ink)); color:var(--admin-surface, var(--white)); }
+.headshot-settings button:focus-visible { outline:2px solid var(--admin-green, var(--ink)); outline-offset:3px; }
+.headshot-settings .headshot-settings__notice { color:var(--admin-success, #16735a); }
+.headshot-settings .headshot-settings__error { color:var(--admin-danger, #b42318); }
+</style>

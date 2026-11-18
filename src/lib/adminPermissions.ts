@@ -10,6 +10,7 @@ export type UserRole = (typeof APP_ROLES)[number];
 export type AdminRole = Exclude<UserRole, 'customer'>;
 
 export const ADMIN_PERMISSIONS = [
+  'account.manage',
   'practice.manage',
   'dashboard.read',
   'analytics.read',
@@ -63,9 +64,9 @@ const permissions = (values: AdminPermission[]) => new Set<AdminPermission>(valu
  */
 const ROLE_PERMISSIONS: Record<AdminRole, ReadonlySet<AdminPermission>> = {
   super_admin: all,
-  support: permissions(['dashboard.read', 'orders.read', 'customers.read', 'bookings.read', 'bookings.manage', 'support.read', 'support.write', 'privacy.read', 'privacy.manage', 'internal_messages.read', 'internal_messages.write']),
-  employee: permissions(['client_records.read', 'client_records.write', 'internal_messages.read', 'internal_messages.write']),
-  practitioner: permissions(['client_records.read', 'client_records.write', 'internal_messages.read', 'internal_messages.write']),
+  support: permissions(['account.manage', 'dashboard.read', 'orders.read', 'customers.read', 'bookings.read', 'bookings.manage', 'support.read', 'support.write', 'privacy.read', 'privacy.manage', 'internal_messages.read', 'internal_messages.write']),
+  employee: permissions(['account.manage', 'client_records.read', 'client_records.write', 'internal_messages.read', 'internal_messages.write']),
+  practitioner: permissions(['account.manage', 'client_records.read', 'client_records.write', 'internal_messages.read', 'internal_messages.write']),
 };
 
 export const isUserRole = (value: string): value is UserRole => (APP_ROLES as readonly string[]).includes(value);
@@ -86,6 +87,7 @@ export const firstAccessibleAdminPath = (roles: readonly UserRole[]) => {
 /** Null is deliberate: unregistered admin routes are denied by default. */
 export const requiredAdminPermission = (path: string, method = 'GET'): AdminPermission | null => {
   if (path.startsWith('/admin/afspraken/') || path === '/admin/afspraaktypes' || path === '/admin/boekingslinks' || path.startsWith('/admin/therapeuten') || path.startsWith('/api/admin/practice')) return 'practice.manage';
+  if (path === '/admin/account') return 'account.manage';
   if (path === '/admin') return 'dashboard.read';
   if (path === '/admin/analytics') return 'analytics.read';
   if (path === '/admin/bestellingen' || path.startsWith('/admin/bestellingen/') || path === '/admin/betalingen') return 'orders.read';

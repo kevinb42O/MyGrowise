@@ -34,6 +34,6 @@ const filtered=types.filter(t=>`${t.name} ${groups.find(g=>g.id===t.treatment_gr
  <div class="practice-actions"><button class="admin-button admin-button--primary" type="submit">Opslaan</button><a class="admin-button" href="/admin/afspraaktypes">Annuleren</a></div></form></section>}
  </div></AdminLayout>
 <script>
- const group=document.querySelector<HTMLSelectElement>('[data-group]'),color=document.querySelector<HTMLInputElement>('[data-color]');
+ const group=document.querySelector<HTMLSelectElement>('[data-group]'),color=document.querySelector<HTMLInputElement>('input[data-color]');
  group?.addEventListener('change',()=>{const value=group.selectedOptions[0]?.dataset.color;if(color&&value)color.value=value;});
 </script>
