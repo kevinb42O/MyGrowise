@@ -1,5 +1,5 @@
 import { fromBrusselsLocalInput } from './brusselsTime';
-import { patientFields, type PatientDetails } from './patientDetails';
+import { parsePatientDetails, patientFields, type PatientDetails } from './patientDetails';
 import { getSupabaseAdmin } from './supabase/server';
 import { writeSecurityAudit, type AuditActor } from './securityAudit';
 import type { UserSession } from './adminAuth';
@@ -370,16 +370,17 @@ export const getBookingForPatientCreation = async (user: UserSession, bookingId:
   return { id: String(data.id), patientId: data.patient_id ? String(data.patient_id) : null, customerUserId: data.customer_user_id ? String(data.customer_user_id) : null, clientName: String(data.client_name), clientEmail: String(data.client_email), startsAt: String(data.starts_at), status: String(data.status), practitionerName: String((data as Row).practitioners?.name || 'Professional') };
 };
 
-export const createPatient = async (input: { firstName: unknown; lastName: unknown; email: unknown; assigneeUserId: unknown }, user: UserSession, actor: AuditActor) => {
+export const createPatient = async (input: { firstName: unknown; lastName: unknown; email: unknown; assigneeUserId: unknown; details?: Record<string, unknown> }, user: UserSession, actor: AuditActor) => {
   assertRecordRole(user);
   const firstName = String(input.firstName || '').trim(), lastName = String(input.lastName || '').trim();
   if (!firstName || !lastName || firstName.length > 60 || lastName.length > 60) throw new Error('invalid_input');
   const fullName = `${firstName} ${lastName}`; const email = normalizeEmail(input.email);
   if (fullName.length < 2 || fullName.length > 120 || (email && (email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)))) throw new Error('invalid_input');
+  const details = parsePatientDetails({...input.details, first_name: firstName, last_name: lastName, email: email || ''});
   const assignee = normalizeName(input.assigneeUserId) || null;
   if (assignee && !uuidPattern.test(assignee)) throw new Error('invalid_input');
   if (!isOwner(user) && assignee && assignee !== user.sub) throw new Error('not_allowed');
-  const { data, error } = await getSupabaseAdmin().rpc('create_patient_with_names', { p_actor_user_id: user.sub, p_first_name: firstName, p_last_name: lastName, p_email: email, p_assignee_user_id: assignee, p_request_id: actor.requestId || null });
+  const { data, error } = await getSupabaseAdmin().rpc('create_patient_with_details', { p_actor_user_id: user.sub, p_details: details, p_assignee_user_id: assignee, p_request_id: actor.requestId || null });
   fail(error); const id = String(data);
   return id;
 };

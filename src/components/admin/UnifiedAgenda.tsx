@@ -1,3 +1,4 @@
+import NavigationToggleIcon from './NavigationToggleIcon';
 import AdminSkeleton from './AdminSkeleton';
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import FullCalendar from '@fullcalendar/react';
@@ -160,8 +161,8 @@ function visibleHours(items: Item[]) {
   return { min: `${String(min).padStart(2, '0')}:00:00`, max: `${String(max).padStart(2, '0')}:00:00` };
 }
 
-function AgendaIcon({ name }: { name: 'menu' | 'previous' | 'next' }) {
-  return <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={name === 'menu' ? 'M4 7h16M4 12h16M4 17h16' : name === 'previous' ? 'm15 6-6 6 6 6' : 'm9 6 6 6-6 6'} /></svg>;
+function AgendaIcon({ name }: { name: 'previous' | 'next' }) {
+  return <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={name === 'previous' ? 'm15 6-6 6 6 6' : 'm9 6 6 6-6 6'} /></svg>;
 }
 
 export default function UnifiedAgenda({ mode = 'admin', allowItransform = false, preferenceKey = '' }: { mode?: Mode; allowItransform?: boolean; preferenceKey?: string }) {
@@ -421,7 +422,7 @@ export default function UnifiedAgenda({ mode = 'admin', allowItransform = false,
 
   return <div className={`unified-agenda${filterOpen ? ' has-open-filters' : ''}${practice ? ' unified-agenda--practice' : ''}`}>
     <div className="agenda-toolbar" aria-label="Agendabediening">
-      <button type="button" className="agenda-toolbar__menu" data-agenda-navigation aria-label="Navigatie openen" aria-controls={practice ? 'practice-sidebar' : 'admin-sidebar'} aria-expanded="false"><AgendaIcon name="menu" /></button>
+      <button type="button" className="agenda-toolbar__menu" data-agenda-navigation aria-label="Navigatie openen" aria-controls={practice ? 'practice-sidebar' : 'admin-sidebar'} aria-expanded="false"><NavigationToggleIcon /></button>
       <div className="agenda-toolbar__navigation">
         <button type="button" aria-label="Vorige periode" onClick={() => calendarRef.current?.getApi().prev()}><AgendaIcon name="previous" /></button>
         <button type="button" aria-label="Volgende periode" onClick={() => calendarRef.current?.getApi().next()}><AgendaIcon name="next" /></button>

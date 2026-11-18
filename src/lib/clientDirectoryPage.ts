@@ -21,7 +21,7 @@ export async function loadClientDirectoryPage(context: Pick<AstroGlobal, 'locals
     const form = await context.request.formData();
     submitted = Object.fromEntries([...form.entries()].map(([k,v])=>[k,String(v)]));
     try {
-      const id = await createPatient({firstName:form.get('first_name'),lastName:form.get('last_name'),email:form.get('email'),assigneeUserId:form.get('assignee_user_id')},user,auditActor(user,context.locals.requestId,'/api/admin/clienten'));
+      const id = await createPatient({firstName:form.get('first_name'),lastName:form.get('last_name'),email:form.get('email'),assigneeUserId:form.get('assignee_user_id'),details:submitted},user,auditActor(user,context.locals.requestId,'/api/admin/clienten'));
       return context.redirect(`${recordsBase}/${id}?melding=aangemaakt`,303);
     } catch (error) { createError = clientRecordError(error); }
   }
@@ -42,7 +42,7 @@ export async function loadClientDirectoryPage(context: Pick<AstroGlobal, 'locals
   const showBookingError = Boolean(bookingId && !booking);
   const formError = createError || context.url.searchParams.get('fout') || '';
   const errors: Record<string, string> = {
-    invalid_input: 'Controleer de naam en het e-mailadres.', invalid_patient: 'Controleer de naam en het e-mailadres.', not_found: 'De afspraak bestaat niet of je hebt er geen toegang toe.',
+    invalid_input: 'Controleer de ingevulde cliëntgegevens, zoals naam, datums, telefoonnummer en e-mailadres.', invalid_patient: 'Controleer de ingevulde cliëntgegevens, zoals naam, datums, telefoonnummer en e-mailadres.', not_found: 'De afspraak bestaat niet of je hebt er geen toegang toe.',
     not_allowed: 'Je hebt geen toegang tot deze dossieractie.',
     booking_not_ready: 'Deze afspraak is nog niet bevestigd of afgerond.',
     booking_already_linked: 'Deze afspraak is al aan een dossier gekoppeld.',

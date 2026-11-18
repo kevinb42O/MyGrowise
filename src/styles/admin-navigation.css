@@ -64,3 +64,40 @@
 @media (prefers-reduced-motion:reduce) {
   .navigation-shell .admin-sidebar { transition:none; }
 }
+
+/* The panel stays on the left; only the action arrow changes direction. */
+.navigation-shell :is(.admin-menu-button, .agenda-toolbar__menu) {
+  width:40px;
+  min-width:40px;
+  height:40px;
+  padding:0;
+  border:1px solid var(--admin-border);
+  border-radius:8px;
+  background:var(--admin-surface);
+  color:var(--admin-green);
+}
+.navigation-shell :is(.admin-menu-button, .agenda-toolbar__menu):hover {
+  border-color:var(--admin-green);
+  background:var(--admin-green-soft);
+}
+.navigation-shell :is(.admin-menu-button, .agenda-toolbar__menu):active {
+  background:var(--admin-subtle);
+}
+.navigation-shell :is(.admin-menu-button, .agenda-toolbar__menu):focus-visible {
+  outline:2px solid var(--admin-green);
+  outline-offset:3px;
+}
+.navigation-toggle-icon { display:block; flex-shrink:0; }
+.navigation-toggle-icon__mobile { display:none; }
+.navigation-toggle-icon__arrow { transform-origin:15px 12px; }
+[aria-expanded="true"] > .navigation-toggle-icon .navigation-toggle-icon__arrow { transform:rotate(180deg); }
+@media (prefers-reduced-motion:no-preference) {
+  .navigation-shell :is(.admin-menu-button, .agenda-toolbar__menu) {
+    transition:background-color 140ms ease-out, border-color 140ms ease-out;
+  }
+}
+@media (max-width:820px) {
+  .navigation-shell :is(.admin-menu-button, .agenda-toolbar__menu) { width:44px; min-width:44px; height:44px; }
+  .navigation-toggle-icon__desktop { display:none; }
+  .navigation-toggle-icon__mobile { display:block; }
+}

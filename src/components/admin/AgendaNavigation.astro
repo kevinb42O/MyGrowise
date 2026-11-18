@@ -1,6 +1,5 @@
 ---
 import AdminIcon from './AdminIcon.astro';
-import AttentionStatus from './AttentionStatus.astro';
 import ClientSearch from './ClientSearch';
 import NotificationBell from './NotificationBell.astro';
 import { hasPermission, type UserSession } from '../../lib/adminAuth';
@@ -13,5 +12,4 @@ const { practice, user } = Astro.props;
     <div class="agenda-client-search__panel"><ClientSearch practice={practice} client:only="react" /></div>
   </details>}
   {user && <NotificationBell userId={user.sub} basePath={practice ? '/praktijk/berichten' : '/admin/berichten'} />}
-  <AttentionStatus surface={practice ? 'practice' : 'admin'} compact />
 </div>

@@ -1,6 +1,7 @@
 ---
 import AdminLayout from '../../layouts/AdminLayout.astro';
 import AdminIcon from '../admin/AdminIcon.astro';
+import PatientFields from '../practice/PatientFields.astro';
 import PracticeLayout from '../../layouts/PracticeLayout.astro';
 import type { ClientDirectoryData } from '../../lib/clientDirectoryPage';
 interface Props { data: ClientDirectoryData }
@@ -71,10 +72,9 @@ const Layout = practice ? PracticeLayout : AdminLayout;
       {formError && !bookingId && <div class="client-create-dialog__error" role="alert"><AdminIcon name="warning" size={18}/><span>{errors[formError] || 'Opslaan is niet gelukt. Controleer je gegevens en probeer opnieuw.'}</span></div>}
       <div id="client-new-panel" role={canAssign ? 'tabpanel' : undefined} aria-labelledby={canAssign ? 'client-new-tab' : undefined} data-client-create-panel="new">
         <form class="client-create-dialog__form" method="post" action={`${recordsBase}#client-record-create`}>
+          <p class="client-create-dialog__help">Voornaam en achternaam zijn verplicht. De overige gegevens kun je nu invullen of later aanvullen in het dossier.</p>
+          <div class="client-create-dialog__details"><PatientFields values={submitted}/></div>
           <div class="client-create-dialog__fields">
-            <label><span>Voornaam</span><input name="first_name" required maxlength="60" autocomplete="given-name" value={submitted.first_name}/></label>
-            <label><span>Achternaam</span><input name="last_name" required maxlength="60" autocomplete="family-name" value={submitted.last_name}/></label>
-            <label class="client-create-dialog__wide"><span>E-mailadres <small>Optioneel</small></span><input name="email" value={submitted.email} type="email" maxlength="254" autocomplete="off" placeholder="naam@voorbeeld.be" aria-describedby="client-email-help"/><small id="client-email-help">Je kunt ook zonder e-mailadres een dossier starten.</small></label>
             {canAssign && <label class="client-create-dialog__wide"><span>Toegewezen aan <small>Optioneel</small></span><select name="assignee_user_id"><option value="" selected={(submitted.assignee_user_id ?? defaultAssignee)===''}>Nog niet toewijzen</option>{staff.map((member) => <option value={member.id} selected={(submitted.assignee_user_id ?? defaultAssignee)===member.id}>{member.name}{member.roles.includes('practitioner') ? ' · Professional' : member.roles.includes('super_admin') ? ' · Superadmin' : ' · Medewerker'}</option>)}</select></label>}
           </div>
           <p class="client-create-dialog__privacy"><AdminIcon name="lock" size={15}/> Verslagen zijn alleen zichtbaar voor bevoegde medewerkers.</p>
@@ -256,7 +256,7 @@ const Layout = practice ? PracticeLayout : AdminLayout;
 <style>
   :global(html.client-create-is-open) { overflow: hidden; }
   .client-create-dialog {
-    width: min(560px, calc(100% - 32px)); max-height: calc(100dvh - 48px); margin: auto; padding: 0;
+    width: min(680px, calc(100% - 32px)); max-height: calc(100dvh - 48px); margin: auto; padding: 0;
     border: 0; border-radius: 16px; background: #fff; color: var(--admin-text);
     box-shadow: 0 28px 90px rgb(14 43 37 / 24%); overscroll-behavior: contain; scroll-padding-block: 24px 100px; scrollbar-width: thin; scrollbar-color: var(--admin-border-strong) transparent;
   }
@@ -276,6 +276,20 @@ const Layout = practice ? PracticeLayout : AdminLayout;
   .client-create-dialog__tabs button[aria-selected="true"]::after { position: absolute; right: 0; bottom: -1px; left: 0; height: 2px; background: var(--admin-green); content: ''; }
   .client-create-dialog__tabs button:hover { color: var(--admin-green); }
   .client-create-dialog__form { margin: 0; }
+  .client-create-dialog__help { margin: 0; padding: 24px 32px 0; color: var(--admin-muted); font-size: 13px; line-height: 1.6; }
+  .client-create-dialog__details { display: grid; gap: 28px; padding: 24px 32px 0; }
+  .client-create-dialog__details :global(fieldset) { min-width: 0; margin: 0; padding: 0; border: 0; border-radius: 0; background: transparent; box-shadow: none; }
+  .client-create-dialog__details :global(legend) { margin: 0 0 16px; padding: 0; color: var(--admin-text); font-size: 15px; font-weight: 600; }
+  .client-create-dialog__details :global(.practice-fields) { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px 16px; padding: 0; align-items: start; }
+  .client-create-dialog__details :global(label) { display: grid; min-width: 0; gap: 8px; color: var(--admin-text); font-size: 13px; font-weight: 600; }
+  .client-create-dialog__details :global(label > span) { color: var(--admin-text); font-size: 13px; font-weight: 600; }
+  .client-create-dialog__details :global(.wide) { grid-column: 1 / -1; }
+  .client-create-dialog__details :global(small) { color: var(--admin-muted); font-size: 12px; font-weight: 400; line-height: 1.5; }
+  .client-create-dialog__details :global(input), .client-create-dialog__details :global(select), .client-create-dialog__details :global(textarea) { width: 100%; min-width: 0; min-height: 46px; padding: 10px 12px; border: 1px solid var(--admin-border-strong); border-radius: 8px; background: white; color: var(--admin-text); font: inherit; font-size: 14px; font-weight: 400; caret-color: var(--admin-green); }
+  .client-create-dialog__details :global(textarea) { resize: vertical; line-height: 1.5; }
+  .client-create-dialog__details :global(input:hover), .client-create-dialog__details :global(select:hover), .client-create-dialog__details :global(textarea:hover) { border-color: var(--admin-muted); }
+  .client-create-dialog__details :global(:focus-visible) { outline: 2px solid var(--admin-green); outline-offset: 3px; }
+
   .client-create-dialog__fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px 16px; padding: 24px 32px 20px; }
   .client-create-dialog__fields label { display: grid; min-width: 0; gap: 8px; }
   .client-create-dialog__fields label > span { display: flex; align-items: baseline; gap: 8px; font-size: 13px; font-weight: 600; }
@@ -318,6 +332,10 @@ const Layout = practice ? PracticeLayout : AdminLayout;
     .client-create-dialog__header h2 { font-size: 21px; }
     .client-create-dialog__close { top: 22px; right: 10px; }
     .client-create-dialog__tabs { margin-inline: 20px; gap: 20px; }
+    .client-create-dialog__help { padding: 22px 20px 0; }
+    .client-create-dialog__details { padding: 22px 20px 0; }
+    .client-create-dialog__details :global(.practice-fields) { grid-template-columns: minmax(0, 1fr); gap: 18px; }
+    .client-create-dialog__details :global(input), .client-create-dialog__details :global(select), .client-create-dialog__details :global(textarea) { font-size: 16px; }
     .client-create-dialog__fields { grid-template-columns: minmax(0, 1fr); gap: 18px; padding: 22px 20px 20px; }
     .client-create-dialog input, .client-create-dialog select { font-size: 16px; }
     .client-create-dialog__privacy { padding: 0 20px 22px; }

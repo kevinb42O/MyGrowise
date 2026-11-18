@@ -6,7 +6,8 @@ import ClientSearch from '../components/admin/ClientSearch';
 import AppIcons from '../components/astro/AppIcons.astro';
 import FormProtection from '../components/practice/FormProtection.astro';
 import AdminIcon from '../components/admin/AdminIcon.astro';
-import AttentionStatus from '../components/admin/AttentionStatus.astro';
+import NavigationToggleIcon from '../components/admin/NavigationToggleIcon';
+import AttentionIndicators from '../components/admin/AttentionIndicators.astro';
 import NotificationBell from '../components/admin/NotificationBell.astro';
 import '../styles/admin.css';
 import '../styles/practice-management.css';
@@ -165,7 +166,7 @@ const canOpen = (href: string) => {
         {!agendaWorkspace && <header class="admin-topbar">
           <div class="admin-topbar__left">
             <button class="admin-icon-button admin-menu-button" type="button" aria-label="Menu openen" aria-controls="admin-sidebar" aria-expanded="false" data-sidebar-open>
-              <AdminIcon name="menu" /><span class="admin-attention-dot" data-attention-keys="*" role="img" aria-label="Aandacht nodig" hidden></span>
+              <NavigationToggleIcon /><span class="admin-attention-dot" data-attention-keys="*" role="img" aria-label="Aandacht nodig" hidden></span>
             </button>
             <span class="admin-topbar__crumb">MyGrowise</span>
             <span aria-hidden="true">/</span>
@@ -177,7 +178,7 @@ const canOpen = (href: string) => {
         </header>}
 
         <main id="admin-main" class="admin-main">
-          {!agendaWorkspace && <AttentionStatus surface="admin" />}
+          <AttentionIndicators surface="admin" />
           <slot />
         </main>
       </div>

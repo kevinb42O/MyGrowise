@@ -18,7 +18,7 @@ export const POST: APIRoute = async ({ request, locals, redirect }) => {
       ? await createPatientFromBooking(String(form.get('booking_id') || ''), user, actor)
       : operation === 'from_customer'
         ? await createPatientFromCustomerAccount(String(form.get('customer_user_id') || ''), String(form.get('assignee_user_id') || '') || null, user, actor)
-        : await createPatient({ firstName: form.get('first_name'), lastName: form.get('last_name'), email: form.get('email'), assigneeUserId: form.get('assignee_user_id') }, user, actor);
+        : await createPatient({ firstName: form.get('first_name'), lastName: form.get('last_name'), email: form.get('email'), assigneeUserId: form.get('assignee_user_id'), details: Object.fromEntries(form.entries()) }, user, actor);
     const destination = new URLSearchParams({ melding: operation === 'from_booking' ? 'afspraak' : operation === 'from_customer' ? 'account_gekoppeld' : 'aangemaakt' });
     if (operation === 'from_booking') destination.set('boeking', String(form.get('booking_id') || ''));
     return redirect(`${recordsBase}/${encodeURIComponent(patientId)}?${destination}${operation === 'from_booking' ? '#nieuw-verslag' : ''}`, 303);

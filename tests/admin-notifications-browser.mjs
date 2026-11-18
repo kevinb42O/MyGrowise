@@ -44,7 +44,7 @@ const Layout = practice ? PracticeLayout : AdminLayout;
       const page = await context.newPage();
       const pageErrors = [];
       page.on('pageerror', error => pageErrors.push(error.message));
-      let unread = 41, requests = [], attentionFail = false, readFail = false, partial = false;
+      let unread = 41, requests = [], attentionFail = false, readFail = false, partial = false, attentionChecks = 0;
       const surface = role === 'practitioner' ? 'praktijk' : 'admin';
       const items = [
         { key: 'messages', href: `/${surface}/berichten?view=team`, label: 'Ongelezen teammeldingen', count: 2 },
@@ -56,6 +56,7 @@ const Layout = practice ? PracticeLayout : AdminLayout;
       await page.route('**/api/**', async route => {
         const url = route.request().url();
         if (url.includes('/internal/attention')) {
+          attentionChecks++;
           await route.fulfill({ status: attentionFail ? 503 : 200, json: { items: partial ? items.slice(0, 1) : items, unavailable: partial ? ['bookings'] : [], checkedAt: createdAt } });
         } else if (url.includes('/internal/notifications')) {
           if (route.request().method() === 'POST') {
@@ -67,7 +68,8 @@ const Layout = practice ? PracticeLayout : AdminLayout;
       });
       await page.goto(`${origin}/notification-audit-fixture?role=${role}`, { waitUntil: 'domcontentloaded' });
       await page.waitForFunction(() => document.querySelector('[data-notification-count]')?.textContent === '41');
-      await page.waitForFunction(() => document.querySelector('[data-attention-heading]')?.textContent === 'Op te volgen' && !document.querySelector('[data-attention-keys="*"]')?.hidden);
+      await page.waitForFunction(() => !document.querySelector('[data-attention-keys="*"]')?.hidden);
+      assert.equal(await page.locator('[data-attention-status], [data-attention-heading], .admin-attention-overview').count(), 0, 'no duplicate attention panel');
       const messagesDot = page.locator(`.admin-nav a[href="/${surface}/berichten"] [data-attention-keys]`);
       assert.equal(await messagesDot.getAttribute('hidden'), null);
       if (width < 1000) {
@@ -106,12 +108,20 @@ const Layout = practice ? PracticeLayout : AdminLayout;
       assert.ok(requests.every(body => body.all === true && body.before === '2026-11-18T08:00:00Z'));
       await page.keyboard.press('Escape');
       partial = true;
-      await page.evaluate(() => window.dispatchEvent(new Event('notifications:changed')));
-      await page.waitForFunction(() => document.querySelector('[data-attention-heading]')?.textContent.includes('onvolledig'));
+      let previousChecks = attentionChecks;
+      await Promise.all([
+        page.waitForResponse(response => response.url().includes('/internal/attention')),
+        page.evaluate(() => window.dispatchEvent(new Event('notifications:changed'))),
+      ]);
+      assert.ok(attentionChecks > previousChecks);
       if (role !== 'employee') assert.equal(await page.locator(`.admin-nav a[href="/${surface}/boekingen"] [data-attention-keys]`).getAttribute('hidden'), null, 'partial failures preserve known signals');
       attentionFail = true;
-      await page.evaluate(() => window.dispatchEvent(new Event('notifications:changed')));
-      await page.waitForFunction(() => document.querySelector('[data-attention-heading]')?.textContent.includes('niet bereikbaar'));
+      previousChecks = attentionChecks;
+      await Promise.all([
+        page.waitForResponse(response => response.url().includes('/internal/attention')),
+        page.evaluate(() => window.dispatchEvent(new Event('notifications:changed'))),
+      ]);
+      assert.ok(attentionChecks > previousChecks);
       assert.equal(await messagesDot.getAttribute('hidden'), null);
       assert.deepEqual(pageErrors, [], 'no runtime errors');
       checks++;

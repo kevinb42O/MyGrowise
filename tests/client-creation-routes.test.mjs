@@ -4,6 +4,7 @@ import {readFileSync} from 'node:fs';
 import {createRequire} from 'node:module';
 import vm from 'node:vm';
 import ts from 'typescript';
+import {parsePatientDetails,patientFields} from '../src/lib/patientDetails.ts';
 const require=createRequire(import.meta.url);
 const load=(file,dependencies)=>{
  const exports={};const {outputText}=ts.transpileModule(readFileSync(new URL(file,import.meta.url),'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}});
@@ -13,17 +14,17 @@ const user={sub:'11111111-1111-4111-8111-111111111111',roles:['practitioner'],pr
 const actor={auditActor:()=>({userId:user.sub})};
 const clientId='22222222-2222-4222-8222-222222222222';
 const context=(path,values)=>({url:new URL(`http://localhost${path}`),request:new Request(`http://localhost${path}`,values?{method:'POST',body:new URLSearchParams(values)}:{}),locals:{currentUser:user},params:{id:'nieuw'},redirect:(url,status)=>new Response(null,{status,headers:{location:url}})});
-test('directory retains submitted name, email and assignee after failed atomic creation',async()=>{
+test('directory forwards all patient details and retains them after failed atomic creation',async()=>{
  let received;
  const {loadClientDirectoryPage}=load('../src/lib/clientDirectoryPage.ts',{
   './adminAuth':{isTrustedFormOrigin:()=>true,hasPermission:()=>true},'./securityAudit':actor,
   './clientRecordErrors':{clientRecordError:()=> 'invalid_input'},
   './clientRecords':{createPatient:async input=>{received=input;throw new Error('invalid_input');},auditPatientDirectoryAccess:async()=>{},listPatientRecords:async()=>[],getPatientStaff:async()=>[],listUnlinkedCustomerAccounts:async()=>[]},
  });
- const values={first_name:'Anne Marie',last_name:'Van den Berg',email:'synthetic@example.invalid',assignee_user_id:user.sub};
+ const values={first_name:'Anne Marie',last_name:'Van den Berg',email:'synthetic@example.invalid',assignee_user_id:user.sub,salutation:'mevrouw',gender:'female',birth_date:'1988-02-29',intake_date:'2026-11-17',street:'Teststraat',house_number:'12',address_box:'A',postal_code:'1000',city:'Brussel',country:'BE',mobile:'+32 470 12 34 56',registration_reason:'Een eerste gesprek',referrer:'Huisarts'};
  const result=await loadClientDirectoryPage(context('/praktijk/clienten',values));
  assert.deepEqual({...result.submitted},values);assert.equal(result.formError,'invalid_input');
- assert.equal(received.firstName,'Anne Marie');assert.equal(received.lastName,'Van den Berg');
+ assert.equal(received.firstName,'Anne Marie');assert.equal(received.lastName,'Van den Berg');assert.deepEqual({...received.details},values);
 });
 const setup=()=>{
  const calls=[];
@@ -59,4 +60,21 @@ test('valid offer links preselect the offer within the permitted therapist scope
  assert.equal(valid.submitted.offer_id,'o1');assert.equal(valid.selectedPractitioner,'p1');
  const forged=await loadAppointmentPage(context('/praktijk/afspraken/nieuw?offer_id=o2'));
  assert.equal(forged.submitted.offer_id,undefined);
+});
+
+test('manual creation validates full details before a single atomic database call',async()=>{
+ const calls=[];
+ const {createPatient}=load('../src/lib/clientRecords.ts',{
+  './brusselsTime':{},'./patientDetails':{parsePatientDetails,patientFields},'./securityAudit':{},
+  './supabase/server':{getSupabaseAdmin:()=>({rpc:async(name,args)=>{calls.push({name,args});return {data:clientId,error:null};}})},
+ });
+ const input={firstName:' Anne ',lastName:' Test ',email:' ANNE@EXAMPLE.INVALID ',assigneeUserId:null,details:{gender:'female',salutation:'mevrouw',birth_date:'1988-02-29',street:' Teststraat ',country:'be',mobile:'+32 470 12 34 56'}};
+ assert.equal(await createPatient(input,user,{}),clientId);
+ assert.equal(calls.length,1);assert.equal(calls[0].name,'create_patient_with_details');
+ const details=calls[0].args.p_details;
+ assert.equal(details.first_name,'Anne');assert.equal(details.email,'anne@example.invalid');assert.equal(details.country,'BE');assert.equal(details.street,'Teststraat');assert.equal(details.salutation,'mevrouw');assert.equal(details.gender,'female');assert.equal(details.birth_date,'1988-02-29');
+ for(const invalid of [{gender:'forged'},{salutation:'forged'},{birth_date:'1988-02-30'},{mobile:'abc'},{country:'Belgium'}]){
+  await assert.rejects(()=>createPatient({...input,details:{...input.details,...invalid}},user,{}));
+ }
+ assert.equal(calls.length,1,'invalid details must never create a record');
 });

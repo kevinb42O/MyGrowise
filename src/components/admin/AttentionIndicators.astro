@@ -1,0 +1,47 @@
+---
+interface Props { surface: 'admin' | 'practice' }
+const { surface } = Astro.props;
+---
+<span hidden data-attention-indicators data-surface={surface}></span>
+<script>
+  const root = document.querySelector<HTMLElement>('[data-attention-indicators]');
+  if (root) {
+    const surface = root.dataset.surface || 'admin';
+    const indicators = document.querySelectorAll<HTMLElement>('[data-attention-keys]');
+    let running = false;
+    let stopped = false;
+    type Item = { key: string; href: string; label: string; count: number };
+    let previous: Item[] = [];
+    const refresh = async () => {
+      if (running || stopped || document.hidden) return;
+      running = true;
+      try {
+        const response = await fetch(`/api/internal/attention?surface=${surface}`, { credentials: 'same-origin', cache: 'no-store', signal: AbortSignal.timeout(15000) });
+        if (!response.ok) throw new Error('unavailable');
+        const data = await response.json() as { items: Item[]; unavailable: string[] };
+        if (!Array.isArray(data.items) || !Array.isArray(data.unavailable)) throw new Error('invalid');
+        const missing = new Set(data.unavailable);
+        // Keep the last known signal if one source is temporarily unavailable.
+        const items = [...data.items, ...previous.filter(item => missing.has(item.key))];
+        previous = items;
+        indicators.forEach(dot => {
+          const keys = (dot.dataset.attentionKeys || '').split(' ');
+          const matches = items.filter(item => keys.includes('*') || keys.includes(item.key) || (keys.includes('mail') && item.key.startsWith('mail:')));
+          const total = matches.reduce((sum, item) => sum + item.count, 0);
+          dot.hidden = total === 0;
+          const label = `${total} aandachtspunten: ${matches.filter(item => item.count > 0).map(item => `${item.label} (${item.count})`).join(', ')}`;
+          dot.setAttribute('aria-label', label);
+          dot.title = label;
+        });
+      } catch {
+        // Keep the last known navigation indicators until the next successful check.
+      } finally { running = false; }
+    };
+    const timer = window.setInterval(refresh, 60000);
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) refresh(); });
+    window.addEventListener('focus', refresh);
+    window.addEventListener('notifications:changed', refresh);
+    window.addEventListener('pagehide', () => { stopped = true; window.clearInterval(timer); }, { once: true });
+    refresh();
+  }
+</script>

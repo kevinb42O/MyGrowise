@@ -19,9 +19,11 @@ export function setupAdminNavigation() {
   const syncToggles = () => {
     body.querySelectorAll<HTMLButtonElement>(toggleSelector).forEach(button => {
       button.setAttribute('aria-expanded', String(expanded()));
-      button.setAttribute('aria-label', mobile.matches
+      const label = mobile.matches
         ? (mobileOpen ? 'Menu sluiten' : 'Menu openen')
-        : (desktopExpanded ? 'Menu inklappen' : 'Menu uitklappen'));
+        : (desktopExpanded ? 'Menu inklappen' : 'Menu uitklappen');
+      button.setAttribute('aria-label', label);
+      button.title = label;
     });
   };
   const focusable = () => [...sidebar.querySelectorAll<HTMLElement>('a[href], button, summary, input, select, [tabindex="0"]')]

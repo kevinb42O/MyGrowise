@@ -24,7 +24,7 @@ try{
  create role anon; create role authenticated; create role service_role;
  create table user_roles(user_id uuid,role text);
  create table practice_managers(user_id uuid);
- create table patients(id uuid primary key default gen_random_uuid(),full_name text not null,email text,created_by uuid,customer_user_id uuid unique,status text default 'active',
+ create table patients(id uuid primary key default gen_random_uuid(),full_name text not null,email text,created_by uuid,customer_user_id uuid unique,status text default 'active',updated_at timestamptz default now(),intake_date date,
  first_name text default '',last_name text default '',birth_date date,street text default '',house_number text default '',address_box text default '',postal_code text default '',city text default '',country text default 'BE',mobile text default '',national_number text default '',gender text default '',salutation text default '',registration_reason text default '',referrer text default '',
  constraint patients_extended_fields check(salutation in ('','heer','meneer','mevrouw')));
  create table commerce_buyers(customer_user_id uuid unique,email text,first_name text,last_name text);
@@ -43,11 +43,26 @@ try{
  ['20261117170000_practice_workflow_fixes.sql','book_new_patient'],
  ])await exec(routine(file,name));
  await exec(readFileSync(new URL('../supabase/migrations/20261117180000_patient_names_and_salutations.sql',import.meta.url),'utf8'));
+ await exec(readFileSync(new URL('../supabase/migrations/20261029061435_remove_patient_national_number.sql',import.meta.url),'utf8'));
+ await exec(readFileSync(new URL('../supabase/migrations/20261118120000_complete_patient_creation.sql',import.meta.url),'utf8'));
  const admin=uuid(),therapist=uuid(),other=uuid(),owner=uuid(),type=uuid(),offer=uuid();
  await q("insert into user_roles values($1,'super_admin'),($2,'practitioner'),($3,'practitioner')",[admin,therapist,other]);
  await q("insert into practitioners values($1,$2,true,'')",[owner,therapist]);
  await q("insert into appointment_types values($1,'Test','intake','online','',60,true)",[type]);
  await q('insert into practitioner_appointment_types values($1,$2,$3,60,true)',[offer,owner,type]);
+ const complete='select create_patient_with_details($1,$2::jsonb,$3,null) id';
+ const details={first_name:'Anne',last_name:'Compleet',email:'complete@example.invalid',birth_date:'1988-02-29',gender:'female',salutation:'mevrouw',intake_date:'2026-11-17',street:'Teststraat',house_number:'12',address_box:'A',postal_code:'1000',city:'Brussel',country:'BE',mobile:'+32 470 12 34 56',registration_reason:'Een eerste gesprek',referrer:'Huisarts'};
+ const completeId=(await q(complete,[therapist,JSON.stringify(details),null])).rows[0].id;
+ const saved=(await q('select * from patients where id=$1',[completeId])).rows[0];
+ for(const [field,value] of Object.entries(details)) assert.equal(saved[field] instanceof Date?saved[field].toISOString().slice(0,10):saved[field],value,field);
+ checks++;
+ const counts=async()=> (await q('select (select count(*) from patients) patients,(select count(*) from patient_assignments) assignments,(select count(*) from security_audit_log) audits')).rows[0];
+ const before=await counts();
+ await rejects(complete,[therapist,JSON.stringify({...details,salutation:'forged'}),null],/patients_extended_fields/);
+ assert.deepEqual(await counts(),before);checks++;
+ await rejects(complete,[therapist,JSON.stringify(details),other],/not_allowed/);
+ assert.deepEqual(await counts(),before);checks++;
+ assert.equal((await q("select has_function_privilege('authenticated','public.create_patient_with_details(uuid,jsonb,uuid,uuid)','EXECUTE') ok")).rows[0].ok,false);checks++;
  const manual='select create_patient_with_names($1,$2,$3,$4,$5,null) id';
  const patient=(await q(manual,[therapist,'Anne Marie','Van den Berg','anne@example.invalid',null])).rows[0].id;
  assert.deepEqual((await q('select first_name,last_name,email,full_name from patients where id=$1',[patient])).rows[0],{first_name:'Anne Marie',last_name:'Van den Berg',email:'anne@example.invalid',full_name:'Anne Marie Van den Berg'});checks++;

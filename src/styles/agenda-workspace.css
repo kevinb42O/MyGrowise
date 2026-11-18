@@ -66,22 +66,15 @@
 .agenda-navigation-tools summary { display:flex; align-items:center; gap:10px; min-height:36px; padding:8px 12px; color:var(--admin-text); font-size:.875rem; cursor:pointer; list-style:none; }
 .agenda-navigation-tools summary::-webkit-details-marker { display:none; }
 .agenda-navigation-tools .admin-notifications > button { width:42px; height:36px; border:0; }
-.agenda-navigation-tools .admin-attention-overview { margin:0; padding:0; border:0; background:transparent; }
-.agenda-navigation-tools .admin-attention-overview summary { position:relative; }
 html[data-navigation-state="collapsed"] .agenda-workspace .agenda-navigation-tools summary > span:not(.admin-attention-dot) { display:none; }
-html[data-navigation-state="collapsed"] .agenda-workspace .agenda-navigation-tools summary > .admin-attention-dot { position:absolute; top:3px; right:3px; }
 .agenda-client-search__panel,
-.agenda-navigation-tools .admin-attention-overview[open] > .agenda-attention-panel,
 .agenda-navigation-tools .admin-notification-panel { position:fixed; z-index:90; left:72px; right:auto; top:auto; bottom:16px; width:min(360px,calc(100vw - 88px)); background:white; }
 .agenda-client-search__panel { padding:12px; border:1px solid var(--admin-border); border-radius:8px; box-shadow:0 8px 30px rgb(18 42 33 / 16%); }
 .agenda-client-search__panel .header-client-search { width:100%; }
 .agenda-client-search__panel .client-search__panel { top:auto; bottom:calc(100% + 8px); max-height:55dvh; overflow:auto; }
-.agenda-attention-panel { max-height:70dvh; padding:12px; border:1px solid var(--admin-border); border-radius:8px; overflow:auto; box-shadow:0 8px 30px rgb(18 42 33 / 16%); }
-.agenda-attention-panel .admin-attention-summary { display:grid; }
 .agenda-workspace.agenda-navigation-open .agenda-navigation-tools { justify-items:stretch; }
 .agenda-workspace.agenda-navigation-open .agenda-navigation-tools .admin-notification-panel,
-.agenda-workspace.agenda-navigation-open .agenda-client-search__panel,
-.agenda-workspace.agenda-navigation-open .admin-attention-overview[open] > .agenda-attention-panel { left:256px; }
+.agenda-workspace.agenda-navigation-open .agenda-client-search__panel { left:256px; }
 
 @media (max-width:1100px) {
   .agenda-toolbar { gap:8px; }
@@ -120,8 +113,7 @@ html[data-navigation-state="collapsed"] .agenda-workspace .agenda-navigation-too
   .agenda-workspace .agenda-calendar .fc-timeGridWeek-view .fc-scrollgrid { min-width:640px; }
   .agenda-workspace .agenda-calendar .fc-timeGridWeek-view { overflow-x:auto; }
   .agenda-workspace.agenda-navigation-open .agenda-navigation-tools .admin-notification-panel,
-  .agenda-workspace.agenda-navigation-open .agenda-client-search__panel,
-  .agenda-workspace.agenda-navigation-open .admin-attention-overview[open] > .agenda-attention-panel { left:8px; width:calc(100vw - 16px); }
+  .agenda-workspace.agenda-navigation-open .agenda-client-search__panel { left:8px; width:calc(100vw - 16px); }
   .agenda-workspace .agenda-client-search__panel .client-search__panel { max-height:45dvh; }
   .agenda-toolbar button, .agenda-workspace .agenda-toolbar__create summary { min-height:40px; }
 }
