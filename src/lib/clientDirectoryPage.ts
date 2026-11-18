@@ -28,7 +28,7 @@ export async function loadClientDirectoryPage(context: Pick<AstroGlobal, 'locals
   const requestedStatus = context.url.searchParams.get('status') || 'active';
   const status = ['active', 'archived', 'all'].includes(requestedStatus) ? requestedStatus as 'active' | 'archived' | 'all' : 'active';
   await auditPatientDirectoryAccess(user, context.locals.requestId);
-  const clients = await listPatientRecords(user, '', status);
+  const clients = await listPatientRecords(user, (context.url.searchParams.get('q') || '').slice(0, 80), status);
   const staff = canAssign ? await getPatientStaff() : [];
   const customerSearch = (context.url.searchParams.get('klantzoek') || '').trim().slice(0, 80);
   const customerAccounts = canAssign ? await listUnlinkedCustomerAccounts(user, customerSearch) : [];

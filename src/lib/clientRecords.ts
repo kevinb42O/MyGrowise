@@ -190,31 +190,38 @@ const accessiblePatientIds = async (user: UserSession) => {
   return [...new Set(((data || []) as Row[]).map((row) => String(row.patient_id)))];
 };
 
-const queryPatients = async (ids: string[] | null, status: PatientStatus | 'all', term: string) => {
+const queryPatients = async (ids: string[] | null, status: PatientStatus | 'all', term: string, actor: string) => {
   const client = getSupabaseAdmin();
-  const collect = async (field?: 'full_name' | 'email') => {
+  const collect = async () => {
     let query = client.from('patients').select('id,full_name,email,customer_user_id,status,created_at,updated_at').order('updated_at', { ascending: false }).limit(500);
     if (ids) {
       if (!ids.length) return [] as Row[];
       query = query.in('id', ids);
     }
     if (status !== 'all') query = query.eq('status', status);
-    if (term && field) query = query.ilike(field, `%${term}%`);
     const { data, error } = await query;
     fail(error);
     return (data || []) as Row[];
   };
   if (!term) return collect();
-  const [names, emails] = await Promise.all([collect('full_name'), collect('email')]);
-  return [...new Map([...names, ...emails].map((row) => [String(row.id), row])).values()]
-    .sort((a, b) => String(b.updated_at).localeCompare(String(a.updated_at)));
+  const { data: matches, error } = await client.rpc('search_patient_choices_v2', { p_actor: actor, p_search: term, p_recent: false, p_status: status, p_limit: 500 });
+  fail(error);
+  const orderedIds = ((matches || []) as Row[]).map(row => String(row.id));
+  if (!orderedIds.length) return [];
+  let query = client.from('patients').select('id,full_name,email,customer_user_id,status,created_at,updated_at').in('id', orderedIds).limit(500);
+  if (ids) { if (!ids.length) return []; query = query.in('id', ids); }
+  if (status !== 'all') query = query.eq('status', status);
+  const result = await query;
+  fail(result.error);
+  const rank = new Map(orderedIds.map((id, index) => [id, index]));
+  return ((result.data || []) as Row[]).sort((a, b) => rank.get(String(a.id))! - rank.get(String(b.id))!);
 };
 
 export const listPatientRecords = async (user: UserSession, search = '', status: PatientStatus | 'all' = 'active'): Promise<PatientDirectoryItem[]> => {
   assertRecordRole(user);
   const ids = await accessiblePatientIds(user);
   const term = normalizeName(search).slice(0, 80);
-  const rows = await queryPatients(ids, status, term);
+  const rows = await queryPatients(ids, status, term, user.sub);
   if (!rows.length) return [];
   const patientIds = rows.map((row) => String(row.id));
   const client = getSupabaseAdmin();

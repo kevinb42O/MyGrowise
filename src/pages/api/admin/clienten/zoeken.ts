@@ -16,9 +16,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
         const { error } = await db.from('patient_recent_visits').delete().eq('user_id', locals.currentUser!.sub);
         if (error) throw error;
       }
-      const { data, error } = await db.rpc('search_patient_choices', { p_actor: locals.currentUser!.sub, p_search: search.trim(), p_recent: !search.trim() });
+      const { data, error } = await db.rpc('search_patient_choices_v2', { p_actor: locals.currentUser!.sub, p_search: search.trim(), p_recent: !search.trim(), p_status: form.get('include_archived') === '1' ? 'all' : 'active', p_limit: search.trim() ? 9 : 5 });
       if (error) throw error;
-      return Response.json({ clients: data || [] }, { headers: { 'cache-control': 'private, no-store' } });
+      return Response.json({ clients: (data || []).slice(0, search.trim() ? 8 : 5), hasMore: Boolean(search.trim() && data && data.length > 8) }, { headers: { 'cache-control': 'private, no-store' } });
     }
     const requestedStatus = String(form.get('status') || 'active');
     const status = ['active', 'archived', 'all'].includes(requestedStatus) ? requestedStatus as 'active' | 'archived' | 'all' : 'active';

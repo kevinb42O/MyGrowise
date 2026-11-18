@@ -37,7 +37,7 @@ const Layout = practice ? PracticeLayout : AdminLayout;
       <header class="admin-panel__header"><div><h2>Cliënten</h2><p><span data-client-result-count aria-live="polite">{clients.length} dossier{clients.length === 1 ? '' : 's'}</span> in deze weergave · zoek op naam of e-mailadres</p></div><span class="client-directory-lock"><AdminIcon name="lock" size={14}/> Inhoud alleen zichtbaar in het dossier</span></header>
       <form class="client-directory-toolbar" method="get" action={recordsBase} data-client-search-form>
         {bookingId && <input type="hidden" name="boeking" value={bookingId}/>}
-        <label class="client-search"><span class="sr-only">Zoek cliënt</span><AdminIcon name="search" size={16}/><input type="search" data-client-search-input maxlength="80" placeholder="Naam of e-mailadres" autocomplete="off"/></label>
+        <label class="client-search"><span class="sr-only">Zoek cliënt</span><AdminIcon name="search" size={16}/><input type="search" data-client-search-input name="q" value={(Astro.url.searchParams.get('q') || '').slice(0, 80)} maxlength="80" placeholder="Naam of e-mailadres" autocomplete="off"/></label>
         <label><span class="sr-only">Dossierstatus</span><select name="status" data-client-status><option value="active" selected={status === 'active'}>Actieve dossiers</option><option value="archived" selected={status === 'archived'}>Gearchiveerd</option><option value="all" selected={status === 'all'}>Alles</option></select></label>
         <button class="admin-button" type="submit">Zoeken</button>
       </form>
@@ -52,7 +52,7 @@ const Layout = practice ? PracticeLayout : AdminLayout;
           <AdminIcon name="arrow" size={15}/>
         </a>)}
       </div>
-      <div class="admin-empty-row" data-client-empty hidden={clients.length > 0}><div><span><AdminIcon name="customers" size={17}/></span><strong data-client-empty-title>{status === 'archived' ? 'Geen gearchiveerde dossiers' : 'Nog geen cliëntendossiers'}</strong><p data-client-empty-copy>Maak een cliënt aan of open een bevestigde afspraak om het eerste dossier te starten.</p></div></div>
+      <div class="admin-empty-row" data-client-empty hidden={clients.length > 0}><div><span><AdminIcon name="customers" size={17}/></span><strong data-client-empty-title>{Astro.url.searchParams.get('q') ? 'Geen resultaten gevonden' : status === 'archived' ? 'Geen gearchiveerde dossiers' : 'Nog geen cliëntendossiers'}</strong><p data-client-empty-copy>{Astro.url.searchParams.get('q') ? 'Pas de zoekterm aan of kies een andere dossierstatus.' : 'Maak een cliënt aan of open een bevestigde afspraak om het eerste dossier te starten.'}</p></div></div>
     </section>
 
 
@@ -221,6 +221,9 @@ const Layout = practice ? PracticeLayout : AdminLayout;
   const refresh = async () => {
     if (!form || !results || !searchInput || !statusInput) return;
     const requestNumber = ++latestRequest;
+    const currentUrl = new URL(window.location.href);
+    if (searchInput.value.trim()) currentUrl.searchParams.set('q', searchInput.value.trim()); else currentUrl.searchParams.delete('q');
+    window.history.replaceState(null, '', currentUrl);
     const body = new URLSearchParams({ search: searchInput.value, status: statusInput.value });
     form.setAttribute('aria-busy', 'true');
     try {
