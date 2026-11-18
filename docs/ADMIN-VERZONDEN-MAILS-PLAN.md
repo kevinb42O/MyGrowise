@@ -1,6 +1,6 @@
 # Verzonden e-mails zichtbaar in superadmin
 
-Datum: 18 november 2026. Status: geïmplementeerd en lokaal gecontroleerd; databasemigratie toegepast. Applicatie-uitrol volgt via de bestaande Vercel-integratie.
+Datum: 18 november 2026. Status: geïmplementeerd, lokaal gecontroleerd en uitgerold via de bestaande Vercel-integratie; databasemigratie toegepast.
 
 ## Doel
 
@@ -72,7 +72,7 @@ Dit is een beperkte aanpassing van verzendregistratie; geen nieuwe maildienst of
 
 De uitbreiding komt op de bestaande mailopvolgingspagina binnen `/admin`; een extra dashboardwidget is niet nodig voor deze opdracht. Supabase Auth-mails blijven buiten dit overzicht, omdat ze niet via deze vier wachtrijen lopen.
 
-Bij uitvoering: eerst de additieve databasemigratie toepassen, vervolgens de applicatie uitrollen via de bestaande Vercel-integratie binnen Free/Hobby. Controleer daarna met een gecontroleerde testverzending de telling, historiek en tijdweergave. De migratie is op 18 november toegepast; de applicatie-uitrol en nacontrole worden hieronder vastgelegd.
+Bij uitvoering: eerst de additieve databasemigratie toepassen, vervolgens de applicatie uitrollen via de bestaande Vercel-integratie binnen Free/Hobby. Controleer daarna met een gecontroleerde testverzending de telling, historiek en tijdweergave. De migratie is op 18 november toegepast; de applicatie-uitrol en nacontrole zijn hieronder vastgelegd.
 
 
 ## Uitvoering en bewijs op 18 november 2026
@@ -85,3 +85,5 @@ Bij uitvoering: eerst de additieve databasemigratie toepassen, vervolgens de app
 - TypeScript, productiebuild en artifactcontrole geslaagd. Browsercontrole met synthetische gegevens op 1440px en 390px geslaagd, inclusief datumweergave, mobiele statuslabels, geen pagina-overloop, focusbare links en afwezigheid van retryacties bij verzonden mails. Screenshots lokaal onder `/tmp/mygrowise-admin-audit-fixes/mail-{desktop,mobile}.png` visueel beoordeeld.
 - De echte Supabase/PostgREST-query's tegen de gemigreerde database gecontroleerd: tellingen en historiek stemmen overeen voor alle wachtrijen. Op dat moment: support 0 verzonden, commerce 8, afspraken 6, website 4; website 3 onbevestigd, afspraken 3 gepland.
 - Geen nieuwe echte e-mail verstuurd tijdens de verificatie. De tests gebruiken gesimuleerd transport; succesvolle overdracht van een nieuwe productiemail en inboxontvangst zijn in deze ronde niet bewezen.
+- Implementatiecommit `31bfa02` naar `origin/main` gepusht. De bestaande Vercel-integratie bevestigt **Deployment has completed**: [deployment](https://vercel.com/lanternnetworks-projects/mygrowise/3gU89opQn7kJVPCn4gj46UxMwsvR).
+- Productie-HTTP-controle: zowel de nieuwe verzonden- als onbevestigd-filterlink wordt zonder sessie met 303 naar de adminlogin doorgestuurd, met behoud van de volledige vervolg-URL. De ingelogde productiepagina is niet opnieuw visueel beoordeeld; de visuele controles betreffen de echte componenten met synthetische gegevens lokaal.
