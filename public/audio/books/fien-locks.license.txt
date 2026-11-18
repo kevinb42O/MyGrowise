@@ -1,0 +1,18 @@
+Lock feedback for Fien — downloaded 2026-11-18.
+
+fien-locked.m4a
+“Lock rattle 5.wav” by deleted_user_2104797
+https://freesound.org/people/deleted_user_2104797/sounds/164670/
+CC0 1.0 Universal: https://creativecommons.org/publicdomain/zero/1.0/
+Source: https://cdn.freesound.org/previews/164/164670_2104797-hq.mp3
+Old padlock rattling against wood. Public HQ MP3 preview.
+Edited: excerpt 0.59–1.49 s, 15 ms fade-in, 80 ms fade-out, gain 0.8, AAC 128 kbps.
+
+fien-unlock.mp3
+“Small Padlock Opening” by Rudmer_Rotteveel
+https://freesound.org/people/Rudmer_Rotteveel/sounds/536414/
+CC0 1.0 Universal: https://creativecommons.org/publicdomain/zero/1.0/
+Source: https://cdn.freesound.org/previews/536/536414_4921277-hq.mp3
+Public HQ MP3 preview, 0.251 seconds.
+
+Both recordings are covered by the reader's existing sound on/off preference.

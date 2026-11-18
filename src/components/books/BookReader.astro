@@ -2,7 +2,7 @@
 import {BOOK_TITLE} from '../../lib/ebooks/book';
 interface Props { pages:string[]; back:string; preview?:boolean }
 const {pages,back,preview=false}=Astro.props;
-const soundEffects=preview?['star','chest']:['star','chest','heart','bell','balloon-grab','balloon-fly'];
+const soundEffects=preview?['star','chest','locked','unlock']:['star','chest','locked','unlock','heart','bell','balloon-grab','balloon-fly'];
 const controls=[
  ['cover','Omslag',1],['start','Het verhaal van Fien',5],
  ['chest','De toverkist',10],['heart','Het hart',21],['balloon','De ballon',25],['powers','De vijf krachten',27],
@@ -36,6 +36,8 @@ const controls=[
      <div class="reader-shadow" data-shadow aria-hidden="true"></div>
      <canvas data-paper aria-hidden="true" hidden></canvas>
      <canvas data-effects width="1200" height="849" aria-hidden="true"></canvas>
+     <canvas data-lock-effects width="1200" height="849" aria-hidden="true"></canvas>
+     <button type="button" class="reader-chest-key" data-chest-key aria-label="Neem de sleutel uit Fiens hand" hidden><img src="/images/books/animation/fien-key.png" alt="" draggable="false"/></button>
      <button type="button" class="reader-hotspot" data-hotspot hidden>
       <span class="reader-spot-label" aria-hidden="true"></span>
       <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -57,6 +59,7 @@ const controls=[
    <button type="button" class="reader-count" data-count aria-label="Ga naar een pagina">1 <span>/</span> {pages.length}</button>
    <button type="button" data-next aria-label="Volgende pagina"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m10 6 6 6-6 6"/></svg></button>
   </nav>
+  <button type="button" class="reader-key-item" data-key-item aria-label="Jouw sleutel. Open de toverkist." hidden><img src="/images/books/animation/fien-key.png" alt="" draggable="false"/></button>
   <div class="reader-work-tools">
   <button type="button" class="reader-write-open" data-write-open aria-haspopup="dialog" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 20 1.5-6L16 3.5a2.1 2.1 0 0 1 3 0L20.5 5a2.1 2.1 0 0 1 0 3L10 18.5 4 20Zm1.5-6 4.5 4.5M14.5 5l4.5 4.5"/></svg><span>Schrijf in je boek</span></button>
   <button type="button" class="reader-color-open" data-color-open aria-expanded="false" aria-controls="reader-color-panel"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 20 1.5-6L16 3.5a2.1 2.1 0 0 1 3 0L20.5 5a2.1 2.1 0 0 1 0 3L10 18.5 4 20Zm1.5-6 4.5 4.5M14.5 5l4.5 4.5"/></svg><span>Kleuren</span></button>
@@ -72,14 +75,14 @@ const controls=[
   <audio data-page-audio src="/audio/books/fien-page-turn.m4a" preload="auto"></audio>
   <!-- fien-bell.m4a uses "School bell.wav" by deleted_user_7020630, CC0. https://freesound.org/s/378394/ — 3.68 s, volume reduced, short fades. -->
   <!-- Chest Opening.wav by spookymodem, CC0. https://freesound.org/s/202092/ — public HQ MP3, unchanged. -->
-  {soundEffects.map(name=><audio data-effect-audio={name} src={`/audio/books/fien-${name}.${name==='chest'?'mp3':'m4a'}`} preload="auto"></audio>)}
+  {soundEffects.map(name=><audio data-effect-audio={name} src={`/audio/books/fien-${name}.${['chest','unlock'].includes(name)?'mp3':'m4a'}`} preload="auto"></audio>)}
   <p class="reader-sr" data-status aria-live="polite"></p>
   <dialog class="reader-dialog" data-menu aria-labelledby="reader-menu-title">
    <form method="dialog"><button aria-label="Sluiten" class="reader-close"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg></button></form>
    <h2 id="reader-menu-title">Waar waren we?</h2>
    <div class="reader-chapters">{(preview?[['cover','Omslag',1],['start','Ontmoet Fien',2],['chest','Op avontuur',3]]:controls).map(([,label,page])=><button type="button" data-go={page}><span>{label}</span><small>{page}</small></button>)}</div>
    <form class="reader-jump" data-jump><label for="reader-page-number">Naar pagina</label><input id="reader-page-number" name="page" type="number" min="1" max={pages.length} required/><button>Ga</button></form>
-   <div class="reader-settings"><button type="button" data-zoom aria-pressed="false">Vul het scherm</button><button type="button" data-motion aria-pressed="false">Rustig bladeren</button><button type="button" data-page-sound aria-pressed="true">Boekgeluid</button></div>
+   <div class="reader-settings"><button type="button" data-zoom aria-pressed="false">Vul het scherm</button><button type="button" data-motion aria-pressed="false">Rustig bladeren</button><button type="button" data-page-sound aria-pressed="true">Boekgeluid</button><button type="button" data-key-reset hidden>Zoek de sleutel opnieuw</button></div>
    <p>Veeg om te bladeren of gebruik de pijltjes. Met schermvulling kun je de illustratie verschuiven en met de knoppen bladeren.</p>
   </dialog>
   <dialog class="reader-write-dialog" data-write-dialog aria-labelledby="reader-write-title" aria-describedby="reader-write-hint">
@@ -169,7 +172,22 @@ const controls=[
  .reader-hotspot[data-kind='star'] .reader-spot-label{margin-inline-start:-5px}
  .reader-hotspot:is(:hover,:focus-visible) .reader-spot-label{background:#3b513b}
  .reader[data-calm='no'] .reader-hotspot:active svg{transform:scale(.87)}
- .reader-hotspot[data-playing] :is(svg,.reader-spot-label),.reader-hotspot[data-playing]::before{opacity:0;pointer-events:none}
+ .reader-hotspot[data-playing] :is(svg,.reader-spot-label),.reader-hotspot[data-playing]::before,.reader-hotspot[data-playing]::after{opacity:0;pointer-events:none;animation:none}
+ .reader .reader-chest-key{position:absolute;z-index:2;left:44.2%;top:30.8%;width:6.4%;height:16%;min-width:44px;min-height:44px;padding:0;transform:translate(-50%,-12%) rotate(-18deg);touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+ .reader-chest-key img{width:100%;height:100%;object-fit:contain;pointer-events:none;filter:drop-shadow(1px 3px 2px #492c3b55)}
+ .reader-chest-key:focus-visible{outline:2px solid #fff3b0;outline-offset:4px;border-radius:40%}
+ .reader-chest-key::after{content:'';position:absolute;left:32%;top:22%;width:5px;height:5px;background:#fff7cb;box-shadow:0 0 7px 3px #fff0b4;border-radius:50%;pointer-events:none}
+ .reader[data-calm='no'] .reader-chest-key::after{animation:reader-key-glint 2.8s ease-in-out infinite}
+ @keyframes reader-key-glint{0%,65%,100%{opacity:0;scale:.3}78%{opacity:1;scale:1.4}}
+ .reader .reader-key-item{position:absolute;z-index:5;right:max(18px,env(safe-area-inset-right));bottom:max(18px,env(safe-area-inset-bottom));width:72px;height:86px;padding:9px 16px;isolation:isolate;border-radius:40%;background:radial-gradient(ellipse,#ffdfa635,#ffdfa600 72%)}
+ .reader-key-item img{width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 3px 3px #10251a80);rotate:22deg;pointer-events:none}
+ .reader-key-item:focus-visible{outline:2px solid #ffd990;outline-offset:3px}
+ .reader-key-flight{position:fixed;z-index:20;object-fit:contain;pointer-events:none;filter:drop-shadow(0 5px 5px #31253566);will-change:transform,opacity}
+ .reader .reader-hotspot[data-kind='chest']{z-index:1}
+ .reader-hotspot[data-kind='chest'] :is(svg,.reader-spot-label),.reader-hotspot[data-kind='chest']::before,.reader-hotspot[data-kind='chest']::after{display:none}
+ .reader[data-coloring='yes'] :is(.reader-chest-key,.reader-key-item){visibility:hidden}
+ @media(max-width:600px){.reader .reader-key-item{width:60px;height:74px;right:max(10px,env(safe-area-inset-right));bottom:max(10px,env(safe-area-inset-bottom));padding:8px 13px}}
+ @media(prefers-reduced-motion:reduce){.reader-chest-key::after{animation:none!important}}
  .reader .reader-color-open{position:absolute;z-index:3;left:max(12px,env(safe-area-inset-left));bottom:max(12px,env(safe-area-inset-bottom));display:flex;align-items:center;gap:.5rem;min-height:46px;padding:.5rem .85rem;background:#fff0b6;color:#422e23;border-radius:1.5rem;font-size:.85rem;font-weight:700;box-shadow:0 4px 18px #101d1766}
  .reader .reader-color-open[data-boxes='yes']{background:#ffda7b}
  .reader .reader-color-open:focus-visible{outline:3px solid #fff5db;outline-offset:3px}

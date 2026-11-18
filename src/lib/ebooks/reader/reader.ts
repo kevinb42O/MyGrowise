@@ -1,6 +1,7 @@
+import {makeChestQuest} from './chestQuest';
 import {makePaper} from './paper';
 import {stepPageSpring} from './pageMotion';
-import {makeChestPainter,chestPlateUrl,type ChestPainter} from './chest';
+import {makeChestPainter,chestPlateUrl,chestInteriorUrl,type ChestPainter} from './chest';
 import {makeColoring} from './coloring';
 import {makeWriting} from './writing';
 
@@ -37,15 +38,13 @@ export function startBookReader(root:HTMLElement){
   let index=0, frame=0, chromeTimer=0, hintTimer=0, navigation=0;
   let calm=false, fill=false, scale=1, panX=0, panY=0;
   let effectFrame=0, effectTimer=0, effectRequest=0;
-  let chestReady:Promise<HTMLImageElement>|undefined;
+  let chestReady:Promise<{plate:HTMLImageElement;interior:HTMLImageElement}>|undefined;
   function loadChest(){
     if(!chestReady){
-      const image=new Image();
-      chestReady=new Promise<HTMLImageElement>((resolve,reject)=>{
-        image.onload=()=>resolve(image);
-        image.onerror=()=>{chestReady=undefined;reject(new Error('chest_artwork_unavailable'));};
-        image.src=chestPlateUrl;
-      });
+      const load=(url:string)=>{const image=new Image();image.src=url;return image.decode().then(()=>image);};
+      chestReady=Promise.all([load(chestPlateUrl),load(chestInteriorUrl)])
+        .then(([plate,interior])=>({plate,interior}))
+        .catch(error=>{chestReady=undefined;throw error;});
     }
     return chestReady;
   }
@@ -62,12 +61,14 @@ export function startBookReader(root:HTMLElement){
     ++navigation;
     if(turn)complete(false);
     coloring.close();
+    quest.cancel();
     clearEffect();
     interact();
     showControls(false);
   });
   const coloring=makeColoring(root,()=>{
     writing.close();
+    quest.cancel();
     ++navigation;
     if(turn)complete(false);
     clearEffect();
@@ -79,6 +80,11 @@ export function startBookReader(root:HTMLElement){
   const prefs=(key:string,value?:string)=>{
     try{if(value!==undefined)localStorage.setItem(key,value);else return localStorage.getItem(key);}catch{}
   };
+  const quest=makeChestQuest(root,{
+    storageKey,page:()=>page,calm:()=>root.dataset.calm==='yes',
+    sound:name=>playEffectSound(name),interact,
+    open:()=>{const moment=getMoment();if(moment?.kind==='chest')void startEffect(moment,false);},
+  });
   const soundKey='mygrowise-fien-page-sound';
   let sound=prefs(soundKey)!=='no';
   soundButton.setAttribute('aria-pressed',String(sound));
@@ -158,6 +164,7 @@ export function startBookReader(root:HTMLElement){
     pageNumber.value=String(index+1);
     coloring.setPage(bookPage());
     writing.setPage(bookPage());
+    quest.setPage(bookPage());
     status.textContent=`Pagina ${index+1} van ${urls.length}`;
     const spot=getMoment();
     if(spot?.kind==='chest')void loadChest().catch(()=>{});
@@ -228,9 +235,9 @@ export function startBookReader(root:HTMLElement){
     let chestPaint:ChestPainter|undefined;
     if(moment.kind==='chest'){
       try{
-        const plate=await loadChest();
+        const {plate,interior}=await loadChest();
         if(request!==effectRequest)return;
-        chestPaint=makeChestPainter(page,plate);
+        chestPaint=makeChestPainter(page,plate,interior);
       }catch{ /* Keep the original light effect available if artwork cannot load. */ }
       if(request!==effectRequest)return;
     }
@@ -258,6 +265,7 @@ export function startBookReader(root:HTMLElement){
       return;
     }
     if(moment.kind==='balloon')playEffectSound(held?'balloon-grab':'balloon-fly');
+    else if(moment.kind==='chest')effectTimer=window.setTimeout(()=>playEffectSound('chest'),260);
     else playEffectSound(moment.kind,moment.kind==='heart'&&held);
 
     let last=start;
@@ -301,6 +309,7 @@ export function startBookReader(root:HTMLElement){
   function begin(target:number,grip:number){
     const image=ready.get(target);
     if(!image||target===index||!page.complete||!page.naturalWidth)return false;
+    quest.setPage(0);
     const previous=page;
     if(renderer===undefined&&root.dataset.calm!=='yes'){
       try{renderer=makePaper(canvas);}catch{renderer=null;}
@@ -353,6 +362,7 @@ export function startBookReader(root:HTMLElement){
   async function go(target:number,animated=true){
     if(target<0||target>=urls.length||target===index)return;
     const ticket=++navigation;
+    quest.cancel();
     coloring.close();
     interact();error.hidden=true;
     if(turn)complete(false);
@@ -372,7 +382,7 @@ export function startBookReader(root:HTMLElement){
   }
 
   stage.addEventListener('pointerdown',event=>{
-    if(root.dataset.coloring==='yes'||(event.target as HTMLElement).closest('[data-writing-fields]')||event.button!==0||event.target===hotspot||hotspot.contains(event.target as Node))return;
+    if(root.dataset.coloring==='yes'||(event.target as HTMLElement).closest('[data-writing-fields],[data-chest-key]')||event.button!==0||event.target===hotspot||hotspot.contains(event.target as Node))return;
     ++navigation;
     interact();
     stage.setPointerCapture(event.pointerId);
@@ -440,7 +450,7 @@ export function startBookReader(root:HTMLElement){
   stage.addEventListener('lostpointercapture',event=>{if(touches.has(event.pointerId))release(event,true);});
   main.addEventListener('pointerup',event=>{if(event.target===main)interact();});
   canvas.addEventListener('webglcontextlost',event=>{event.preventDefault();complete(false);renderer=null;});
-  window.addEventListener('resize',()=>{if(fill)resetZoom();else transform();if(turn)draw(turn.value);});
+  window.addEventListener('resize',()=>{quest.cancel();if(fill)resetZoom();else transform();if(turn)draw(turn.value);});
   fullscreenButton.hidden=!document.fullscreenEnabled;
   document.addEventListener('fullscreenchange',()=>{
     const active=document.fullscreenElement===root;
@@ -475,7 +485,7 @@ export function startBookReader(root:HTMLElement){
       else advance(['ArrowLeft','PageUp'].includes(event.key)?-1:1);
     }
   });
-  const openMenu=()=>{coloring.close();interact();menu.showModal();};
+  const openMenu=()=>{quest.cancel();coloring.close();interact();menu.showModal();};
   get('[data-open-menu]').addEventListener('click',openMenu);
   get('[data-count]').addEventListener('click',openMenu);
   prev.addEventListener('click',()=>advance(-1));
@@ -530,8 +540,10 @@ export function startBookReader(root:HTMLElement){
   for(const name of ['pointerup','pointercancel','lostpointercapture'] as const)hotspot.addEventListener(name,releaseEffect);
   hotspot.addEventListener('click',event=>{
     const moment=getMoment();
+    if(moment?.kind==='chest'){void quest.activate();return;}
     if(moment&&(event.detail===0||(moment.kind!=='heart'&&moment.kind!=='balloon')))startEffect(moment,false);
   });
+  get('[data-key-reset]').addEventListener('click',()=>{quest.reset();menu.close();showControls(false);});
   menu.addEventListener('close',()=>showControls());
 
   transform();

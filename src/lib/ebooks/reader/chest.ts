@@ -4,32 +4,65 @@ const unit=(value:number)=>Math.max(0,Math.min(1,value));
 
 export type ChestPainter = (ctx: CanvasRenderingContext2D, elapsed: number, calm: boolean) => void;
 export const chestPlateUrl = '/images/books/animation/fien-chest-open.webp';
+export const chestInteriorUrl = '/images/books/animation/fien-chest-interior.webp';
 
 // Coordinates follow the actual curved lid and its sloping rear hinge in the
 // original 1200 × 849 book artwork. Only this patch is ever replaced.
-const lidOutline = new Path2D('M383 450 C376 424 379 393 390 374 Q397 361 405 355 L873 410 Q880 428 878 455 L874 520 Z');
+const lidOutline = new Path2D('M382 451 C378 422 380 391 394 368 Q403 351 421 341 C523 354 692 386 873 409 Q881 426 880 455 L875 521 C720 503 542 473 382 451 Z');
 const mouth = new Path2D('M383 450 435 408 875 450 860 519 Z');
-const hinge = {x:405,y:355};
-const angle = Math.atan2(55,468);
+const hinge = {x:421,y:341};
+const angle = Math.atan2(68,452);
 const ex=Math.cos(angle), ey=Math.sin(angle), nx=-ey, ny=ex;
 
-export function makeChestPainter(source: HTMLImageElement, plate: HTMLImageElement): ChestPainter {
+export function makeChestPainter(source: HTMLImageElement, plate: HTMLImageElement, interior?: HTMLImageElement): ChestPainter {
   // Sample the original illustration once, not once per animation frame.
   const lid = document.createElement('canvas');
-  lid.width=512;lid.height=180;
+  lid.width=512;lid.height=196;
   const ink=lid.getContext('2d')!;
-  ink.translate(-374,-347);
+  ink.translate(-374,-334);
   ink.clip(lidOutline);
   ink.drawImage(source,0,0,1200,849);
+  // The lock belongs to the front of the chest, not to its moving shell.
+  // Borrow adjacent painted wood only inside its small overlapping cap.
+  ink.save();
+  ink.clip(new Path2D('M614 457 Q641 451 643 482 L611 490 Z'));
+  ink.drawImage(source,64,9,1200,849);
+  ink.restore();
   const underside=document.createElement('canvas');
   underside.width=lid.width;underside.height=lid.height;
   const back=underside.getContext('2d')!;
-  back.drawImage(lid,0,0);
-  back.globalCompositeOperation='source-atop';
-  const wood=back.createLinearGradient(0,0,0,180);
-  wood.addColorStop(0,'#7364bb');wood.addColorStop(.55,'#51418d');wood.addColorStop(1,'#352955');
-  back.globalAlpha=.87;
-  back.fillStyle=wood;back.fillRect(0,0,512,180);
+  if(interior){
+    // Map the complete authored interior to the lid's sloping edges. A flat
+    // rectangular draw cropped off the rim and made its braces look broken.
+    back.translate(-374,-334);
+    const point=(u:number,v:number)=>({
+      x:(382+493*u)*(1-v)+(421+452*u)*v,
+      y:(451+70*u)*(1-v)+(341+68*u)*v,
+    });
+    const triangle=(u0:number,v0:number,u1:number,v1:number,u2:number,v2:number)=>{
+      const p=point(u0,v0),q=point(u1,v1),r=point(u2,v2);
+      const sx0=u0*interior.naturalWidth,sy0=v0*interior.naturalHeight;
+      const sx1=u1*interior.naturalWidth,sy1=v1*interior.naturalHeight;
+      const sx2=u2*interior.naturalWidth,sy2=v2*interior.naturalHeight;
+      const det=(sx1-sx0)*(sy2-sy0)-(sx2-sx0)*(sy1-sy0);
+      const a=((q.x-p.x)*(sy2-sy0)-(r.x-p.x)*(sy1-sy0))/det;
+      const b=((q.y-p.y)*(sy2-sy0)-(r.y-p.y)*(sy1-sy0))/det;
+      const c=((r.x-p.x)*(sx1-sx0)-(q.x-p.x)*(sx2-sx0))/det;
+      const d=((r.y-p.y)*(sx1-sx0)-(q.y-p.y)*(sx2-sx0))/det;
+      back.save();back.beginPath();back.moveTo(p.x,p.y);back.lineTo(q.x,q.y);back.lineTo(r.x,r.y);back.closePath();back.clip();
+      back.transform(a,b,c,d,p.x-a*sx0-c*sy0,p.y-b*sx0-d*sy0);
+      back.drawImage(interior,0,0);back.restore();
+    };
+    for(let i=0;i<12;i++){
+      const u=i/12,next=(i+1)/12;
+      triangle(u,0,next,0,u,1);triangle(next,0,next,1,u,1);
+    }
+  }else{
+    back.drawImage(lid,0,0);
+    back.globalCompositeOperation='source-atop';
+    back.fillStyle='#51418d';back.globalAlpha=.74;
+    back.fillRect(0,0,512,196);
+  }
 
   return (ctx,elapsed,calm) => {
     const pose=chestPose(elapsed);
@@ -54,27 +87,30 @@ export function makeChestPainter(source: HTMLImageElement, plate: HTMLImageEleme
 
     // Rotate around the illustrated rear hinge, retaining its perspective.
     // A calm-mode user gets a dissolve to the open pose instead of movement.
-    const rotation=(calm?1:pose.open)*1.87;
-    const depth=Math.cos(rotation)-.42*Math.sin(rotation);
-    const a=ex*ex+depth*nx*nx,b=ex*ey+depth*nx*ny;
-    const c=b,d=ey*ey+depth*ny*ny;
+    const rotation=(calm?1:pose.open)*1.65;
+    const depth=Math.cos(rotation)-1.12*Math.sin(rotation);
+    // The painted crown sits above the real (occluded) rear hinge.
+    // As it rolls back, register that edge to the open plate's rear rim.
+    const opened=calm?1:pose.open;
+    const progress=unit(opened/.35);
+    const registration=progress*progress*(3-2*progress);
+    const axis=angle+(Math.atan2(42,440)-angle)*registration;
+    const ux=Math.cos(axis),uy=Math.sin(axis),vx=-uy,vy=ux;
+    const length=1-.033*registration;
+    const a=length*ux*ex+depth*vx*nx;
+    const b=length*uy*ex+depth*vy*nx;
+    const c=length*ux*ey+depth*vx*ny;
+    const d=length*uy*ey+depth*vy*ny;
+    const pivotX=hinge.x+14*registration,pivotY=hinge.y+67*registration;
     ctx.save();
     if(calm)ctx.globalAlpha=pose.open;
-    // The arched shell has height above its hinge plane. Its ridge travels
-    // down as it rotates back, keeping the painted rear edge on the rim.
-    const arch=32*(1-depth);
-    ctx.transform(a,b,c,d,hinge.x-a*hinge.x-c*hinge.y+nx*arch,hinge.y-b*hinge.x-d*hinge.y+ny*arch);
-    ctx.drawImage(lid,374,347);
-    const reverse=Math.max(0,Math.min(1,(rotation-1.04)/.24));
+    ctx.transform(a,b,c,d,pivotX-a*hinge.x-c*hinge.y,pivotY-b*hinge.x-d*hinge.y);
+    const reverse=unit((rotation-.64)/.22);
+    ctx.save();ctx.globalAlpha=(calm?pose.open:1)*(1-reverse);
+    ctx.drawImage(lid,374,334);ctx.restore();
     if(reverse>0){
       ctx.save();ctx.globalAlpha=(calm?pose.open:1)*reverse;
-      ctx.drawImage(underside,374,347);ctx.restore();
-    }
-    // Warm spill catches the underside instead of a detached halo.
-    if(rotation>1.02){
-      ctx.clip(lidOutline);
-      ctx.globalAlpha=(calm?pose.open:1)*pose.light*.23;
-      ctx.fillStyle='#ffd48b';ctx.fillRect(374,347,512,180);
+      ctx.drawImage(underside,374,334);ctx.restore();
     }
     ctx.restore();
 
