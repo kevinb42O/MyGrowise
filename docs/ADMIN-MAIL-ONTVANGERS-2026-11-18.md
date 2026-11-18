@@ -1,6 +1,6 @@
 # Ontvangers in Mailopvolging
 
-Datum: 18 november 2026. Status: implementatie en lokale controles geslaagd; uitrol wordt hieronder vastgelegd.
+Datum: 18 november 2026. Status: geïmplementeerd, lokaal gecontroleerd en via Vercel uitgerold; databasemigratie toegepast.
 
 De eerdere visuele herinrichting verborg essentiële informatie. Op expliciet verzoek van Kevin staan cliëntnaam en e-mailadres nu direct in iedere rij, bij alle statussen. De categorie staat onder het mailtype. Bij teammails staat onder het mailtype over welke cliënt de mail gaat, terwijl de ontvangerkolom het echte teamadres toont. Ontbrekende gegevens worden herkenbaar gemeld.
 
@@ -29,4 +29,4 @@ De migratie `20261118180000_admin_mail_recipients.sql` breidt de bestaande proje
 
 ## Uitrol
 
-Migratie toegepast en geregistreerd in de gekoppelde database: alle 24 taken en de bestaande statustellingen behouden; alle 24 hebben een naam en adres beschikbaar. Vercelcontrole volgt na push. Een SMTP-verzendbevestiging bewijst geen aflevering in de inbox.
+Migratie toegepast en geregistreerd in de gekoppelde database: alle 24 taken en de bestaande statustellingen behouden; alle 24 hebben een naam en adres beschikbaar. De productielezer via PostgREST bevestigt dezelfde tellingen en naam/adresdekking. Commit `c3cfefe` is succesvol uitgerold via de bestaande [Vercel-integratie](https://vercel.com/lanternnetworks-projects/mygrowise/ENU1QLxRsQ5NgsjCUipWEnDhEgXx). De visuele controles gebruikten lokaal synthetische gegevens; het ingelogde productiescherm is niet afzonderlijk visueel getest. Een SMTP-verzendbevestiging bewijst geen aflevering in de inbox.
