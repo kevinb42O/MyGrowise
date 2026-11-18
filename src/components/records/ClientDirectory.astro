@@ -12,11 +12,11 @@ const Layout = practice ? PracticeLayout : AdminLayout;
   <div class="admin-page client-records-page">
     <section class="admin-page-heading">
       <div><p class="admin-eyebrow">Begeleiding · vertrouwelijk</p><h1>Cliëntendossiers</h1><p>Bewaar verslagen per cliënt en volg afspraken en toewijzingen op één beveiligde plek.</p></div>
-      {canWrite && <a class="admin-button admin-button--primary" href="#client-record-create"><AdminIcon name="customers" size={16}/> Cliënt toevoegen</a>}
+      {canWrite && <button class="admin-button admin-button--primary" type="button" data-client-create-open><AdminIcon name="plus" size={16}/> Cliënt toevoegen</button>}
     </section>
 
     {Astro.url.searchParams.get('melding')==='verwijderd' && <p class="practice-alert" role="status">Het lege dossier is definitief verwijderd.</p>}
-    {formError && <div class="admin-login__alert admin-login__alert--error" role="alert"><AdminIcon name="warning" size={17}/><span>{errors[formError] || 'De actie kon niet worden opgeslagen. Controleer je toegang en probeer opnieuw.'}</span></div>}
+    {formError && (bookingId || !canWrite) && <div class="admin-login__alert admin-login__alert--error" role="alert"><AdminIcon name="warning" size={17}/><span>{errors[formError] || 'De actie kon niet worden opgeslagen. Controleer je toegang en probeer opnieuw.'}</span></div>}
 
     {bookingId && <section class="client-source-card" aria-labelledby="client-source-title">
       <span class="client-record-icon"><AdminIcon name="calendar" size={18}/></span>
@@ -55,38 +55,127 @@ const Layout = practice ? PracticeLayout : AdminLayout;
     </section>
 
 
-    {canWrite && <section class="client-create-panel admin-panel" id="client-record-create">
-      <header class="admin-panel__header"><div><h2>Cliënt toevoegen</h2><p>Controleer eerst of de cliënt hierboven al een dossier heeft. Vul daarna de naam in of kies een bestaand online account.</p></div><span class="practice-private-badge"><AdminIcon name="lock" size={13}/> Privé</span></header>
-    {canAssign && <details class="practice-card" id="client-account-create" open={Boolean(customerSearch)}><summary>De cliënt heeft al een online account</summary>
-      <header class="admin-panel__header"><div><h2>Bestaand online account kiezen</h2><p>Koppel een bestaand online account aan een privé dossier. Verslagen verschijnen alleen voor bevoegde medewerkers.</p></div><span class="practice-private-badge"><AdminIcon name="lock" size={13}/> Privé</span></header>
-      <form class="client-account-search" method="get" action={`${recordsBase}#client-account-create`}>
-        <label><span class="sr-only">Zoek online account</span><input type="search" name="klantzoek" maxlength="80" value={customerSearch} placeholder="Zoek op naam of e-mailadres"/></label>
-        <button class="admin-button" type="submit"><AdminIcon name="search" size={15}/> Zoeken</button>
-        {customerSearch && <a class="admin-button" href={`${recordsBase}#client-account-create`}>Wis zoekterm</a>}
-      </form>
-      {customerAccounts.length ? <form class="client-create-form client-account-create-form" method="post" action={`/api/admin/clienten?werkruimte=${practice ? 'praktijk' : 'admin'}`}>
-        <input type="hidden" name="operation" value="from_customer"/>
-        <label><span>Online account</span><select name="customer_user_id" required><option value="" disabled selected>Kies een cliënt</option>{customerAccounts.map((account) => <option value={account.id}>{account.fullName} · {account.email || 'Geen e-mailadres'}</option>)}</select></label>
-        <label><span>Toegewezen aan <small>optioneel</small></span><select name="assignee_user_id"><option value="" selected={(submitted.assignee_user_id ?? defaultAssignee)===''}>Nog niet toewijzen</option>{staff.map((member) => <option value={member.id} selected={(submitted.assignee_user_id ?? defaultAssignee)===member.id}>{member.name}</option>)}</select></label>
-        <button class="admin-button admin-button--primary" type="submit">Dossier aanmaken met dit account</button>
-      </form> : <p class="client-account-empty">{customerSearch ? 'Geen klantaccount gevonden zonder dossier. Pas de zoekterm aan.' : 'Alle klantaccounts hebben al een dossier of er zijn nog geen klantaccounts.'}</p>}
-    </details>}
-
-      <h3>Nieuwe cliëntgegevens invullen</h3>
-      <form class="client-create-form" method="post" action={`${recordsBase}#client-record-create`}>
-        <label><span>Voornaam</span><input name="first_name" required maxlength="60" autocomplete="given-name" value={submitted.first_name}/></label>
-        <label><span>Achternaam</span><input name="last_name" required maxlength="60" autocomplete="family-name" value={submitted.last_name}/></label>
-        <label><span>E-mailadres <small>optioneel</small></span><input name="email" value={submitted.email} type="email" maxlength="254" autocomplete="off" placeholder="naam@voorbeeld.be"/></label>
-        {canAssign && <label><span>Toegewezen aan <small>optioneel</small></span><select name="assignee_user_id"><option value="" selected={(submitted.assignee_user_id ?? defaultAssignee)===''}>Nog niet toewijzen</option>{staff.map((member) => <option value={member.id} selected={(submitted.assignee_user_id ?? defaultAssignee)===member.id}>{member.name}{member.roles.includes('practitioner') ? ' · Professional' : member.roles.includes('super_admin') ? ' · Superadmin' : ' · Medewerker'}</option>)}</select></label>}
-        <button class="admin-button admin-button--primary" type="submit"><AdminIcon name="check" size={15}/> Cliënt aanmaken</button>
-      </form>
-    </section>}
+    {canWrite && <dialog class="client-create-dialog" id="client-record-create" aria-labelledby="client-create-title" aria-describedby="client-create-description" data-reopen={Boolean((formError && !bookingId) || customerSearch || Astro.url.searchParams.has('klantzoek'))}>
+      <header class="client-create-dialog__header">
+        <div class="client-create-dialog__title-row">
+          <span class="client-create-dialog__icon"><AdminIcon name="customers" size={22}/></span>
+          <h2 id="client-create-title" tabindex="-1">Cliënt toevoegen</h2>
+        </div>
+        <button class="client-create-dialog__close" type="button" data-client-create-close aria-label="Sluiten"><AdminIcon name="close" size={20}/></button>
+        <p id="client-create-description">{canAssign ? 'Start een dossier voor een nieuwe cliënt of koppel een bestaand online account.' : 'Vul de cliëntgegevens in om een nieuw dossier te starten.'}</p>
+      </header>
+      {canAssign && <div class="client-create-dialog__tabs" role="tablist" aria-label="Cliënt toevoegen via">
+        <button type="button" role="tab" id="client-new-tab" aria-controls="client-new-panel" aria-selected="true" data-client-create-tab="new">Nieuwe cliënt</button>
+        <button type="button" role="tab" id="client-account-tab" aria-controls="client-account-create" aria-selected="false" tabindex="-1" data-client-create-tab="account">Bestaand account</button>
+      </div>}
+      {formError && !bookingId && <div class="client-create-dialog__error" role="alert"><AdminIcon name="warning" size={18}/><span>{errors[formError] || 'Opslaan is niet gelukt. Controleer je gegevens en probeer opnieuw.'}</span></div>}
+      <div id="client-new-panel" role={canAssign ? 'tabpanel' : undefined} aria-labelledby={canAssign ? 'client-new-tab' : undefined} data-client-create-panel="new">
+        <form class="client-create-dialog__form" method="post" action={`${recordsBase}#client-record-create`}>
+          <div class="client-create-dialog__fields">
+            <label><span>Voornaam</span><input name="first_name" required maxlength="60" autocomplete="given-name" value={submitted.first_name}/></label>
+            <label><span>Achternaam</span><input name="last_name" required maxlength="60" autocomplete="family-name" value={submitted.last_name}/></label>
+            <label class="client-create-dialog__wide"><span>E-mailadres <small>Optioneel</small></span><input name="email" value={submitted.email} type="email" maxlength="254" autocomplete="off" placeholder="naam@voorbeeld.be" aria-describedby="client-email-help"/><small id="client-email-help">Je kunt ook zonder e-mailadres een dossier starten.</small></label>
+            {canAssign && <label class="client-create-dialog__wide"><span>Toegewezen aan <small>Optioneel</small></span><select name="assignee_user_id"><option value="" selected={(submitted.assignee_user_id ?? defaultAssignee)===''}>Nog niet toewijzen</option>{staff.map((member) => <option value={member.id} selected={(submitted.assignee_user_id ?? defaultAssignee)===member.id}>{member.name}{member.roles.includes('practitioner') ? ' · Professional' : member.roles.includes('super_admin') ? ' · Superadmin' : ' · Medewerker'}</option>)}</select></label>}
+          </div>
+          <p class="client-create-dialog__privacy"><AdminIcon name="lock" size={15}/> Verslagen zijn alleen zichtbaar voor bevoegde medewerkers.</p>
+          <footer class="client-create-dialog__footer"><button class="client-create-dialog__cancel" type="button" data-client-create-close>Annuleren</button><button class="client-create-dialog__submit" type="submit"><AdminIcon name="plus" size={16}/><span data-client-submit-label>Cliënt aanmaken</span></button></footer>
+        </form>
+      </div>
+      {canAssign && <div id="client-account-create" role="tabpanel" aria-labelledby="client-account-tab" data-client-create-panel="account" hidden>
+        <div class="client-create-dialog__account">
+          <p>Kies een online account dat nog geen dossier heeft.</p>
+          <form class="client-create-dialog__search" method="get" action={`${recordsBase}#client-account-create`}>
+            <label><span class="sr-only">Zoek online account</span><input type="search" name="klantzoek" maxlength="80" value={customerSearch} placeholder="Naam of e-mailadres"/></label>
+            <button type="submit" aria-label="Account zoeken"><AdminIcon name="search" size={18}/></button>
+          </form>
+          {customerSearch && <a class="client-create-dialog__reset" href={`${recordsBase}?klantzoek=#client-account-create`}>Wis zoekterm</a>}
+        </div>
+        {customerAccounts.length ? <form class="client-create-dialog__form" method="post" action={`/api/admin/clienten?werkruimte=${practice ? 'praktijk' : 'admin'}`}>
+          <input type="hidden" name="operation" value="from_customer"/>
+          <div class="client-create-dialog__fields">
+            <label class="client-create-dialog__wide"><span>Online account</span><select name="customer_user_id" required><option value="" disabled selected>Kies een cliënt</option>{customerAccounts.map((account) => <option value={account.id}>{account.fullName} · {account.email || 'Geen e-mailadres'}</option>)}</select></label>
+            <label class="client-create-dialog__wide"><span>Toegewezen aan <small>Optioneel</small></span><select name="assignee_user_id"><option value="" selected={(submitted.assignee_user_id ?? defaultAssignee)===''}>Nog niet toewijzen</option>{staff.map((member) => <option value={member.id} selected={(submitted.assignee_user_id ?? defaultAssignee)===member.id}>{member.name}</option>)}</select></label>
+          </div>
+          <p class="client-create-dialog__privacy"><AdminIcon name="lock" size={15}/> Verslagen zijn alleen zichtbaar voor bevoegde medewerkers.</p>
+          <footer class="client-create-dialog__footer"><button class="client-create-dialog__cancel" type="button" data-client-create-close>Annuleren</button><button class="client-create-dialog__submit" type="submit"><AdminIcon name="check" size={16}/><span data-client-submit-label>Account koppelen</span></button></footer>
+        </form> : <><p class="client-create-dialog__empty">{customerSearch ? 'Geen account zonder dossier gevonden. Probeer een andere naam of een ander e-mailadres.' : 'Er zijn geen online accounts zonder dossier. Voeg de cliënt toe via ‘Nieuwe cliënt’.'}</p><footer class="client-create-dialog__footer"><button class="client-create-dialog__cancel" type="button" data-client-create-close>Sluiten</button></footer></>}
+      </div>}
+    </dialog>}
 
     <p class="client-records-footnote"><AdminIcon name="lock" size={14}/> Verslaginhoud verschijnt uitsluitend na het openen van een dossier. Toegang en dossierwijzigingen worden vastgelegd voor beveiligingscontrole.</p>
   </div>
 </Layout>
 
 <script>
+  const createDialog = document.querySelector<HTMLDialogElement>('.client-create-dialog');
+  const createTrigger = document.querySelector<HTMLButtonElement>('[data-client-create-open]');
+  const createTabs = Array.from(document.querySelectorAll<HTMLButtonElement>('[data-client-create-tab]'));
+  const selectCreateTab = (mode: string) => {
+    createTabs.forEach((tab) => {
+      const active = tab.dataset.clientCreateTab === mode;
+      tab.setAttribute('aria-selected', String(active));
+      tab.tabIndex = active ? 0 : -1;
+    });
+    document.querySelectorAll<HTMLElement>('[data-client-create-panel]').forEach((panel) => { panel.hidden = panel.dataset.clientCreatePanel !== mode; });
+  };
+  const openCreateDialog = () => {
+    if (!createDialog || createDialog.open) return;
+    createDialog.showModal();
+    document.documentElement.classList.add('client-create-is-open');
+    if (createDialog.querySelector('[role="alert"]')) createDialog.querySelector<HTMLElement>('#client-create-title')?.focus();
+    else createDialog.querySelector<HTMLInputElement>('[data-client-create-panel]:not([hidden]) input:not([type="hidden"])')?.focus();
+  };
+  createTrigger?.addEventListener('click', openCreateDialog);
+  document.querySelectorAll('[data-client-create-close]').forEach((button) => button.addEventListener('click', () => createDialog?.close()));
+  createDialog?.addEventListener('close', () => {
+    document.documentElement.classList.remove('client-create-is-open');
+    if (['#client-record-create', '#client-account-create'].includes(window.location.hash)) {
+      window.history.replaceState(null, '', window.location.pathname + window.location.search);
+    }
+    createTrigger?.focus({ preventScroll: true });
+  });
+  createTabs.forEach((tab, index) => {
+    tab.addEventListener('click', () => selectCreateTab(tab.dataset.clientCreateTab!));
+    tab.addEventListener('keydown', (event) => {
+      if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+      event.preventDefault();
+      const next = event.key === 'Home' ? 0 : event.key === 'End' ? createTabs.length - 1 : (index + (event.key === 'ArrowRight' ? 1 : -1) + createTabs.length) % createTabs.length;
+      selectCreateTab(createTabs[next].dataset.clientCreateTab!);
+      createTabs[next].focus();
+    });
+  });
+  const restoreCreateDialog = () => {
+    const account = window.location.hash === '#client-account-create' || new URLSearchParams(window.location.search).has('klantzoek');
+    if (account && createTabs.length) selectCreateTab('account');
+    if (account || window.location.hash === '#client-record-create' || createDialog?.dataset.reopen === 'true') openCreateDialog();
+  };
+  restoreCreateDialog();
+  window.addEventListener('hashchange', restoreCreateDialog);
+  createDialog?.querySelectorAll<HTMLFormElement>('form[method="post"]').forEach((form) => {
+    form.addEventListener('submit', (event) => {
+      if (form.getAttribute('aria-busy') === 'true') { event.preventDefault(); return; }
+      form.setAttribute('aria-busy', 'true');
+      const submit = form.querySelector<HTMLButtonElement>('button[type="submit"]');
+      if (submit) {
+        submit.style.minWidth = `${submit.getBoundingClientRect().width}px`;
+        submit.disabled = true;
+        const label = submit.querySelector<HTMLElement>('[data-client-submit-label]');
+        if (label) { label.dataset.idleText = label.textContent || ''; label.textContent = 'Opslaan…'; }
+      }
+    });
+  });
+
+  window.addEventListener('pageshow', (event) => {
+    if (!event.persisted) return;
+    createDialog?.querySelectorAll<HTMLFormElement>('form[aria-busy]').forEach((form) => {
+      form.removeAttribute('aria-busy');
+      const submit = form.querySelector<HTMLButtonElement>('button[type="submit"]');
+      if (submit) { submit.disabled = false; submit.style.removeProperty('min-width'); }
+      const label = form.querySelector<HTMLElement>('[data-client-submit-label]');
+      if (label?.dataset.idleText) label.textContent = label.dataset.idleText;
+    });
+  });
+
   const recordsBase = window.location.pathname.startsWith('/praktijk') ? '/praktijk/clienten' : '/admin/clienten';
   const form = document.querySelector<HTMLFormElement>('[data-client-search-form]');
   const searchInput = document.querySelector<HTMLInputElement>('[data-client-search-input]');
@@ -163,3 +252,86 @@ const Layout = practice ? PracticeLayout : AdminLayout;
   });
   form?.addEventListener('submit', (event) => { event.preventDefault(); clearTimeout(searchTimer); refresh(); });
 </script>
+
+<style>
+  :global(html.client-create-is-open) { overflow: hidden; }
+  .client-create-dialog {
+    width: min(560px, calc(100% - 32px)); max-height: calc(100dvh - 48px); margin: auto; padding: 0;
+    border: 0; border-radius: 16px; background: #fff; color: var(--admin-text);
+    box-shadow: 0 28px 90px rgb(14 43 37 / 24%); overscroll-behavior: contain; scroll-padding-block: 24px 100px; scrollbar-width: thin; scrollbar-color: var(--admin-border-strong) transparent;
+  }
+  .client-create-dialog::backdrop { background: rgb(16 32 27 / 48%); }
+  .client-create-dialog[open] { animation: client-create-enter 180ms cubic-bezier(.16, 1, .3, 1); }
+  .client-create-dialog [hidden] { display: none; }
+  .client-create-dialog__header { position: relative; padding: 28px 32px 24px; }
+  .client-create-dialog__title-row { display: flex; align-items: center; gap: 14px; margin: 0 32px 14px 0; }
+  .client-create-dialog__icon { display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto; width: 42px; height: 42px; border-radius: 10px; background: var(--admin-green-soft); color: var(--admin-green); }
+  .client-create-dialog__header h2 { margin: 0; color: var(--admin-text); font-size: 24px; font-weight: 600; letter-spacing: -.025em; line-height: 1.2; }
+  .client-create-dialog__header p { max-width: 440px; text-wrap: pretty; margin: 0; color: var(--admin-muted); font-size: 14px; line-height: 1.6; }
+  .client-create-dialog__close { position: absolute; top: 29px; right: 24px; display: grid; place-items: center; width: 40px; height: 40px; padding: 0; border: 0; border-radius: 8px; background: transparent; color: var(--admin-muted); cursor: pointer; }
+  .client-create-dialog__close:hover { background: var(--admin-subtle); color: var(--admin-text); }
+  .client-create-dialog__tabs { display: flex; gap: 24px; margin: 0 32px; border-bottom: 1px solid var(--admin-border); }
+  .client-create-dialog__tabs button { position: relative; min-height: 46px; padding: 0 0 13px; border: 0; background: transparent; color: var(--admin-muted); font-size: 13px; font-weight: 600; cursor: pointer; }
+  .client-create-dialog__tabs button[aria-selected="true"] { color: var(--admin-green); font-weight: 600; }
+  .client-create-dialog__tabs button[aria-selected="true"]::after { position: absolute; right: 0; bottom: -1px; left: 0; height: 2px; background: var(--admin-green); content: ''; }
+  .client-create-dialog__tabs button:hover { color: var(--admin-green); }
+  .client-create-dialog__form { margin: 0; }
+  .client-create-dialog__fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px 16px; padding: 24px 32px 20px; }
+  .client-create-dialog__fields label { display: grid; min-width: 0; gap: 8px; }
+  .client-create-dialog__fields label > span { display: flex; align-items: baseline; gap: 8px; font-size: 13px; font-weight: 600; }
+  .client-create-dialog__fields small { color: var(--admin-muted); font-size: 12px; font-weight: 400; line-height: 1.5; }
+  .client-create-dialog__wide { grid-column: 1 / -1; }
+  .client-create-dialog input, .client-create-dialog select { width: 100%; min-width: 0; height: 46px; padding: 10px 12px; border: 1px solid var(--admin-border-strong); border-radius: 8px; background: white; color: var(--admin-text); font-size: 14px; caret-color: var(--admin-green); }
+  .client-create-dialog input::placeholder { color: var(--admin-muted); opacity: 1; }
+  .client-create-dialog input:hover, .client-create-dialog select:hover { border-color: var(--admin-muted); }
+  .client-create-dialog :focus-visible { outline: 2px solid var(--admin-green); outline-offset: 3px; }
+  .client-create-dialog ::selection { background: var(--admin-green); color: white; }
+  .client-create-dialog__privacy { display: flex; align-items: flex-start; gap: 8px; margin: 0; padding: 0 32px 24px; color: var(--admin-muted); font-size: 12px; line-height: 1.5; }
+  .client-create-dialog__privacy :global(svg) { margin-top: 1px; }
+  .client-create-dialog__footer { position: sticky; z-index: 1; bottom: 0; display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 16px 32px; border-top: 1px solid var(--admin-border); background: var(--admin-canvas); }
+  .client-create-dialog__footer button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 10px 17px; border: 1px solid var(--admin-border-strong); border-radius: 8px; font-size: 13px; font-weight: 500; cursor: pointer; }
+  .client-create-dialog__footer .client-create-dialog__cancel { border-color: transparent; background: transparent; color: var(--admin-muted); }
+  .client-create-dialog__footer .client-create-dialog__cancel:hover { background: var(--admin-subtle); color: var(--admin-text); }
+  .client-create-dialog__footer .client-create-dialog__submit { border-color: transparent; min-width: 176px; background: var(--admin-green); color: white; white-space: nowrap; }
+  .client-create-dialog__footer .client-create-dialog__submit:hover { background: var(--admin-green-hover); }
+  .client-create-dialog__footer .client-create-dialog__submit:disabled { opacity: .65; cursor: wait; }
+  .client-create-dialog__account { padding: 24px 32px 0; }
+  .client-create-dialog__account p, .client-create-dialog__empty { margin: 0 0 16px; color: var(--admin-muted); font-size: 13px; line-height: 1.6; }
+  .client-create-dialog__search { display: flex; gap: 8px; }
+  .client-create-dialog__search label { flex: 1; min-width: 0; }
+  .client-create-dialog__search button { display: grid; place-items: center; width: 46px; border: 1px solid var(--admin-border-strong); border-radius: 8px; background: var(--admin-green-soft); color: var(--admin-green); cursor: pointer; }
+  .client-create-dialog__search button:hover { background: var(--admin-subtle); }
+  .client-create-dialog__reset { display: inline-block; margin-top: 12px; color: var(--admin-green); font-size: 12px; text-decoration: underline; text-underline-offset: 3px; }
+  .client-create-dialog__empty { padding: 24px 32px; margin: 0; }
+  .client-create-dialog__error { display: flex; align-items: flex-start; gap: 10px; margin: 20px 32px 0; padding: 12px 14px; border-radius: 8px; background: #fff1ee; color: #98261b; font-size: 13px; line-height: 1.5; }
+  [data-client-create-open] { background: var(--admin-green); border-color: var(--admin-green); color: white; }
+  [data-client-create-open]:hover { background: var(--admin-green-hover); border-color: var(--admin-green-hover); }
+  .client-create-dialog button { transition: background-color 140ms ease, color 140ms ease; touch-action: manipulation; }
+  .client-create-dialog button:active:not(:disabled) { filter: brightness(.96); }
+  @keyframes client-create-enter { from { opacity: .5; transform: translateY(8px) scale(.99); } to { opacity: 1; transform: translateY(0) scale(1); } }
+  @media (prefers-reduced-motion: reduce) { .client-create-dialog[open] { animation: none; } .client-create-dialog button { transition: none; } }
+  @media (max-width: 540px) {
+    .client-create-dialog { width: calc(100% - 24px); max-height: calc(100dvh - 24px); border-radius: 12px; }
+    .client-create-dialog__header { padding: 24px 20px 20px; }
+    .client-create-dialog__title-row { gap: 10px; margin-right: 28px; margin-bottom: 12px; }
+    .client-create-dialog__icon { width: 36px; height: 36px; border-radius: 8px; }
+    .client-create-dialog__header h2 { font-size: 21px; }
+    .client-create-dialog__close { top: 22px; right: 10px; }
+    .client-create-dialog__tabs { margin-inline: 20px; gap: 20px; }
+    .client-create-dialog__fields { grid-template-columns: minmax(0, 1fr); gap: 18px; padding: 22px 20px 20px; }
+    .client-create-dialog input, .client-create-dialog select { font-size: 16px; }
+    .client-create-dialog__privacy { padding: 0 20px 22px; }
+    .client-create-dialog__footer { padding: 16px 20px; gap: 8px; }
+    .client-create-dialog__footer button { padding-inline: 10px; }
+    .client-create-dialog__footer .client-create-dialog__submit { min-width: 0; padding-inline: 14px; }
+    .client-create-dialog__account { padding: 22px 20px 0; }
+    .client-create-dialog__empty { padding: 22px 20px; }
+    .client-create-dialog__error { margin-inline: 20px; }
+  }
+  @media (max-width: 359px) {
+    .client-create-dialog__title-row { gap: 9px; }
+    .client-create-dialog__header h2 { font-size: 19px; }
+    .client-create-dialog__footer .client-create-dialog__submit { padding-inline: 10px; }
+    .client-create-dialog__footer .client-create-dialog__cancel { padding-inline: 6px; }
+  }
+</style>

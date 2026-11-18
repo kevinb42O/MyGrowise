@@ -25,7 +25,7 @@ export const POST: APIRoute = async ({ request, locals, redirect }) => {
   } catch (error) {
     const destination = new URLSearchParams({ fout: clientRecordError(error) });
     if (form.get('booking_id')) destination.set('boeking', String(form.get('booking_id')));
-    return redirect(`${recordsBase}?${destination}`, 303);
+    return redirect(`${recordsBase}?${destination}${form.get('operation') === 'from_customer' ? '#client-account-create' : ''}`, 303);
   }
 };
 
